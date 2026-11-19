@@ -109,6 +109,9 @@ describe('getOutput help pages', () => {
     const queueRow = text.split('\n').find((line) => line.startsWith('| `queue` |'));
     expect(queueRow).toContain('Ctrl+E');
     expect(text).not.toContain('### Key Bindings');
+    expect(text).not.toContain('### commands');
+    expect(text).not.toContain('A command disabled in the Commands tab');
+    expect(text.trimEnd().endsWith('|')).toBe(true);
   });
 
   it('prints the subagent page and its alphabetical commands row', () => {

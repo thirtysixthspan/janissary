@@ -22,6 +22,7 @@ import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 import { SUBAGENT_PRIMER } from '../subagent/primer.js';
+import { TAB_PRIMER } from '../commands/tab-primer.js';
 import { NOTIFY_PRIMER } from '../notifications/primer.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
@@ -40,6 +41,7 @@ describe('createAcpToolTable', () => {
       `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}`,
       `${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`,
       SUBAGENT_PRIMER,
+      TAB_PRIMER,
       NOTIFY_PRIMER,
       DB_PRIMER,
       `Only these commands are allowed: ${NATIVE_ACP_COMMANDS.join(', ')}.`,
@@ -120,7 +122,7 @@ describe('createAcpToolTable', () => {
 
   it('runs the file and web entries on the workspace and the others on the caller side', () => {
     const { tools } = setup();
-    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'workspace', 'caller', 'caller', 'caller']);
+    expect(tools.map((tool) => tool.runsOn)).toEqual(['caller', 'caller', 'workspace', 'workspace', 'caller', 'caller', 'caller', 'caller']);
   });
 
   it('keeps the database entry last when it is included', () => {
@@ -149,6 +151,20 @@ describe('createAcpToolTable', () => {
     expect(tools).toHaveLength(1);
     expect(toolPrimer(tools, [])).toBe('browser primer text');
     expect(toolExtractor(tools)('browser goto x')).toBe('browser goto x');
+  });
+
+  it('builds one caller-side tab tool from a tab grant', () => {
+    const tools = createAcpToolTable(['tab']);
+    expect(tools).toHaveLength(1);
+    expect(tools[0].primer).toBe(TAB_PRIMER);
+    expect(tools[0].runsOn).toBe('caller');
+    expect(toolPrimer(tools, ['tab'])).toBe(`${TAB_PRIMER}\n\nOnly these commands are allowed: tab.`);
+  });
+
+  it('extracts a trailing tab line and skips near misses', () => {
+    const tools = createAcpToolTable(['tab']);
+    expect(toolExtractor(tools)('Here you go\ntab focus notes')).toBe('tab focus notes');
+    expect(toolExtractor(tools)('tabs focus notes')).toBeNull();
   });
 });
 
@@ -223,6 +239,27 @@ describe('gateCommand', () => {
   it('allows a granted command whose row is enabled with agent access', () => {
     const rows = [{ name: 'browser goto', effectiveEnabled: true, effectiveAgentAccess: true }];
     expect(gateCommand(core({ rows }), gateTools, 'browser goto https://x')).toStrictEqual({ runsOn: 'caller' });
+  });
+
+  it('gates a granted tab command on the caller side', () => {
+    const tools = createAcpToolTable(['tab']);
+    expect(gateCommand(core({ grants: ['tab'] }), tools, 'tab focus notes')).toStrictEqual({ runsOn: 'caller' });
+  });
+
+  it('refuses an ungranted tab command for the role', () => {
+    const tools = createAcpToolTable(NATIVE_ACP_COMMANDS);
+    const snapshot = core({ grants: [], roleName: 'researcher' });
+    expect(gateCommand(snapshot, tools, 'tab focus notes')).toStrictEqual({
+      refusal: 'Command not allowed for role "researcher": tab.',
+    });
+  });
+
+  it('refuses a disabled tab command', () => {
+    const tools = createAcpToolTable(['tab']);
+    const rows = [{ name: 'tab', effectiveEnabled: false, effectiveAgentAccess: true }];
+    expect(gateCommand(core({ grants: ['tab'], rows }), tools, 'tab focus notes')).toStrictEqual({
+      refusal: 'Command is disabled: tab.', refused: 'disabled',
+    });
   });
 
   it('decides the same way twice from a deep-frozen snapshot', () => {

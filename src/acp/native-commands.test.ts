@@ -24,6 +24,7 @@ describe('native ACP commands', () => {
       'web search',
       'web fetch',
       'subagent',
+      'tab',
       'notify',
     ]);
   });
@@ -56,6 +57,9 @@ describe('native ACP commands', () => {
     ['subagent', 'subagent'],
     ['subagent --role research --task t.md', 'subagent'],
     ['subagent {"role":"research","task":"t.md"}', 'subagent'],
+    ['tab', 'tab'],
+    ['tab focus notes', 'tab'],
+    ['TAB DOCK "review notes" left', 'tab'],
     ['notify Build finished', 'notify'],
     ['NOTIFY Hello', 'notify'],
   ] as const)('assigns %s to %s, including trailing arguments', (command, tool) => {
@@ -102,7 +106,7 @@ describe('native ACP commands', () => {
     const tools = createAcpToolTable(NATIVE_ACP_COMMANDS);
     const recognizers = tools.filter((tool) => !tool.match('anything at all'));
     for (const nearMiss of [
-      'browser gotofoo x', 'file greps x', 'web searching x', 'question unknown x', 'db sqlitex list x', 'notify-x Build',
+      'browser gotofoo x', 'file greps x', 'web searching x', 'question unknown x', 'db sqlitex list x', 'notify-x Build', 'tabs focus notes',
     ]) {
       expect(nativeCommandName(nearMiss)).toBeUndefined();
       expect(recognizers.some((tool) => tool.match(nearMiss))).toBe(false);

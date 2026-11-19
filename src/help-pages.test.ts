@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { listHelpPages, readHelpPage } from './help-pages.js';
+import { listHelpPages, readCommandTable, readHelpPage } from './help-pages.js';
 
 describe('help pages', () => {
   it('lists markdown page names alphabetically and reads only listed pages', () => {
@@ -84,5 +84,48 @@ describe('help pages', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('the commands table', () => {
+  const withTrailingSections = [
+    '### Commands',
+    '',
+    '| Command | Description |',
+    '| ------- | ----------- |',
+    '| `agent` | Run a task |',
+    '',
+    'Some prose about disabled commands.',
+    '',
+    '### commands',
+    '',
+    'Detailed prose.',
+  ].join('\n');
+
+  it('returns only the table, dropping trailing prose and command sections', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'help-table-'));
+    try {
+      writeFileSync(path.join(directory, 'commands.md'), withTrailingSections);
+      expect(readCommandTable(directory)).toEqual({
+        kind: 'page',
+        text: '### Commands\n\n| Command | Description |\n| ------- | ----------- |\n| `agent` | Run a task |',
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves a commands page with no table unchanged', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'help-table-'));
+    try {
+      writeFileSync(path.join(directory, 'commands.md'), 'Commands');
+      expect(readCommandTable(directory)).toEqual({ kind: 'page', text: 'Commands' });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('propagates an unreadable result', () => {
+    expect(readCommandTable(path.join(tmpdir(), 'no-such-help-directory'))).toEqual({ kind: 'unreadable' });
   });
 });

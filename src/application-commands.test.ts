@@ -6,7 +6,8 @@ describe('application command inventory', () => {
   const rows = listApplicationCommands();
 
   it('lists built-ins, bundled plugins, help, and native ACP forms alphabetically', () => {
-    expect(rows.some((row) => row.kind === 'builtin' && row.name === 'tab')).toBe(true);
+    expect(rows.some((row) => row.kind === 'native' && row.name === 'tab')).toBe(true);
+    expect(rows.some((row) => row.kind === 'builtin' && row.name === 'tab focus')).toBe(true);
     expect(rows.some((row) => row.kind === 'plugin' && row.name === 'conversations')).toBe(true);
     expect(rows.some((row) => row.kind === 'help' && row.name === 'help')).toBe(true);
     expect(rows.some((row) => row.kind === 'native' && row.name === 'db sqlite query')).toBe(true);
@@ -23,6 +24,12 @@ describe('application command inventory', () => {
     expect(rows.find((row) => row.name === 'browser goto')).toMatchObject({ parent: 'browser', nativeTool: 'browser' });
     expect(rows.find((row) => row.name === 'db sqlite query')).toMatchObject({ parent: 'db sqlite', nativeTool: 'database' });
     expect(rows.find((row) => row.name === 'question approve')?.nativeTool).toBe('question');
+    expect(rows.find((row) => row.name === 'tab')).toEqual({
+      name: 'tab', kind: 'native', aliases: [], forms: ['tab'], nativeTool: 'tab',
+    });
+    expect(resolveApplicationCommand('tab focus notes')).toMatchObject({
+      name: 'tab focus', kind: 'builtin', forms: ['tab focus'],
+    });
     expect(rows.find((row) => row.name === 'file read')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
     expect(rows.find((row) => row.name === 'file glob')).toMatchObject({ kind: 'native', parent: 'file', nativeTool: 'file' });
     expect(rows.find((row) => row.name === 'file grep')).toEqual({

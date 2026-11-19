@@ -170,7 +170,8 @@ describe('RolesTab', () => {
     });
     renderTab(payload);
 
-    expect(NATIVE_ACP_COMMANDS).toHaveLength(19);
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(20);
+    expect(NATIVE_ACP_COMMANDS).toContain('tab');
     expect(NATIVE_ACP_COMMANDS).toContain('notify');
     expect(NATIVE_ACP_COMMANDS).toContain('file grep');
     expect(NATIVE_ACP_COMMANDS).toContain('file patch');
@@ -954,7 +955,8 @@ describe('RolesTab', () => {
     const { intent, publish } = renderTab(payload);
 
     expect(NATIVE_ACP_COMMANDS.indexOf('notify')).toBe(NATIVE_ACP_COMMANDS.length - 1);
-    expect(NATIVE_ACP_COMMANDS.indexOf('subagent')).toBe(NATIVE_ACP_COMMANDS.length - 2);
+    expect(NATIVE_ACP_COMMANDS.indexOf('tab')).toBe(NATIVE_ACP_COMMANDS.length - 2);
+    expect(NATIVE_ACP_COMMANDS.indexOf('subagent')).toBe(NATIVE_ACP_COMMANDS.length - 3);
     fireEvent.click(screen.getByRole('button', { name: 'Add command' }));
     const picker = screen.getByLabelText('Command to add to role research') as HTMLSelectElement;
     expect([...picker.options].map(({ value }) => value).slice(1)).toEqual(

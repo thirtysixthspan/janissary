@@ -2,11 +2,12 @@ import type { Command } from './types.js';
 import { resolveTarget } from './resolve-target.js';
 import { appendCommandOutput } from '../command/append.js';
 import { parseTabCommand } from './parse-tab.js';
+import { isTabCommandLine } from './tab-primer.js';
 import { notify } from '../notifications/index.js';
 
 export const command: Command = {
   name: 'tab',
-  match: (input) => /^tab(?:\s|$)/i.test(input),
+  match: (input) => isTabCommandLine(input),
   samples: [
     'tab', 'tab focus notes', 'tab move notes 2', 'tab pane notes right', 'tab split notes',
     'tab color notes #ff0000', 'tab group notes review', 'tab dock notes left', 'tab undock notes',

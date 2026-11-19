@@ -3,7 +3,8 @@ import type * as FileSystem from 'node:fs';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
+import { DEFAULT_ROLES } from './default-roles.js';
+import { readRolesFile, writeRolesFile } from './roles-file.js';
 import { NATIVE_ACP_COMMANDS } from './shared.js';
 import type { Role } from './shared.js';
 
@@ -58,13 +59,13 @@ describe('reading the roles in effect', () => {
     expect(Object.keys(readJson(homeFile(home)))).toEqual(DEFAULT_ROLES.map((role) => role.name));
   });
 
-  it('creates seven default roles with the exact ask and tell entries and grants', () => {
+  it('creates eight default roles with the exact ask, tell, and user-interface entries and grants', () => {
     const { home, root } = directories();
     readRolesFile(home, root);
 
     const file = readJson(homeFile(home));
     expect(Object.keys(file)).toEqual([
-      'planning', 'research', 'code review', 'implementation', 'documentation', 'ask', 'tell',
+      'planning', 'research', 'code review', 'implementation', 'documentation', 'ask', 'tell', 'user-interface',
     ]);
     expect(file['ask']).toEqual({
       description: 'When you ask a question via ACP.',
@@ -89,11 +90,18 @@ describe('reading the roles in effect', () => {
         'notify',
       ],
     });
+    expect(file['user-interface']).toEqual({
+      description: 'When you ask a model to arrange the user interface via ACP.',
+      entries: file['ask'].entries,
+      commands: ['tab'],
+    });
     expect(file['ask'].commands).toHaveLength(12);
     expect(file['tell'].commands).toHaveLength(19);
-    expect(file['tell'].commands).toEqual([...NATIVE_ACP_COMMANDS]);
+    expect(file['tell'].commands).toEqual(NATIVE_ACP_COMMANDS.filter((command) => command !== 'tab'));
+    expect(file['tell'].commands).not.toContain('tab');
     expect(file['tell'].commands.filter((command) => command === 'subagent')).toHaveLength(1);
     expect(file['tell'].commands.at(-1)).toBe('notify');
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(20);
     expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
 
