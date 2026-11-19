@@ -56,13 +56,6 @@ Risks and things to verify during implementation
 - `question` and `subagent` calls are long-running; MCP call timeouts and ACP prompt cancellation must not orphan a pending answer or child session.
 
 
-* supplement file command with additional sub commands:
-- file list / file ls <path> — directory listing
-- file stat <path> — size, mtime, type, permissions.
-- file exists <path> — cheap existence/type check.
-- file head / file tail <path> -n — first/last N lines without offset math.
-
-
 ## development
 
 ## deferred
