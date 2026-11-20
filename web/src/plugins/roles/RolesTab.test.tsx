@@ -170,7 +170,7 @@ describe('RolesTab', () => {
     });
     renderTab(payload);
 
-    expect(NATIVE_ACP_COMMANDS).toHaveLength(20);
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(25);
     expect(NATIVE_ACP_COMMANDS).toContain('tab');
     expect(NATIVE_ACP_COMMANDS).toContain('notify');
     expect(NATIVE_ACP_COMMANDS).toContain('file grep');

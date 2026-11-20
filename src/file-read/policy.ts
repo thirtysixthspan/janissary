@@ -2,7 +2,7 @@ import type { Stats } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { foldCase } from './canonical.js';
+import { canonicalPath, foldCase } from './canonical.js';
 import { containedAbsolute } from '../path-containment.js';
 import { SECRET_DENY_PATHS } from '../sandbox/paths.js';
 
@@ -82,6 +82,27 @@ export function createRealTargetCheck(realRoot: string): (realTarget: string) =>
     if (!containedAbsolute(realRoot, realTarget)) return 'Outside the workspace';
     if (isSecretPath(path.relative(realRoot, realTarget))) return 'Secret file';
     return isUnderAnchors(anchors, realTarget) ? 'Secret file' : undefined;
+  };
+}
+
+function isAbsentPathError(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+    ? error.code
+    : undefined;
+  return code === 'ENOENT' || code === 'ENOTDIR';
+}
+
+// A missing leaf must not hide an escaping symlink: check the nearest existing ancestor instead.
+export function createRequestedTargetCheck(root: string): (requested: string) => FilePolicyFailure | undefined {
+  const realRoot = canonicalPath(root);
+  const check = createRealTargetCheck(realRoot);
+  return (requested) => {
+    const target = path.resolve(root, requested);
+    try {
+      return check(canonicalPath(target));
+    } catch (error) {
+      return isAbsentPathError(error) ? check(resolveExisting(target)) : 'Outside the workspace';
+    }
   };
 }
 

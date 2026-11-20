@@ -21,6 +21,11 @@ describe('native ACP commands', () => {
       'file write',
       'file edit',
       'file patch',
+      'file list',
+      'file stat',
+      'file exists',
+      'file head',
+      'file tail',
       'web search',
       'web fetch',
       'subagent',
@@ -73,6 +78,15 @@ describe('native ACP commands', () => {
     expect(nativeCommandTool('DB SQLITE QUERY store SELECT 1')).toBe('database');
     expect(nativeCommandName('  FILE   GREP\t--literal TODO  ')).toBe('file grep');
     expect(nativeCommandTool('FILE GREP')).toBe('file');
+  });
+
+  it('resolves the file ls alias to the file list native name', () => {
+    expect(nativeCommandName('file ls docs')).toBe('file list');
+    expect(nativeCommandName('  FILE\tLS  docs  ')).toBe('file list');
+    expect(nativeCommandTool('file ls docs')).toBe('file');
+    expect(isNativeCommand('file ls docs')).toBe(true);
+    expect(nativeCommandName('file lsignore docs')).toBeUndefined();
+    expect(nativeCommandName('file ls-foo docs')).toBeUndefined();
   });
 
   it('classifies malformed grep arguments by the command name', () => {

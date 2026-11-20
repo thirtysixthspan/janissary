@@ -54,6 +54,21 @@ describe('application command inventory', () => {
     expect(resolveApplicationCommand('file patch {')?.name).toBe('file patch');
   });
 
+  it('gives each new file subcommand its own native row under the file parent', () => {
+    const newNames = ['file list', 'file stat', 'file exists', 'file head', 'file tail'];
+    for (const name of newNames) {
+      expect(rows.find((row) => row.name === name)).toEqual({
+        name, kind: 'native', aliases: name === 'file list' ? ['file ls'] : [],
+        forms: [name], parent: 'file', nativeTool: 'file',
+      });
+      expect(resolveApplicationCommand(name)?.name).toBe(name);
+      expect(resolveApplicationCommand(`${name} notes.md`)?.name).toBe(name);
+    }
+    expect(rows.some((row) => row.name === 'file ls')).toBe(false);
+    expect(resolveApplicationCommand('file ls')?.name).toBe('file list');
+    expect(resolveApplicationCommand('file ls notes.md')?.name).toBe('file list');
+  });
+
   it('falls back to the file command for words that only start with file grep', () => {
     expect(resolveApplicationCommand('file greps x'))
       .toMatchObject({ name: 'file', kind: 'builtin', forms: ['file'] });

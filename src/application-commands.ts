@@ -48,7 +48,8 @@ function buildApplicationCommands(): ApplicationCommandRow[] {
   }
   for (const name of NATIVE_ACP_COMMANDS) {
     const parent = name.split(' ').slice(0, -1).join(' ');
-    rows.push({ name, kind: 'native', aliases: [], forms: [name], ...(parent && { parent }), nativeTool: nativeCommandTool(name) });
+    const aliases = name === 'file list' ? ['file ls'] : [];
+    rows.push({ name, kind: 'native', aliases, forms: [name], ...(parent && { parent }), nativeTool: nativeCommandTool(name) });
   }
   return rows.map((row) => ({ ...row, name: normalizeCommandName(row.name), aliases: row.aliases.map((alias) => normalizeCommandName(alias)), forms: row.forms.map((form) => normalizeCommandName(form)), ...(row.parent && { parent: normalizeCommandName(row.parent) }) }))
     .toSorted(compare);

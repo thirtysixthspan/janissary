@@ -354,6 +354,20 @@ describe('frame codec', () => {
     void mismatched;
   });
 
+  it('round-trips a declared read operation request and its finished-text reply', () => {
+    const request: ClientFrame = {
+      type: 'filesystem-request', session: 'files1', request: 'q1',
+      operation: 'stat-path', args: { path: 'src/index.ts' },
+    };
+    expect(roundTrip(request)).toEqual(request);
+
+    const reply: RemoteFrame = {
+      type: 'filesystem-reply', session: 'files1', request: 'q1',
+      result: { text: 'src/index.ts  1.2 KB  file' },
+    };
+    expect(roundTrip(reply)).toEqual(reply);
+  });
+
   describe('grep-files', () => {
     const args = {
       pattern: 'TODO', include: 'src/**', exclude: '**/*.test.ts',
@@ -1203,8 +1217,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 47', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(47);
+  it('is 48', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(48);
   });
 });
 
@@ -1342,6 +1356,12 @@ describe('handshake', () => {
     const line = `${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: REMOTE_PROTOCOL_VERSION + 1, root: '/srv/proj' })}`;
     const parsed = parseHandshake(line);
     expect(parsed).toEqual({ error: expect.stringContaining(String(REMOTE_PROTOCOL_VERSION + 1)) });
+    expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
+  });
+
+  it('refuses a version-47 peer at the exact-version handshake', () => {
+    const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: 47 })}`);
+    expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
   });
 

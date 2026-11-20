@@ -19,6 +19,7 @@ import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
 import { FILE_GLOB_PRIMER } from '../file-glob/command.js';
 import { FILE_GREP_PRIMER } from '../file-grep/command.js';
 import { FILE_PATCH_PRIMER } from '../file-patch/command.js';
+import { FILE_LIST_PRIMER, FILE_STAT_PRIMER, FILE_EXISTS_PRIMER, FILE_HEAD_PRIMER, FILE_TAIL_PRIMER } from './file-primer.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
 import { SUBAGENT_PRIMER } from '../subagent/primer.js';
@@ -38,7 +39,7 @@ describe('createAcpToolTable', () => {
     expect(toolPrimer(tools, NATIVE_ACP_COMMANDS)).toBe([
       'browser primer text',
       'question primer text',
-      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}`,
+      `${FILE_READ_PRIMER}\n\n${FILE_GLOB_PRIMER}\n\n${FILE_GREP_PRIMER}\n\n${FILE_MUTATION_PRIMER}\n\n${FILE_PATCH_PRIMER}\n\n${FILE_LIST_PRIMER}\n\n${FILE_STAT_PRIMER}\n\n${FILE_EXISTS_PRIMER}\n\n${FILE_HEAD_PRIMER}\n\n${FILE_TAIL_PRIMER}`,
       `${WEB_SEARCH_PRIMER}\n\n${WEB_FETCH_PRIMER}`,
       SUBAGENT_PRIMER,
       TAB_PRIMER,
@@ -838,6 +839,67 @@ describe('file grep gate', () => {
     expect(gateCommand(snapshot(grants, rows), toolsFor(grants), GREP)).toStrictEqual({
       refusal: 'Command is disabled: file grep.', refused: 'disabled',
     });
+  });
+});
+
+describe('additional file command tools', () => {
+  const NEW = [
+    ['file list', FILE_LIST_PRIMER, 'file list docs'],
+    ['file stat', FILE_STAT_PRIMER, 'file stat notes.md'],
+    ['file exists', FILE_EXISTS_PRIMER, 'file exists notes.md'],
+    ['file head', FILE_HEAD_PRIMER, 'file head notes.md -n 5'],
+    ['file tail', FILE_TAIL_PRIMER, 'file tail notes.md'],
+  ] as const;
+  const fileTool = (grants: readonly string[]) => createAcpToolTable(grants).find((tool) => tool.runsOn === 'workspace');
+
+  it('adds no separate tool row for any new name', () => {
+    for (const [name] of NEW) {
+      const tools = createAcpToolTable([name]);
+      expect(tools).toHaveLength(1);
+      expect(tools[0].runsOn).toBe('workspace');
+    }
+  });
+
+  it.each(NEW)('shows the %s primer only when that name is granted', (name, primer) => {
+    expect(fileTool([name])!.primer).toBe(primer);
+    expect(fileTool(['file read'])!.primer).not.toContain(primer);
+  });
+
+  it.each(NEW)('recognizes a trailing %s line in the reply predicate and extraction', (name, _primer, line) => {
+    const tools = createAcpToolTable([name]);
+    expect(tools[0].isCommandLine(line)).toBe(true);
+    expect(toolExtractor(tools)(`Let me check.\n${line}`)).toBe(line);
+  });
+
+  it('recognizes the file ls alias in the reply predicate', () => {
+    const tools = createAcpToolTable(['file list']);
+    expect(tools[0].isCommandLine('file ls docs')).toBe(true);
+  });
+
+  it('extracts the file ls alias and gates it as file list', () => {
+    const grants = ['file list'];
+    const tools = createAcpToolTable(grants);
+    expect(toolExtractor(tools)('Let me check.\nfile ls docs')).toBe('file ls docs');
+    const snapshot: AcpRunSnapshot = {
+      kind: 'core', role: 'tell', roleName: 'reader', grants, rows: [], withoutTools: false,
+    };
+    expect(gateCommand(snapshot, tools, 'file ls docs')).toStrictEqual({ runsOn: 'workspace' });
+  });
+
+  it.each([
+    ['granted', ['file']],
+    ['ungranted', []],
+  ])('refuses agent new file commands when %s, echoing the whole line', (_label, grants) => {
+    const agent: AcpRunSnapshot = { kind: 'agent', grants, askUser: false };
+    for (const command of [
+      'file list docs', 'file ls docs', 'file stat notes.md', 'file exists notes.md',
+      'file head notes.md -n 5', 'file tail notes.md',
+      'FILE LIST docs', '/file stat notes.md', '  file\texists notes.md  ',
+    ]) {
+      expect(gateCommand(agent, [], command)).toStrictEqual({
+        refusal: `Agent: command not permitted: ${command}.`,
+      });
+    }
   });
 });
 

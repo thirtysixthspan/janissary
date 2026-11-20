@@ -56,6 +56,11 @@ export const resultDecoders = {
   'read-file': decodeResult<{ content: string }>((value): value is { content: string } => record(value) && typeof value.content === 'string'),
   'read-lines': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'glob-paths': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
+  'list-directory': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
+  'stat-path': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
+  'path-exists': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
+  'head-lines': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
+  'tail-lines': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'grep-files': decodeResult<{ text: string }>((value): value is { text: string } => record(value) && typeof value.text === 'string'),
   'web-search': decodeResult<{ text: string }>((value): value is { text: string } => record(value)
     && typeof value.text === 'string' && value.text.length > 0),

@@ -38,7 +38,7 @@
 | `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that directory's changes; `diff on <tab name>` opens that tab's workspace diff |
 | `edit` | Open a file for editing (`edit <file>[:line]`); a bare existing runscript name opens it when no exact file exists |
 | `execute` | Run an existing project runscript immediately in the managed system shell (`execute <name>`) |
-| `file` | Use a `file` subcommand to read, search, write, and patch project files; bare `file` prints its usage |
+| `file` | Use a `file` subcommand to read, search, write, and patch project files, or to inspect a path with `list`/`ls`, `stat`, `exists`, `head`/`tail [-n]`; bare `file` prints its usage |
 | `file edit` | `file edit <JSON>` applies a single-file edit |
 | `file glob` | `file glob <pattern>` lists paths matching a glob |
 | `file grep` | `file grep <pattern>` searches file contents |
@@ -161,6 +161,6 @@ Bare `commands` opens the Commands tab, or focuses it when already open, and re-
 
 The selector is read only when a name follows it: `commands disable agent` disables the `agent` command, while `commands disable agent agent` is an agent-access change and is refused with `Not a native ACP command: agent.` A change writes to the effective `commands.json`; with no usable file it is refused with `commands.json at <path> is unusable — fix the file before editing commands.`, and a failed write replies `Could not write commands.json at <path>.` without changing the setting.
 
-The table has a row for each native file command (`file read`, `file glob`, `file grep`, `file write`, `file edit`, `file patch`), all under the `file` parent, and rows for `web search` and `web fetch` under the parentless `web`. Disabling one of these rows refuses just that command, typed or as an agent tool, while disabling the parent refuses all of its children.
+The table has a row for each native file command (`file read`, `file glob`, `file grep`, `file write`, `file edit`, `file patch`, `file list`, `file stat`, `file exists`, `file head`, `file tail`), all under the `file` parent; `file ls` is an alias of `file list` and has no row of its own. It also has rows for `web search` and `web fetch` under the parentless `web`. Disabling one of these rows refuses just that command, typed or as an agent tool, while disabling the parent refuses all of its children.
 
 The tab never docks itself; `tab dock` can dock it. The `commands` command can disable itself, and can be re-enabled from its open tab. Once the tab is closed, a disabled `commands` is refused like any other command until the effective `commands.json` file is edited by hand.

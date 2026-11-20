@@ -11,32 +11,10 @@ import type { NavigatorListener } from '../remote/channel/types.js';
 import type { ClientFrame, RemoteFrame, ServerFrame } from '../remote/protocol-frames.js';
 import { decodeFrame, encodeFrame } from '../remote/protocol.js';
 import { RemoteFileNavigators } from '../remote/serve-file-navigator.js';
+import { fakeChannel, type RequestFrame } from '../testing/fake-remote-channel.js';
 import { command } from './file.js';
 
 type FakeTab = { label: string; workspaceDir?: string; remote?: unknown };
-
-function fakeChannel() {
-  const sent: ClientFrame[] = [];
-  let listener: NavigatorListener | undefined;
-  const attachNavigator = vi.fn((_id: string, value: NavigatorListener) => { listener = value; });
-  const channel = {
-    attachNavigator,
-    detachNavigator: vi.fn(),
-    send: (frame: ClientFrame) => { sent.push(frame); },
-  };
-  const requests = () => sent.filter((frame) => frame.type === 'filesystem-request');
-  const reply = (result: unknown, error?: string) => {
-    const request = requests().at(-1);
-    if (request?.type !== 'filesystem-request') throw new Error('No request was sent.');
-    listener?.onReply({
-      type: 'filesystem-reply', session: request.session, request: request.request,
-      ...(error ? { error } : { result }),
-    });
-  };
-  return { channel, attachNavigator, requests, reply, listener: () => listener };
-}
-
-type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
 function wireChannel(root: string) {
   const entries: { line: string; frame: RemoteFrame }[] = [];
@@ -326,6 +304,58 @@ describe('file command run', () => {
         entry: { input: 'file grep needle', output: 'notes.md:1: workspace needle' },
         invocationId: 'inv-1',
       }]);
+    });
+  });
+
+  describe('new subcommand dispatch', () => {
+    beforeEach(() => {
+      tabs = [{ label: 'janus' }];
+      writeFileSync(path.join(root, 'a.md'), 'one\ntwo\n');
+      mkdirSync(path.join(root, 'docs'));
+      writeFileSync(path.join(root, 'docs', 'b.md'), '');
+    });
+
+    it('dispatches list and its ls alias to the list executor', async () => {
+      expect(await run('file list .')).toContain('a.md');
+      appended = [];
+      expect(await run('file ls .')).toContain('a.md');
+    });
+
+    it('dispatches stat, exists, head, and tail to their executors', async () => {
+      expect(await run('file stat a.md')).toContain('a.md');
+      appended = [];
+      expect(await run('file exists a.md')).toBe('file');
+      appended = [];
+      expect(await run('file head a.md -n 1')).toContain('1\tone');
+      appended = [];
+      expect(await run('file tail a.md -n 1')).toBe('2\ttwo');
+    });
+
+    it('keeps the read usage line for lookalikes of the new subcommands', async () => {
+      for (const line of [
+        'file listing .', 'file status a.md', 'file existing a.md',
+        'file heading a.md', 'file tailing a.md', 'file lss .',
+      ]) {
+        expect(await run(line)).toBe(FILE_READ_USAGE);
+        appended = [];
+      }
+    });
+
+    it('appends one transcript entry with the exact typed input for every new command', async () => {
+      for (const line of [
+        'file list .', 'file ls .', 'file stat a.md', 'file exists a.md',
+        'file head a.md -n 1', 'file tail a.md -n 1',
+      ]) {
+        appended = [];
+        await run(line);
+        expect(appended).toEqual([{ input: line, output: expect.any(String) }]);
+      }
+    });
+
+    it('declares a sample for each new subcommand', () => {
+      for (const subcommand of ['list', 'stat', 'exists', 'head', 'tail']) {
+        expect(command.samples.some((sample) => sample.startsWith(`file ${subcommand} `))).toBe(true);
+      }
     });
   });
 

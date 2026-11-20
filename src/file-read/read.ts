@@ -46,6 +46,18 @@ export function readWorkspaceLines(root: string, args: FileReadArgs): string {
   return formatFileLines(text, args);
 }
 
+export type TextReadResult = { text: string } | { error: string };
+
+export function readWorkspaceText(root: string, requested: string): TextReadResult {
+  const lexicalFailure = checkLexicalPath(root, requested);
+  if (lexicalFailure !== undefined) return { error: `${lexicalFailure}: ${requested}.` };
+  const bytes = loadBytes(root, requested);
+  if (typeof bytes === 'string') return { error: `${bytes}: ${requested}.` };
+  const text = decodeText(bytes);
+  if (text === undefined) return { error: `Not a text file: ${requested}.` };
+  return { text };
+}
+
 export function readWorkspaceCommand(root: string, input: string): string {
   const parsed = parseFileRead(input);
   if ('error' in parsed) return parsed.error;
