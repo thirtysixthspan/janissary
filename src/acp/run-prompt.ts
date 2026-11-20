@@ -17,6 +17,14 @@ import { globFilesInTab } from '../file-glob/tab-glob.js';
 import { isFileGlobCommandLine } from '../file-glob/command.js';
 import { grepFilesInTab } from '../file-grep/tab-grep.js';
 import { isFileGrepCommandLine } from '../file-grep/command.js';
+import { isFileListCommandLine } from '../file-list/command.js';
+import { listFilesInTab } from '../file-list/tab-list.js';
+import { isFileStatCommandLine } from '../file-stat/command.js';
+import { statFileInTab } from '../file-stat/tab-stat.js';
+import { isFileExistsCommandLine } from '../file-exists/command.js';
+import { fileExistsInTab } from '../file-exists/tab-exists.js';
+import { isFileHeadTailCommandLine } from '../file-head-tail/command.js';
+import { headTailInTab } from '../file-head-tail/tab-head-tail.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { runWebInTab } from '../web/tab-web.js';
 import { coreActivity } from './record-feed.js';
@@ -105,6 +113,10 @@ export function runCorePrompt(
       if (isFileMutationCommandLine(normalized)) return mutateFileInTab(managers, label, command);
       if (isFileGlobCommandLine(normalized)) return globFilesInTab(managers, label, command, request.abort.signal);
       if (isFileGrepCommandLine(normalized)) return grepFilesInTab(managers, label, command);
+      if (isFileListCommandLine(normalized)) return listFilesInTab(managers, label, command);
+      if (isFileStatCommandLine(normalized)) return statFileInTab(managers, label, command);
+      if (isFileExistsCommandLine(normalized)) return fileExistsInTab(managers, label, command);
+      if (isFileHeadTailCommandLine(normalized)) return headTailInTab(managers, label, command);
       return readFileInTab(managers, label, command);
     },
   };
