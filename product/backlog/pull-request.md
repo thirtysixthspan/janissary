@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bring the agent-command functional spec in line with batch execution so it no longer documents single-command extraction and the old correction sentence.
-
-Existing Issue: product/specs/agent-command.md still states that a run's command comes from the last closed labelled block, that zero or more than one command in a block draws the old "exactly one command inside a final fenced block" correction, and that a later unclosed block does not suppress the last closed one, all of which the delivered loop now does the opposite of. Severity: 6/10
-
-Existing Risk: 6/10 - An agent or reader using that spec as the contract for agent runs will expect one command per reply and the old correction wording, and will misread parallel batches and whole-reply correction as regressions.
-
-Proposal Risk: 2/10 - This is prose only with no behavior change; the residual risk is quoted strings drifting from the code, which a direct comparison against commandProtocolPrimer and CORRECTION_PROMPT catches.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2137 "update the agent-command spec to describe parallel command batches". Rewrite the local-task-execution paragraphs of product/specs/agent-command.md that describe labelled-block extraction to match the behavior in src/acp/loop.ts and src/acp/command-block.ts: every closed `janissary` block in a reply forms a batch whose commands run in parallel, each finished command gets its own `Output of` follow-up and tool entry, each command spends one step against maxToolTurns, an unclosed labelled block or any empty, multiple-command, or unowned block corrects the whole reply with the new sentence from CORRECTION_PROMPT, and a reply with no block is the final answer. Keep the quoted primer and correction text character-for-character identical to commandProtocolPrimer and CORRECTION_PROMPT, leave the scope-limited product/specs/acp.md untouched, and make no source changes. No colocated test covers these prose claims, so verify by comparing the strings directly with the code.
-
-
 * Deliver over-budget refusals after the results of commands that ran, as the description's example shows, rather than ahead of them.
 
 Existing Issue: In src/acp/loop.ts launchBatch pushes refusals for over-budget commands into the result queue at launch time while results of commands that actually run are queued only when their promises settle, so with asynchronous commands the refusal follow-ups are delivered before results that finished earlier. Severity: 4/10
