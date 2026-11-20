@@ -45,6 +45,17 @@ const disabledFileGlob = {
   }],
 } as const satisfies CommandSettingsSnapshot;
 
+const disabledFileList = {
+  ...snapshot,
+  commands: [{
+    name: 'file', kind: 'builtin', aliases: [], forms: ['file'],
+    enabled: true, agentAccess: true, effectiveEnabled: true, effectiveAgentAccess: true,
+  }, {
+    name: 'file list', kind: 'native', aliases: ['file ls'], forms: ['file list'], parent: 'file',
+    enabled: false, agentAccess: true, effectiveEnabled: false, effectiveAgentAccess: true,
+  }],
+} as const satisfies CommandSettingsSnapshot;
+
 describe('disabledApplicationCommand', () => {
   it('resolves a space-separated line without a fallback', () => {
     expect(disabledApplicationCommand('ask hello', disabledAsk)?.name).toBe('ask');
@@ -63,6 +74,20 @@ describe('disabledApplicationCommand', () => {
   it('refuses a disabled file glob row without disabling bare file', () => {
     expect(disabledApplicationCommand('file glob *.ts', disabledFileGlob)?.name).toBe('file glob');
     expect(disabledApplicationCommand('file', disabledFileGlob)).toBeUndefined();
+  });
+
+  it('refuses a disabled file list row through both spellings without disabling bare file', () => {
+    expect(disabledApplicationCommand('file list', disabledFileList)?.name).toBe('file list');
+    expect(disabledApplicationCommand('file ls', disabledFileList)?.name).toBe('file list');
+    expect(disabledApplicationCommand('file ls notes.md', disabledFileList)?.name).toBe('file list');
+    expect(disabledApplicationCommand('file', disabledFileList)).toBeUndefined();
+  });
+
+  it('refuses both file list spellings when the file parent is disabled', () => {
+    const settings = current({ file: { enabled: false } });
+    expect(effectiveCommandSetting(settings, 'file list').effectiveEnabled).toBe(false);
+    expect(disabledApplicationCommand('file list', settings)?.name).toBe('file list');
+    expect(disabledApplicationCommand('file ls', settings)?.name).toBe('file list');
   });
 
   it('does not refuse when the fallback row is enabled', () => {

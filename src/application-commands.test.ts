@@ -58,12 +58,15 @@ describe('application command inventory', () => {
     const newNames = ['file list', 'file stat', 'file exists', 'file head', 'file tail'];
     for (const name of newNames) {
       expect(rows.find((row) => row.name === name)).toEqual({
-        name, kind: 'native', aliases: [], forms: [name], parent: 'file', nativeTool: 'file',
+        name, kind: 'native', aliases: name === 'file list' ? ['file ls'] : [],
+        forms: [name], parent: 'file', nativeTool: 'file',
       });
       expect(resolveApplicationCommand(name)?.name).toBe(name);
       expect(resolveApplicationCommand(`${name} notes.md`)?.name).toBe(name);
     }
     expect(rows.some((row) => row.name === 'file ls')).toBe(false);
+    expect(resolveApplicationCommand('file ls')?.name).toBe('file list');
+    expect(resolveApplicationCommand('file ls notes.md')?.name).toBe('file list');
   });
 
   it('falls back to the file command for words that only start with file grep', () => {

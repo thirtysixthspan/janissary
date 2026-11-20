@@ -59,6 +59,34 @@ describe('completeFileReadCommand', () => {
       .toEqual(['exists', 'grep', 'head', 'list', 'ls', 'read', 'stat', 'tail']);
   });
 
+  it('hides list and ls from completion when file list is disabled', () => {
+    const policy = policyWith({ 'file list': { enabled: false } });
+    expect(policy.allows('file list')).toBe(false);
+    expect(policy.allows('file ls')).toBe(false);
+    const matches = completeFileReadCommand(at('file '), root, policy)?.matches;
+    expect(matches).not.toContain('list');
+    expect(matches).not.toContain('ls');
+    expect(matches).toContain('read');
+  });
+
+  it('offers list and ls again when file list is enabled', () => {
+    const policy = policyWith({ 'file list': { enabled: true } });
+    expect(policy.allows('file list')).toBe(true);
+    expect(policy.allows('file ls')).toBe(true);
+    const matches = completeFileReadCommand(at('file '), root, policy)?.matches;
+    expect(matches).toContain('list');
+    expect(matches).toContain('ls');
+  });
+
+  it('hides both file list spellings when the file parent is disabled', () => {
+    const policy = policyWith({ file: { enabled: false } });
+    expect(policy.allows('file list')).toBe(false);
+    expect(policy.allows('file ls')).toBe(false);
+    const matches = completeFileReadCommand(at('file '), root, policy)?.matches;
+    expect(matches).not.toContain('list');
+    expect(matches).not.toContain('ls');
+  });
+
   it('offers each new subcommand only when enabled by policy', () => {
     for (const word of ['list', 'ls', 'stat', 'exists', 'head', 'tail']) {
       const policy: CompletionPolicy = { allows: (input) => input !== `file ${word}`, names: [] };
