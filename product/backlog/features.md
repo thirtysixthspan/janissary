@@ -2,8 +2,6 @@
 
 ## ready
 
-* subagents are launched with a role. a subagent command can only execute subagent commands using the same role. this should be enforced. 
-
 ## development
 
 ## deferred
