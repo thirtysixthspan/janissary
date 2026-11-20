@@ -79,7 +79,7 @@ export function startRemoteLoop(
     ranCommand: (command, result, workspace, refused) => {
       if (aborted()) return;
       for (const [request, call] of pending) {
-        if (call.command === command) {
+        if (call.command === command && call.settled) {
           pending.delete(request);
           return;
         }
