@@ -130,3 +130,7 @@ Live checks Step 9 will make:
 - Migration or cleanup of persisted `commands.json` settings, command history, or schedules that may still contain the text `newfile` — tolerated by the existing decoders.
 - The RESOLVED backlog entry naming `help/newfile.md`, completed plans, and `CHANGELOG.md` — historical records.
 - Other `named` concepts (tab display aliases, renamed files, monitor names); only `EditorView.named` is in scope.
+
+## Rebase adaptation
+
+After this pull request was opened, master merged "feat(commands)!: remove the newdir command" (72353dfb), which removed `newdir` from the same command registry entry, command-form declaration, help table row and page, documentation passages, and `OpenFileManager` helper and tests that this plan was trimming around. The rebase conflicts were resolved by applying both removals: `newfile` is gone per this plan and `newdir` stays gone per master. The instructions above to keep the `newdir` row, example, and paragraph, and to keep `nextFreeName` because `newDirectory` uses it, no longer apply — master had already removed `newDirectory`, so `OpenFileManager`'s now-unused `nextFreeName` import was removed with it. The stale `newfile meeting notes.md` example in the shared "Relative paths" sentence of `opening-files.md` was also dropped. The plan's goal — removing the `newfile` command and the editor `named` flag — is unchanged and fully met.
