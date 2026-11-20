@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle over-budget refusals that are discarded when the agent answers before a batch's follow-up queue drains.
-
-Existing Issue: When a batch straddles the step cap, the loop queues a refusal for each over-budget command but a final answer to the first delivered follow-up calls finish, which clears the queue, so those refusals are never sent and the run ends as answered instead of capped. Severity: 7/10
-
-Existing Risk: 6/10 - The agent never learns why its extra commands were skipped and may reissue them in a new prompt, while remote callers and telemetry receive an answered end reason for a run that actually hit the cap.
-
-Proposal Risk: 3/10 - Draining the queue before terminating keeps the abort path intact but adds a termination condition a later edit could break, so the colocated loop tests must pin both the capped reason and the final-answer path.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2137 "deliver over-budget refusals even when the agent answers before the follow-up queue drains". In src/acp/loop.ts, track when a launched batch produced over-budget refusals and make the terminal transition wait until the result queue is empty before calling h.finished with the capped reason, without discarding still-pending follow-ups when a reply with no command arrives; keep finish idempotent and preserve the abort early-out and the answered path for a reply with no commands and no pending work. Add a colocated test in src/acp/loop.test.ts with a scripted session whose second reply is a final answer rather than the repeated batch the current over-budget test relies on, and assert that every over-budget command gets exactly one `ACP: step limit reached; command not run.` follow-up and that the last event is finished with the capped reason. Keep the existing over-budget, correction, and abort tests passing, and check the acp-run-end reason expectations in src/remote/serve-acp-loop.test.ts.
-
-
 * Bring the agent-command functional spec in line with batch execution so it no longer documents single-command extraction and the old correction sentence.
 
 Existing Issue: product/specs/agent-command.md still states that a run's command comes from the last closed labelled block, that zero or more than one command in a block draws the old "exactly one command inside a final fenced block" correction, and that a later unclosed block does not suppress the last closed one, all of which the delivered loop now does the opposite of. Severity: 6/10

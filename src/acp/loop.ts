@@ -86,6 +86,7 @@ export function runAcpToolLoop(
     launching = true;
     for (const { command } of commands) {
       if (step >= maxSteps) {
+        pendingCap = true;
         queue.push({ command, output: REFUSAL, label: label(command) });
         continue;
       }
@@ -132,7 +133,7 @@ export function runAcpToolLoop(
         } else if (result.kind === 'batch') {
           if (step >= maxSteps) pendingCap = true;
           else launchBatch(result.commands);
-        } else {
+        } else if (queue.length === 0 && inFlight === 0 && !pendingCap) {
           finish('answered');
         }
         pump();

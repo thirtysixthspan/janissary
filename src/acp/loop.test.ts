@@ -534,6 +534,22 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
   });
 
+  it('delivers every over-budget refusal before finishing capped when the agent answers early', () => {
+    const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```\n\n```janissary\nnotify three\n```';
+    const { session, sent } = makeSession([batch, 'All done.']);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => 'r');
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify one');
+    const refusals = sent.filter((prompt) => prompt.includes('ACP: step limit reached; command not run.'));
+    expect(refusals).toHaveLength(2);
+    expect(refusals[0]).toContain('Output of `notify two`:\nACP: step limit reached; command not run.');
+    expect(refusals[1]).toContain('Output of `notify three`:\nACP: step limit reached; command not run.');
+    expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
+  });
+
   it('sends the correction and runs nothing for a malformed reply without spending a step', () => {
     const { session, sent } = makeSession([
       '```janissary\njust prose\n```',
