@@ -20,15 +20,18 @@ const defaults: FileGrepArgs = {
   limit: 100,
   path: undefined,
 };
-const flagCases: Array<[string, Partial<FileGrepArgs>]> = [
+const singleUseFlagCases: Array<[string, Partial<FileGrepArgs>]> = [
   ['--literal', { literal: true }],
   ['--word', { word: true }],
   ['--case-sensitive', { caseSensitive: true }],
   ['--path ./Src/', { path: './Src/' }],
-  ['--include *.ts,*.tsx', { include: '*.ts,*.tsx' }],
-  ['--exclude **/Tests/**', { exclude: '**/Tests/**' }],
   ['--limit 7', { limit: 7 }],
 ];
+const repeatableFlagCases: Array<[string, Partial<FileGrepArgs>]> = [
+  ['--include *.ts,*.tsx', { include: '*.ts,*.tsx' }],
+  ['--exclude **/Tests/**', { exclude: '**/Tests/**' }],
+];
+const flagCases = [...singleUseFlagCases, ...repeatableFlagCases];
 const valuedFlags = ['--path', '--include', '--exclude', '--limit'];
 
 describe('parseFileGrep', () => {
@@ -111,8 +114,35 @@ describe('parseFileGrep', () => {
     expect(parseFileGrep(`file grep ${flag}`)).toStrictEqual(usage);
   });
 
-  it.each(flagCases)('refuses a repeated flag before the pattern: %s', (flag) => {
+  it.each(singleUseFlagCases)('refuses a repeated flag before the pattern: %s', (flag) => {
     expect(parseFileGrep(`file grep ${flag} ${flag} needle`)).toStrictEqual(usage);
+  });
+
+  it.each([
+    ['include', '--include *.ts --include *.tsx', '*.ts,*.tsx'],
+    ['exclude', '--exclude **/Tests/** --exclude **/*.d.ts', '**/Tests/**,**/*.d.ts'],
+  ] as const)('accumulates repeated --%s flags', (key, flags, expected) => {
+    expect(parseFileGrep(`file grep ${flags} needle`)).toStrictEqual({ ...defaults, [key]: expected });
+  });
+
+  it('accumulates repeated include and exclude flags together in the order typed', () => {
+    expect(parseFileGrep('file grep --include *.ts --exclude **/Tests/** --include *.tsx --exclude **/*.d.ts needle')).toStrictEqual({
+      ...defaults, include: '*.ts,*.tsx', exclude: '**/Tests/**,**/*.d.ts',
+    });
+  });
+
+  it('keeps commas written inside a repeated flag value', () => {
+    expect(parseFileGrep('file grep --include src/*.ts,*.tsx --include *.mts --include *.cts needle')).toStrictEqual({
+      ...defaults, include: 'src/*.ts,*.tsx,*.mts,*.cts',
+    });
+  });
+
+  it.each(['--include', '--exclude'])('refuses a repeated %s with no value', (flag) => {
+    expect(parseFileGrep(`file grep ${flag} *.ts ${flag}`)).toStrictEqual(usage);
+  });
+
+  it.each(['--include', '--exclude'])('refuses a repeated %s with a flag-looking value', (flag) => {
+    expect(parseFileGrep(`file grep ${flag} *.ts ${flag} --word needle`)).toStrictEqual(usage);
   });
 
   it.each(flagCases)('refuses uppercase flag spelling: %s', (flag) => {

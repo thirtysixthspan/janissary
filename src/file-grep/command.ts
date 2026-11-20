@@ -28,6 +28,12 @@ const stringFlags = new Map<string, 'path' | 'include' | 'exclude'>([
   ['--exclude', 'exclude'],
 ]);
 
+const repeatableFlags = new Set(['--include', '--exclude']);
+
+function appendGlob(args: FileGrepArgs, key: 'include' | 'exclude', value: string): void {
+  args[key] = args[key] === '' ? value : `${args[key]},${value}`;
+}
+
 function scanFlag(args: FileGrepArgs, flag: string, tokens: RegExp, input: string): boolean {
   const switchKey = switches.get(flag);
   if (switchKey !== undefined) {
@@ -39,7 +45,11 @@ function scanFlag(args: FileGrepArgs, flag: string, tokens: RegExp, input: strin
   const value = tokens.exec(input)?.[0];
   if (value === undefined || value.startsWith('--')) return false;
   if (stringKey !== undefined) {
-    args[stringKey] = value;
+    if (stringKey === 'include' || stringKey === 'exclude') {
+      appendGlob(args, stringKey, value);
+    } else {
+      args[stringKey] = value;
+    }
     return true;
   }
   const limit = positiveInteger(value);
@@ -75,7 +85,7 @@ function scanArguments(input: string, offset: number): FileGrepArgs | undefined 
       args.pattern = input.slice(token.index);
       return args;
     }
-    if (seen.has(flag) || !scanFlag(args, flag, tokens, input)) return undefined;
+    if ((seen.has(flag) && !repeatableFlags.has(flag)) || !scanFlag(args, flag, tokens, input)) return undefined;
     seen.add(flag);
   }
   return undefined;

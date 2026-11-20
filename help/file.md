@@ -100,13 +100,13 @@ A missing pattern, a second pattern, an unknown or repeated flag, a `--path` wit
 
 `file grep <pattern>` prints one line per matching line, `<path>:<line>: <preview>`, such as `src/file-read/command.ts:9: export const FILE_READ_USAGE = …`. It searches the same root as `file read`: the tab's workspace, or the project directory when the tab has none. A remote tab searches only its remote workspace on the remote machine, never the local disk.
 
-Flags come first, in any order, and each may appear once. The first token that is not one of these flags starts the pattern, and the rest of the line, including internal spaces, is the pattern. A `--` ends the flags, so `file grep --literal -- --limit` searches for `--limit`. Without `--`, an unknown flag before the pattern prints the usage line. Flag values are single tokens with no whitespace.
+Flags come first, in any order. `--include` and `--exclude` may each appear more than once; every other flag may appear once. The first token that is not one of these flags starts the pattern, and the rest of the line, including internal spaces, is the pattern. A `--` ends the flags, so `file grep --literal -- --limit` searches for `--limit`. Without `--`, an unknown flag before the pattern prints the usage line. Flag values are single tokens with no whitespace.
 
 - `--literal` matches the pattern as fixed text, so regular-expression punctuation searches for itself.
 - `--word` requires the match to sit on a word boundary.
 - `--case-sensitive` turns on case sensitivity; matching is case-insensitive by default.
 - `--path <path>` searches only that folder, or that single file. `.`, `./src`, and `src/` are accepted.
-- `--include <globs>` and `--exclude <globs>` filter by comma-separated globs such as `*.ts,*.tsx`. A glob without a slash matches a name at any depth; one with a slash is anchored to `--path`. A plain name selects a whole folder, exclude wins over include, and the comma always separates patterns, so write `*.js,*.jsx` rather than `*.{js,jsx}`.
+- `--include <globs>` and `--exclude <globs>` filter by comma-separated globs such as `*.ts,*.tsx`. Either flag may repeat, and the values combine in the order typed, so `--include *.ts --include *.tsx` selects the same files as `--include *.ts,*.tsx`. A glob without a slash matches a name at any depth; one with a slash is anchored to `--path`. A plain name selects a whole folder, exclude wins over include, and the comma always separates patterns, so write `*.js,*.jsx` rather than `*.{js,jsx}`.
 - `--limit <n>` prints at most `n` rows, from 1 to 250, and defaults to 100.
 
 The pattern is a JavaScript regular expression, matched one line at a time: `^` and `$` anchor to that line, and no pattern spans two lines. A malformed pattern prints the engine's message plus `Use --literal to search for the text as typed.`. A pattern that can match empty text prints `Pattern matches empty text, so it would match every line: <pattern>.` and searches nothing.
@@ -119,7 +119,7 @@ Searches use the same file set as Quick Open: tracked and untracked files git do
 
 A bad `--path` prints one line naming it as you typed it: `Path not found: <path>.` when nothing exists there, and `Outside the workspace: <path>.` for an absolute path, a path that leaves the root, or a path whose real location is outside the root. A `--path` naming a single file is filtered like a directory search: when that file is git-ignored, secret, binary, over 2 MB, or excluded by `--include` or `--exclude`, the output is `(no matches)` with no reason. A symbolic link named as `--path` is skipped the same way when it is dangling or resolves inside the root, while one that resolves outside the root is refused as `Outside the workspace: <path>.`.
 
-Malformed arguments print `Usage: file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>`. A missing pattern, an unknown flag before the pattern, a repeated flag, a flag with no value, and a `--limit` that is not a whole number from 1 to 250 all print it.
+Malformed arguments print `Usage: file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>`. A missing pattern, an unknown flag before the pattern, a repeated flag other than `--include` or `--exclude`, a flag with no value, and a `--limit` that is not a whole number from 1 to 250 all print it.
 
 On a remote tab, `Remote connection unavailable.` is printed when the tab has no live connection or its workspace is still being prepared. A connection that drops or stops answering mid-search prints `The remote connection ended.` or `The remote machine did not answer in time.`.
 
