@@ -79,3 +79,7 @@ The five remote operations need a frame union member and argument shape in `src/
 
 - Run `$janissary/scripts/run.mjs check-diff` and confirm it is clean after the source changes and after the tests.
 - By hand in a tab: run each new command and its alias on a local tab with a workspace, on a local tab without one, and on a remote tab; confirm the output matches the agreed wording, that `-n` counts work, that a missing path and a path outside the root print the expected refusal, and that the agent tool forms answer the same way.
+
+## Rebase adaptation
+
+`master` moved `DEFAULT_ROLES` out of `src/plugins/roles/roles-file.ts` into a new `src/plugins/roles/default-roles.ts` module and added the `notify` native command, so the built-in `ask` and `tell` grants for the five new file names are now made in `default-roles.ts` (which `roles-file.ts` imports) instead of the inline array the subplans describe. The `filePrimer` extraction remains at `src/acp/file-primer.ts`. Master also expanded `help/commands.md` into per-subcommand rows, so the new names are documented in the `file` row while master's separate rows are preserved. Native-vocabulary and default-grant count assertions were updated for the merged 25-command vocabulary, 17-command `ask` list, and 24-command `tell` list. All behavior and wording from the plan are otherwise unchanged.
