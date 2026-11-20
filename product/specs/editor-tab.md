@@ -40,7 +40,7 @@ up/down, etc.) are not.
 
 - **Metadata header** — a single row showing the file's name, size, and location. The location is
   abbreviated using the `$root` and `~` shortcuts (see `root-path.md`), the same as elsewhere the
-  application displays a path. A git-synced file lives in the shared git-sync clone, so its location
+  application displays a path. A git-synced file lives in the shared git-sync worktree, so its location
   reads as `$git-sync/<rest>` rather than `$root/workspace/git-sync/<rest>`.
 - The metadata header groups every action at the right edge of that same row: the
   reveal-in-file-navigator icon, the sync-status icon when present, save, commit to origin,
@@ -76,7 +76,7 @@ navigator is the file's only live route back to the remote host. When a re-root 
 workspace has left the file outside the current root, the navigator re-roots to its workspace root
 first and the file is selected there. A source navigator that has closed or been retargeted leaves
 the cached copy with no route back, which is the blocked state above. A file synced with GitHub is
-revealed inside the shared git-sync clone that holds it, under the same local root rule, with no
+revealed inside the shared git-sync worktree that holds it, under the same local root rule, with no
 mapping back to the main checkout.
 
 When the file, or a directory above it, has gone from disk since the editor opened it, the click
@@ -614,7 +614,7 @@ opening a second synced file never creates a second copy of the shared workspace
 stays open.
 
 The shared workspace pulls from and pushes to the same default branch the second condition checks
-against: the branch its own clone records as the remote's default. When that cannot be determined,
+against: the branch its own worktree records as the remote's default. When that cannot be determined,
 it falls back to the branch the shared workspace has checked out, and then to `master`. The branch
 is worked out once, when the shared workspace is ready, and used for every sync that follows; a
 workspace discarded after a failed provisioning attempt works it out again once the fresh one is
@@ -631,8 +631,10 @@ file changed as a result refreshes automatically, exactly like an ordinary exter
 "Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always,
 and its next save shows the overwrite prompt instead of writing over the pulled content. Every pull
 into the shared workspace re-checks every open synced tab straight away rather than waiting for the
-file change to be noticed. The shared workspace is a depth-1 sparse clone containing the `product/`
-directory, so it starts with only the latest commit and the files git-sync is configured to sync.
+file change to be noticed. The shared workspace is a worktree of the project repository, checked out
+detached at the remote's default branch and sparse to the `product/` directory, so it starts at the
+latest synced commit and holds only the files git-sync is configured to sync. It shares the
+repository's objects and remote rather than cloning a second copy.
 
 Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
 flash is not delayed by anything that happens next. After that, the saved file alone is committed

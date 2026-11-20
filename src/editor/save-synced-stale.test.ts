@@ -57,7 +57,7 @@ beforeEach(() => {
   managers.shellTranscript = { isWriting: () => false } as unknown as Managers['shellTranscript'];
   managers.tab = new TabManager(managers);
   managers.editorWatch = new EditorWatchManager(managers);
-  const workspace = { create: () => ({ dir: shared, ready: Promise.resolve() }), remove: vi.fn() };
+  const workspace = { createWorktree: () => ({ dir: shared, ready: Promise.resolve() }), remove: vi.fn() };
   managers.gitSync = new GitSync(workspace as unknown as WorkspaceManager);
 });
 
@@ -77,7 +77,7 @@ function openSyncedTab(): { url: string; file: string } {
 const originContent = () => git(origin, 'show', `master:${RELATIVE}`);
 
 describe('saving a git-synced editor tab', () => {
-  it('refuses a stale buffer instead of committing it over upstream work the clone already pulled', async () => {
+  it('refuses a stale buffer instead of committing it over upstream work the worktree already pulled', async () => {
     const { url, file } = openSyncedTab();
     const buffer = BASE;
     commitAndPush(upstream, UPSTREAM, 'upstream records');

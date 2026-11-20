@@ -23,13 +23,13 @@ Concretely, both the root directory and the state directory inside it are addres
 
 ### The git-sync symbol
 
-Every git-synced file is edited inside one shared workspace clone, which physically lives under the state directory at `workspace/git-sync`. That clone reads as **`$git-sync`** instead of `$root/workspace/git-sync`: the clone itself is shown as `$git-sync/`, and a path inside it as `$git-sync/<rest>`. It takes priority over `$root`, so a synced file's location reads, for example:
+Every git-synced file is edited inside one shared worktree of the project repository, which physically lives under the state directory at `workspace/git-sync`. That worktree reads as **`$git-sync`** instead of `$root/workspace/git-sync`: the worktree itself is shown as `$git-sync/`, and a path inside it as `$git-sync/<rest>`. It takes priority over `$root`, so a synced file's location reads, for example:
 
 ```
 $git-sync/product/backlog/issues.md   = /Users/name/dev/janissary/.janissary/workspace/git-sync/product/backlog/issues.md
 ```
 
-Only the clone named exactly `git-sync` is abbreviated this way; a sibling folder whose name merely starts with `git-sync` keeps the ordinary `$root/workspace/…` form. A workspaced tab's own clone still reads as `$workspace/<name>` (below). `$git-sync` is display-only: it is not recognized as a typed path prefix.
+Only the worktree named exactly `git-sync` is abbreviated this way; a sibling folder whose name merely starts with `git-sync` keeps the ordinary `$root/workspace/…` form. A workspaced tab's own clone still reads as `$workspace/<name>` (below). `$git-sync` is display-only: it is not recognized as a typed path prefix.
 
 ### The workspace symbol
 

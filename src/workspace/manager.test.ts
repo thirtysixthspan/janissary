@@ -6,6 +6,13 @@ const getRemoteUrlMock = vi.fn();
 const provisionWorkspaceMock = vi.fn();
 const removeWorkspaceMock = vi.fn();
 const removeWorkspaceStrictMock = vi.fn();
+const provisionSyncWorktreeMock = vi.fn();
+const removeSyncWorktreeMock = vi.fn();
+
+vi.mock('./worktree.js', () => ({
+  provisionSyncWorktree: (...args: unknown[]) => provisionSyncWorktreeMock(...args),
+  removeSyncWorktree: (...args: unknown[]) => removeSyncWorktreeMock(...args),
+}));
 
 vi.mock('./index.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Workspace>();
@@ -33,6 +40,8 @@ describe('WorkspaceManager', () => {
     provisionWorkspaceMock.mockReset();
     removeWorkspaceMock.mockReset();
     removeWorkspaceStrictMock.mockReset();
+    provisionSyncWorktreeMock.mockReset();
+    removeSyncWorktreeMock.mockReset();
   });
 
   describe('preflight', () => {
@@ -545,6 +554,41 @@ describe('WorkspaceManager', () => {
       const manager = new WorkspaceManager();
       manager.removeAll();
       expect(removeWorkspaceMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createWorktree', () => {
+    const dir = '/repo/.janissary/workspace/git-sync';
+
+    it('tracks a worktree and removes it through Git on the last release', async () => {
+      provisionSyncWorktreeMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager('/repo');
+      const result = manager.createWorktree('git-sync');
+      if (!('ready' in result)) throw new Error('worktree did not start');
+      await result.ready;
+
+      expect(provisionSyncWorktreeMock).toHaveBeenCalledWith('git-sync', '/repo');
+      expect(manager.tracks(dir)).toBe(true);
+      manager.release(dir);
+      expect(manager.tracks(dir)).toBe(false);
+      expect(removeSyncWorktreeMock).toHaveBeenCalledWith(dir, '/repo');
+      expect(removeWorkspaceMock).not.toHaveBeenCalled();
+    });
+
+    it('removes tracked worktrees through Git at shutdown, leaving clones on the ordinary path', () => {
+      const clone = '/repo/.janissary/workspace/agent';
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue(handle(clone));
+      provisionSyncWorktreeMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager('/repo');
+      manager.create('agent');
+      manager.createWorktree('git-sync');
+      manager.removeAll();
+
+      expect(removeSyncWorktreeMock).toHaveBeenCalledWith(dir, '/repo');
+      expect(removeWorkspaceMock).toHaveBeenCalledWith(clone);
+      expect(removeWorkspaceMock).not.toHaveBeenCalledWith(dir);
     });
   });
 });

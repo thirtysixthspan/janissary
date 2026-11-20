@@ -1,4 +1,5 @@
 import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, removeWorkspaceStrict, type ProvisionHandle } from './index.js';
+import { provisionSyncWorktree, removeSyncWorktree } from './worktree.js';
 import { errorText } from '../error-text.js';
 import { messageBus } from '../bus.js';
 import type { GitCloneOptions } from '../git/clone.js';
@@ -25,6 +26,7 @@ export class WorkspaceManager {
   private refs = new Map<string, number>();
   private names = new Map<string, string>();
   private pending = new Map<string, PendingWorkspace>();
+  private worktrees = new Set<string>();
   private projectDir: string;
 
   constructor(
@@ -54,6 +56,24 @@ export class WorkspaceManager {
       : provisionWorkspace(name, origin.url, githubToken, cloneOptions);
     this.refs.set(handle.dir, 1);
     this.names.set(name, handle.dir);
+    const pending: PendingWorkspace = { cancel: handle.cancel, dir: handle.dir, ready: Promise.resolve() };
+    pending.ready = this.trackReady(name, handle, pending, startedAt);
+    this.pending.set(name, pending);
+    return {
+      dir: handle.dir, ready: pending.ready, cancel: () => this.cancelAttempt(name, pending),
+      get oauthNotice() { return handle.oauthNotice; },
+    };
+  }
+
+  // The git-sync workspace is a worktree of the project repository rather than a clone. It shares
+  // the manager's ref tracking and ready reporting with clones, but its directory is removed through
+  // Git so the worktree registration does not outlive the workspace.
+  createWorktree(name: string): ProvisioningWorkspace | { error: string } {
+    const startedAt = performance.now();
+    const handle = provisionSyncWorktree(name, this.projectDir);
+    this.refs.set(handle.dir, 1);
+    this.names.set(name, handle.dir);
+    this.worktrees.add(handle.dir);
     const pending: PendingWorkspace = { cancel: handle.cancel, dir: handle.dir, ready: Promise.resolve() };
     pending.ready = this.trackReady(name, handle, pending, startedAt);
     this.pending.set(name, pending);
@@ -181,7 +201,8 @@ export class WorkspaceManager {
     }
     this.refs.delete(dir);
     this.forgetName(dir);
-    removeWorkspace(dir);
+    if (this.worktrees.delete(dir)) removeSyncWorktree(dir, this.projectDir);
+    else removeWorkspace(dir);
   }
 
   remove(dir: string): void {
@@ -192,9 +213,13 @@ export class WorkspaceManager {
   removeAll(): void {
     for (const pending of this.pending.values()) pending.cancel();
     this.pending.clear();
-    for (const dir of this.refs.keys()) removeWorkspace(dir);
+    for (const dir of this.refs.keys()) {
+      if (this.worktrees.has(dir)) removeSyncWorktree(dir, this.projectDir);
+      else removeWorkspace(dir);
+    }
     this.refs.clear();
     this.names.clear();
+    this.worktrees.clear();
   }
 
   dispose(): void {
