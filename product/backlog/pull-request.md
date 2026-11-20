@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's claim that remote out-of-workspace answers match the local one-word forbidden.
-
-Existing Issue: The description and plan promise the same one-word forbidden for a path outside the workspace with no path echoed, but the new helpers in src/file-navigator/remote/port-reads.ts short-circuit absolute paths to Outside the workspace: <path>. and a far-side containment refusal is mapped by rejectionLine in src/file-read/tab-read.ts to that same verbose echoed line. Severity: 6/10
-
-Existing Risk: 5/10 - A remote tab prints a verbose line naming the path where a local tab prints forbidden, so callers parsing the documented one-word answers break and the path is echoed in a reply the description says never echoes it.
-
-Proposal Risk: 2/10 - The three one-word commands answer forbidden on both sides while the verbose head and tail lines stay untouched as their spec requires, so the only change is the refusal wording those three commands already document.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2115 "make remote out-of-workspace refusals match the one-word forbidden". In src/file-navigator/remote/port-reads.ts change remoteListDirectory, remoteStatPath, and remotePathExists to return the one-word forbidden from src/file-failure.ts when the path is absolute instead of an echoed Outside the workspace line; leave remoteHeadLines and remoteTailLines on the verbose wording because file head and file tail deliberately keep file read's error lines. Translate a far-side containment refusal for those three operations to forbidden as well, either in the three tab executors or around withRemoteTabPort, without changing rejectionLine for head and tail. Update the remote-tab sections of src/file-exists/tab-exists.test.ts, src/file-list/tab-list.test.ts, and src/file-stat/tab-stat.test.ts, which currently assert the verbose echoed line, to assert forbidden, add an explicit local-versus-remote comparison for an absolute path and a ../ path, and exercise the real far-side refusal path through src/remote/serve-file-navigator.ts rather than only mocked replies. Keep product/specs/remote-server.md's identical-wording claim true.
-
-
 * Deliver the plan's promise that disabling file list also refuses the file ls alias.
 
 Existing Issue: The description and application-commands spec say disabling file list refuses both spellings and that ls is offered or hidden with the file list row, but resolveApplicationCommand in src/application-commands.ts carries no ls alias on the file list row, so typed dispatch and completion resolve file ls to the parent file builtin instead. Severity: 6/10

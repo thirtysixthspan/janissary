@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { fileFailureLine } from '../../file-failure.js';
 import type { RemoteRequest } from './port-git.js';
 import type { RemotePortPaths } from './port-paths.js';
 import { failureResult, type FileOperationResult } from '../file-operation-result.js';
@@ -75,10 +76,14 @@ export async function remoteGrepFiles(
   return { text: result.text, path: sent };
 }
 
+function outsideForbidden(relPath: string): string {
+  return fileFailureLine('Outside the workspace', relPath) ?? 'forbidden';
+}
+
 export async function remoteListDirectory(
   request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
 ): Promise<{ text: string; path: string }> {
-  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  if (path.posix.isAbsolute(relPath)) return { text: outsideForbidden(relPath), path: relPath };
   const sent = await paths.to(root, relPath);
   const result = await request('list-directory', { path: sent });
   return { text: result.text, path: sent };
@@ -87,7 +92,7 @@ export async function remoteListDirectory(
 export async function remoteStatPath(
   request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
 ): Promise<{ text: string; path: string }> {
-  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  if (path.posix.isAbsolute(relPath)) return { text: outsideForbidden(relPath), path: relPath };
   const sent = await paths.to(root, relPath);
   const result = await request('stat-path', { path: sent });
   return { text: result.text, path: sent };
@@ -96,7 +101,7 @@ export async function remoteStatPath(
 export async function remotePathExists(
   request: RemoteRequest, paths: RemotePortPaths, root: string, relPath: string,
 ): Promise<{ text: string; path: string }> {
-  if (path.posix.isAbsolute(relPath)) return { text: `Outside the workspace: ${relPath}.`, path: relPath };
+  if (path.posix.isAbsolute(relPath)) return { text: outsideForbidden(relPath), path: relPath };
   const sent = await paths.to(root, relPath);
   const result = await request('path-exists', { path: sent });
   return { text: result.text, path: sent };

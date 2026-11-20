@@ -1153,7 +1153,7 @@ describe('RemoteFileSystemPort typed read methods', () => {
   it.each(['listDirectory', 'statPath', 'pathExists'] as const)('%s refuses an absolute path without a request', async (method) => {
     const h = harness();
     await expect(h.port[method]('/remote/ws', '/remote/ws/a.md'))
-      .resolves.toEqual({ text: 'Outside the workspace: /remote/ws/a.md.', path: '/remote/ws/a.md' });
+      .resolves.toEqual({ text: 'forbidden', path: '/remote/ws/a.md' });
     expect(hasRequest(h.sent)).toBe(false);
   });
 

@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { localReadRoot, rejectionLine } from '../file-read/tab-read.js';
+import { localReadRoot, oneWordRejectionLine } from '../file-read/tab-read.js';
 import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
 import { parseFileExists } from './command.js';
 import { fileExists } from './exists-core.js';
@@ -10,7 +10,7 @@ function existsRemoteFile(managers: Managers, label: string, relPath: string): P
       const { text } = await port.pathExists(workspace, relPath);
       return text;
     } catch (error) {
-      return rejectionLine(error, relPath);
+      return oneWordRejectionLine(error, relPath);
     }
   });
 }

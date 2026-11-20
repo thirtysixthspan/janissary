@@ -3,8 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FileSystemPort } from '../file-navigator/filesystem-port.js';
-import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
-import { fakeChannel } from '../testing/fake-remote-channel.js';
+import { fakeChannel, loopbackChannel } from '../testing/fake-remote-channel.js';
 import { FILE_LIST_USAGE } from './command.js';
 import { listFilesInTab } from './tab-list.js';
 
@@ -231,16 +230,23 @@ describe('listFilesInTab on a remote tab', () => {
   });
 
   it('answers an absolute path locally without a request', async () => {
-    expect(await start('file list /etc')).toBe('Outside the workspace: /etc.');
+    expect(await start('file list /etc')).toBe('forbidden');
     expect(remote.requests()).toEqual([]);
   });
 
-  it('maps a far-side containment refusal to the path as typed', async () => {
-    const pending = start('file list ../x');
-    await vi.waitFor(() => expect(remote.requests()).toHaveLength(1));
-    expect(remote.requests()[0]).toMatchObject({ args: { path: '../x' } });
-    remote.reply(undefined, OUTSIDE_ROOT_REASON);
-    expect(await pending).toBe('Outside the workspace: ../x.');
+  it('matches the local one-word refusal for an absolute path and a parent path', async () => {
+    const absolute = path.join(root, '..', 'outside.txt');
+    expect(await listFilesInTab(managersWith(), 'janus', `file list ${absolute}`)).toBe('forbidden');
+    expect(await start(`file list ${absolute}`)).toBe('forbidden');
+    expect(await listFilesInTab(managersWith(), 'janus', 'file list ../x')).toBe('forbidden');
+    expect(remote.requests()).toEqual([]);
+  });
+
+  it('maps the real far-side containment refusal to forbidden', async () => {
+    remote = loopbackChannel(remoteRoot);
+    expect(await start('file list ../x')).toBe('forbidden');
+    expect(remote.requests()[0]).toMatchObject({ operation: 'list-directory', args: { path: '../x' } });
+    remote.dispose();
   });
 
   it('prints the unavailable line without a channel', async () => {

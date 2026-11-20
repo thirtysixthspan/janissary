@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/filesystem-port.js';
-import { localReadRoot, rejectionLine } from '../file-read/tab-read.js';
+import { localReadRoot, oneWordRejectionLine } from '../file-read/tab-read.js';
 import { withRemoteTabPort } from '../file-read/remote-tab-port.js';
 import { parseFileStat } from './command.js';
 import { statFile } from './stat-core.js';
@@ -11,7 +11,7 @@ function statRemoteFile(managers: Managers, label: string, relPath: string): Pro
       const { text } = await port.statPath(workspace, relPath);
       return text;
     } catch (error) {
-      return rejectionLine(error, relPath);
+      return oneWordRejectionLine(error, relPath);
     }
   });
 }

@@ -1,4 +1,5 @@
 import type { Managers } from '../managers.js';
+import { fileFailureLine } from '../file-failure.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { parseFileRead, type FileReadArgs } from './command.js';
 import { readWorkspaceLines } from './read.js';
@@ -22,6 +23,12 @@ export function rejectionLine(error: unknown, typed: string): string {
   if (message === OUTSIDE_ROOT_REASON) return `Outside the workspace: ${typed}.`;
   if (message === REMOTE_UNAVAILABLE) return REMOTE_UNAVAILABLE;
   return message;
+}
+
+export function oneWordRejectionLine(error: unknown, typed: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message === OUTSIDE_ROOT_REASON) return fileFailureLine('Outside the workspace', typed) ?? 'forbidden';
+  return rejectionLine(error, typed);
 }
 
 function readRemoteFile(managers: Managers, label: string, parsed: FileReadArgs): Promise<string> {
