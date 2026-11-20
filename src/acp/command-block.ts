@@ -27,7 +27,8 @@ export type CommandBlockResult =
   | { kind: 'absent' };
 
 type ReplyLine = { text: string; start: number; end: number };
-type Candidate = { open: number; close?: number };
+type Candidate = { open: number; close: number };
+type Candidates = { closed?: Candidate; unclosedLabelled: boolean };
 
 const LABEL = 'janissary';
 const JANISSARY_PREFIX = /^janissary\s+/i;
@@ -74,31 +75,34 @@ function commandFromBlock(
   };
 }
 
-function findCandidate(lines: ReplyLine[]): Candidate | undefined {
+function findCandidate(lines: ReplyLine[]): Candidates {
   let fence: CodeFence | undefined;
-  let candidate: Candidate | undefined;
+  let open = 0;
+  let labelled = false;
+  let closed: Candidate | undefined;
 
   for (const [index, line] of lines.entries()) {
     const text = line.text;
     if (fence) {
       if (closesFence(text, fence)) {
+        if (labelled) closed = { open, close: index };
         fence = undefined;
-        if (candidate && candidate.close === undefined) candidate.close = index;
+        labelled = false;
       }
       continue;
     }
     const opening = openingFence(text);
     if (!opening) continue;
     fence = opening;
-    if (fenceInfo(text) === LABEL) candidate = { open: index };
+    labelled = fenceInfo(text) === LABEL;
+    open = index;
   }
-  return candidate;
+  return { closed, unclosedLabelled: fence !== undefined && labelled };
 }
 
 export function extractCommandBlock(text: string, allowQuestion: boolean): CommandBlockResult {
   const lines = replyLines(text);
-  const candidate = findCandidate(lines);
-  if (!candidate) return { kind: 'absent' };
-  if (candidate.close === undefined) return { kind: 'mistake', commands: 0 };
-  return commandFromBlock(lines, candidate.open, candidate.close, allowQuestion);
+  const { closed, unclosedLabelled } = findCandidate(lines);
+  if (!closed) return unclosedLabelled ? { kind: 'mistake', commands: 0 } : { kind: 'absent' };
+  return commandFromBlock(lines, closed.open, closed.close, allowQuestion);
 }

@@ -30,6 +30,16 @@ describe('extractCommandBlock', () => {
     });
   });
 
+  it('runs the last closed labelled block when a later labelled block is left unclosed', () => {
+    const first = '```janissary\nnotify hello\n```';
+    const text = [first, '```janissary', 'notify never-closed'].join('\n');
+    expect(extractCommandBlock(text, true)).toEqual({
+      kind: 'one',
+      command: 'notify hello',
+      span: { start: text.indexOf(first), end: text.indexOf(first) + first.length },
+    });
+  });
+
   it('reports zero commands for an unclosed labelled block and absent for no labelled fence', () => {
     expect(extractCommandBlock('```janissary\nnotify hello', true)).toEqual({ kind: 'mistake', commands: 0 });
     expect(extractCommandBlock('Just a final answer.', true)).toEqual({ kind: 'absent' });
