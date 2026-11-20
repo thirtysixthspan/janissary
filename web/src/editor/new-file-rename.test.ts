@@ -11,10 +11,6 @@ describe('opensRenameSession', () => {
     expect(opensRenameSession(makeView({ newFile: true }))).toBe(true);
   });
 
-  it('skips the rename for a new file named when it was opened', () => {
-    expect(opensRenameSession(makeView({ newFile: true, named: true }))).toBe(false);
-  });
-
   it('skips the rename for a file that already exists', () => {
     expect(opensRenameSession(makeView({ name: 'notes.txt', size: '12 B' }))).toBe(false);
   });

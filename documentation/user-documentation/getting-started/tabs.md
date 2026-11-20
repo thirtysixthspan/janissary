@@ -202,7 +202,7 @@ Shells and harnesses also receive `$root` as the project directory, `$workspace`
 
 Janissary sets these values on every process it starts, replacing any values inherited from another session. Before a project is initialized, your current working directory supplies the root. The dedicated test browser does not receive these variables. Setting these variables does not change which files a process can access.
 
-You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, `newfile`, or `files`:
+You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, or `files`:
 
 ```
 open $root/src/cli.ts

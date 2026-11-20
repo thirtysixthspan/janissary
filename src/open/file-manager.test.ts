@@ -222,69 +222,6 @@ describe('OpenFileManager.edit (dispatch by file type)', () => {
   });
 });
 
-describe('OpenFileManager.newFile', () => {
-  const makeManagers = (dir: string, opened: string[]): Managers => ({
-    tab: {
-      cwdOf: () => dir, workingDirOf: () => dir,
-      append: () => {},
-      openEditorTab: (view: { path: string }) => { opened.push(view.path); },
-      registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
-    },
-  } as unknown as Managers);
-
-  it('opens the literal target when it does not exist yet', () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
-    const opened: string[] = [];
-    const mgr = new OpenFileManager(makeManagers(dir, opened));
-
-    mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
-
-    expect(opened).toEqual([path.join(dir, 'untitled.md')]);
-  });
-
-  it('opens untitled-2.md when untitled.md already exists', () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
-    writeFileSync(path.join(dir, 'untitled.md'), 'existing', 'utf8');
-    const opened: string[] = [];
-    const mgr = new OpenFileManager(makeManagers(dir, opened));
-
-    mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
-
-    expect(opened).toEqual([path.join(dir, 'untitled-2.md')]);
-  });
-
-  it('opens untitled-3.md when both untitled.md and untitled-2.md already exist', () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
-    writeFileSync(path.join(dir, 'untitled.md'), 'existing', 'utf8');
-    writeFileSync(path.join(dir, 'untitled-2.md'), 'existing', 'utf8');
-    const opened: string[] = [];
-    const mgr = new OpenFileManager(makeManagers(dir, opened));
-
-    mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
-
-    expect(opened).toEqual([path.join(dir, 'untitled-3.md')]);
-  });
-
-  // The command already carries the name, so the editor opens in its buffer rather than a rename.
-  it('marks the opened new-file view as named', () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
-    const views: { path: string; newFile?: boolean; named?: boolean }[] = [];
-    const managers = {
-      tab: {
-        cwdOf: () => dir, workingDirOf: () => dir,
-        append: () => {},
-        openEditorTab: (view: { path: string; newFile?: boolean; named?: boolean }) => { views.push(view); },
-        registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
-      },
-    } as unknown as Managers;
-
-    new OpenFileManager(managers).newFile('newfile notes.txt', 'notes.txt', 'janus');
-
-    expect(views).toHaveLength(1);
-    expect(views[0]).toMatchObject({ path: path.join(dir, 'notes.txt'), newFile: true, named: true });
-  });
-});
-
 describe('OpenFileManager.run', () => {
   // A target the parser cannot read is answered on the tab that typed it, with the usage line, and
   // nothing is dispatched — otherwise the bare `open` would fall through to an opener with an
