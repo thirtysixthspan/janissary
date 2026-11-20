@@ -11,7 +11,6 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `help keys` | List every key binding |
 | `layout` | `layout window <width> <height>`, `layout sidebar left\|right <width>`, `layout split <percent>`, or `layout reporting <percent>` sets a size; `layout show` prints the current ones |
 | `diff [path]` | Open the [diff tab](/user-documentation/tab-types/diff-tab) on the project's changes, optionally scoped to a directory |
-| `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
 | `edit <file>[:line]` | Open a file for editing; a bare existing runscript name opens that script when no exact file exists; see [Opening files](/user-documentation/tab-types/opening-files#opening-a-file-to-change-it-edit) |
 | `execute <name>` | Run an existing project runscript immediately in the system shell; see [Scheduling](/user-documentation/automation/scheduling#run-a-runscript-now) |

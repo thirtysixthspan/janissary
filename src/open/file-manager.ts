@@ -6,7 +6,6 @@ import type { OpenInvocation } from './types.js';
 import { didOsOpen } from '../openers/os-open.js';
 import { openInDefaultViewer } from '../openers/external-viewer.js';
 import { openInEditor } from '../openers/editor.js';
-import { nextFreeName } from '../editor/next-free-name.js';
 import { resolveTabPath } from '../tab/resolve-path.js';
 import { containedAbsolute } from '../path-containment.js';
 import { expandGlob } from './glob.js';
@@ -88,18 +87,6 @@ export class OpenFileManager {
   private async openPluginEdit(pluginId: string, file: string, context: OpenContext): Promise<undefined> {
     await context.runPluginOpener(pluginId, 'edit', file);
     return undefined;
-  }
-
-  // The file navigator's "New file" button / Cmd+N: like `edit`, but resolves to the next free
-  // `<base>-N<ext>` name first, so creating a second new file in a directory that already has
-  // `untitled.md` opens `untitled-2.md` instead of reopening the existing one. `newfile <file>`
-  // names its file, so the view is marked `named` and the tab opens in its buffer, not a rename.
-  newFile(command: string, target: string, label: string, runId?: string): void {
-    const file = resolveTabPath(this.managers, label, target);
-    const dir = path.dirname(file);
-    const resolved = path.join(dir, nextFreeName(dir, path.basename(file)));
-    const context = this.buildContext(command, label, runId);
-    openInEditor(resolved, { ...context, openEditorTab: (view) => context.openEditorTab({ ...view, named: true }) });
   }
 
   private note(text: string, command: string, label: string, invocation?: OpenInvocation): void {
