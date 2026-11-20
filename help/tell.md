@@ -1,6 +1,6 @@
 ### tell
 
-Send a task to the tab's core ACP session, which runs the models and native command grants in the `tell` role. The shell prints the exact `tell <prompt>` line and returns to the bar immediately. If nothing else was printed, the settled answer appears as rendered Markdown beneath that line. Otherwise, the shell prints your line again at the current bottom with the answer under it. Live activity appears in the session's connection tab.
+Send a task to the tab's core ACP session, which runs the models and native command grants in the `tell` role. The shell prints the exact `tell <prompt>` line and returns to the bar immediately. If nothing else was printed, the settled answer appears as rendered Markdown beneath that line, one blank line below its `Thinking` marker. Otherwise, the shell prints your line again at the current bottom with the answer under it. Live activity appears in the session's connection tab.
 
 **Usage**
 

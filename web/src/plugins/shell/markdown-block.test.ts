@@ -96,20 +96,20 @@ describe('insertMarkdownBlock', () => {
     expect(fake.written.at(-1)).toBe('\u{1B}[1m>\u{1B}[22m ');
   });
 
-  it('reserves one extra row before the block when the echo needs its marker line kept clear', () => {
+  it('reserves the marker row and a blank row before the block', () => {
     const plain = fakeTerminal({ probeHeight: 48, screenHeight: 240, rows: 20 });
     const reserved = fakeTerminal({ probeHeight: 48, screenHeight: 240, rows: 20 });
 
     insertMarkdownBlock(plain.terminal, undefined, '# Answer', vi.fn());
     insertMarkdownBlock(reserved.terminal, undefined, '# Answer', vi.fn(), true);
 
-    expect(reserved.written[0]).toBe(`\r\n${plain.written[0]}`);
+    expect(reserved.written[0]).toBe(`\r\n\r\n${plain.written[0]}`);
     expect(reserved.markers).toEqual(plain.markers);
     expect(reserved.decorations).toEqual(plain.decorations);
     expect(reserved.written.at(-1)).toBe(plain.written.at(-1));
   });
 
-  it('starts the block one row lower when a row is reserved for the marker', () => {
+  it('starts the block two rows lower when the marker row and a blank row are reserved', () => {
     const blockAt = (reserveRow: boolean): string => {
       const fake = fakeTerminal({ probeHeight: 48, screenHeight: 240, rows: 20 });
       let cursor = 4;
@@ -129,7 +129,7 @@ describe('insertMarkdownBlock', () => {
     };
 
     const plainTop = blockAt(false);
-    expect(blockAt(true)).toBe(`${Number(plainTop.slice(0, -2)) + 12}px`);
+    expect(blockAt(true)).toBe(`${Number(plainTop.slice(0, -2)) + 24}px`);
   });
 
   it('reserves the full measured height for a reply taller than the viewport', () => {
