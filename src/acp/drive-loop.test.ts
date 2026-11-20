@@ -86,13 +86,13 @@ describe('corePrimer', () => {
   it('states the exchange protocol with the loop step cap when commands are available', () => {
     const result = primerFor(coreSnapshot('ask', ['file write']));
     expect(result).toContain(commandProtocolPrimer(maxToolSteps()));
-    expect(result).toContain('At most 8 commands run for one request.');
+    expect(result).toContain('At most 8 commands run for one request, counting every command in a batch.');
   });
 
   it('states the configured step cap in the protocol', () => {
     getConfig().maxToolTurns = 3;
     const result = primerFor(coreSnapshot('ask', ['file write']));
-    expect(result).toContain('At most 3 commands run for one request.');
+    expect(result).toContain('At most 3 commands run for one request, counting every command in a batch.');
     expect(maxToolSteps()).toBe(3);
   });
 
