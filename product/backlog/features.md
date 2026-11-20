@@ -2,8 +2,6 @@
 
 ## ready
 
-* Shift the ACP tool loop from reading a bare command on the reply's last line to reading it from a labelled fenced block, while still allowing only one command per turn. The agent is told to place its one command inside a final block tagged with a known label; the host reads only the last such closed block and treats zero or multiple commands in it as a correctable mistake rather than ending the turn. Prose after the command no longer terminates the loop, arguments can span multiple lines, and a command echoed twice no longer leaves a stray copy in the transcript. The two extraction paths — the core host loop and the agent-driven path that today ignores fenced content — converge on the same block rule, and the old top-of-line marker becomes redundant inside a block.
-
 * Expose role tools to ACP models as direct MCP tools
 Every tool a role grants to an ACP session becomes a real MCP tool advertised straight to the model in the provider's tool list, with no Code Mode indirection. The model calls those tools through the provider's native tool-calling channel; OpenCode executes them against a Janissary-owned MCP server; the server runs the corresponding Janissary role tool and returns the result. The same works for local and remote ACP sessions, and each tool call and result is rendered as a tool entry in the connection transcript. The current mechanism — primed text commands extracted from the model's final reply line, run by `runAcpToolLoop`, with `acp-tool-request`/`acp-tool-result` frames on the remote channel — is removed entirely.
 Design decisions
