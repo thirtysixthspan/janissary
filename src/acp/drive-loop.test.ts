@@ -325,17 +325,19 @@ describe('driveToolLoop', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('reports a host rejection before any abort as one error', async () => {
+  it('delivers a host rejection as an ordinary result and keeps going', async () => {
     const { sent, events, host, reject } = drivePending();
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
     reject(new Error('host failed'));
-    await vi.waitFor(() => { expect(ofKind(events, 'error')).toEqual([['error', 'host failed']]); });
-    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', maxToolSteps()]); });
-    expect(ofKind(events, 'ranCommand')).toEqual([]);
-    expect(sent).toHaveLength(1);
+    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'answered', maxToolSteps()]); });
+    expect(ofKind(events, 'error')).toEqual([]);
+    const ran = ofKind(events, 'ranCommand');
+    expect(ran).toHaveLength(1);
+    expect(ran[0][2]).toBe('ACP error: host failed');
+    expect(sent[1]).toContain('ACP error: host failed');
   });
 
-  it('reports a synchronously throwing host and ends the run', () => {
+  it('delivers a synchronously throwing host as an ordinary result', () => {
     const { session, sent } = makeSession([block(QUERY), 'Done.']);
     const { h, events } = makeHandlers();
     const host = {
@@ -345,10 +347,12 @@ describe('driveToolLoop', () => {
 
     driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, new AbortController().signal);
 
-    expect(ofKind(events, 'error')).toEqual([['error', 'sync boom']]);
-    expect(events.at(-1)).toEqual(['finished', 'failed', maxToolSteps()]);
-    expect(ofKind(events, 'ranCommand')).toEqual([]);
-    expect(sent).toHaveLength(1);
+    expect(ofKind(events, 'error')).toEqual([]);
+    expect(events.at(-1)).toEqual(['finished', 'answered', maxToolSteps()]);
+    const ran = ofKind(events, 'ranCommand');
+    expect(ran).toHaveLength(1);
+    expect(ran[0][2]).toBe('ACP error: sync boom');
+    expect(sent[1]).toContain('ACP error: sync boom');
   });
 });
 
@@ -486,9 +490,9 @@ describe('driveToolLoop file mutations', () => {
   });
 
   it('exposes no file tools without tools', () => {
-    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [block(WRITE)]);
+    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [block(WRITE), 'Done.']);
     expect(host.runWorkspace).not.toHaveBeenCalled();
-    expect(sent).toHaveLength(1);
+    expect(sent).toHaveLength(2);
   });
 
   it('caps repeated writes at eight steps', () => {

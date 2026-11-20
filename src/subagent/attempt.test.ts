@@ -285,8 +285,10 @@ describe('runSubagentEntry', () => {
     scriptedSession([[block('file read a.md')]]);
     await withRealLoop(async () => {
       const result = await runSubagentEntry(options);
-      expect(result).toMatchObject({ status: 'failed', reason: 'error' });
-      expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]);
+      expect(result).toMatchObject({ status: 'partial', reason: 'capped' });
+      expect(record.activity.mock.calls[0]).toEqual(['tool', 'file read a.md']);
+      expect(record.activity.mock.calls.some(([kind, text]) =>
+        kind === 'tool' && String(text).includes('ACP error: command boom'))).toBe(true);
     });
   });
 

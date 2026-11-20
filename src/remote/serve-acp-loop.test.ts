@@ -331,14 +331,16 @@ describe('startRemoteLoop caller steps', () => {
     expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
   });
 
-  it('ends the run with a non-fatal error when the result carries an error', async () => {
-    const { frames, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+  it('delivers a caller error as a tool step and keeps the run going', async () => {
+    const { frames, sent, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
 
     handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, error: 'database unavailable' });
     await flush();
 
-    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: RUN_ID, message: 'database unavailable', fatal: false });
-    expect(framesOf(frames, 'acp-run-end')).toEqual([]);
+    expect(framesOf(frames, 'acp-error')).toEqual([]);
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+    expect(sent[1]).toContain('ACP error: database unavailable');
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
   });
 
   it('ignores a result for an unknown or already settled request', async () => {
@@ -791,15 +793,14 @@ describe('startRemoteLoop workspace grep routing', () => {
     expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('(no matches)');
   });
 
-  it('emits the existing nonfatal acp-error for an unexpected rejection', async () => {
+  it('delivers an unexpected rejection as a tool step instead of an error frame', async () => {
     mocks.grepWorkspaceCommand.mockImplementationOnce(() => Promise.reject(new Error('grep worker stopped')));
-    const { frames } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames, sent } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
 
-    await vi.waitFor(() => expect(framesOf(frames, 'acp-error')).toHaveLength(1));
-    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
-    expect(frames.at(-1)).toEqual({
-      type: 'acp-error', id: RUN_ID, message: 'grep worker stopped', fatal: false,
-    });
+    await vi.waitFor(() => expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' }));
+    expect(framesOf(frames, 'acp-error')).toEqual([]);
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('ACP error: grep worker stopped');
+    expect(sent[1]).toContain('ACP error: grep worker stopped');
   });
 
   it('still forwards a later database command as caller request 1', async () => {

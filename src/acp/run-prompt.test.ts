@@ -1259,7 +1259,7 @@ describe('runCorePrompt file grep routing', () => {
     expect(mocks.readFileInTab).not.toHaveBeenCalled();
   });
 
-  it('rejects an unexpected grep failure by identity and reports the ACP error through the real loop', async () => {
+  it('rejects an unexpected grep failure by identity and feeds its ACP error back through the real loop', async () => {
     const failure = new Error('grep worker stopped');
     mocks.grepFilesInTab.mockImplementationOnce(() => Promise.reject(failure));
     const seam = harness({ tab: { workspaceDir: dir } });
@@ -1272,13 +1272,15 @@ describe('runCorePrompt file grep routing', () => {
       const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
       const { request } = start('tell', ['file grep'], 'tell', 'record-1');
       reply(providerPrompt, block(GREP));
+      await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(2));
+      expect(providerPrompt.mock.calls[1][0]).toContain(`ACP error: ${failure.message}`);
+      reply(providerPrompt, 'Done.');
       await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
 
-      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
-        answered: false, error: `ACP error: ${failure.message}`,
+      expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({ answered: true, reply: 'Done.' }));
+      expect(managers.tab.append).toHaveBeenCalledWith('shell', expect.objectContaining({
+        acp: true, output: `ACP error: ${failure.message}`,
       }));
-      expect(managers.tab.append).not.toHaveBeenCalledWith('shell', expect.objectContaining({ acp: true }));
-      expect(providerPrompt).toHaveBeenCalledTimes(1);
     });
   });
 
