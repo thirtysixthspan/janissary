@@ -400,6 +400,14 @@ describe('addThinkingMarker', () => {
       expect(element.lastElementChild).toBe(spinner);
     });
 
+    it('paints above the prompt mask sharing the marker row so its whole label stays visible', () => {
+      const { fake } = mount();
+
+      const element = render(fake);
+
+      expect(Number(element.style.zIndex)).toBeGreaterThan(7);
+    });
+
     it('draws the link without brackets or an icon', () => {
       const { fake } = mount({}, view('link'));
 

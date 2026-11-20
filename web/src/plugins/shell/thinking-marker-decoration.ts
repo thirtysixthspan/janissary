@@ -13,6 +13,10 @@ type MarkerTerminal = Pick<Terminal, 'element' | 'rows' | 'cols' | 'buffer' | 'r
 
 const LABELS = { running: 'Thinking', link: 'see thought process' } as const;
 
+// Xterm paints every top-layer decoration at z-index 7, so the idle prompt mask on the marker's row
+// covers its first two cells. Lift the marker above the mask to keep the whole label visible.
+const MARKER_Z_INDEX = '8';
+
 function isUsable(size: number): boolean {
   return Number.isFinite(size) && size > 0;
 }
@@ -58,6 +62,7 @@ function fill(element: HTMLElement, view: ThinkingMarkerView): void {
   label.textContent = LABELS[view.kind];
   const spinner = view.kind === 'running' ? icon(faSpinner, { classes: ['fa-spin'] }).node[0] : undefined;
   element.classList.add('shell-thinking-marker');
+  element.style.zIndex = MARKER_Z_INDEX;
   element.dataset.kind = view.kind;
   element.setAttribute('role', 'link');
   element.title = `Open ${view.name}`;
