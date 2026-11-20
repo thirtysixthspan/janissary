@@ -324,6 +324,8 @@ connections and schedule windows auto-show for five seconds whenever the tab bec
 fade over 300 ms unless pinned or hovered. If an empty window gains its first row after that interval,
 it auto-shows again; a window with no rows stays hidden.
 Both popups begin below the metadata row, which remains visible.
+Double-clicking the connections button opens or focuses the connections tab; a single click still
+shows the popup and pins it open.
 
 A row in the connections window that names a durable ACP record, including a running agent run
 started from this shell, opens or focuses that record's connection tab when clicked or pressed with

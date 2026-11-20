@@ -294,6 +294,10 @@ export type TabPluginClientCapabilities = {
   // rather than as a tab-scoped RPC because the dialog is the command's answer, and the schedules
   // tab reaches it the same way a shell or harness tab's command bar does.
   openScheduleLaunch?(): void;
+  // Open or focus the app-wide connections tab by sending the bare `connections` command, the same
+  // answer a typed command gets. Optional so the capability fixtures that build this object need no
+  // change, like the other tab-scoped openers.
+  openConnections?(): void;
   // Open this plugin tab's own ACP transcript as an editor tab. The host supplies the label so a
   // plugin cannot ask to open another tab's transcript.
   openAcpTranscript?(): void;

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { RemoteTargetView } from '@shared/protocol';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -173,5 +173,43 @@ describe('ShellTabMeta diff button', () => {
     render(<ShellTabMeta payload={provisioningPayload} capabilities={capabilities()} />);
     const button = screen.getByRole('button', { name: 'Show diff in the workspace' });
     expect(button).toBeDisabled();
+  });
+});
+
+describe('ShellTabMeta connections button', () => {
+  const row = { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' };
+
+  function renderWithConnection(openConnections: () => void) {
+    return render(<ShellTabMeta
+      payload={{ ...payload, connections: [row] }}
+      capabilities={capabilities({ active: true, openConnection: vi.fn(), openConnections })}
+    />);
+  }
+
+  it('opens the connections tab on a double click of the connections button', () => {
+    const openConnections = vi.fn();
+    const { container } = renderWithConnection(openConnections);
+
+    fireEvent.doubleClick(container.querySelector('.tab-connections')!);
+
+    expect(openConnections).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a single click as the popup toggle and does not open the connections tab', () => {
+    vi.useFakeTimers();
+    try {
+      const openConnections = vi.fn();
+      const { container } = renderWithConnection(openConnections);
+      const button = container.querySelector('.tab-connections')!;
+
+      act(() => { vi.advanceTimersByTime(5400); });
+      expect(container.querySelector('.panel-row')).toBeNull();
+
+      fireEvent.click(button);
+      expect(container.querySelector('.panel-row')).not.toBeNull();
+      expect(openConnections).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

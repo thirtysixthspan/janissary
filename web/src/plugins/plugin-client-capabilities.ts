@@ -85,6 +85,7 @@ export function createPluginClientCapabilities(
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     openDiffHere: () => { client.send({ method: 'openDiffFor', params: { label } }); },
     openScheduleLaunch: () => { client.send({ method: 'command', params: { text: 'schedule' } }); },
+    openConnections: () => { client.send({ method: 'command', params: { text: 'connections' } }); },
     // Each path and its opener are supplied together or not at all: a plugin drawing the recording
     // flag or the transcript button needs one answer to "does this tab have one", and a handler with
     // no path behind it would be a button that opens nothing.
