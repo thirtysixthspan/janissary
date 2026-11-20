@@ -102,6 +102,7 @@
 | `quit` | Exit the application (asks for confirmation); Cancel returns focus to the command bar that submitted it. `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias; in an editor tab, renames the file |
 | `roles` | Open the roles tab, where named roles map to harness/model/effort choices and native ACP command grants in `roles.json`; bare `roles` only |
+| `roles list` | Print every role's enabled model choices and native command grants as pretty-printed JSON |
 | `schedule` | Schedule a tab command to run later |
 | `schedule cancel` | Cancel a scheduled tab command |
 | `schedule clear` | Clear the scheduled commands for a tab |

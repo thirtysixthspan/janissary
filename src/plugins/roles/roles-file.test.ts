@@ -79,7 +79,7 @@ describe('reading the roles in effect', () => {
         'question ask', 'question approve', 'file read', 'file glob', 'file grep',
         'file list', 'file stat', 'file exists', 'file head', 'file tail',
         'web search', 'web fetch',
-        'notify',
+        'roles list', 'notify',
       ],
     });
     expect(file['tell']).toEqual({
@@ -90,8 +90,8 @@ describe('reading the roles in effect', () => {
         'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
         'file glob', 'file grep', 'file write', 'file edit', 'file patch',
         'file list', 'file stat', 'file exists', 'file head', 'file tail',
-        'web search', 'web fetch', 'subagent',
-        'notify',
+        'web search', 'web fetch',
+        'roles list', 'subagent', 'notify',
       ],
     });
     expect(file['user-interface']).toEqual({
@@ -99,19 +99,20 @@ describe('reading the roles in effect', () => {
       entries: file['ask'].entries,
       commands: ['tab'],
     });
-    expect(file['ask'].commands).toHaveLength(17);
-    expect(file['tell'].commands).toHaveLength(24);
+    expect(file['ask'].commands).toHaveLength(18);
+    expect(file['tell'].commands).toHaveLength(25);
     expect(file['tell'].commands).toEqual(NATIVE_ACP_COMMANDS.filter((command) => command !== 'tab'));
     expect(file['tell'].commands).not.toContain('tab');
     expect(file['tell'].commands.filter((command) => command === 'subagent')).toHaveLength(1);
     expect(file['tell'].commands.at(-1)).toBe('notify');
-    expect(NATIVE_ACP_COMMANDS).toHaveLength(25);
+    expect(NATIVE_ACP_COMMANDS).toHaveLength(26);
     const newNames = ['file list', 'file stat', 'file exists', 'file head', 'file tail'];
     for (const name of newNames) {
       expect(file['ask'].commands).toContain(name);
       expect(file['tell'].commands).toContain(name);
     }
-    expect(DEFAULT_ROLES.slice(0, 5).every((role) => role.commands.length === 0)).toBe(true);
+    expect(DEFAULT_ROLES.slice(0, 2).map((role) => role.commands)).toEqual([['roles list'], ['roles list']]);
+    expect(DEFAULT_ROLES.slice(2, 5).every((role) => role.commands.length === 0)).toBe(true);
   });
 
   it('answers the default roles without writing a file when asked not to create one', () => {
@@ -121,9 +122,9 @@ describe('reading the roles in effect', () => {
     expect(read.source).toBe('default');
     expect(read.problem).toBeUndefined();
     expect(read.roles).toEqual(DEFAULT_ROLES);
-    expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(17);
+    expect(read.roles.find((role) => role.name === 'ask')?.commands).toHaveLength(18);
     const tell = read.roles.find((role) => role.name === 'tell')?.commands;
-    expect(tell).toHaveLength(24);
+    expect(tell).toHaveLength(25);
     expect(tell).toContain('subagent');
     expect(tell).toContain('notify');
     expect(existsSync(homeFile(home))).toBe(false);

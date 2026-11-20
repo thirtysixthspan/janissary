@@ -40,6 +40,7 @@ import { command as layout } from './layout.js';
 import { command as question } from './question.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 import { command as plugins } from './plugins.js';
+import { command as roles } from './roles.js';
 import { tabPluginCatalog } from '../plugins/catalog.js';
 import { claimPluginCommands } from '../plugins/command-adapter.js';
 
@@ -86,6 +87,7 @@ export const coreCommands: Command[] = [
   layout,
   question,
   plugins,
+  roles,
   monitors,
   monitor,
   unmonitor,

@@ -16,6 +16,7 @@ export const COMMAND_FORMS: Readonly<Record<string, ApplicationCommandDeclaratio
   play: { name: 'play', forms: ['play'] }, plugins: { name: 'plugins', forms: ['plugins', 'plugins list'] },
   profile: { name: 'profile', forms: ['profile', 'profile list'] }, queue: { name: 'queue', forms: ['queue', 'queue list'] },
   quit: { name: 'quit', forms: ['quit'] }, rename: { name: 'rename', forms: ['rename'] },
+  roles: { name: 'roles', forms: ['roles list'], parent: 'roles' },
   schedule: { name: 'schedule', forms: ['schedule', 'schedule list', 'schedule cancel', 'schedule clear'] },
   search: { name: 'search', forms: ['search transcript'], parent: 'search' }, send: { name: 'send', forms: ['send'] },
   ssh: { name: 'ssh', forms: ['ssh'] }, subagent: { name: 'subagent', forms: ['subagent'] },

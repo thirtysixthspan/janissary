@@ -392,7 +392,7 @@ describe('editing roles through intents', () => {
     ]);
 
     const stored = readRolesFile(home, capabilities.originTab()!.root).roles.find(({ name }) => name === 'research')!;
-    expect(stored.commands).toEqual(['future command', 'browser goto']);
+    expect(stored.commands).toEqual(['roles list', 'future command', 'browser goto']);
     expect((updated.at(-1)!.value.payload as RolesPayload).roles.find(({ name }) => name === 'research')?.commands)
       .toEqual(stored.commands);
     expect(vi.mocked(renameSync).mock.calls.length - initialWrites).toBe(2);
@@ -547,7 +547,7 @@ describe('editing roles through intents', () => {
 
     const read = readRolesFile(home, capabilities.originTab()!.root);
     expect(read.roles[1]).toEqual({
-      name: '__proto__', description: 'Keep this.', entries: [entry, entry], commands: ['custom command'],
+      name: '__proto__', description: 'Keep this.', entries: [entry, entry], commands: ['roles list', 'custom command'],
     });
     expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
   });
