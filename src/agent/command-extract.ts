@@ -1,17 +1,4 @@
-type CodeFence = { character: '`' | '~'; length: number };
-
-function openingFence(line: string): CodeFence | undefined {
-  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-  const marker = match?.[1];
-  const info = match?.[2] ?? '';
-  if (!marker || (marker.startsWith('`') && info.includes('`'))) return undefined;
-  return { character: marker.startsWith('`') ? '`' : '~', length: marker.length };
-}
-
-function closesFence(line: string, fence: CodeFence): boolean {
-  const marker = /^ {0,3}(`+|~+)[ \t]*$/.exec(line)?.[1];
-  return marker !== undefined && marker.startsWith(fence.character) && marker.length >= fence.length;
-}
+import { closesFence, openingFence, type CodeFence } from '../acp/command-block.js';
 
 export function extractAgentCommand(text: string, allowQuestion: boolean): string | null {
   const lines = text.split('\n');
