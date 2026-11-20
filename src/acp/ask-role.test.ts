@@ -36,14 +36,14 @@ const CODEX = { harness: 'codex', model: 'gpt-6-luna', effort: 'high' };
 const ASK_COMMANDS = [
   'db sqlite list', 'db sqlite query', 'browser goto', 'browser content', 'question ask', 'question approve',
   'file read', 'file glob', 'file grep', 'file list', 'file stat', 'file exists', 'file head', 'file tail',
-  'web search', 'web fetch', 'notify',
+  'web search', 'web fetch', 'roles list', 'notify',
 ];
 const TELL_COMMANDS = [
   'db sqlite create', 'db sqlite delete', 'db sqlite query', 'db sqlite list',
   'browser goto', 'browser content', 'browser eval', 'question ask', 'question approve', 'file read',
   'file glob', 'file grep', 'file write', 'file edit', 'file patch',
   'file list', 'file stat', 'file exists', 'file head', 'file tail',
-  'web search', 'web fetch', 'subagent', 'notify',
+  'web search', 'web fetch', 'roles list', 'subagent', 'notify',
 ];
 
 describe('askRoleEntries', () => {
@@ -103,7 +103,7 @@ describe('readRoleSettings', () => {
     });
     const tell = readRoleSettings(root, 'tell', home);
     expect(tell.commands).toEqual(TELL_COMMANDS);
-    expect(tell.commands).toHaveLength(24);
+    expect(tell.commands).toHaveLength(25);
     expect(tell.commands).toEqual(expect.arrayContaining([
       'file glob', 'file grep', 'file write', 'file edit', 'file patch', 'web search', 'web fetch', 'subagent',
       'notify',

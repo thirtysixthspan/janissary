@@ -288,6 +288,7 @@ describe('getOutput help pages', () => {
       question: ['question ask', 'question approve'],
       commands: ['commands enable', 'commands disable'],
       files: ['files expand', 'files collapse', 'files cursor', 'files anchor', 'files select'],
+      roles: ['roles list'],
     };
 
     for (const [parent, subcommands] of Object.entries(forms)) {

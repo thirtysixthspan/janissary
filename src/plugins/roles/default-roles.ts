@@ -4,7 +4,7 @@ export const DEFAULT_ROLES: readonly Role[] = [
   {
     name: 'planning',
     description: 'Research and development of plans for new product features.',
-    commands: [],
+    commands: ['roles list'],
     entries: [
       { harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' },
       { harness: 'claude', model: 'claude-opus-5-5', effort: 'xhigh' },
@@ -14,7 +14,7 @@ export const DEFAULT_ROLES: readonly Role[] = [
     name: 'research',
     description: 'Research, comparison, and information gathering for a task or question.',
     entries: [],
-    commands: [],
+    commands: ['roles list'],
   },
   {
     name: 'code review',
@@ -47,7 +47,7 @@ export const DEFAULT_ROLES: readonly Role[] = [
       'question ask', 'question approve', 'file read', 'file glob', 'file grep',
       'file list', 'file stat', 'file exists', 'file head', 'file tail',
       'web search', 'web fetch',
-      'notify',
+      'roles list', 'notify',
     ],
   },
   {
@@ -64,7 +64,7 @@ export const DEFAULT_ROLES: readonly Role[] = [
       'file glob', 'file grep', 'file write', 'file edit', 'file patch',
       'file list', 'file stat', 'file exists', 'file head', 'file tail',
       'web search', 'web fetch',
-      'subagent', 'notify',
+      'roles list', 'subagent', 'notify',
     ],
   },
   {

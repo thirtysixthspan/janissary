@@ -23,6 +23,7 @@ export const NATIVE_ACP_COMMANDS = [
   'file tail',
   'web search',
   'web fetch',
+  'roles list',
   'subagent',
   'tab',
   'notify',

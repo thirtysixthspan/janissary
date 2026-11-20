@@ -28,6 +28,7 @@ describe('native ACP commands', () => {
       'file tail',
       'web search',
       'web fetch',
+      'roles list',
       'subagent',
       'tab',
       'notify',

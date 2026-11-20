@@ -11,6 +11,16 @@ takes no argument. It lives in the center strip like the search tab (see [[tab-p
 `roles` opens or focuses the singleton roles tab. `roles` with any argument — `roles left`,
 `roles review` — is answered `Usage: roles`: the tab is never docked and there is no per-role open.
 
+`roles list` is a separate built-in form that prints to the transcript and opens no tab. It appends
+one pretty-printed JSON object with a `roles` array. Each role carries its `name`, `description`,
+`models`, and `commands`: `models` holds only the entries whose harness and model are both in the
+currently enabled model catalog, each as `{ "harness": …, "model": … }` plus `effort` when the entry
+stores one, in the role's entry order; `commands` is the role's native grants in file order. Entries
+whose model is no longer enabled are left out. The command reloads the catalog and reads the roles
+file in effect without creating one, so hand edits and catalog refreshes are reflected. Anything
+after `roles list` is answered `Usage: roles list`. `roles list` is a native ACP command (see
+[[application-commands]]) granted by default to the `ask`, `tell`, `planning`, and `research` roles.
+
 ### The file
 
 Roles live in `~/.janissary/roles.json`, a JSON object keyed by role name. Each role is a
@@ -57,9 +67,9 @@ carry out a task via ACP.`, and starts with the same three entries. The `user-in
 `tell`, has the description `When you ask a model to arrange the user interface via ACP.`, starts with
 the same three entries, and grants only `tab`. The `ask` role grants `db sqlite
 list`, `db sqlite query`, `browser goto`, `browser content`, `question ask`, `question approve`,
-`file read`, `file glob`, `file grep`, `file list`, `file stat`, `file exists`, `file head`, `file tail`, `web search`, `web fetch`, and `notify`. The `tell` role grants all native commands except `tab` (twenty-four of the twenty-five):
-those seventeen plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
-`file edit`, `file patch`, and `subagent`. The published native vocabulary has twenty-five entries, so the default `tell` grants every one except `tab`, and `user-interface` is the only default role that grants `tab`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning`, `research`, `code review`, `implementation`, and
+`file read`, `file glob`, `file grep`, `file list`, `file stat`, `file exists`, `file head`, `file tail`, `web search`, `web fetch`, `roles list`, and `notify`. The `tell` role grants all native commands except `tab` (twenty-five of the twenty-six):
+those eighteen plus `db sqlite create`, `db sqlite delete`, `browser eval`, `file write`,
+`file edit`, `file patch`, and `subagent`. The published native vocabulary has twenty-six entries, so the default `tell` grants every one except `tab`, and `user-interface` is the only default role that grants `tab`. An existing roles file is not changed, so its saved `tell` keeps the grants it lists, including a list without `subagent`. `planning` and `research` start with the `roles list` grant; `code review`, `implementation`, and
 `documentation` start with no command grants. Only `planning`, `ask`, `tell`, and `user-interface` start with entries.
 ### What the tab shows
 
