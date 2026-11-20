@@ -23,6 +23,7 @@ export type AcpPendingPrompt = {
   echo?: string;
   recordId?: string;
   recordName?: string;
+  recordPrompt?: string;
   cancellation?: Promise<boolean>;
   // Set once the model has completed a reply turn for this request: from then on it has answered, and
   // a later failure is reported rather than retried on another model.

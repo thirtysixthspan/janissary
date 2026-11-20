@@ -27,7 +27,7 @@ export function beginCoreRecord(records: AcpSessionRecords, runtime: TabRuntime,
 export function promptCoreRecord(records: AcpSessionRecords, runtime: TabRuntime, pending: AcpPendingPrompt): void {
   const recordId = acpRoleRuntime(runtime, pending.role).recordId;
   if (!recordId || pending.recordId) return;
-  if (records.prompt(recordId, pending.prompt)) {
+  if (records.prompt(recordId, pending.recordPrompt ?? pending.prompt, pending.prompt)) {
     pending.recordId = recordId;
     const recordName = acpRoleRuntime(runtime, pending.role).recordName;
     if (recordName) pending.recordName = recordName;

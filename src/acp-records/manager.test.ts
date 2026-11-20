@@ -112,6 +112,18 @@ describe('AcpSessionRecords transitions', () => {
     expect(changes).toHaveBeenCalledTimes(10);
   });
 
+  it('titles from an explicit text while storing the full prompt, and keeps that title later', () => {
+    const records = create();
+    const id = records.begin(core);
+    const stored = 'preamble\n\nuser prompt';
+    expect(records.prompt(id, stored, 'user prompt')).toBe(true);
+    expect(records.rows()[0].title).toBe('ACP: user prompt');
+    records.answer(id, 'answer');
+    expect(read(id).blocks[0].prompt).toBe(stored);
+    records.prompt(id, 'second', 'ignored');
+    expect(records.rows()[0].title).toBe('ACP: user prompt');
+  });
+
   it('keeps an empty first-line title and keeps agents Running after settlement', () => {
     const records = create();
     const id = records.begin(core);

@@ -27,12 +27,14 @@ import { isFileHeadTailCommandLine } from '../file-head-tail/command.js';
 import { headTailInTab } from '../file-head-tail/tab-head-tail.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { runWebInTab } from '../web/tab-web.js';
-import { coreActivity } from './record-feed.js';
+import { coreActivity, promptCoreRecord } from './record-feed.js';
+import type { AcpSessionRecords } from '../acp-records/manager.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { effectiveCommandSetting } from '../native-commands/policy.js';
 import type { CommandSettingsSnapshot } from '../native-commands/settings-types.js';
-import { runToolLoop } from './drive-loop.js';
+import { corePrimer, runToolLoop } from './drive-loop.js';
+import { createAcpToolTable } from './tool-table.js';
 
 export function coreSnapshotRows(settings: CommandSettingsSnapshot | undefined): AcpRunSnapshotRow[] {
   if (settings === undefined) return [];
@@ -53,6 +55,22 @@ function coreSnapshot(
     rows: coreSnapshotRows(settings),
     withoutTools: runtime.acpWithoutTools === true,
   };
+}
+
+export function corePromptPrimer(
+  runtime: TabRuntime, request: AcpPendingPrompt, settings: CommandSettingsSnapshot | undefined,
+): string {
+  const snapshot = coreSnapshot(runtime, request, settings);
+  const tools = snapshot.withoutTools ? [] : createAcpToolTable(snapshot.grants);
+  return corePrimer(snapshot, tools);
+}
+
+export function prepareCorePromptRecord(
+  records: AcpSessionRecords, runtime: TabRuntime, request: AcpPendingPrompt,
+  settings: CommandSettingsSnapshot | undefined,
+): void {
+  request.recordPrompt = `${corePromptPrimer(runtime, request, settings)}\n\n${request.prompt}`;
+  promptCoreRecord(records, runtime, request);
 }
 
 async function dispatchNative(

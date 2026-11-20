@@ -8,8 +8,7 @@ import type { AcpPendingPrompt, PromptResultOptions } from './prompt-state.js';
 import type { TabRuntime } from '../tab/types.js';
 import type { SubagentDelivery } from '../subagent/messages.js';
 import { deliverSubagentMessage, scheduleSubagentDrain } from './subagent-delivery.js';
-import { promptCoreRecord } from './record-feed.js';
-import { runCorePrompt } from './run-prompt.js';
+import { prepareCorePromptRecord, runCorePrompt } from './run-prompt.js';
 import type { Managers } from '../managers.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import {
@@ -143,7 +142,7 @@ export class AcpManager extends AcpSessionManager {
     acpRoleRuntime(runtime, attempt.role).prompt = request;
     this.managers.tab.addBusy(label, request);
     try {
-      promptCoreRecord(this.managers.acpRecords, runtime, request);
+      prepareCorePromptRecord(this.managers.acpRecords, runtime, request, attempt.nativeSettings);
       if (acpRoleRuntime(runtime, attempt.role).prompt !== request) return;
       const session = this.acquire(label, entry, attempt.role);
       if (acpRoleRuntime(runtime, attempt.role).prompt !== request

@@ -49,15 +49,16 @@ function setup(remote = false, farLoop = false) {
   managers.tab = new TabManager(managers);
   managers.tab.tabs.push(makeTab('owner', '#fff'));
   managers.tab.tabs[0].title = 'Original owner';
-  const sessions: { session: AcpSession; options: AcpOptions; control: AcpPromptControl; handlers?: PromptHandlers }[] = [];
+  const sessions: { session: AcpSession; options: AcpOptions; control: AcpPromptControl; sent: string[] }[] = [];
   mock.connect.mockImplementation((options: AcpOptions) => {
     const control = new AcpPromptControl();
+    const sent: string[] = [];
     const session: AcpSession = {
-      prompt: vi.fn((_text, handlers) => { control.admit(handlers); }),
+      prompt: vi.fn((text, handlers) => { sent.push(text); control.admit(handlers); }),
       cancel: () => control.cancel(async () => {}),
       kill: () => control.release(), shutdown: async () => control.release(),
     };
-    sessions.push({ session, options, control });
+    sessions.push({ session, options, control, sent });
     return session;
   });
   const listeners: AcpSessionListener[] = [];
@@ -152,6 +153,7 @@ function setup(remote = false, farLoop = false) {
   };
   const fixture = {
     root, records, managers, sessions, handshake, chunk, end, shell: undefined as ShellManager | undefined,
+    sent: () => sessions.at(-1)?.sent ?? [],
     listener: () => listeners.at(-1)!,
     clientFrames,
     far: farRoot === undefined ? undefined : {
@@ -181,6 +183,20 @@ afterEach(() => {
 });
 
 describe('core record feeds', () => {
+  it('stores the provider preamble and user prompt together while titling from the user prompt', async () => {
+    const f = setup();
+    const pending = f.managers.acp.prompt('owner', 'ask first\nsecond line');
+    f.handshake();
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+    f.chunk('answer');
+    f.end();
+    await pending;
+    const window = f.records.window(id);
+    expect(window?.blocks[0].prompt).toBe(f.sent()[0]);
+    expect(window?.blocks[0].prompt).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.title).toBe('ACP: first');
+  });
+
   it('isolates concurrent role streams and keeps the tab busy until both settle', async () => {
     const f = setup();
     const ask = f.managers.acp.prompt('owner', 'ask first');
@@ -205,8 +221,8 @@ describe('core record feeds', () => {
     f.end(1);
     await expect(tell).resolves.toBe('tell partial + tell final');
     expect(f.managers.tab.byLabel('owner')!.runtime?.busy).toBe(false);
-    expect(f.records.window(askId)?.blocks).toMatchObject([{ prompt: 'first', answer: 'ask partial' }]);
-    expect(f.records.window(tellId)?.blocks).toMatchObject([{ prompt: 'second', answer: 'tell partial + tell final' }]);
+    expect(f.records.window(askId)?.blocks).toMatchObject([{ prompt: expect.stringContaining('first'), answer: 'ask partial' }]);
+    expect(f.records.window(tellId)?.blocks).toMatchObject([{ prompt: expect.stringContaining('second'), answer: 'tell partial + tell final' }]);
     expect(f.managers.tab.byLabel('owner')?.log.map(({ input, output }) => ({ input, output }))).toEqual([
       { input: 'first', output: 'ask partial' },
       { input: 'second', output: 'tell partial + tell final' },
@@ -334,7 +350,7 @@ describe('core record feeds', () => {
     await expect(answer).resolves.toBe('displayed once');
     expect(f.records.window(id)).toMatchObject({
       status: 'Idle', source: { ownerLabel: 'owner', ownerName: 'Original owner', model: 'google/gemini-3.1-flash-lite' },
-      blocks: [{ prompt: 'first\nsecond line', answer: 'displayed once', entries: kinds.map((kind) => ({ kind, text: ' ' })) }],
+      blocks: [{ prompt: expect.stringContaining('first\nsecond line'), answer: 'displayed once', entries: kinds.map((kind) => ({ kind, text: ' ' })) }],
     });
     f.managers.acp.close('owner');
     expect(new AcpRecordStore({ projectDir: f.root }).read(id)).toMatchObject({ outcome: 'Closed', blocks: [{ answer: 'displayed once' }] });
@@ -472,7 +488,7 @@ describe('core record feeds', () => {
     expect(f.clientFrames.filter((frame) => frame.type === 'acp-tool-request')).toEqual([]);
     expect(f.managers.tab.byLabel('owner')!.cmdHistory).toEqual(['git status']);
     expect(f.records.window(id)?.blocks).toMatchObject([{
-      prompt: 'find FILE_READ_USAGE',
+      prompt: expect.stringContaining('find FILE_READ_USAGE'),
       answer: 'Found FILE_READ_USAGE.',
     }]);
 
@@ -574,7 +590,7 @@ describe('core record feeds', () => {
     f.end();
     await expect(tellAnswer).resolves.toBe('tell answer');
     expect(f.records.window(askId)?.blocks).toEqual([]);
-    expect(f.records.window(tellId)?.blocks).toMatchObject([{ prompt: 'a separate prompt', answer: 'tell answer' }]);
+    expect(f.records.window(tellId)?.blocks).toMatchObject([{ prompt: expect.stringContaining('a separate prompt'), answer: 'tell answer' }]);
 
     expect(f.managers.acp.close('owner', undefined, 'ask')).toBe(true);
     expect(f.managers.acp.has('owner')).toBe(false);
