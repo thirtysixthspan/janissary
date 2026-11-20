@@ -12,7 +12,7 @@ export function agentPrimer(snapshot: AgentSnapshot): string {
   const skills = snapshot.skills.map(({ name, instructions }) => `## ${name}\n${instructions}`).join('\n\n');
   return [
     'Complete the task below in the current project. Use native workspace tools for files and shell.',
-    'Use only the selected skill instructions. To invoke a Janissary application command, end your reply with one final line: janissary <command>.',
+    'Use only the selected skill instructions. To invoke a Janissary application command, put it inside a final fenced block whose info string is exactly `janissary`. Write the command in the block without a `janissary` prefix; arguments can span several lines, and prose may follow the block. A command on a bare line outside the block is just your answer, not a command.',
     'Only commands granted by the selected skills are permitted. A question requires the ask-user skill and the question grant.',
     `Task (${snapshot.taskPath}):\n${snapshot.taskText}`,
     ...(skills ? [`Selected skills:\n${skills}`] : []),

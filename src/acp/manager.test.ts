@@ -7,6 +7,7 @@ import type { AcpRoleSettings } from './ask-role.js';
 import type { AcpRole } from './role.js';
 import { makeTab } from '../tab/index.js';
 import { DB_PRIMER } from '../database/primer.js';
+import { MARKDOWN_INSTRUCTION } from './launch.js';
 import type { AcpSessionListener } from '../remote/channel/acp.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 
@@ -231,7 +232,7 @@ describe('AcpManager.run', () => {
     acp.run('tab1', 'ask summarize this');
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
-    expect(deps.primer).toBe(`${NO_TOOLS_LINE}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`);
+    expect(deps.primer).toBe(`${NO_TOOLS_LINE}\n\n${MARKDOWN_INSTRUCTION}`);
     expect(deps.extractCommand('Let me look.\nbrowser open https://example.com')).toEqual({ kind: 'absent' });
     expect(deps.extractCommand('question ask "What port?"')).toEqual({ kind: 'absent' });
     expect(deps.extractCommand('db sqlite list')).toEqual({ kind: 'absent' });

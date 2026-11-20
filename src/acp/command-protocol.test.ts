@@ -4,9 +4,9 @@ import { commandProtocolPrimer } from './command-protocol.js';
 describe('commandProtocolPrimer', () => {
   const text = commandProtocolPrimer(8);
 
-  it('asks for exactly one plain-text command on the final line', () => {
+  it('asks for one command in a final fenced block labelled janissary', () => {
     expect(text.startsWith('How commands work:')).toBe(true);
-    expect(text).toContain('end your reply with exactly one command on its own final line, as plain text: no code fence, no prompt marker, nothing after it.');
+    expect(text).toContain('put exactly one command inside a final fenced block whose info string is exactly `janissary`');
   });
 
   it('says how output returns and that refusals arrive as output', () => {
