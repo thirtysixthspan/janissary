@@ -65,28 +65,13 @@ export function hitFromEvent(e: { target: EventTarget | null; clientX: number; c
   return { line, col, inGutter };
 }
 
-// During a drag, the pointer may be over gaps/scrollbar: fall back to elementFromPoint against
-// the whole editor body and clamp vertically to the first/last row.
+// Resolve the point under a dragging pointer to an editor row. A point that cannot be resolved to
+// something inside the editor body — the pointer has left the tab — yields null so the drag leaves
+// the selection frozen until the pointer returns over the body.
 export function hitFromPoint(body: HTMLElement, x: number, y: number): MouseHit | null {
   const element = document.elementFromPoint(x, y);
   if (element && body.contains(element)) return hitFromEvent({ target: element, clientX: x, clientY: y });
-  // Above or below the body: clamp to the first or last line.
-  const rows = body.querySelectorAll('[data-editor-line]');
-  if (rows.length === 0) return null;
-  const first = rows[0].getBoundingClientRect();
-  if (y < first.top) return { line: 0, col: 0, inGutter: false };
-  const lastRow = [...rows].at(-1) as HTMLElement;
-  const lastLine = Number(lastRow.dataset.editorLine);
-  return { line: lastLine, col: Number.MAX_SAFE_INTEGER, inGutter: false };
-}
-
-// A point that has to land on a rendered row. Unlike hitFromPoint, which serves drag selection and
-// clamps a pointer it cannot resolve to the first or last line, an arrow press that resolves nothing
-// must say so: clamping would turn it into a jump to the start or end of the document.
-function rowHitAt(body: HTMLElement, x: number, y: number): MouseHit | null {
-  const element = document.elementFromPoint(x, y);
-  if (!element || !body.contains(element)) return null;
-  return hitFromEvent({ target: element, clientX: x, clientY: y });
+  return null;
 }
 
 // One visual row up/down from the caret's current screen position, for wrapped-line-aware
@@ -102,5 +87,5 @@ export function visualVerticalHit(body: HTMLElement, caret: HTMLElement, dir: 'u
   const y = probePoint(body, rect, dir);
   const port = scrollport(body);
   if (y < port.top || y > port.bottom) return null;
-  return rowHitAt(body, rect.left, y);
+  return hitFromPoint(body, rect.left, y);
 }
