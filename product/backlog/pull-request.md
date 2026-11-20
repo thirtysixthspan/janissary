@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's preserved leading-slash agent command behavior instead of gutting the test that covered it
-
-Existing Issue: The agent test named for stripping a leading slash now feeds a labelled block whose content has no leading slash, and the shared extractor does not recognize a leading-slash command inside a block, so that previously supported behavior is neither exercised nor delivered. Severity: 5/10
-
-Existing Risk: 4/10 - An agent that writes `/file read a.md` inside a labelled block, which the retired extractor accepted and the gate still normalizes, now gets a correction prompt instead of a workspace read.
-
-Proposal Risk: 2/10 - Normalizing one leading slash before the command-start check is localized and the gate already strips it, so the surrounding agent gating and frame assertions stay unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2127 "preserve leading-slash agent commands in labelled blocks". In src/remote/serve-acp-loop.test.ts restore the "strips a leading slash from an agent file read before reading the workspace" fixture to a labelled block whose content is `/file read a.md`, keeping its frame and step-count assertions unchanged. In src/acp/command-block.ts strip one leading `/` from a candidate line before the nativeCommandName check in isCommandStart so a leading-slash command inside a labelled block is recognized as one command, leaving the returned command text unchanged so gateAgentCommand continues to normalize it. Verify the agent run reports a workspace step with command `file read a.md` and that src/acp/command-block.test.ts, src/acp/tool-table.test.ts, and the rest of src/remote/serve-acp-loop.test.ts keep passing; the core path and allowQuestion behavior must not move.
-
-
 * Update the tool-table resolution comment that still describes bare last-line extraction
 
 Existing Issue: The comment above createAcpToolTable says extraction takes "the reply's last line that any tool recognizes", but after this diff extraction reads the command from the last closed labelled block, so the comment documents the bare-line contract this change removed. Severity: 2/10

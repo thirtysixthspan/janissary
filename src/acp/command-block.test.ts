@@ -72,6 +72,14 @@ describe('extractCommandBlock', () => {
     });
   });
 
+  it('recognizes one leading slash on a block command without changing the returned text', () => {
+    expect(extractCommandBlock('```janissary\n/file read a.md\n```', true)).toMatchObject({
+      kind: 'one',
+      command: '/file read a.md',
+    });
+    expect(extractCommandBlock('```janissary\n//file read a.md\n```', true)).toEqual({ kind: 'mistake', commands: 0 });
+  });
+
   it('honours allowQuestion for a question command-start line', () => {
     const text = '```janissary\nquestion ask "why"\n```';
     expect(extractCommandBlock(text, false)).toEqual({ kind: 'mistake', commands: 0 });

@@ -47,7 +47,7 @@ function fenceInfo(line: string): string {
 }
 
 function isCommandStart(line: string, allowQuestion: boolean): boolean {
-  const name = nativeCommandName(line);
+  const name = nativeCommandName(line.replace(/^\//, ''));
   if (name === undefined) return false;
   return allowQuestion || !name.startsWith('question ');
 }

@@ -410,7 +410,7 @@ describe('startRemoteLoop agent runs', () => {
   it('strips a leading slash from an agent file read before reading the workspace', () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
 
-    const { frames } = start([[block('file read a.md')], ['Done.']], agentSnapshot(['file']));
+    const { frames } = start([[block('/file read a.md')], ['Done.']], agentSnapshot(['file']));
 
     const steps = framesOf(frames, 'acp-tool-step');
     expect(steps).toHaveLength(1);
