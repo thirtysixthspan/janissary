@@ -110,7 +110,7 @@ vi.mock('./drive-loop.js', async (importOriginal) => {
   return { ...actual, runToolLoop: mocks.runToolLoop };
 });
 
-import { coreSnapshotRows, runCorePrompt } from './run-prompt.js';
+import { corePromptPrimer, coreSnapshotRows, runCorePrompt } from './run-prompt.js';
 
 const homeRoots: string[] = [];
 const launchRoots: string[] = [];
@@ -274,6 +274,15 @@ function primer(role: 'ask' | 'tell', options: StartOptions = {}): string {
 
 describe('runCorePrompt role primer', () => {
   beforeEach(() => { vi.clearAllMocks(); });
+
+  it('builds the same primer the loop sends, with and without tools', () => {
+    for (const withoutTools of [false, true]) {
+      const h = harness({ withoutTools });
+      const { deps, request } = h.start('tell', ['db sqlite query']);
+      const nativeSettings = h.managers.nativeCommandSettings?.current();
+      expect(corePromptPrimer(h.tab.runtime as TabRuntime, request, nativeSettings)).toBe(deps.primer);
+    }
+  });
 
   it('places the tell instruction after available tool text and the protocol, before Markdown', () => {
     expect(primer('tell')).toBe([

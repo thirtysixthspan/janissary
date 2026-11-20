@@ -1,6 +1,6 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
-import { acpLaunchFor } from '../acp/launch.js';
+import { acpLaunchFor, MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import { connectAcp } from '../acp/index.js';
 import { createRemoteAcpSession, type RemoteAcpSession } from '../remote/acp-session.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
@@ -60,7 +60,7 @@ export async function executeAgentRun(
 ): Promise<AgentResult> {
   if (run.outcome || run.abortController.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
   const prompt = taskPrompt(agentPrimer(run.snapshot), parameters);
-  run.record?.prompt(prompt);
+  run.record?.prompt(`${MARKDOWN_INSTRUCTION}\n\n${prompt}`);
   const selected = selectedModel(model, managers.models.modelsFor('opencode'));
   const launch = acpLaunchFor({ harness: 'opencode', model: selected, variant: effort ?? 'medium' });
   const env = {

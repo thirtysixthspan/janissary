@@ -59,10 +59,10 @@ export class AcpSessionRecords {
     return record.id;
   }
 
-  prompt(id: string, text: string): boolean {
+  prompt(id: string, text: string, titleText = text): boolean {
     const record = this.open(id);
     if (!record || typeof text !== 'string' || !text.trim() || unansweredBlock(record)) return false;
-    if (record.blocks.length === 0) record.title = recordTitle(record.source, text);
+    if (record.blocks.length === 0) record.title = recordTitle(record.source, titleText);
     const timestamp = this.touch(record);
     record.blocks.push({ prompt: text, startedAt: timestamp, entries: [] });
     this.save(record);

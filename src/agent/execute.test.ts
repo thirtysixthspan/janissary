@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { AcpOptions } from '../acp/types.js';
+import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import { BUNDLED_MODEL_CATALOG } from '../models/catalog-file.js';
 import { janissaryRoot } from '../janissary-root.js';
@@ -71,7 +72,7 @@ describe('agent execution record capture', () => {
       session.prompt(prompt, { onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() });
     });
     const execution = executeAgentRun(run, invocation, model, undefined, 'Parameters\nverbatim ', modelManagers() as never, remote ? { channel, host: 'build-box' } : undefined);
-    expect(records.window(run.recordId!)?.blocks[0].prompt).toBe(`${commandTools.agentPrimer(run.snapshot)}\nParameters\nverbatim `);
+    expect(records.window(run.recordId!)?.blocks[0].prompt).toBe(`${MARKDOWN_INSTRUCTION}\n\n${commandTools.agentPrimer(run.snapshot)}\nParameters\nverbatim `);
     if (remote) {
       expect(runAcpToolLoop).not.toHaveBeenCalled();
       listener!.onReady(true);

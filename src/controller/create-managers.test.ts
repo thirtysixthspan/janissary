@@ -138,7 +138,7 @@ describe('createManagers durable ACP records', () => {
     await expect(coreAnswer).resolves.toBe('ACP session closed.');
     await expect(execution).resolves.toMatchObject({ status: 'terminated' });
     const store = new AcpRecordStore({ projectDir });
-    expect(store.read(coreId)).toMatchObject({ outcome: 'Closed', blocks: [{ prompt: 'core task', answer: 'ACP session closed.' }] });
+    expect(store.read(coreId)).toMatchObject({ outcome: 'Closed', blocks: [{ prompt: expect.stringContaining('core task'), answer: 'ACP session closed.' }] });
     expect(store.read(run.recordId!)).toMatchObject({ outcome: 'Terminated', blocks: [{ answer: 'Agent terminated.', entries: [{ text: 'partial thought' }] }] });
     const restarted = make();
     expect(restarted.managers.acpRecords.window(run.recordId!)?.status).toBe('Terminated');
