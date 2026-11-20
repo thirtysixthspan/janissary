@@ -1,7 +1,7 @@
 import { isBrowserCommandLine, BROWSER_PRIMER } from '../browser/command.js';
 import { isQuestionCommandLine, QUESTION_PRIMER } from '../question-command.js';
 import { DB_PRIMER, isDatabaseCommandLine } from '../database/primer.js';
-import { findLastCommandLine } from './command-line.js';
+import { extractCommandBlock, type CommandBlockResult } from './command-block.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { nativeCommandName, nativeCommandTool, type NativeCommandTool } from './native-commands.js';
 import type { AcpRunSnapshot } from './types.js';
@@ -191,8 +191,12 @@ function gateAgentCommand(
   return { runsOn: 'workspace' };
 }
 
-// The command on the reply's last line that any tool recognizes, or null when no line is one.
-export function toolExtractor(tools: AcpTool[]): (text: string) => string | null {
-  return (text) => findLastCommandLine(text, (line) => nativeCommandName(line) !== undefined
-    && tools.some((tool) => tool.isCommandLine(line)));
+// The command in the reply's labelled block, provided a granted tool owns it.
+export function toolExtractor(tools: AcpTool[]): (text: string) => CommandBlockResult {
+  return (text) => {
+    const result = extractCommandBlock(text, true);
+    if (result.kind !== 'one') return result;
+    const line = result.command.split('\n', 1)[0];
+    return tools.some((tool) => tool.isCommandLine(line)) ? result : { kind: 'absent' };
+  };
 }

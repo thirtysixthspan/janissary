@@ -37,6 +37,7 @@ vi.mock('./serve-acp-loop.js', async (importOriginal) => {
 
 import { RemoteAcp } from './serve-acp.js';
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
 const WORKSPACE = '/srv/proj/.janissary/workspace/bekir';
 
 const OPEN = {
@@ -327,7 +328,7 @@ describe('RemoteAcp — workspace selectors', () => {
 
     acp.open({ ...OPEN, workspace: 'sel' });
     acp.run(RUN_FRAME);
-    lastHandlers().onChunk('file read which.md');
+    lastHandlers().onChunk(block('file read which.md'));
     lastHandlers().onEnd('end_turn');
     await flush();
     expect(frames.filter((frame) => frame.type === 'acp-tool-step')).toEqual([
@@ -336,7 +337,7 @@ describe('RemoteAcp — workspace selectors', () => {
 
     selected = workspace;
     acp.run(RUN_FRAME);
-    lastHandlers().onChunk('file read which.md');
+    lastHandlers().onChunk(block('file read which.md'));
     lastHandlers().onEnd('end_turn');
     await flush();
     expect(frames.filter((frame) => frame.type === 'acp-tool-step')).toEqual([
@@ -479,7 +480,7 @@ describe('RemoteAcp — running', () => {
 
     acp.run(RUN_FRAME);
 
-    lastHandlers().onChunk('file read a.md');
+    lastHandlers().onChunk(block('file read a.md'));
     lastHandlers().onEnd('end_turn');
     await flush();
 
@@ -487,7 +488,7 @@ describe('RemoteAcp — running', () => {
       { type: 'acp-tool-step', id: 'racp1', command: 'file read a.md', result: '1\tone\n2\ttwo', workspace: true },
     ]);
 
-    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onChunk(block('db sqlite query movies SELECT 1'));
     lastHandlers().onEnd('end_turn');
     await flush();
 
@@ -578,7 +579,7 @@ describe('RemoteAcp — running', () => {
     acp.open(OPEN);
     acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
 
-    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onChunk(block('db sqlite query movies SELECT 1'));
     lastHandlers().onEnd('end_turn');
     await flush();
 
@@ -639,7 +640,7 @@ describe('RemoteAcp — cancelling, closing, and losing a run', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
     acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
-    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onChunk(block('db sqlite query movies SELECT 1'));
     lastHandlers().onEnd('end_turn');
     await flush();
     expect(frames.filter((frame) => frame.type === 'acp-tool-request')).toHaveLength(1);
@@ -678,7 +679,7 @@ describe('RemoteAcp — cancelling, closing, and losing a run', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
     acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
-    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onChunk(block('db sqlite query movies SELECT 1'));
     lastHandlers().onEnd('end_turn');
     await flush();
 
@@ -723,7 +724,7 @@ describe('RemoteAcp — cancelling, closing, and losing a run', () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
     acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
-    lastHandlers().onChunk('db sqlite query movies SELECT 1');
+    lastHandlers().onChunk(block('db sqlite query movies SELECT 1'));
     lastHandlers().onEnd('end_turn');
     await flush();
 

@@ -16,6 +16,8 @@ import type * as DriveLoop from '../acp/drive-loop.js';
 import type * as TaskResolution from '../agent/task-resolution.js';
 import { runSubagentCommand } from './command-policy.js';
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
+
 type ConnectOptions = {
   cwd: string;
   onError: (message: string) => void;
@@ -272,8 +274,8 @@ describe('subagent integration — local command to human reply', () => {
       launch();
       await drain();
       handshake(0, 'provider-A');
-      for (let step = 0; step < 8; step += 1) answer(0, 'file read x.md');
-      answer(0, 'file read x.md\neight commands done');
+      for (let step = 0; step < 8; step += 1) answer(0, block('file read x.md'));
+      answer(0, `${block('file read x.md')}\neight commands done`);
       await drain();
       expect(humanReplies().at(-1)!.output).toBe('Subagent research partial.\n\neight commands done');
     });

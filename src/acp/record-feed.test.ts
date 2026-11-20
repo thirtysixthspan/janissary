@@ -21,6 +21,8 @@ import { startRemoteLoop, type RemoteLoopHandle } from '../remote/serve-acp-loop
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { closeTabResources } from '../tab/cleanup.js';
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
+
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
 const shellMock = vi.hoisted(() => ({ spawn: vi.fn(), execute: vi.fn(), pwd: vi.fn() }));
 const home = vi.hoisted(() => ({ dir: '' }));
@@ -350,7 +352,7 @@ describe('core record feeds', () => {
     f.handshake();
     const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
 
-    f.chunk('file grep TODO');
+    f.chunk(block('file grep TODO'));
     f.end();
     await vi.waitFor(() => { expect(f.sessions[0].control.current).toBeDefined(); });
     f.chunk('found it');
@@ -386,7 +388,7 @@ describe('core record feeds', () => {
     const listener = f.listener();
 
     listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'start', first: true });
-    listener.onChunk('file grep TODO');
+    listener.onChunk(block('file grep TODO'));
     listener.onTurn({ type: 'acp-turn', id: 'racp1', phase: 'end', display: '' });
     listener.onToolStep({
       type: 'acp-tool-step', id: 'racp1', command: 'file grep TODO', result: 'a.txt:1: TODO', workspace: true,
@@ -433,7 +435,7 @@ describe('core record feeds', () => {
     await vi.waitFor(() => { expect(far.prompts).toHaveLength(1); });
     const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
 
-    far.reply(0, grep);
+    far.reply(0, block(grep));
     await vi.waitFor(() => { expect(far.prompts).toHaveLength(2); });
     expect(far.texts[1]).toContain(`Output of \`${grep}\`:\n${grepResult}`);
     expect(far.texts[1]).not.toContain('[host]');
@@ -445,7 +447,7 @@ describe('core record feeds', () => {
       { kind: 'tool', text: `[host] ${grepResult}` },
     ]);
 
-    far.reply(1, read);
+    far.reply(1, block(read));
     await vi.waitFor(() => { expect(far.prompts).toHaveLength(3); });
     expect(far.texts[2]).toContain(`Output of \`${read}\`:\n${readResult}`);
     expect(f.managers.tab.byLabel('owner')!.log.filter((entry) => entry.acp === true)).toEqual([

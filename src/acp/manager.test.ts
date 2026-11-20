@@ -36,6 +36,7 @@ vi.mock('../browser/command.js', () => ({
 
 import { AcpManager } from './manager.js';
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
 const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) });
 
 const snapshot: AcpRunSnapshot = { kind: 'agent', grants: [], askUser: false };
@@ -147,7 +148,7 @@ describe('AcpManager.run', () => {
     expect(first.primer).not.toContain('Only these commands are allowed');
     expect(first.primer).not.toContain(DB_PRIMER);
     expect(first.primer).toContain(NO_TOOLS_LINE);
-    expect(first.extractCommand('question ask "Who?"')).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
+    expect(first.extractCommand(block('question ask "Who?"'))).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
     expect(first.extractCommand('db sqlite list')).toEqual({ kind: 'absent' });
     expect(settingsCurrent).toHaveBeenCalledOnce();
 
@@ -162,7 +163,7 @@ describe('AcpManager.run', () => {
     expect(retry.primer).toContain('question ask');
     expect(retry.primer).not.toContain('Only these commands are allowed');
     expect(retry.primer).toContain(NO_TOOLS_LINE);
-    expect(retry.extractCommand('question ask "Who?"')).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
+    expect(retry.extractCommand(block('question ask "Who?"'))).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
     expect(retry.runCommand('question ask "Who?"')).toBe('Command is disabled: question ask.');
     expect(dispatchNativeLine).not.toHaveBeenCalled();
 
@@ -178,7 +179,7 @@ describe('AcpManager.run', () => {
     expect(next.primer).not.toContain('question ask');
     expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
     expect(next.primer).toContain(NO_BUILTIN_TOOLS_LINE);
-    expect(next.extractCommand('db sqlite query store SELECT 1'))
+    expect(next.extractCommand(block('db sqlite query store SELECT 1')))
       .toMatchObject({ kind: 'one', command: 'db sqlite query store SELECT 1' });
     expect(next.extractCommand('question ask "Who?"')).toEqual({ kind: 'absent' });
     await expect(next.runCommand('db sqlite query store SELECT 1')).resolves.toBe('db ran');
@@ -206,7 +207,7 @@ describe('AcpManager.run', () => {
     const dependencies = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
 
     expect(dependencies.primer).toContain('question ask "<question>"');
-    expect(dependencies.extractCommand('question ask "What port?"'))
+    expect(dependencies.extractCommand(block('question ask "What port?"')))
       .toMatchObject({ kind: 'one', command: 'question ask "What port?"' });
     dispatchNativeLine.mockResolvedValue({ dispatched: true, output: 'Production' });
     await expect(dependencies.runCommand(
@@ -248,7 +249,7 @@ describe('AcpManager.run', () => {
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(deps.primer).toContain(DB_PRIMER);
-    expect(deps.extractCommand('question ask "What port?"'))
+    expect(deps.extractCommand(block('question ask "What port?"')))
       .toMatchObject({ kind: 'one', command: 'question ask "What port?"' });
   });
 

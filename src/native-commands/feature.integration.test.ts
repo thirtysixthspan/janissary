@@ -147,7 +147,8 @@ describe('native command settings across the feature seams', () => {
     const allowLine = toolPrimer(tools, allowed)
       .split('\n').find((line) => line.startsWith('Only these commands are allowed:'));
     expect(allowLine).not.toContain('browser content');
-    expect(toolExtractor(tools)('browser content')).toBe('browser content');
+    expect(toolExtractor(tools)('```janissary\nbrowser content\n```'))
+      .toMatchObject({ kind: 'one', command: 'browser content' });
 
     await expect(managers.command.dispatchLineWithOutput('janus', 'browser content')).resolves.toEqual({
       dispatched: true, output: '',

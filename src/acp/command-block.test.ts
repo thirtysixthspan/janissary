@@ -78,6 +78,31 @@ describe('extractCommandBlock', () => {
     expect(extractCommandBlock(text, true)).toMatchObject({ kind: 'one', command: 'question ask "why"' });
   });
 
+  it('does not require the janissary marker inside a labelled block but still strips it when present', () => {
+    expect(extractCommandBlock('```janissary\nquestion ask "old"\n```', true)).toMatchObject({
+      kind: 'one', command: 'question ask "old"',
+    });
+    expect(extractCommandBlock('```janissary\njanissary question ask "old"\n```', true)).toMatchObject({
+      kind: 'one', command: 'question ask "old"',
+    });
+  });
+
+  it('does not extract a bare final command line outside a labelled block', () => {
+    expect(extractCommandBlock('Answer\njanissary question ask "real"', true)).toEqual({ kind: 'absent' });
+    expect(extractCommandBlock('Answer\nquestion ask "real"', true)).toEqual({ kind: 'absent' });
+  });
+
+  it('reads tilde-fenced content only when it is the last closed labelled block', () => {
+    expect(extractCommandBlock('~~~text\nquestion ask "hidden"\n~~~', true)).toEqual({ kind: 'absent' });
+    expect(extractCommandBlock('~~~\nquestion ask "hidden"\n~~~', true)).toEqual({ kind: 'absent' });
+    expect(extractCommandBlock('~~~janissary\nquestion ask "real"\n~~~', true)).toMatchObject({
+      kind: 'one', command: 'question ask "real"',
+    });
+    expect(extractCommandBlock(
+      '~~~janissary\nquestion ask "hidden"\n~~~\n```janissary\nquestion ask "real"\n```', true,
+    )).toMatchObject({ kind: 'one', command: 'question ask "real"' });
+  });
+
   it('accepts tilde and backtick fences and requires a matching closing marker', () => {
     expect(extractCommandBlock('~~~janissary\nnotify hello\n~~~', true)).toMatchObject({
       kind: 'one', command: 'notify hello',
