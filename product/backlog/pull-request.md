@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's blanket claim that all new file commands use one-word refusals, which head and tail contradict.
-
-Existing Issue: The description's overview says the new commands share a terse one-word result vocabulary rather than the verbose refusal lines older commands print, while its own verification step 26 and the help page state that head and tail keep `file read`'s verbose failure lines. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer or agent reader trusts the blanket sentence, assumes every new subcommand emits only one-word answers, and builds parsing or expectations that break on the verbose head and tail failures.
-
-Proposal Risk: 1/10 - The sentence is narrowed to the one-word commands with no behavior change, and the existing head and tail verbose-line tests already pin both vocabularies.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2115 "correct the description's blanket one-word vocabulary claim for head and tail". In the pull request body's overview, rewrite the sentence "the new commands share a terse one-word result vocabulary (`missing`, `forbidden`, `notdir`) rather than the verbose refusal lines the older commands print" so it names only `file list`, `file stat`, and `file exists` as the one-word commands and states that `file head` and `file tail` keep `file read`'s verbose failure lines. Leave every other paragraph verbatim, including the Behavior examples and the full How to verify section whose step 26 already states the correct behavior. No code, help, or spec edit belongs here: src/file-failure.ts, src/file-head-tail/head-tail-core.ts, and the assertions in src/file-head-tail/tab-head-tail.test.ts already pin both vocabularies and must keep passing. Verify by re-reading the corrected sentence against step 26 and those verbose-line assertions.
-
-
 * Complete the millisecond documentation repair so the help page's inline mtime example matches the formatter.
 
 Existing Issue: The new "Listing and inspecting paths" section of help/file.md describes a row's modification time as "an ISO UTC timestamp such as `2026-11-19T13:50:00Z`", a shape the formatter never emits, immediately beside the corrected `2026-11-19T13:50:00.000Z` example row. Severity: 2/10
