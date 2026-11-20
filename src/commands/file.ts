@@ -12,20 +12,10 @@ import { isFileListCommandLine } from '../file-list/command.js';
 import { listFilesInTab } from '../file-list/tab-list.js';
 import { isFileStatCommandLine } from '../file-stat/command.js';
 import { statFileInTab } from '../file-stat/tab-stat.js';
+import { isFileExistsCommandLine } from '../file-exists/command.js';
 import { fileExistsInTab } from '../file-exists/tab-exists.js';
+import { isFileHeadTailCommandLine } from '../file-head-tail/command.js';
 import { headTailInTab } from '../file-head-tail/tab-head-tail.js';
-
-function isFileExistsCommandLine(line: string): boolean {
-  return /^file\s+exists(\s|$)/i.test(line);
-}
-
-function isFileHeadCommandLine(line: string): boolean {
-  return /^file\s+head(\s|$)/i.test(line);
-}
-
-function isFileTailCommandLine(line: string): boolean {
-  return /^file\s+tail(\s|$)/i.test(line);
-}
 
 function fileOutput(managers: Managers, label: string, line: string): Promise<string> {
   if (isFileGlobCommandLine(line)) return globFilesInTab(managers, label, line);
@@ -34,7 +24,7 @@ function fileOutput(managers: Managers, label: string, line: string): Promise<st
   if (isFileListCommandLine(line)) return listFilesInTab(managers, label, line);
   if (isFileStatCommandLine(line)) return statFileInTab(managers, label, line);
   if (isFileExistsCommandLine(line)) return Promise.resolve(fileExistsInTab(managers, label, line));
-  if (isFileHeadCommandLine(line) || isFileTailCommandLine(line)) {
+  if (isFileHeadTailCommandLine(line)) {
     return Promise.resolve(headTailInTab(managers, label, line));
   }
   return readFileInTab(managers, label, line);
