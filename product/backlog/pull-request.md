@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the tool-specific command primers so they stop telling the model to end its reply with a bare command line.
-
-Existing Issue: The core prompt still concatenates per-tool primers that instruct the model to end its reply with one bare command line (no code fence, nothing after it), while the rewritten command-protocol primer says a bare line outside the labelled block is just the answer, so one prompt gives the model contradictory instructions. Severity: 7/10
-
-Existing Risk: 7/10 - A model follows the more specific tool primer, emits a bare final command line, and the new extractor treats it as prose and ends the run without executing anything, so the headline feature silently fails in normal use.
-
-Proposal Risk: 2/10 - After the primers agree, the model has one unambiguous place for its command; the remaining risk is that the many colocated primer assertions must be updated together and a missed one leaves a stale string behind.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2127 "update the tool-specific command primers to the labelled-block rule". Rewrite the bare-final-line instruction in the per-tool primers joined by toolPrimer in src/acp/tool-table.ts: file read in src/file-read/command.ts, file write in src/file-write/command.ts, file glob in src/file-glob/command.ts, file grep in src/file-grep/command.ts, file patch in src/file-patch/command.ts, the directory and head/tail forms in src/acp/file-primer.ts, web search in src/web/search/command.ts, web fetch in src/web/fetch/command.ts, browser in src/browser/command.ts, database in src/database/primer.ts, question in src/question-command.ts, and notify in src/notifications/primer.ts, so each tells the agent to put exactly one command inside a final fenced block whose info string is exactly `janissary`, keeping each tool's grammar and worked example and its final-answer-and-no-trailing-command rule. Leave the legacy whole-reply extractors extractDatabaseCommand, extractBrowserCommand, and extractQuestionCommand and their findLastCommandLine calls untouched as the plan requires. Update the colocated primer assertions in the matching test files and the quoted primer text in product/specs/acp.md that still shows a bare final line. Keep the labelled-block extraction and gating tests in src/acp/command-block.test.ts, src/acp/tool-table.test.ts, and src/acp/drive-loop.test.ts passing unchanged.
-
-
 * Update the agent-command spec's stale claim that an agent requests a command on its final reply line.
 
 Existing Issue: product/specs/agent-command.md still states that the agent requests a Janissary command on its final nonempty reply line as `janissary <command>`, immediately above the paragraph this pull request rewrote to say the command comes from a labelled fenced block. Severity: 6/10

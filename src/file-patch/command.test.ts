@@ -62,6 +62,8 @@ describe('FILE_PATCH_PRIMER', () => {
     expect(FILE_PATCH_PRIMER.split('\n')).toHaveLength(5);
     expect(FILE_PATCH_PRIMER).toContain('file patch {"patchText":"<patch>"}');
     expect(FILE_PATCH_PRIMER).toContain('`Patched <n> files:`');
+    expect(FILE_PATCH_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
+    expect(FILE_PATCH_PRIMER).not.toContain('end your reply with one line');
   });
 
   it('gives an example line that parses as an update and a delete', () => {

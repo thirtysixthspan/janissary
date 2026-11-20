@@ -5,31 +5,31 @@ import { FILE_READ_PRIMER } from '../file-read/command.js';
 import { FILE_MUTATION_PRIMER } from '../file-write/command.js';
 
 export const FILE_LIST_PRIMER = [
-  'To list a directory in the workspace, end your reply with one line:',
+  'To list a directory in the workspace, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file list <path>',
   'Paths are relative to the workspace root. The output is one row per entry with its size, modified time, and mode. `file ls` is an accepted alias.',
 ].join('\n');
 
 export const FILE_STAT_PRIMER = [
-  'To inspect one workspace file or directory, end your reply with one line:',
+  'To inspect one workspace file or directory, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file stat <path>',
   'Paths are relative to the workspace root. The output is one row with the entry name, size, modified time, and mode.',
 ].join('\n');
 
 export const FILE_EXISTS_PRIMER = [
-  'To check whether a workspace path exists and what kind it is, end your reply with one line:',
+  'To check whether a workspace path exists and what kind it is, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file exists <path>',
   'Paths are relative to the workspace root. The output is `file`, `dir`, `link`, or `missing`.',
 ].join('\n');
 
 export const FILE_HEAD_PRIMER = [
-  'To read the first lines of a workspace file, end your reply with one line:',
+  'To read the first lines of a workspace file, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file head <path> [-n <lines>]',
   'Paths are relative to the workspace root. The default is 10 lines.',
 ].join('\n');
 
 export const FILE_TAIL_PRIMER = [
-  'To read the last lines of a workspace file, end your reply with one line:',
+  'To read the last lines of a workspace file, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file tail <path> [-n <lines>]',
   'Paths are relative to the workspace root. The default is 10 lines.',
 ].join('\n');

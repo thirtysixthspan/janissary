@@ -28,6 +28,9 @@ describe('DatabaseManager', () => {
   it('exposes the db primer', () => {
     const manager = new DatabaseManager();
     expect(manager.primer).toBe(DB_PRIMER);
+    expect(DB_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
+    expect(DB_PRIMER).toContain('NO trailing `db` command.');
+    expect(DB_PRIMER).not.toContain('no code fence');
   });
 
   it('tracks a database a tab creates', () => {

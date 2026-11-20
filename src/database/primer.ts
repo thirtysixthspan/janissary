@@ -10,10 +10,9 @@ export const DB_PRIMER = [
   '  db sqlite query  <name> <sql>    # run SQL against a database',
   '  db sqlite list                   # list databases',
   'Database names use letters, numbers, "-" and "_" only; the engine is always "sqlite".',
-  'To inspect or change a database, end your reply with exactly one `db` command on its',
-  'own final line (no code fence, nothing after it). The host runs it automatically and',
-  'returns the output to you, so you can issue further commands. When the task is done,',
-  'reply with the final answer and NO trailing `db` command.',
+  'To inspect or change a database, put exactly one `db` command inside a final fenced block whose info string is exactly `janissary`,',
+  'without a `janissary` prefix; prose may follow the block. The host runs it automatically and returns the output to you,',
+  'so you can issue further commands. When the task is done, reply with the final answer and NO trailing `db` command.',
   'Be concise: do not explain what you are doing. Only output `db` commands and the final answer.',
 ].join('\n');
 

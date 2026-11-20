@@ -86,6 +86,8 @@ describe('FILE_MUTATION_PRIMER', () => {
     expect(FILE_MUTATION_PRIMER).toContain('creates missing parent folders.');
     expect(FILE_MUTATION_PRIMER).not.toContain('expectedHash');
     expect(FILE_MUTATION_PRIMER.split('\n')).toHaveLength(9);
+    expect(FILE_MUTATION_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
+    expect(FILE_MUTATION_PRIMER).not.toContain('end your reply with one line');
   });
 
   it('explains escaping, shows a new-file example, and names the replies', () => {

@@ -8,7 +8,7 @@ export const FILE_PATCH_USAGE = 'Usage: file patch <JSON>';
 const PATCH_TOO_LARGE = 'Patch too large (>5 MB). No files were changed.';
 
 export const FILE_PATCH_PRIMER = [
-  'To change several files in one step, end your reply with one line:',
+  'To change several files in one step, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file patch {"patchText":"<patch>"}',
   'The patch is applied all-or-nothing. Inside it: `*** Add File: <path>` then the new content with every line prefixed by `+`; `*** Delete File: <path>` with no body; `*** Update File: <path>`, optionally `*** Move to: <new path>`, then hunks: an `@@` line (optionally `@@ <a line that comes before the change>`) followed by lines starting with ` ` (unchanged context), `-` (removed), or `+` (added). Give about 3 context lines around each change.',
   String.raw`Example: file patch {"patchText":"*** Begin Patch\n*** Update File: src/a.ts\n@@\n const a = 1;\n-const b = 2;\n+const b = 3;\n*** Delete File: old.txt\n*** End Patch"}`,

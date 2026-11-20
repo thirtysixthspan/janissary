@@ -102,8 +102,7 @@ export const BROWSER_PRIMER = [
   '  browser goto <url>     # navigate to a URL (a browser/window opens automatically)',
   '  browser content        # return the current page\'s rendered text',
   '  browser eval <js>      # run JavaScript in the page and return the result',
-  'To read a web page, end your reply with exactly one `browser` command on its own final',
-  'line (no code fence, nothing after it). The host runs it and returns the output to you,',
-  'so you can issue further commands. When the task is done, reply with the final answer and',
-  'NO trailing command.',
+  'To read a web page, put exactly one `browser` command inside a final fenced block whose info string is exactly `janissary`,',
+  'without a `janissary` prefix; prose may follow the block. The host runs it and returns the output to you, so you can issue',
+  'further commands. When the task is done, reply with the final answer and NO trailing command.',
 ].join('\n');

@@ -200,7 +200,7 @@ describe('WEB_SEARCH_PRIMER', () => {
   it('is the six primer lines', () => {
     expect(WEB_SEARCH_PRIMER).toBe(
       [
-        'To search the web, end your reply with one line:',
+        'To search the web, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
         'web search <query> [--results <1-20>] [--max-chars <200-100000>] [--depth basic|advanced] [--provider <name>]',
         'The result is a Markdown list of up to 10 results by default, each a title linked to its URL with a snippet beneath. For time-sensitive searches, include the year in the query; the search does not infer freshness.',
         '--depth advanced gives better snippets but costs more; use it only when basic results are not enough.',

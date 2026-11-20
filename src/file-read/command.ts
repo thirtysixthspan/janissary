@@ -42,7 +42,7 @@ export function parseFileRead(input: string): FileReadArgs | { error: string } {
 }
 
 export const FILE_READ_PRIMER = [
-  'To read a file in the workspace, end your reply with one line:',
+  'To read a file in the workspace, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file read <path> [--offset <line>] [--limit <lines>]',
   'Paths are relative to the workspace root. The output is numbered lines, at most 2000 per read; use --offset to continue a long file.',
 ].join('\n');

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBrowserCommand, extractBrowserCommand } from './command.js';
+import { parseBrowserCommand, extractBrowserCommand, BROWSER_PRIMER } from './command.js';
 
 describe('parseBrowserCommand', () => {
   it('parses open with an optional name and headless default', () => {
@@ -44,6 +44,14 @@ describe('parseBrowserCommand', () => {
     expect('error' in parseBrowserCommand('browser goto')).toBe(true);
     expect('error' in parseBrowserCommand('browser use')).toBe(true);
     expect('error' in parseBrowserCommand('browser window open w1')).toBe(true);
+  });
+});
+
+describe('BROWSER_PRIMER', () => {
+  it('teaches the labelled block rule and keeps the no-trailing-command rule', () => {
+    expect(BROWSER_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
+    expect(BROWSER_PRIMER).toContain('NO trailing command.');
+    expect(BROWSER_PRIMER).not.toContain('no code fence');
   });
 });
 
