@@ -2,9 +2,6 @@
 
 ## ready
 
-* allow acp sessions to accept multiple tool calls in a single message, for example:
-Let me look into how ACP sessions are set up and what preamble injection exists. ```janissary file grep --include *.ts,*.mjs -i acp ``` Let me search more specifically for ACP session creation and prompt/preamble handling. ```janissary file glob **/*acp* ``` Let me look at what files exist related to ACP and preambles. ```janissary file grep --include *.ts,*.mjs -i "acp" --path src ``` Let me broaden and look at the structure. ```janissary file list src ``` Let me find the agent connection code. ```janissary file glob **/*.ts --path src --limit 100 ```
-
 ## development
 
 ## deferred
