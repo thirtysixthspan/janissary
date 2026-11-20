@@ -12,6 +12,7 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
 type AcpRunFrame = Extract<ClientFrame, { type: 'acp-run' }>;
 type AcpToolResultFrame = Extract<ClientFrame, { type: 'acp-tool-result' }>;
+type PendingCall = { result: Deferred<string>; command: string; settled: boolean };
 
 function webWorkspaceCommand(line: string, tokens: ProjectTokens, signal: AbortSignal): string | Promise<string> {
   const subcommand = webSubcommand(line);
@@ -45,14 +46,13 @@ export function startRemoteLoop(
   const aborted = () => controller.signal.aborted;
   const id = frame.id;
   let requestNumber = 0;
-  let forwarded = false;
   let cancellation: Promise<void> | undefined;
-  const pending = new Map<number, Deferred<string>>();
+  const pending = new Map<number, PendingCall>();
 
   const abort = () => {
     if (aborted()) return;
     controller.abort();
-    for (const request of pending.values()) request.reject(new Error('ACP: run aborted.'));
+    for (const call of pending.values()) call.result.reject(new Error('ACP: run aborted.'));
     pending.clear();
   };
 
@@ -66,8 +66,7 @@ export function startRemoteLoop(
       if (aborted()) return '';
       const request = ++requestNumber;
       const result = deferred<string>();
-      pending.set(request, result);
-      forwarded = true;
+      pending.set(request, { result, command, settled: false });
       send({ type: 'acp-tool-request', id, request, command });
       return result.promise;
     },
@@ -79,9 +78,11 @@ export function startRemoteLoop(
     endTurn: (display) => { if (!aborted()) send({ type: 'acp-turn', id, phase: 'end', display }); },
     ranCommand: (command, result, workspace, refused) => {
       if (aborted()) return;
-      if (forwarded) {
-        forwarded = false;
-        return;
+      for (const [request, call] of pending) {
+        if (call.command === command) {
+          pending.delete(request);
+          return;
+        }
       }
       send({
         type: 'acp-tool-step', id, command, result,
@@ -110,11 +111,11 @@ export function startRemoteLoop(
 
   return {
     toolResult: (result) => {
-      const request = pending.get(result.request);
-      if (request === undefined) return;
-      pending.delete(result.request);
-      if (result.output === undefined) request.reject(new Error(result.error));
-      else request.resolve(result.output);
+      const call = pending.get(result.request);
+      if (call === undefined || call.settled) return;
+      call.settled = true;
+      if (result.output === undefined) call.result.reject(new Error(result.error));
+      else call.result.resolve(result.output);
     },
     cancel: () => {
       if (aborted()) return cancellation ?? Promise.resolve();

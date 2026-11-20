@@ -359,6 +359,100 @@ describe('startRemoteLoop caller steps', () => {
   });
 });
 
+describe('startRemoteLoop parallel caller correlation', () => {
+  const Q2 = 'db sqlite query movies SELECT 2';
+  const Q3 = 'db sqlite query movies SELECT 3';
+
+  it('correlates every caller block in one reply with its own request and emits no tool step', async () => {
+    const batch = [QUERY, Q2, Q3].map((command) => block(command)).join('\n\n');
+    const { frames, handle } = start([[batch], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+
+    const requests = framesOf(frames, 'acp-tool-request');
+    expect(requests.map((frame) => frame.request)).toEqual([1, 2, 3]);
+    expect(requests.map((frame) => frame.command)).toEqual([QUERY, Q2, Q3]);
+
+    for (const frame of requests) {
+      handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: frame.request, output: `out-${frame.request}` });
+    }
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+  });
+
+  it('consumes one pending entry per identical command in a batch', async () => {
+    const batch = `${block(QUERY)}\n\n${block(QUERY)}`;
+    const { frames, handle } = start([[batch], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+
+    expect(framesOf(frames, 'acp-tool-request').map((frame) => frame.request)).toEqual([1, 2]);
+
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'first' });
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 2, output: 'second' });
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+  });
+
+  it('keeps a workspace step from the same batch', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\n');
+    const batch = `${block(QUERY)}\n\n${block('file read a.md')}`;
+    const { frames, handle } = start([[batch], ['Done.']], coreSnapshot('tell', ['db sqlite query', 'file read']));
+
+    expect(framesOf(frames, 'acp-tool-request').map((frame) => frame.command)).toEqual([QUERY]);
+    const step: Extract<ServerFrame, { type: 'acp-tool-step' }> = {
+      type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md', result: '1\tone', workspace: true,
+    };
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([step]);
+
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: '42' });
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([step]);
+  });
+
+  it('keeps a gate refusal step from the same batch', async () => {
+    const snapshot = coreSnapshot('tell', ['db sqlite query', 'file read'], [
+      { name: 'file read', effectiveEnabled: false, effectiveAgentAccess: true },
+    ]);
+    const batch = `${block(QUERY)}\n\n${block('file read a.md')}`;
+    const { frames, handle } = start([[batch], ['Done.']], snapshot);
+
+    expect(framesOf(frames, 'acp-tool-request').map((frame) => frame.command)).toEqual([QUERY]);
+    const step: Extract<ServerFrame, { type: 'acp-tool-step' }> = {
+      type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md',
+      result: 'Command is disabled: file read.', workspace: false, refused: 'disabled',
+    };
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([step]);
+
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: '42' });
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([step]);
+  });
+
+  it('rejects several pending caller requests on abort and sends no further frames', async () => {
+    const run = startHeld(coreSnapshot('tell', ['db sqlite query']));
+    const batch = [QUERY, Q2, Q3].map((command) => block(command)).join('\n\n');
+    run.last().onChunk(batch);
+    run.last().onEnd('end_turn');
+    await flush();
+    expect(framesOf(run.frames, 'acp-tool-request').map((frame) => frame.request)).toEqual([1, 2, 3]);
+    const before = run.frames.length;
+
+    run.handle.abort();
+    await flush();
+
+    for (const request of [1, 2, 3]) {
+      run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request, output: `out-${request}` });
+    }
+    run.last().onChunk('late');
+    run.last().onEnd('end_turn');
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(run.sent).toHaveLength(1);
+  });
+});
+
 describe('startRemoteLoop frame order', () => {
   it('emits turn, delta chunks, end, request, and the follow-up turn in order', async () => {
     const { frames, handle } = start([
