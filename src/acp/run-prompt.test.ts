@@ -35,7 +35,8 @@ import { FILE_LIST_USAGE } from '../file-list/command.js';
 import * as fileGrepCandidates from '../file-grep/candidates.js';
 import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
-import { CORE_MAX_STEPS } from './drive-loop.js';
+import { maxToolSteps } from './drive-loop.js';
+import { getConfig } from '../config.js';
 import { deferred } from '../deferred.js';
 import { WEB_SEARCH_PRIMER } from '../web/search/command.js';
 import { WEB_FETCH_PRIMER } from '../web/fetch/command.js';
@@ -114,6 +115,7 @@ import { coreSnapshotRows, runCorePrompt } from './run-prompt.js';
 const homeRoots: string[] = [];
 const launchRoots: string[] = [];
 beforeEach(() => {
+  getConfig().maxToolTurns = 8;
   const dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-home-'));
   home.dir = dir;
   homeRoots.push(dir);
@@ -279,7 +281,7 @@ describe('runCorePrompt role primer', () => {
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
       DISABLED_HARNESS_TOOLS_LINE,
-      commandProtocolPrimer(CORE_MAX_STEPS),
+      commandProtocolPrimer(maxToolSteps()),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
@@ -450,9 +452,11 @@ describe('runCorePrompt tool runner', () => {
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
   });
 
-  it('caps the loop at eight tool steps', () => {
+  it('caps the loop at the configured tool steps', () => {
     const { start } = harness();
-    expect(start('ask', ['db sqlite query']).deps.maxSteps).toBe(8);
+    expect(start('ask', ['db sqlite query']).deps.maxSteps).toBe(maxToolSteps());
+    getConfig().maxToolTurns = 3;
+    expect(start('ask', ['db sqlite query']).deps.maxSteps).toBe(3);
   });
 
   it('records the command and its result, and appends the result entry', async () => {

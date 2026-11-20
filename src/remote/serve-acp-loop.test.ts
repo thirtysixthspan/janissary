@@ -3,6 +3,7 @@ import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getConfig } from '../config.js';
 import { NO_TOOLS_LINE } from '../acp/internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import type { AcpRunSnapshot, AcpRunSnapshotRow, AcpSession, AcpToolHost, PromptHandlers } from '../acp/types.js';
@@ -100,6 +101,7 @@ let workspace: string;
 let homeDir: string;
 
 beforeEach(() => {
+  getConfig().maxToolTurns = 8;
   workspace = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-'));
   homeDir = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-home-'));
   home.dir = homeDir;

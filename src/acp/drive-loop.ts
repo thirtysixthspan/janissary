@@ -1,4 +1,5 @@
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpToolHost } from './types.js';
+import { getConfig } from '../config.js';
 import { extractCommandBlock } from './command-block.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { createAcpToolTable, gateCommand, toolExtractor, toolPrimer, type AcpTool } from './tool-table.js';
@@ -11,7 +12,9 @@ import { commandProtocolPrimer } from './command-protocol.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
 
-export const CORE_MAX_STEPS = 8;
+export function maxToolSteps(): number {
+  return getConfig().maxToolTurns;
+}
 
 export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, tools: AcpTool[]): string {
   const allowList = NATIVE_ACP_COMMANDS.filter((command) => snapshot.grants.includes(command)
@@ -21,7 +24,7 @@ export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, 
     toolPrimer(tools, allowList),
     toolsAvailable ? NO_BUILTIN_TOOLS_LINE : NO_TOOLS_LINE,
     toolsAvailable ? DISABLED_HARNESS_TOOLS_LINE : '',
-    toolsAvailable ? commandProtocolPrimer(CORE_MAX_STEPS) : '',
+    toolsAvailable ? commandProtocolPrimer(maxToolSteps()) : '',
     snapshot.role === 'tell' ? TELL_INSTRUCTION : '',
     MARKDOWN_INSTRUCTION,
   ].filter(Boolean).join('\n\n');
@@ -74,7 +77,7 @@ export function driveToolLoop(
     extractCommand: snapshot.kind === 'core'
       ? toolExtractor(tools)
       : (text) => extractCommandBlock(text, snapshot.askUser),
-    maxSteps: snapshot.kind === 'core' ? CORE_MAX_STEPS : Infinity,
+    maxSteps: maxToolSteps(),
     describeCommand: describeLoopCommand,
   }, {
     startTurn: (isFirst) => { events.startTurn(isFirst); },

@@ -1,10 +1,11 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { createRemoteAcpSession } from './acp-session.js';
 import type { AcpSessionListener } from './channel/acp.js';
 import type { RemoteChannel } from './channel/index.js';
 import type { ClientFrame } from './protocol-frames.js';
 import type { AcpLoopHandlers, AcpRunSnapshot } from '../acp/types.js';
-import { CORE_MAX_STEPS } from '../acp/drive-loop.js';
+import { maxToolSteps } from '../acp/drive-loop.js';
+import { getConfig } from '../config.js';
 
 const OPTIONS = {
   id: 'racp1',
@@ -15,6 +16,8 @@ const OPTIONS = {
 };
 
 const snapshot: AcpRunSnapshot = { kind: 'agent', grants: [], askUser: false };
+
+beforeEach(() => { getConfig().maxToolTurns = 8; });
 
 function runEvents(): AcpLoopHandlers {
   return {
@@ -371,7 +374,7 @@ describe('createRemoteAcpSession — running', () => {
 
     s.listener().onRunEnd('answered');
 
-    expect(first.finished).toHaveBeenCalledWith('answered', CORE_MAX_STEPS);
+    expect(first.finished).toHaveBeenCalledWith('answered', maxToolSteps());
     expect(overlap.finished).not.toHaveBeenCalled();
     const next = runEvents();
     s.session.run('next', snapshot, vi.fn(), next);
@@ -400,14 +403,15 @@ describe('createRemoteAcpSession — running', () => {
     expect(events.endTurn).toHaveBeenCalledWith('Final');
   });
 
-  it.each(['answered', 'capped'] as const)('maps an %s run end to the core step cap', (reason) => {
+  it.each(['answered', 'capped'] as const)('maps an %s run end to the configured step cap', (reason) => {
+    getConfig().maxToolTurns = 12;
     const s = makeSession();
     const events = runEvents();
     s.session.run('go', snapshot, vi.fn(), events);
 
     s.listener().onRunEnd(reason);
 
-    expect(events.finished).toHaveBeenCalledWith(reason, CORE_MAX_STEPS);
+    expect(events.finished).toHaveBeenCalledWith(reason, 12);
   });
 
   it('drains a cancelled run without a finished event, then admits the next run', async () => {

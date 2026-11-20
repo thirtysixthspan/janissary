@@ -1,10 +1,11 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpRunSnapshotRow } from './types.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
-import { CORE_MAX_STEPS, corePrimer, driveToolLoop, runToolLoop } from './drive-loop.js';
+import { corePrimer, driveToolLoop, maxToolSteps, runToolLoop } from './drive-loop.js';
+import { getConfig } from '../config.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 import { createAcpToolTable } from './tool-table.js';
 import { DISABLED_HARNESS_TOOLS_LINE, NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
@@ -15,6 +16,8 @@ import { globWorkspaceCommand } from '../file-glob/glob.js';
 import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+
+beforeEach(() => { getConfig().maxToolTurns = 8; });
 
 type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
 
@@ -35,7 +38,7 @@ describe('corePrimer', () => {
       'Only these commands are allowed: db sqlite query.',
       NO_BUILTIN_TOOLS_LINE,
       DISABLED_HARNESS_TOOLS_LINE,
-      commandProtocolPrimer(CORE_MAX_STEPS),
+      commandProtocolPrimer(maxToolSteps()),
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
@@ -65,7 +68,7 @@ describe('corePrimer', () => {
     expect(result).toContain(DISABLED_HARNESS_TOOLS_LINE);
     expect(result.indexOf(NO_BUILTIN_TOOLS_LINE)).toBeLessThan(result.indexOf(DISABLED_HARNESS_TOOLS_LINE));
     expect(result.indexOf(DISABLED_HARNESS_TOOLS_LINE))
-      .toBeLessThan(result.indexOf(commandProtocolPrimer(CORE_MAX_STEPS)));
+      .toBeLessThan(result.indexOf(commandProtocolPrimer(maxToolSteps())));
   });
 
   it('gives only the no-tools line and Markdown when the caller passes no tools', () => {
@@ -82,8 +85,15 @@ describe('corePrimer', () => {
 
   it('states the exchange protocol with the loop step cap when commands are available', () => {
     const result = primerFor(coreSnapshot('ask', ['file write']));
-    expect(result).toContain(commandProtocolPrimer(CORE_MAX_STEPS));
+    expect(result).toContain(commandProtocolPrimer(maxToolSteps()));
     expect(result).toContain('At most 8 commands run for one request.');
+  });
+
+  it('states the configured step cap in the protocol', () => {
+    getConfig().maxToolTurns = 3;
+    const result = primerFor(coreSnapshot('ask', ['file write']));
+    expect(result).toContain('At most 3 commands run for one request.');
+    expect(maxToolSteps()).toBe(3);
   });
 
   it('omits the exchange protocol when every granted command is unavailable', () => {
@@ -287,6 +297,14 @@ describe('driveToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
   });
 
+  it('caps a core loop at the configured step limit', () => {
+    getConfig().maxToolTurns = 3;
+    const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY)]);
+    expect(host.runCaller).toHaveBeenCalledTimes(3);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(3);
+    expect(events.at(-1)).toEqual(['finished', 'capped', 3]);
+  });
+
   it('drops a host result that arrives after the abort', async () => {
     const { sent, events, host, controller, resolve } = drivePending();
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
@@ -312,7 +330,7 @@ describe('driveToolLoop', () => {
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
     reject(new Error('host failed'));
     await vi.waitFor(() => { expect(ofKind(events, 'error')).toEqual([['error', 'host failed']]); });
-    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', CORE_MAX_STEPS]); });
+    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', maxToolSteps()]); });
     expect(ofKind(events, 'ranCommand')).toEqual([]);
     expect(sent).toHaveLength(1);
   });
@@ -328,7 +346,7 @@ describe('driveToolLoop', () => {
     driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, new AbortController().signal);
 
     expect(ofKind(events, 'error')).toEqual([['error', 'sync boom']]);
-    expect(events.at(-1)).toEqual(['finished', 'failed', CORE_MAX_STEPS]);
+    expect(events.at(-1)).toEqual(['finished', 'failed', maxToolSteps()]);
     expect(ofKind(events, 'ranCommand')).toEqual([]);
     expect(sent).toHaveLength(1);
   });
@@ -388,7 +406,7 @@ describe('runToolLoop', () => {
     runToolLoop(session, 'do it', { kind: 'agent', grants: ['db'], askUser: false }, host, h, new AbortController().signal);
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith('db sqlite list');
     expect(sent[1]).toContain('caller output');
-    expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
+    expect(events.at(-1)).toEqual(['finished', 'answered', maxToolSteps()]);
   });
 });
 
@@ -431,7 +449,7 @@ describe('driveToolLoop agent runs', () => {
     expect(sent[1]).toContain(`Output of \`file grep TODO\`:\n${refusal}`);
     expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'file grep TODO', false]]);
     expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', 'file grep TODO', refusal, false, undefined]]);
-    expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
+    expect(events.at(-1)).toEqual(['finished', 'answered', maxToolSteps()]);
   });
 
   it.each([false, true])('extracts a bare question only with askUser enabled (%s)', (askUser) => {
@@ -448,13 +466,12 @@ describe('driveToolLoop agent runs', () => {
     expect(host.runWorkspace).not.toHaveBeenCalled();
   });
 
-  it('runs twenty steps without a cap', () => {
-    const replies = [...Array.from({ length: 20 }, () => block('db sqlite list')), 'Done.'];
-    const { sent, events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, replies);
-    expect(host.runCaller).toHaveBeenCalledTimes(20);
-    expect(sent).toHaveLength(21);
-    expect(ofKind(events, 'ranCommand')).toHaveLength(20);
-    expect(events.at(-1)).toEqual(['finished', 'answered', Infinity]);
+  it('caps an agent run at the configured step limit', () => {
+    getConfig().maxToolTurns = 3;
+    const { events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, [block('db sqlite list')]);
+    expect(host.runCaller).toHaveBeenCalledTimes(3);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(3);
+    expect(events.at(-1)).toEqual(['finished', 'capped', 3]);
   });
 });
 

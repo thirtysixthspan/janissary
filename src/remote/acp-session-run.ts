@@ -1,6 +1,6 @@
 import type { AcpLoopHandlers, AcpToolHost } from '../acp/types.js';
 import type { AcpPromptControl, ProviderTurn } from '../acp/prompt-control.js';
-import { CORE_MAX_STEPS } from '../acp/drive-loop.js';
+import { maxToolSteps } from '../acp/drive-loop.js';
 import { errorText } from '../error-text.js';
 import type { ClientFrame, RemoteFrame } from './protocol-frames.js';
 
@@ -41,7 +41,7 @@ export function createRemoteAcpRun(control: AcpPromptControl, send: (frame: Clie
   };
 
   const finish = (events: AcpLoopHandlers, reason: string) => {
-    if (reason === 'answered' || reason === 'capped') events.finished(reason, CORE_MAX_STEPS);
+    if (reason === 'answered' || reason === 'capped') events.finished(reason, maxToolSteps());
   };
 
   return {
