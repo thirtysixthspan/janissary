@@ -82,7 +82,7 @@
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `next` | Switch to the next tab |
-| `notifications` | Open the notifications feed; per-type settings control desktop banners and sounds in `.janissary/config.json` |
+| `notifications` | Open the notifications feed; per-type settings control desktop banners and sounds in `.janissary/notifications.json` |
 | `notifications clear` | Empty the notification queue, record file, and on-screen toasts |
 | `notifications left` | Dock the notifications tab in the left sidebar |
 | `notifications right` | Dock the notifications tab in the right sidebar |

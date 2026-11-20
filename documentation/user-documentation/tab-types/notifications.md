@@ -65,39 +65,38 @@ Janissary never asks for desktop-notification permission. A banner appears only 
 already granted permission for the Janissary site; denying or withholding permission does not affect
 the feed or bell. Browser autoplay rules can block sounds until you interact with the page.
 
-Set the alert channels and category volumes in `.janissary/config.json`:
+Set the per-type alert channels in `.janissary/notifications.json` and the master switches and category volumes in `.janissary/config.json`:
 
-| Setting | Default | What it controls |
-|---|---:|---|
-| `osNotifications` | `true` | Master switch for configured desktop banners when the browser has permission. |
-| `notifications.alerts` | Per-type defaults | Chooses each type's banner and sound (`success`, `warning`, `error`, or `none`). |
-| `terminalBell` | `true` | Allows each type's configured sound cue to play. |
-| `terminalBellVolumeSuccess` | `0.8` | Success-sound volume, from `0` to `1`. |
-| `terminalBellVolumeWarning` | `0.8` | Warning-sound volume, from `0` to `1`. |
-| `terminalBellVolumeError` | `0.8` | Error-sound volume, from `0` to `1`. |
+| Setting | File | Default | What it controls |
+|---|---|---:|---|
+| `alerts` | `notifications.json` | Per-type defaults | Chooses each type's banner and sound (`success`, `warning`, `error`, or `none`). |
+| `osNotifications` | `config.json` | `true` | Master switch for configured desktop banners when the browser has permission. |
+| `terminalBell` | `config.json` | `true` | Allows each type's configured sound cue to play. |
+| `terminalBellVolumeSuccess` | `config.json` | `0.8` | Success-sound volume, from `0` to `1`. |
+| `terminalBellVolumeWarning` | `config.json` | `0.8` | Warning-sound volume, from `0` to `1`. |
+| `terminalBellVolumeError` | `config.json` | `0.8` | Error-sound volume, from `0` to `1`. |
 `osNotifications` and `terminalBell` are master switches for every type's configured banner and cue. Per-type settings can move a notification to a different bundled sound or silence its sound without disabling its banner. See [app configuration](/user-documentation/getting-started/configuration)
 for how to edit and validate these settings.
 
-The config file lists every notification type with its default. For example:
+The notifications file lists every notification type with its default. For example:
 
 ```json
 {
-  "notifications": {
-    "alerts": {
-      "question": { "desktop": true, "sound": "warning" },
-      "file-operation": { "desktop": true, "sound": "error" },
-      "state-change": { "desktop": false, "sound": "none" }
-    }
+  "alerts": {
+    "question": { "desktop": true, "sound": "warning" },
+    "file-operation": { "desktop": true, "sound": "error" },
+    "state-change": { "desktop": false, "sound": "none" }
   }
 }
 ```
 
 A banner with `sound: "none"` plays no cue. A missing or invalid field uses that event's default.
 
-Each cue plays one of three bundled MP3 files. `success.mp3` is the default for `manual`, `plugin-note`, `models-refresh`, `connection-closed`, and `workspace-ready`. `warning.mp3` covers `question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, `layout`, the two remote-session events, `system-schedule-fire`, `tab`, the three launch events, and `remote-refused`. The remaining explicit types use `error.mp3`, and the five ambient types have no cue. Janissary writes the default cue for every type into your config, so you can check or change any one there. The MP3 files live in the app bundle's `sounds/` folder. To use your own sounds, replace the files and rebuild and reinstall the web bundle.
+Each cue plays one of three bundled MP3 files. `success.mp3` is the default for `manual`, `plugin-note`, `models-refresh`, `connection-closed`, and `workspace-ready`. `warning.mp3` covers `question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, `layout`, the two remote-session events, `system-schedule-fire`, `tab`, the three launch events, and `remote-refused`. The remaining explicit types use `error.mp3`, and the five ambient types have no cue. Janissary writes the default cue for every type into `notifications.json`, so you can check or change any one there. The MP3 files live in the app bundle's `sounds/` folder. To use your own sounds, replace the files and rebuild and reinstall the web bundle.
 
-Every notification is also appended to `.janissary/notifications.json`, one JSON line per
-notification, as a durable trail that outlives the run. `notifications clear` is what empties the
+Every notification is also appended to `.janissary/logs/notifications.json`, one JSON line per
+notification, as a durable trail that outlives the run. This record file is separate from the
+`notifications.json` config file at the state root. `notifications clear` is what empties the
 queue, that file, and any toasts on screen — it opens and moves nothing, so an already-open feed
 just goes empty. `clear` is exclusive with a dock keyword: `notifications right clear` docks the
 feed right and clears nothing, since the command reads a single keyword.
@@ -125,20 +124,18 @@ Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` 
 
 ## What it reports
 
-The five ambient event toggles default to `false`. The separate `systemScheduleFire` and `modelsRefresh` toggles both default to `true`. Edit `.janissary/config.json` to choose which background events you want and whether to silence system schedule or Models refresh notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
+The five ambient event toggles default to `false`. The separate `systemScheduleFire` and `modelsRefresh` toggles both default to `true`. Edit `.janissary/notifications.json` to choose which background events you want and whether to silence system schedule or Models refresh notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
 
 ```json
 {
-  "notifications": {
-    "events": {
-      "stateChange": true,
-      "scheduleFire": true,
-      "agentStart": true,
-      "rateLimited": true,
-      "commandDisabled": true,
-      "systemScheduleFire": true,
-      "modelsRefresh": true
-    }
+  "events": {
+    "stateChange": true,
+    "scheduleFire": true,
+    "agentStart": true,
+    "rateLimited": true,
+    "commandDisabled": true,
+    "systemScheduleFire": true,
+    "modelsRefresh": true
   }
 }
 ```

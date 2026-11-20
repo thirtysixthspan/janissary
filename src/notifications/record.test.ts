@@ -40,9 +40,39 @@ describe('notification record', () => {
     initNotificationRecord(undefined);
   });
 
-  it('writes the file under .janissary', () => {
-    expect(notificationRecordPath()).toBe(path.join(projectDir, '.janissary', 'notifications.json'));
+  it('writes the file under .janissary/logs', () => {
+    expect(notificationRecordPath()).toBe(path.join(projectDir, '.janissary', 'logs', 'notifications.json'));
+    expect(existsSync(path.join(projectDir, '.janissary', 'logs'))).toBe(true);
   });
+
+  it('moves a legacy record from the state root into the logs directory', () => {
+    const stateDir = path.join(projectDir, '.janissary');
+    rmSync(logDirPath(), { recursive: true, force: true });
+    writeFileSync(path.join(stateDir, 'notifications.json'), `${JSON.stringify({
+      detectedAt: DETECTED.toISOString(), event: 'manual', tab: 'janus', message: 'from before',
+    })}\n`);
+
+    initNotificationRecord(projectDir);
+
+    expect(existsSync(path.join(stateDir, 'notifications.json'))).toBe(false);
+    expect(lines()).toEqual([{
+      detectedAt: DETECTED.toISOString(), event: 'manual', tab: 'janus', message: 'from before',
+    }]);
+  });
+
+  it('leaves a config-shaped file at the state root untouched', () => {
+    const stateDir = path.join(projectDir, '.janissary');
+    const legacy = path.join(stateDir, 'notifications.json');
+    writeFileSync(legacy, JSON.stringify({ events: {}, alerts: {} }));
+
+    initNotificationRecord(projectDir);
+
+    expect(readFileSync(legacy, 'utf8')).toBe(JSON.stringify({ events: {}, alerts: {} }));
+  });
+
+  function logDirPath(): string {
+    return path.dirname(notificationRecordPath());
+  }
 
   it('appends one JSON line per notification, carrying the ISO time and the event type', () => {
     appendNotificationRecord(notification());

@@ -53,7 +53,7 @@ function settingsMap(value: unknown): Record<string, Record<string, unknown>> {
   return Object.fromEntries(entries);
 }
 
-function notifications(value: unknown, fallback: NotificationConfig): NotificationConfig {
+export function decodeNotificationConfig(value: unknown, fallback: NotificationConfig): NotificationConfig {
   const record = isRecord(value) ? value : {};
   const events = isRecord(record.events) ? record.events : {};
   return {
@@ -76,28 +76,23 @@ function notifications(value: unknown, fallback: NotificationConfig): Notificati
   };
 }
 
+// Works on the standalone notification-config file, whose top level is the NotificationConfig
+// itself rather than a `notifications` key inside config.json.
 export function backfillNotificationAlerts(
-  parsed: unknown,
+  value: unknown,
   defaults: NotificationConfig,
 ): Record<string, unknown> | undefined {
-  const raw = configRecord(parsed);
-  if (!raw) return;
-  const rawNotifications = configRecord(raw.notifications);
-  if (!rawNotifications) return { ...raw, notifications: defaults };
-  const rawAlerts = configRecord(rawNotifications.alerts);
-  if (!rawAlerts) {
-    return { ...raw, notifications: { ...rawNotifications, alerts: defaults.alerts } };
-  }
+  const raw = isRecord(value) ? value : undefined;
+  if (!raw) return { ...defaults };
+  const rawAlerts = isRecord(raw.alerts) ? raw.alerts : undefined;
+  if (!rawAlerts) return { ...raw, alerts: defaults.alerts };
   const missing = Object.keys(defaults.alerts).filter((event) => !Object.hasOwn(rawAlerts, event));
   if (missing.length === 0) return;
   return {
     ...raw,
-    notifications: {
-      ...rawNotifications,
-      alerts: {
-        ...rawAlerts,
-        ...Object.fromEntries(missing.map((event) => [event, defaults.alerts[event as NotificationEventType]])),
-      },
+    alerts: {
+      ...rawAlerts,
+      ...Object.fromEntries(missing.map((event) => [event, defaults.alerts[event as NotificationEventType]])),
     },
   };
 }
@@ -110,7 +105,6 @@ export function backfillMaxToolTurns(parsed: unknown, defaults: Config): Record<
 
 export function decodeConfig(value: unknown, defaults: Config): Config {
   const record = isRecord(value) ? value : {};
-  const defaultNotifications = defaults.notifications;
   return {
     transcriptMaxLines: numberValue(record.transcriptMaxLines, defaults.transcriptMaxLines),
     maxToolTurns: positiveIntegerValue(record.maxToolTurns, defaults.maxToolTurns),
@@ -121,7 +115,6 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     recordShellTabs: booleanValue(record.recordShellTabs, defaults.recordShellTabs),
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),
     theme: stringValue(record.theme, defaults.theme),
-    notifications: defaultNotifications && notifications(record.notifications, defaultNotifications),
     osNotifications: booleanValue(record.osNotifications, defaults.osNotifications),
     terminalBell: booleanValue(record.terminalBell, defaults.terminalBell),
     terminalBellVolumeSuccess: volumeValue(record.terminalBellVolumeSuccess, defaults.terminalBellVolumeSuccess),

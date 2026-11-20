@@ -1,12 +1,14 @@
-import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, writeSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, writeSync } from 'node:fs';
 import path from 'node:path';
+import { isRecord } from '../value-guards.js';
 import type { RecordedNotification } from './queue.js';
 
 // The durable trail of every notification the user was given, one JSON object per line, appended as
 // each one is recorded and **never read back by the application**. The queue (see `queue.ts`) is
 // run-scoped precisely because this file is not: the record outlives the process, the queue does
-// not, and nothing rehydrates one from the other. Modelled on `TranscriptLogger`, which writes
-// `.janissary/log/<date>.json` the same newline-delimited way.
+// not, and nothing rehydrates one from the other. It lives under `.janissary/logs/`, alongside the
+// other files that outlive a run. Modelled on `TranscriptLogger`, which writes newline-delimited
+// JSON the same way.
 
 let recordPath = '';
 
@@ -19,14 +21,41 @@ let abandoned = false;
 export function initNotificationRecord(projectDir?: string): void {
   abandoned = false;
   if (!projectDir) { recordPath = ''; return; }
-  const dir = path.join(projectDir, '.janissary');
+  const stateDir = path.join(projectDir, '.janissary');
   try {
-    mkdirSync(dir);
+    mkdirSync(stateDir);
   } catch {
     // An existing directory is expected; validate it below before trusting the record path.
   }
-  if (!isSafeDirectory(dir)) { recordPath = ''; return; }
-  recordPath = path.join(dir, 'notifications.json');
+  if (!isSafeDirectory(stateDir)) { recordPath = ''; return; }
+  const logDir = path.join(stateDir, 'logs');
+  try {
+    mkdirSync(logDir);
+  } catch {
+    // An existing directory is expected; validate it below before trusting the record path.
+  }
+  if (!isSafeDirectory(logDir)) { recordPath = ''; return; }
+  recordPath = path.join(logDir, 'notifications.json');
+  migrateLegacyRecord(stateDir, recordPath);
+}
+
+// Before the record moved into `logs/`, the trail lived at the state root — the path the notification
+// config now owns. Move a recognizable legacy record aside on the first launch after the move so its
+// lines survive. A file that is not a record (the new config, a link, a FIFO) is left untouched.
+function migrateLegacyRecord(stateDir: string, destination: string): void {
+  const legacy = path.join(stateDir, 'notifications.json');
+  try {
+    if (existsSync(destination)) return;
+    const stat = lstatSync(legacy);
+    if (!stat.isFile() || stat.isSymbolicLink()) return;
+    const firstLine = readFileSync(legacy, 'utf8').split('\n', 1)[0];
+    if (!firstLine) return;
+    const entry: unknown = JSON.parse(firstLine);
+    if (!isRecord(entry) || typeof entry.detectedAt !== 'string' || typeof entry.event !== 'string') return;
+    renameSync(legacy, destination);
+  } catch {
+    // Best effort: a legacy record that cannot be moved is simply left where it is.
+  }
 }
 
 function isSafeDirectory(dir: string): boolean {
