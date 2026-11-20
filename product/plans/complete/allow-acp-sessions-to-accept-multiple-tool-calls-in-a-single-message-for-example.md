@@ -77,3 +77,7 @@ Mirror the existing colocated Vitest conventions for the ACP server area:
 
 - `$janissary/scripts/run.mjs check-diff` after each implementation step.
 - Manual: in an ACP session with file tools granted, ask the agent to investigate a question that needs several file searches and confirm it can issue them as several blocks in one reply; check that each command and its output appears as its own tool entry in the connection tab, that one follow-up message arrives per finished command in completion order, and that the agent then answers without another command. Repeat on a remote-hosted session to confirm the tool results still correlate.
+
+## Rebase adaptation
+
+`master` replaced the fixed eight-command cap with a configurable one: `maxToolSteps()` in `src/acp/drive-loop.ts` reads `maxToolTurns` from `.janissary/config.json` (default 20) and passes it to both `commandProtocolPrimer` and the loop. The batch goal is unchanged — every command still counts as one step and over-budget commands are refused with the same text — but the literal "8" in the quoted primer and spec is now whatever number `maxToolSteps()` returns. The spec's quoted primer and the primer assertions were updated to that configured value while keeping the new batch wording, and the configurable-cap test added on `master` was kept with that wording. The loop's own default remains eight where no budget is injected, so the plan's stated cap still holds for direct loop callers.
