@@ -20,6 +20,8 @@ Shift the ACP tool loop from reading a bare command on the reply's last line to 
 - The old top-of-line `janissary ` marker becomes redundant inside a block.
 - There is no bare-line fallback: a final command line outside a closed labelled block is prose and ends the turn as the final answer.
 - Correction feedback does not consume the 8-step budget; only commands that actually run do. There is no separate cap on correction attempts — an agent that never emits a valid block can keep being asked to correct itself, which the plan records as a risk rather than adding a new limit.
+- A leading `/` on a candidate command line inside the block is recognized by stripping it before the native-command check, while the returned command text keeps the slash so the existing gate and workspace host normalize it. An agent that writes `/file read a.md` in a `janissary` block gets a workspace read rather than a correction.
+- The resolution comment above `createAcpToolTable` states that extraction reads the command inside the last closed labelled block and does not depend on table order; it is a comment-only, behavior-neutral correction.
 
 Together with the feature text these points settle every product decision for this version: the primary flow, the edge cases, the scope boundary, and all user-visible wording.
 
@@ -50,6 +52,8 @@ The extractor scans for the last closed fence whose info string is exactly `jani
 
 The remote path runs this same loop on the host that runs the agent: `src/remote/serve-acp-loop.ts:109` calls `driveToolLoop` on the far side. No new protocol message, RPC, or remote frame is needed; the extraction change lands wherever `driveToolLoop` runs.
 
+The shipped contracts live in named artifacts: `extractCommandBlock` in `src/acp/command-block.ts` returns `one` (command plus the matched block span), `mistake` (command count), or `absent`; `CORRECTION_PROMPT` in `src/acp/loop.ts` holds the single correction sentence; `toolExtractor` delegates to the shared extractor with `allowQuestion: true` and keeps the granted-tool ownership check; `driveToolLoop` passes `snapshot.askUser` as `allowQuestion` for the agent kind. `src/agent/command-extract.ts` and `src/agent/command-extract.test.ts` are deleted, and the affected test files that previously fed a bare command line now use a final `janissary` block while keeping their gating, side-selection, and step-count assertions. Both primers and both behaviour specs are updated to the block rule.
+
 ## Implementation steps
 
 1. Add `src/acp/command-block.ts` with the result type and the pure extractor, plus its unit test.
@@ -66,6 +70,9 @@ The remote path runs this same loop on the host that runs the agent: `src/remote
 - `src/acp/tool-table.test.ts` and `src/acp/drive-loop.test.ts`: core and agent-driven paths both take the command from the labelled block; gating and side selection are unchanged.
 - `src/acp/loop.test.ts`: its `extractCommand` fixtures (`extractDatabaseCommand`, `extractBrowserCommand`, `extractQuestionCommand`) need a small adapter to the new result type, leaving the legacy extractors themselves untouched; a command echoed twice leaves no stray copy in the displayed reply; prose after the block is kept in the displayed reply; zero or multiple commands feed back the shared correction sentence instead of ending the turn; a correction does not advance the step counter while a command that runs does, and the 8-step cap still applies to commands run.
 - `src/acp/manager.test.ts:232`: the `deps.primer` assertion that currently ends with `Write your replies in GitHub-flavored Markdown ...` must be updated for the rewritten command-protocol primer.
+- `src/acp/command-block.test.ts` also asserts that a labelled block whose content is `/file read a.md` yields `kind: 'one'` with the command text unchanged, confirming a leading slash is recognized without being stripped from the returned command.
+- `src/remote/serve-acp-loop.test.ts` keeps the "strips a leading slash from an agent file read before reading the workspace" case: a `/file read a.md` block produces one workspace step with `workspace: true` and `result: '1\tone'`, with its frame, step-count, and other assertions unchanged.
+- The resolution comment above `createAcpToolTable` needs no test; the existing extraction and gating tests in `src/acp/tool-table.test.ts` and `src/acp/command-block.test.ts` already pin the labelled-block contract.
 - `product/specs/acp.md:93` (`To run a command, end your reply with exactly one command on its own final line`), `product/specs/acp.md:103` (`Extraction selects the reply's last recognized tool line`), and `product/specs/agent-command.md:85` (`A final command line inside a Markdown fenced code block is treated as an example`) become the block rule.
 - Follow existing colocated Vitest conventions for `src/` (server project).
 
