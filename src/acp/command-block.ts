@@ -1,6 +1,7 @@
-// Pure extraction of the one command an ACP agent places in a labelled fenced block. The reply is
-// scanned for the last closed ```janissary fence; the block inside is the command. The three-variant
-// result lets the caller tell a final answer from a block that needs correcting.
+// Pure extraction of the commands an ACP agent places in labelled fenced blocks. The reply is
+// scanned for every closed ```janissary fence, each of which contributes one command and its
+// display span. The three-variant result lets the caller tell a final answer from a batch that
+// needs correcting.
 
 import { nativeCommandName } from './native-commands.js';
 
@@ -22,13 +23,15 @@ export function closesFence(line: string, fence: CodeFence): boolean {
 export type CommandBlockSpan = { start: number; end: number };
 
 export type CommandBlockResult =
-  | { kind: 'one'; command: string; span: CommandBlockSpan }
+  | { kind: 'batch'; commands: readonly { command: string; span: CommandBlockSpan }[] }
   | { kind: 'mistake'; commands: number }
   | { kind: 'absent' };
 
+type BlockResult = Exclude<CommandBlockResult, { kind: 'absent' }>;
+
 type ReplyLine = { text: string; start: number; end: number };
 type Candidate = { open: number; close: number };
-type Candidates = { closed?: Candidate; unclosedLabelled: boolean };
+type Candidates = { closed: Candidate[]; unclosedLabelled: boolean };
 
 const LABEL = 'janissary';
 const JANISSARY_PREFIX = /^janissary\s+/i;
@@ -55,7 +58,7 @@ function isCommandStart(line: string, allowQuestion: boolean): boolean {
 
 function commandFromBlock(
   lines: ReplyLine[], open: number, close: number, allowQuestion: boolean,
-): CommandBlockResult {
+): BlockResult {
   const content = lines.slice(open + 1, close).map((line) => line.text);
   const starts: number[] = [];
   for (const [index, line] of content.entries()) {
@@ -69,9 +72,8 @@ function commandFromBlock(
     .join('\n')
     .trim();
   return {
-    kind: 'one',
-    command,
-    span: { start: lines[open].start, end: lines[close].end },
+    kind: 'batch',
+    commands: [{ command, span: { start: lines[open].start, end: lines[close].end } }],
   };
 }
 
@@ -79,13 +81,13 @@ function findCandidate(lines: ReplyLine[]): Candidates {
   let fence: CodeFence | undefined;
   let open = 0;
   let labelled = false;
-  let closed: Candidate | undefined;
+  const closed: Candidate[] = [];
 
   for (const [index, line] of lines.entries()) {
     const text = line.text;
     if (fence) {
       if (closesFence(text, fence)) {
-        if (labelled) closed = { open, close: index };
+        if (labelled) closed.push({ open, close: index });
         fence = undefined;
         labelled = false;
       }
@@ -103,6 +105,13 @@ function findCandidate(lines: ReplyLine[]): Candidates {
 export function extractCommandBlock(text: string, allowQuestion: boolean): CommandBlockResult {
   const lines = replyLines(text);
   const { closed, unclosedLabelled } = findCandidate(lines);
-  if (!closed) return unclosedLabelled ? { kind: 'mistake', commands: 0 } : { kind: 'absent' };
-  return commandFromBlock(lines, closed.open, closed.close, allowQuestion);
+  if (unclosedLabelled) return { kind: 'mistake', commands: 0 };
+  if (closed.length === 0) return { kind: 'absent' };
+  const commands: { command: string; span: CommandBlockSpan }[] = [];
+  for (const candidate of closed) {
+    const block = commandFromBlock(lines, candidate.open, candidate.close, allowQuestion);
+    if (block.kind === 'mistake') return block;
+    commands.push(...block.commands);
+  }
+  return { kind: 'batch', commands };
 }

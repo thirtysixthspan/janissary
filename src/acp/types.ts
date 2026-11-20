@@ -81,8 +81,8 @@ export type AcpLoopDeps = {
   // Execute an extracted command and return its textual output. May be async (e.g. a
   // browser command); the loop awaits the result before continuing.
   runCommand: (command: string) => string | Promise<string>;
-  // Pull the command out of an agent reply: one runnable command with its matched span, a block that
-  // needs correcting, or no block at all (a final answer).
+  // Pull the commands out of an agent reply: a batch of runnable commands with their matched spans,
+  // a reply that needs correcting, or no block at all (a final answer).
   extractCommand: (text: string) => CommandBlockResult;
   // Maximum number of auto-run command steps before stopping (default 8).
   maxSteps?: number;
