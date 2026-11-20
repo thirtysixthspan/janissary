@@ -84,7 +84,9 @@ describe('settleRoot', () => {
     expect(manager.origin()).toBe(ORIGIN);
     const configPath = path.join(root, '.janissary', 'config.json');
     expect(existsSync(configPath)).toBe(true);
-    expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual(getConfig());
+    const expected = { ...getConfig() };
+    delete expected.notifications;
+    expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual(expected);
   });
 
   it("takes a token from the root's own .janissary before the home's", () => {

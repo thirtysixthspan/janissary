@@ -54,9 +54,11 @@ its own line.
 
 ### The notification record
 
-Every notification is also appended to **`.janissary/notifications.json`**, one JSON object per
+Every notification is also appended to **`.janissary/logs/notifications.json`**, one JSON object per
 line, as it is recorded. The file persists across runs and is never read back by the application —
-it is a durable trail to grep, not a source the queue is restored from.
+it is a durable trail to grep, not a source the queue is restored from. On an upgrade from a version
+that kept the trail at the state root, a recognizable record is moved into the logs directory on the
+first launch.
 
 Each line carries the notification's full ISO detection time (unambiguous across days, unlike the
 feed's `8:32pm`), the event type, the originating tab, the message, and the link targets when the
@@ -287,7 +289,7 @@ The explicit-event toggles are `notifications.events.systemScheduleFire` and `no
 
 The five ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `rate-limited`, `command-disabled`) are each **independently togglable and default off** — opt in by editing
-`.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
+`.janissary/notifications.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `workspace-ready`, `tab`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
@@ -394,11 +396,11 @@ on reconnect.
 ### Desktop alerts and bell sounds
 
 A live notification can also ask each connected browser window to show a desktop alert or
-play a short sound, according to its per-type `notifications.alerts` entry. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
+play a short sound, according to its per-type `alerts` entry in `.janissary/notifications.json`. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events, `shell-transcript-failed`,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `tab`, `plugin-note`, `plugin-failure`,
 `schedule-late`, `system-schedule-fire`, `models-refresh`, the two remote-session events, the three launch events, and `remote-refused`.
-Every event type is configured independently in `.janissary/config.json` under `notifications.alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The five ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`, `command-disabled`) default to no banner and no sound. An opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
+Every event type is configured independently in `.janissary/notifications.json` under `alerts`, using the event's hyphenated name. Each entry selects whether to show a desktop banner and one of the `success`, `warning`, or `error` cues, or `none`. The five ambient events (`state-change`, `schedule-fire`, `agent-start`, `rate-limited`, `command-disabled`) default to no banner and no sound. An opted-in ambient event still must pass its `notifications.events` toggle and focus suppression before it can alert.
 A report detected earlier and replayed later does not raise either: its detection time belongs in
 the feed, not in an alert implying it happened just now. A visible notifications feed does not
 suppress a desktop alert.
@@ -426,7 +428,7 @@ The default cue uses bundled MP3 files: `success.mp3` for `manual`, `plugin-note
 the two remote-session events, `system-schedule-fire`, `tab`, the three launch events, and `remote-refused`; and `error.mp3` for the remaining explicit
 events. A type's cue can be changed or silenced independently. A banner-only alert carries no cue name. Each client plays at most one bell per second, while every eligible desktop banner may still
 show. The `osNotifications` and `terminalBell` config switches are independent master switches for every type's configured banner and cue, and default on.
-The three volume settings range from 0 to 1 (default 0.8) and apply to the selected cue. The settings are loaded from `.janissary/config.json` and a change takes
+The three volume settings range from 0 to 1 (default 0.8) and apply to the selected cue. The volumes stay in `.janissary/config.json`; the per-type alert settings load from `.janissary/notifications.json`. A change to either file takes
 effect on the next run. The default MP3 assets live in the web bundle's `sounds/` folder; changing
 them requires rebuilding and replacing the installed bundle.
 

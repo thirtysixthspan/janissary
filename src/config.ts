@@ -3,8 +3,8 @@ import path from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
-import { backfillMaxToolTurns, backfillNotificationAlerts, configRecord, decodeConfig } from './config-decode.js';
-import { NOTIFICATION_ALERT_DEFAULTS } from './notifications/alert-defaults.js';
+import { backfillMaxToolTurns, configRecord, decodeConfig } from './config-decode.js';
+import { DEFAULT_NOTIFICATION_CONFIG, loadNotificationConfig, saveNotificationConfig } from './notifications/config.js';
 import { DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH, DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES, DEFAULT_TAB_NAME_MAX_LENGTH } from './shared/config-defaults.js';
 import type { NotificationEventType } from './notifications/index.js';
 import type { NotificationAlert } from './notifications/alert-defaults.js';
@@ -94,18 +94,7 @@ const DEFAULT_CONFIG: Config = {
   recordShellTabs: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
   theme: DEFAULT_APP_THEME,
-  notifications: {
-    events: {
-      stateChange: false,
-      scheduleFire: false,
-      agentStart: false,
-      rateLimited: false,
-      commandDisabled: false,
-      systemScheduleFire: true,
-      modelsRefresh: true,
-    },
-    alerts: NOTIFICATION_ALERT_DEFAULTS,
-  },
+  notifications: DEFAULT_NOTIFICATION_CONFIG,
   osNotifications: true,
   terminalBell: true,
   terminalBellVolumeSuccess: 0.8,
@@ -124,21 +113,28 @@ export function loadConfig(projectDirectory: string): Config {
   const configPath = path.join(configDirectory, 'config.json');
   storedConfigPath = configPath;
 
+  const notifications = loadNotificationConfig(projectDirectory);
+
   if (!existsSync(configPath)) {
     mkdirSync(configDirectory, { recursive: true });
-    atomicWriteFile(configPath, JSON.stringify(DEFAULT_CONFIG, undefined, 2) + '\n');
-    config = decodeConfig(DEFAULT_CONFIG, DEFAULT_CONFIG);
+    const initial: Config = { ...DEFAULT_CONFIG };
+    delete initial.notifications;
+    atomicWriteFile(configPath, JSON.stringify(initial, undefined, 2) + '\n');
+    config = { ...decodeConfig(DEFAULT_CONFIG, DEFAULT_CONFIG), notifications };
     return config;
   }
 
   try {
     const parsed: unknown = JSON.parse(readFileSync(configPath, 'utf8'));
     config = decodeConfig(parsed, DEFAULT_CONFIG);
-    const alerts = backfillNotificationAlerts(parsed, DEFAULT_CONFIG.notifications!);
-    const backfilled = backfillMaxToolTurns(alerts ?? parsed, DEFAULT_CONFIG);
-    if (backfilled) {
+    config.notifications = notifications;
+    const raw = configRecord(parsed);
+    const backfilled = backfillMaxToolTurns(parsed, DEFAULT_CONFIG);
+    if (backfilled || (raw && Object.hasOwn(raw, 'notifications'))) {
+      const stripped: Record<string, unknown> = { ...(backfilled ?? raw) };
+      delete stripped.notifications;
       try {
-        atomicWriteFile(configPath, JSON.stringify(backfilled, undefined, 2) + '\n');
+        atomicWriteFile(configPath, JSON.stringify(stripped, undefined, 2) + '\n');
       } catch {
         return config;
       }
@@ -155,18 +151,24 @@ export function getConfig(): Config {
   return config;
 }
 
-// Merge `partial` into the in-memory config and write it back to `.janissary/config.json`.
-// Reads and re-stringifies the raw file (rather than the parsed `Config` defaults) so unknown
-// keys a user added by hand survive the round trip. Returns false (without throwing) on failure,
-// so the caller can report it to the transcript instead.
+// Merge `partial` into the in-memory config. Notification settings go to their own file; every
+// other setting reads and re-stringifies the raw config.json (rather than the parsed `Config`
+// defaults) so unknown keys a user added by hand survive the round trip. Returns false (without
+// throwing) on failure, so the caller can report it to the transcript instead.
 export function updateConfig(partial: Partial<Config>): boolean {
   if (!storedConfigPath) return false;
+  if (partial.notifications !== undefined) {
+    if (!saveNotificationConfig(partial.notifications)) return false;
+    config = { ...config, notifications: partial.notifications };
+    return true;
+  }
   try {
     const parsed: unknown = existsSync(storedConfigPath) ? JSON.parse(readFileSync(storedConfigPath, 'utf8')) : {};
     const raw = configRecord(parsed);
     if (!raw) return false;
     const merged = { ...raw, ...partial };
     const next = decodeConfig({ ...config, ...partial }, DEFAULT_CONFIG);
+    next.notifications = config.notifications;
     atomicWriteFile(storedConfigPath, JSON.stringify(merged, undefined, 2) + '\n');
     config = next;
     return true;

@@ -48,14 +48,12 @@ If a question opens while you're working in a different tab, Janissary records `
 
 When no feed is on screen, the line appears as a short toast instead. Three notifications inside ten seconds dock the feed on the right.
 
-You can't switch this line off. The background events have their own toggles under `notifications.events`, but a question doesn't. The desktop banner and the sound are separate, and you can change them. By default a question raises a banner and plays the warning sound. To quiet both, set the `question` entry in `.janissary/config.json`:
+You can't switch this line off. The background events have their own toggles under `events` in `notifications.json`, but a question doesn't. The desktop banner and the sound are separate, and you can change them. By default a question raises a banner and plays the warning sound. To quiet both, set the `question` entry in `.janissary/notifications.json`:
 
 ```json
 {
-  "notifications": {
-    "alerts": {
-      "question": { "desktop": false, "sound": "none" }
-    }
+  "alerts": {
+    "question": { "desktop": false, "sound": "none" }
   }
 }
 ```
