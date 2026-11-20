@@ -45,21 +45,41 @@ function dropLateRejection(result: string | Promise<string>, signal: AbortSignal
   return result instanceof Promise ? settleUnlessAborted(result, signal) : result;
 }
 
+async function rememberOnSettle(
+  result: Promise<string>, step: DrivenStep, completed: DrivenStep[],
+): Promise<string> {
+  try {
+    return await result;
+  } finally {
+    completed.push(step);
+  }
+}
+
 function gatedRunner(
   snapshot: AcpRunSnapshot, tools: readonly AcpTool[], host: AcpToolHost, events: AcpLoopHandlers,
-  remember: (step: DrivenStep) => void, signal: AbortSignal,
+  completed: DrivenStep[], signal: AbortSignal,
 ): (command: string) => string | Promise<string> {
   return (command) => {
     const decision = gateCommand(snapshot, tools, command);
     if ('refusal' in decision) {
-      remember({ workspace: false, ...(decision.refused !== undefined && { refused: decision.refused }) });
+      completed.push({ workspace: false, ...(decision.refused !== undefined && { refused: decision.refused }) });
       events.startCommand?.(command, false);
       return decision.refusal;
     }
-    const workspace = decision.runsOn === 'workspace';
-    remember({ workspace });
-    events.startCommand?.(command, workspace);
-    return dropLateRejection(workspace ? host.runWorkspace(command) : host.runCaller(command), signal);
+    const step: DrivenStep = { workspace: decision.runsOn === 'workspace' };
+    events.startCommand?.(command, step.workspace);
+    let settled: string | Promise<string>;
+    try {
+      settled = dropLateRejection(step.workspace ? host.runWorkspace(command) : host.runCaller(command), signal);
+    } catch (error) {
+      completed.push(step);
+      throw error;
+    }
+    if (settled instanceof Promise) {
+      return rememberOnSettle(settled, step, completed);
+    }
+    completed.push(step);
+    return settled;
   };
 }
 
@@ -68,8 +88,8 @@ export function driveToolLoop(
   host: AcpToolHost, events: AcpLoopHandlers, signal: AbortSignal,
 ): void {
   const tools: AcpTool[] = snapshot.kind === 'core' && !snapshot.withoutTools ? createAcpToolTable(snapshot.grants) : [];
-  let step: DrivenStep = { workspace: false };
-  const runCommand = gatedRunner(snapshot, tools, host, events, (next) => { step = next; }, signal);
+  const completed: DrivenStep[] = [];
+  const runCommand = gatedRunner(snapshot, tools, host, events, completed, signal);
   runAcpToolLoop(session, prompt, {
     signal,
     primer: snapshot.kind === 'core' ? corePrimer(snapshot, tools) : MARKDOWN_INSTRUCTION,
@@ -83,7 +103,10 @@ export function driveToolLoop(
     startTurn: (isFirst) => { events.startTurn(isFirst); },
     chunk: (cumulative) => { events.chunk(cumulative); },
     endTurn: (final) => { events.endTurn(final); },
-    ranCommand: (command, result) => { events.ranCommand(command, result, step.workspace, step.refused); },
+    ranCommand: (command, result) => {
+      const step = completed.shift() ?? { workspace: false };
+      events.ranCommand(command, result, step.workspace, step.refused);
+    },
     finished: (reason, maxSteps) => { events.finished(reason, maxSteps); },
     error: (message) => { events.error(message); },
   });

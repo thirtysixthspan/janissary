@@ -290,6 +290,65 @@ describe('driveToolLoop', () => {
     expect(sent[1]).toContain(refusal);
   });
 
+  it('tags each parallel command result with its own host when the batch settles out of launch order', async () => {
+    const caller = Promise.withResolvers<string>();
+    const workspace = Promise.withResolvers<string>();
+    const batch = `${block(QUERY)}\n\n${block('file read notes.md')}`;
+    const { session } = makeSession([batch, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = {
+      runCaller: vi.fn(() => caller.promise),
+      runWorkspace: vi.fn(() => workspace.promise),
+    };
+
+    driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query', 'file read']), host, h, new AbortController().signal);
+
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
+    expect(ofKind(events, 'startCommand')).toEqual([
+      ['startCommand', QUERY, false],
+      ['startCommand', 'file read notes.md', true],
+    ]);
+
+    workspace.resolve('workspace output');
+    caller.resolve('caller output');
+    await vi.waitFor(() => { expect(ofKind(events, 'ranCommand')).toHaveLength(2); });
+
+    const ran = ofKind(events, 'ranCommand');
+    expect(ran.map((event) => event[1])).toEqual(['file read notes.md', QUERY]);
+    expect(ran[0]).toEqual(['ranCommand', 'file read notes.md', 'workspace output', true, undefined]);
+    expect(ran[1]).toEqual(['ranCommand', QUERY, 'caller output', false, undefined]);
+  });
+
+  it('attaches the disabled refusal only to the disabled command in a parallel batch', async () => {
+    const workspace = Promise.withResolvers<string>();
+    const refusal = 'Command is disabled: db sqlite query.';
+    const snapshot = coreSnapshot('tell', ['db sqlite query', 'file read'], [
+      { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
+    ]);
+    const batch = `${block(QUERY)}\n\n${block('file read notes.md')}`;
+    const { session } = makeSession([batch, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = {
+      runCaller: vi.fn(() => 'caller output'),
+      runWorkspace: vi.fn(() => workspace.promise),
+    };
+
+    driveToolLoop(session, 'do it', snapshot, host, h, new AbortController().signal);
+
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', QUERY, refusal, false, 'disabled']]);
+
+    workspace.resolve('workspace output');
+    await vi.waitFor(() => { expect(ofKind(events, 'ranCommand')).toHaveLength(2); });
+
+    expect(ofKind(events, 'ranCommand')).toEqual([
+      ['ranCommand', QUERY, refusal, false, 'disabled'],
+      ['ranCommand', 'file read notes.md', 'workspace output', true, undefined],
+    ]);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
+  });
+
   it('stops after eight steps with the capped reason', () => {
     const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY)]);
     expect(host.runCaller).toHaveBeenCalledTimes(8);
