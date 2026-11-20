@@ -83,3 +83,13 @@ describe('openConnection capability', () => {
     expect(TAB_PLUGIN_API_VERSION).toBe(3);
   });
 });
+
+describe('openConnections capability', () => {
+  it('opens the connections tab by sending the bare connections command', () => {
+    const { capabilities, send } = setup();
+
+    capabilities.openConnections?.();
+
+    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'connections' } });
+  });
+});

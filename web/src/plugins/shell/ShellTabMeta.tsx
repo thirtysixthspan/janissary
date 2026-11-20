@@ -108,6 +108,7 @@ export function ShellTabMeta({ payload, capabilities }: {
             activeTitle="connections"
             emptyTitle="no active connections"
             {...statusButton(payload.connections.length > 0, windows.connections)}
+            onDoubleClick={() => { capabilities.openConnections?.(); }}
           />
           <StatusWindowButton
             icon={scheduleWindowIcon}

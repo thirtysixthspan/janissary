@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { faPlug } from '@fortawesome/free-solid-svg-icons';
 import { StatusWindowButton } from './StatusWindowButton';
@@ -39,5 +39,29 @@ describe('StatusWindowButton', () => {
     );
     getByTitle('connections').click();
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires onDoubleClick once when it has content', () => {
+    const onDoubleClick = vi.fn();
+    const { getByTitle } = render(
+      <StatusWindowButton
+        icon={faPlug} className="tab-connections" hasContent activeTitle="connections" emptyTitle="no active connections"
+        onEnter={() => {}} onLeave={() => {}} onClick={() => {}} onDoubleClick={onDoubleClick}
+      />,
+    );
+    fireEvent.doubleClick(getByTitle('connections'));
+    expect(onDoubleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire onDoubleClick when it has no content', () => {
+    const onDoubleClick = vi.fn();
+    const { getByTitle } = render(
+      <StatusWindowButton
+        icon={faPlug} className="tab-connections" hasContent={false} activeTitle="connections" emptyTitle="no active connections"
+        onEnter={() => {}} onLeave={() => {}} onClick={() => {}} onDoubleClick={onDoubleClick}
+      />,
+    );
+    fireEvent.doubleClick(getByTitle('no active connections'));
+    expect(onDoubleClick).not.toHaveBeenCalled();
   });
 });

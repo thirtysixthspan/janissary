@@ -11,11 +11,12 @@ type Properties = {
   onEnter: () => void;
   onLeave: () => void;
   onClick: () => void;
+  onDoubleClick?: () => void;
 };
 
 // A meta-bar button driving a status window (connections/schedule): active and hover/pin-clickable
 // when its window has content, dark and inert with an explanatory tooltip when it does not.
-export function StatusWindowButton({ icon, className, hasContent, activeTitle, emptyTitle, onEnter, onLeave, onClick }: Properties) {
+export function StatusWindowButton({ icon, className, hasContent, activeTitle, emptyTitle, onEnter, onLeave, onClick, onDoubleClick }: Properties) {
   return (
     <button
       type="button"
@@ -25,6 +26,7 @@ export function StatusWindowButton({ icon, className, hasContent, activeTitle, e
       onMouseEnter={hasContent ? onEnter : undefined}
       onMouseLeave={hasContent ? onLeave : undefined}
       onClick={hasContent ? onClick : undefined}
+      onDoubleClick={hasContent ? onDoubleClick : undefined}
     >
       <FontAwesomeIcon icon={icon} />
     </button>
