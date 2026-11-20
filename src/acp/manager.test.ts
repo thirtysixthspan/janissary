@@ -147,8 +147,8 @@ describe('AcpManager.run', () => {
     expect(first.primer).not.toContain('Only these commands are allowed');
     expect(first.primer).not.toContain(DB_PRIMER);
     expect(first.primer).toContain(NO_TOOLS_LINE);
-    expect(first.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
-    expect(first.extractCommand('db sqlite list')).toBeNull();
+    expect(first.extractCommand('question ask "Who?"')).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
+    expect(first.extractCommand('db sqlite list')).toEqual({ kind: 'absent' });
     expect(settingsCurrent).toHaveBeenCalledOnce();
 
     commands = ['db sqlite query'];
@@ -162,7 +162,7 @@ describe('AcpManager.run', () => {
     expect(retry.primer).toContain('question ask');
     expect(retry.primer).not.toContain('Only these commands are allowed');
     expect(retry.primer).toContain(NO_TOOLS_LINE);
-    expect(retry.extractCommand('question ask "Who?"')).toBe('question ask "Who?"');
+    expect(retry.extractCommand('question ask "Who?"')).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
     expect(retry.runCommand('question ask "Who?"')).toBe('Command is disabled: question ask.');
     expect(dispatchNativeLine).not.toHaveBeenCalled();
 
@@ -179,8 +179,8 @@ describe('AcpManager.run', () => {
     expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
     expect(next.primer).toContain(NO_BUILTIN_TOOLS_LINE);
     expect(next.extractCommand('db sqlite query store SELECT 1'))
-      .toBe('db sqlite query store SELECT 1');
-    expect(next.extractCommand('question ask "Who?"')).toBeNull();
+      .toMatchObject({ kind: 'one', command: 'db sqlite query store SELECT 1' });
+    expect(next.extractCommand('question ask "Who?"')).toEqual({ kind: 'absent' });
     await expect(next.runCommand('db sqlite query store SELECT 1')).resolves.toBe('db ran');
     expect(dispatchNativeLine).toHaveBeenCalledWith(
       'tab1',
@@ -206,7 +206,8 @@ describe('AcpManager.run', () => {
     const dependencies = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
 
     expect(dependencies.primer).toContain('question ask "<question>"');
-    expect(dependencies.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
+    expect(dependencies.extractCommand('question ask "What port?"'))
+      .toMatchObject({ kind: 'one', command: 'question ask "What port?"' });
     dispatchNativeLine.mockResolvedValue({ dispatched: true, output: 'Production' });
     await expect(dependencies.runCommand(
       'question approve "Deploy?" Staging Production',
@@ -230,9 +231,9 @@ describe('AcpManager.run', () => {
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(deps.primer).toBe(`${NO_TOOLS_LINE}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`);
-    expect(deps.extractCommand('Let me look.\nbrowser open https://example.com')).toBeNull();
-    expect(deps.extractCommand('question ask "What port?"')).toBeNull();
-    expect(deps.extractCommand('db sqlite list')).toBeNull();
+    expect(deps.extractCommand('Let me look.\nbrowser open https://example.com')).toEqual({ kind: 'absent' });
+    expect(deps.extractCommand('question ask "What port?"')).toEqual({ kind: 'absent' });
+    expect(deps.extractCommand('db sqlite list')).toEqual({ kind: 'absent' });
     expect(() => deps.runCommand('db sqlite list')).toThrow('No ACP tool matched command: db sqlite list');
   });
 
@@ -247,7 +248,8 @@ describe('AcpManager.run', () => {
 
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(deps.primer).toContain(DB_PRIMER);
-    expect(deps.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
+    expect(deps.extractCommand('question ask "What port?"'))
+      .toMatchObject({ kind: 'one', command: 'question ask "What port?"' });
   });
 
   // The restriction is the tab's own policy rather than a manager's collection, so a session that dies
@@ -638,8 +640,8 @@ describe('AcpManager role sessions', () => {
     }
     for (const call of calls) {
       const deps = call[2] as AcpLoopDeps;
-      expect(deps.extractCommand('db sqlite list')).toBeNull();
-      expect(deps.extractCommand('browser goto https://example.test')).toBeNull();
+      expect(deps.extractCommand('db sqlite list')).toEqual({ kind: 'absent' });
+      expect(deps.extractCommand('browser goto https://example.test')).toEqual({ kind: 'absent' });
     }
   });
 

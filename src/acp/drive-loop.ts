@@ -1,4 +1,6 @@
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpToolHost } from './types.js';
+import type { CommandBlockResult } from './command-block.js';
+import { cleanCommandLine } from './command-line.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { createAcpToolTable, gateCommand, toolExtractor, toolPrimer, type AcpTool } from './tool-table.js';
 import { runAcpToolLoop } from './loop.js';
@@ -42,6 +44,29 @@ function dropLateRejection(result: string | Promise<string>, signal: AbortSignal
   return result instanceof Promise ? settleUnlessAborted(result, signal) : result;
 }
 
+// Temporary bridge until subplan 3 switches to the shared block extractor: keep what the legacy
+// extractors find, but report it as the `one` variant with the span of the matched reply line.
+function asCommandBlockResult(extract: (text: string) => string | null): (text: string) => CommandBlockResult {
+  return (text) => {
+    const command = extract(text);
+    if (command === null) return { kind: 'absent' };
+    const lines = text.split('\n');
+    const starts: number[] = [];
+    let offset = 0;
+    for (const line of lines) {
+      starts.push(offset);
+      offset += line.length + 1;
+    }
+    for (let index = lines.length - 1; index >= 0; index--) {
+      const cleaned = cleanCommandLine(lines[index]);
+      if (cleaned === command || cleaned.replace(/^janissary\s+/i, '') === command) {
+        return { kind: 'one', command, span: { start: starts[index], end: starts[index] + lines[index].length } };
+      }
+    }
+    return { kind: 'absent' };
+  };
+}
+
 function gatedRunner(
   snapshot: AcpRunSnapshot, tools: readonly AcpTool[], host: AcpToolHost, events: AcpLoopHandlers,
   remember: (step: DrivenStep) => void, signal: AbortSignal,
@@ -71,7 +96,9 @@ export function driveToolLoop(
     signal,
     primer: snapshot.kind === 'core' ? corePrimer(snapshot, tools) : MARKDOWN_INSTRUCTION,
     runCommand,
-    extractCommand: snapshot.kind === 'core' ? toolExtractor(tools) : (text) => extractAgentCommand(text, snapshot.askUser),
+    extractCommand: asCommandBlockResult(snapshot.kind === 'core'
+      ? toolExtractor(tools)
+      : (text) => extractAgentCommand(text, snapshot.askUser)),
     maxSteps: snapshot.kind === 'core' ? CORE_MAX_STEPS : Infinity,
     describeCommand: describeLoopCommand,
   }, {

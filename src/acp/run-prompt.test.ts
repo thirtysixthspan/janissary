@@ -406,7 +406,7 @@ describe('runCorePrompt tool runner', () => {
   it('treats a web search line as prose when the role does not grant it', () => {
     const { start } = harness({ settings: settingsWith({}) });
     const { deps } = start('ask', ['file read']);
-    expect(deps.extractCommand('web search x')).toBeNull();
+    expect(deps.extractCommand('web search x')).toEqual({ kind: 'absent' });
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
   });
 
@@ -437,7 +437,7 @@ describe('runCorePrompt tool runner', () => {
   it('treats a web fetch line as prose when the role does not grant it', () => {
     const { start } = harness({ settings: settingsWith({}) });
     const { deps } = start('ask', ['file read']);
-    expect(deps.extractCommand('web fetch https://x')).toBeNull();
+    expect(deps.extractCommand('web fetch https://x')).toEqual({ kind: 'absent' });
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
   });
 
@@ -641,7 +641,7 @@ describe('runCorePrompt tool runner', () => {
   it('builds no tools on a without-tools tab', () => {
     const { start } = harness({ withoutTools: true });
     const { deps } = start('ask', ['db sqlite query']);
-    expect(deps.extractCommand('Checking.\ndb sqlite query shop SELECT 1')).toBeNull();
+    expect(deps.extractCommand('Checking.\ndb sqlite query shop SELECT 1')).toEqual({ kind: 'absent' });
     expect(deps.primer.startsWith(NO_TOOLS_LINE)).toBe(true);
   });
 });
