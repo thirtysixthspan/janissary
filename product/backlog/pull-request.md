@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver over-budget refusals after the results of commands that ran, as the description's example shows, rather than ahead of them.
-
-Existing Issue: In src/acp/loop.ts launchBatch pushes refusals for over-budget commands into the result queue at launch time while results of commands that actually run are queued only when their promises settle, so with asynchronous commands the refusal follow-ups are delivered before results that finished earlier. Severity: 4/10
-
-Existing Risk: 5/10 - The agent reads that its commands were skipped before it sees the outputs it requested, contradicting the documented completion-order follow-ups and the over-budget behavior example, so it can act on an incomplete result set.
-
-Proposal Risk: 2/10 - Enqueuing refusals through the same serialized pump keeps one delivery path; the main risk is a small ordering regression that a colocated asynchronous test catches.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2137 "enqueue over-budget refusals in completion order after executed-command results". In src/acp/loop.ts change launchBatch so an over-budget command is recorded as a pending refusal and enters the result queue through the same completion-order path as executed commands, for example once in-flight commands have settled, while keeping the exact `ACP: step limit reached; command not run.` text and the `Output of` follow-up block unchanged. Add a colocated test in src/acp/loop.test.ts using Promise.withResolvers where an in-budget command resolves before delivery, asserting the sent follow-ups place that result before the refusal; keep the existing over-budget, parallel-completion, and cap tests passing.
-
-
 * Update the tool-table comment that still says extraction reads only the last closed labelled block.
 
 Existing Issue: The resolution-strategy comment above createAcpToolTable in src/acp/tool-table.ts still says the extractor reads the command inside the last closed labelled block in the reply, while toolExtractor now collects every closed labelled block and gateCommand applies ownership to each one. Severity: 3/10

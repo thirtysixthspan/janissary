@@ -518,6 +518,26 @@ describe('runAcpToolLoop', () => {
     expect(sent[3]).toContain('Output of `notify c`:\nout:notify c');
   });
 
+  it('delivers an executed result before the over-budget refusal when the command is async', async () => {
+    const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```';
+    const { session, sent } = makeSession([batch, 'All done.']);
+    const { h, events } = makeHandlers();
+    const { promise: output, resolve: resolveOutput } = Promise.withResolvers<string>();
+    const runCommand = vi.fn(() => output);
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify one');
+    expect(sent).toHaveLength(1);
+
+    resolveOutput('A');
+    await vi.waitFor(() => { expect(sent).toHaveLength(3); });
+    expect(sent[1]).toContain('Output of `notify one`:\nA');
+    expect(sent[1]).not.toContain('ACP: step limit reached; command not run.');
+    expect(sent[2]).toContain('Output of `notify two`:\nACP: step limit reached; command not run.');
+    expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
+  });
+
   it('runs only the commands that fit and refuses the rest of an over-budget batch', () => {
     const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```\n\n```janissary\nnotify three\n```';
     const { session, sent } = makeSession([batch]);

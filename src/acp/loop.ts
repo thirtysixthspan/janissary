@@ -31,6 +31,7 @@ export function runAcpToolLoop(
 ): void {
   const maxSteps = dependencies.maxSteps ?? 8;
   const queue: Result[] = [];
+  const pendingRefusals: Result[] = [];
   let step = 0;
   let done = false;
   let busy = false;
@@ -59,8 +60,15 @@ export function runAcpToolLoop(
     }
   }
 
+  function flushRefusals() {
+    if (inFlight !== 0 || pendingRefusals.length === 0) return;
+    queue.push(...pendingRefusals);
+    pendingRefusals.length = 0;
+  }
+
   function deliver(result: Result) {
     queue.push(result);
+    flushRefusals();
     if (!launching) pump();
   }
 
@@ -87,7 +95,7 @@ export function runAcpToolLoop(
     for (const { command } of commands) {
       if (step >= maxSteps) {
         pendingCap = true;
-        queue.push({ command, output: REFUSAL, label: label(command) });
+        pendingRefusals.push({ command, output: REFUSAL, label: label(command) });
         continue;
       }
       step++;
@@ -95,6 +103,7 @@ export function runAcpToolLoop(
       void settle(command);
     }
     launching = false;
+    flushRefusals();
     pump();
   }
 
