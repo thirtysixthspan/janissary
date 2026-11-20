@@ -40,7 +40,7 @@ Every route acts for the tab it came from. Closing the tab that first ran `diff`
 from opening or focusing a diff tab from any other tab.
 
 The header names the directory being diffed in the application's own abbreviated form — `$root` for the
-launch directory, `$workspace/<name>` for a workspace clone, `$git-sync` for the shared git-sync clone, `~` for a
+launch directory, `$workspace/<name>` for a workspace clone, `$git-sync` for the shared git-sync worktree, `~` for a
 path under home. Workspace metadata is
 aligned on the left in host, path, branch order, matching the file navigator's metadata row. A workspace on another
 host shows its host first; a workspace with a checked-out branch shows that branch last.

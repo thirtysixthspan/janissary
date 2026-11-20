@@ -6,20 +6,20 @@ import { errorText } from '../error-text.js';
 import { currentBranch, defaultBranch } from './status.js';
 import { isExpectedDiffChange, SyncCommandRunner, SYNC_CANCEL_REASON, SYNC_COMMAND_TIMEOUT_MS } from './sync-command.js';
 
-// Fixed name for the one shared sync workspace clone — never a tab label, since it outlives any
+// Fixed name for the one shared sync workspace — never a tab label, since it outlives any
 // single tab and is shared by every config-listed synced file (see the plan's Design decisions).
 export const SYNC_WORKSPACE_NAME = 'git-sync';
 
 type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
 // The cached handle also carries the branch its sync cycles pull from and push to, resolved once
-// the clone is ready. Living on the handle, it is discarded with it when provisioning fails.
+// the worktree is ready. Living on the handle, it is discarded with it when provisioning fails.
 type SyncWorkspace = ProvisioningWorkspace & { branch?: Promise<string> };
 type SyncResult = { ok: true } | { error: string };
 
-// Owns the single shared git-sync workspace clone end to end. Lazily provisions it once, no matter
+// Owns the single shared git-sync workspace end to end. Lazily provisions it once, no matter
 // how many synced files are opened concurrently — `ensureWorkspace` caches the handle synchronously
 // before any `await`, so a second concurrent caller always sees the first call's handle rather than
-// triggering a second `git clone` (`WorkspaceManager.create` itself has no such dedup). Never call
+// creating a second worktree (`WorkspaceManager.createWorktree` itself has no such dedup). Never call
 // `WorkspaceManager.remove` on its directory — it's torn down only via `removeAll()` at shutdown.
 export class GitSync {
   private handle: SyncWorkspace | undefined;
@@ -44,7 +44,7 @@ export class GitSync {
 
   private ensureWorkspace(): SyncWorkspace | { error: string } {
     if (this.handle) return this.handle;
-    const created = this.workspace.create(SYNC_WORKSPACE_NAME, undefined, { depth: 1, sparseDirectories: ['product'] });
+    const created = this.workspace.createWorktree(SYNC_WORKSPACE_NAME);
     if ('error' in created) return created;
     this.handle = { dir: created.dir, ready: created.ready };
     return this.handle;
@@ -62,7 +62,7 @@ export class GitSync {
     }
   }
 
-  // Waits for the shared clone, then resolves (once per clone) the branch every cycle targets.
+  // Waits for the shared worktree, then resolves (once per worktree) the branch every cycle targets.
   private async readyBranch(handle: SyncWorkspace): Promise<string> {
     await this.waitForWorkspace(handle);
     handle.branch ??= resolveSyncBranch(this.commands, handle.dir);
@@ -99,7 +99,7 @@ export class GitSync {
   }
 
   // Save-triggered cycle: commit the saved file alone as `sync: <filename>` (if it changed), then
-  // the same pull-rebase step, then push. `filePath` is the saved file's path inside the clone.
+  // the same pull-rebase step, then push. `filePath` is the saved file's path inside the worktree.
   async saveSync(filePath: string): Promise<SyncResult> {
     if (this.closed) return { error: SYNC_CANCEL_REASON };
     const handle = this.ensureWorkspace();
@@ -133,15 +133,15 @@ async function waitForAbort(promise: Promise<void>, signal: AbortSignal): Promis
 }
 
 // `sandboxSpawn`'s `GH_TOKEN` injection (`sandbox/index.ts`) only covers spawned agent/harness
-// processes, not the server's own direct git calls — git-sync's pull/push must pass it explicitly
-// so the `gh auth git-credential` helper set up by `finishProvisioning` can authenticate.
+// processes, not the server's own direct git calls — git-sync's pull/push pass it explicitly so an
+// HTTPS origin authenticates through the project's credential helper.
 function githubEnv(): NodeJS.ProcessEnv {
   return { ...process.env, GH_TOKEN: getProjectTokens().github };
 }
 
 // The branch the shared workspace syncs against: the remote's detected default branch, the same
-// one `isPrimaryBranch` admits a file to syncing against, falling back to the clone's own
-// checked-out branch, then `master` when neither can be read or the clone is detached.
+// one `isPrimaryBranch` admits a file to syncing against, falling back to the worktree's own
+// checked-out branch, then `master` when neither can be read or the worktree is detached.
 async function resolveSyncBranch(commands: SyncCommandRunner, dir: string): Promise<string> {
   const execution = { signal: commands.signal, timeout: SYNC_COMMAND_TIMEOUT_MS };
   const detected = await defaultBranch(dir, execution);
@@ -150,9 +150,9 @@ async function resolveSyncBranch(commands: SyncCommandRunner, dir: string): Prom
   return current && current !== 'HEAD' ? current : 'master';
 }
 
-// The shared clone holds every synced file, so every step is scoped to the one that was saved with a
-// `-- <path>` pathspec, the same way `commitRoot` in `commit.ts` scopes its staging: a bare `git add
-// -A` would commit whatever else happened to be changed or untracked in the clone under this file's
+// The shared worktree holds every synced file, so every step is scoped to the one that was saved with
+// a `-- <path>` pathspec, the same way `commitRoot` in `commit.ts` scopes its staging: a bare `git add
+// -A` would commit whatever else happened to be changed or untracked in the worktree under this file's
 // name, and `git commit` without the pathspec would take anything already staged along with it.
 async function commitIfChanged(commands: SyncCommandRunner, dir: string, filePath: string): Promise<void> {
   await commands.run(['add', '-A', '--', filePath], dir);
@@ -167,7 +167,7 @@ async function commitIfChanged(commands: SyncCommandRunner, dir: string, filePat
 
 // `git pull --rebase` against `origin/<branch>`. If it fails after starting a rebase, restore the
 // branch to its pre-rebase state while preserving its local commits, then surface the pull error.
-// `--autostash` sets aside whatever the clone holds beyond its commits — another synced file whose
+// `--autostash` sets aside whatever the worktree holds beyond its commits — another synced file whose
 // own save cycle has not committed it yet — so the pull is never refused over a change it is not
 // about, and puts it back once the rebase settles.
 async function pullRebase(commands: SyncCommandRunner, dir: string, branch: string): Promise<void> {

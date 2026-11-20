@@ -52,7 +52,7 @@ A remote harness or shell tab can open a sibling shell in its existing remote wo
 The terminal is painted in the application theme's own colors — background, text, cursor, and selection — so a light theme gives a light terminal. Choosing a theme in the `theme` picker updates the shell terminal too, without a restart. The 16 ANSI colors that programs print keep the standard terminal values in every theme. [Harness and ssh tabs](/user-documentation/command-bar/commands#theme) are different: they stay dark whichever theme you pick.
 
 The shell tab's metadata row follows zsh's current working directory as you change it, shortening paths
-inside the project to `$root`, paths inside the workspace clone to `$workspace/<name>`, and paths inside the shared git-sync clone to `$git-sync`. Its file-navigator button opens the navigator in that same directory.
+inside the project to `$root`, paths inside the workspace clone to `$workspace/<name>`, and paths inside the shared git-sync worktree to `$git-sync`. Its file-navigator button opens the navigator in that same directory.
 
 When the shell tab is out of sight in both panes and is not docked, submitting a command marks it unread when its transcript entry appears. Finishing marks it unread again; streaming output alone does not. Starting another command clears the flag. The flag also clears after the tab stays active for three continuous seconds. If a flag stays unread and hidden for 30 seconds, Janissary raises the same `Agent '<tab>' is waiting` notification a hidden harness tab raises; clearing the flag cancels it. See [tab badges](/user-documentation/getting-started/tabs#reading-the-tab-strip).
 

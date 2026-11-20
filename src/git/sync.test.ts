@@ -45,8 +45,8 @@ vi.mock('../workspace/index.js', () => ({ workspacePath: (name: string) => `/rep
 const { GitSync, SYNC_WORKSPACE_NAME } = await import('./sync.js');
 
 function makeWorkspace(dir = '/repo/.janissary/workspace/git-sync', ready: Promise<void> = Promise.resolve()) {
-  const create = vi.fn().mockReturnValue({ dir, ready });
-  return { create, remove: vi.fn() } as unknown as WorkspaceManager;
+  const createWorktree = vi.fn().mockReturnValue({ dir, ready });
+  return { createWorktree, remove: vi.fn() } as unknown as WorkspaceManager;
 }
 
 function argLists(): string[][] {
@@ -135,43 +135,43 @@ describe('GitSync', () => {
     expect(sync.workspaceFilePath('notes/todo.md')).toBe(`/repo/.janissary/workspace/${SYNC_WORKSPACE_NAME}/notes/todo.md`);
   });
 
-  it('provisions the shared workspace lazily exactly once for concurrent opens', async () => {
+  it('provisions the shared worktree lazily exactly once for concurrent opens', async () => {
     const workspace = makeWorkspace();
     const sync = new GitSync(workspace);
     const [a, b] = await Promise.all([sync.openSync(), sync.openSync()]);
-    expect(workspace.create).toHaveBeenCalledTimes(1);
-    expect(workspace.create).toHaveBeenCalledWith('git-sync', undefined, { depth: 1, sparseDirectories: ['product'] });
+    expect(workspace.createWorktree).toHaveBeenCalledTimes(1);
+    expect(workspace.createWorktree).toHaveBeenCalledWith('git-sync');
     expect(a).toEqual({ dir: '/repo/.janissary/workspace/git-sync' });
     expect(b).toEqual(a);
   });
 
   it('retries a synchronous workspace creation error', async () => {
-    const create = vi.fn()
+    const createWorktree = vi.fn()
       .mockReturnValueOnce({ error: 'no repo' })
       .mockReturnValue({ dir: '/repo/.janissary/workspace/git-sync', ready: Promise.resolve() });
-    const workspace = { create, remove: vi.fn() } as unknown as WorkspaceManager;
+    const workspace = { createWorktree, remove: vi.fn() } as unknown as WorkspaceManager;
     const sync = new GitSync(workspace);
     expect(await sync.openSync()).toEqual({ error: 'no repo' });
     expect(calls).toHaveLength(0);
     expect(await sync.openSync()).toEqual({ dir: '/repo/.janissary/workspace/git-sync' });
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(createWorktree).toHaveBeenCalledTimes(2);
   });
 
-  it('cleans up a shared clone failure once and provisions again on retry', async () => {
+  it('cleans up a shared worktree failure once and provisions again on retry', async () => {
     const dir = '/repo/.janissary/workspace/git-sync';
-    const create = vi.fn()
-      .mockReturnValueOnce({ dir, ready: Promise.reject(new Error('clone failed')) })
+    const createWorktree = vi.fn()
+      .mockReturnValueOnce({ dir, ready: Promise.reject(new Error('worktree failed')) })
       .mockReturnValue({ dir, ready: Promise.resolve() });
     const remove = vi.fn();
-    const workspace = { create, remove } as unknown as WorkspaceManager;
+    const workspace = { createWorktree, remove } as unknown as WorkspaceManager;
     const sync = new GitSync(workspace);
     const results = await Promise.all([sync.openSync(), sync.openSync()]);
-    expect(results).toEqual([{ error: 'clone failed' }, { error: 'clone failed' }]);
-    expect(create).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([{ error: 'worktree failed' }, { error: 'worktree failed' }]);
+    expect(createWorktree).toHaveBeenCalledTimes(1);
     expect(remove).toHaveBeenCalledOnce();
     expect(remove).toHaveBeenCalledWith(dir);
     expect(await sync.openSync()).toEqual({ dir });
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(createWorktree).toHaveBeenCalledTimes(2);
   });
 
   it('the pull-only cycle pulls/rebases without committing or pushing', async () => {
@@ -206,7 +206,7 @@ describe('GitSync', () => {
     expect(commitCommand).toContain('sync: notes.md');
   });
 
-  it('stages, checks, and commits only the saved file, never the rest of the shared clone', async () => {
+  it('stages, checks, and commits only the saved file, never the rest of the shared worktree', async () => {
     const file = '/repo/.janissary/workspace/git-sync/product/backlog/bugs.md';
     failPatterns = [['diff', '--cached', '--quiet']];
     const sync = new GitSync(makeWorkspace());
@@ -288,7 +288,7 @@ describe('GitSync sync branch', () => {
     expect(pushCall?.options.env?.GH_TOKEN).toBe('test-token');
   });
 
-  it('falls back to the clone\'s checked-out branch when origin/HEAD is not set', async () => {
+  it('falls back to the worktree\'s checked-out branch when origin/HEAD is not set', async () => {
     stdoutFor = { [CURRENT_BRANCH]: 'trunk\n' };
     const sync = new GitSync(makeWorkspace());
     await sync.saveSync('bugs.md');
@@ -297,7 +297,7 @@ describe('GitSync sync branch', () => {
     expect(commands).toContain('push origin HEAD:trunk');
   });
 
-  it('falls back to master for a detached clone with no origin/HEAD', async () => {
+  it('falls back to master for a detached worktree with no origin/HEAD', async () => {
     stdoutFor = { [CURRENT_BRANCH]: 'HEAD\n' };
     const sync = new GitSync(makeWorkspace());
     await sync.saveSync('bugs.md');
@@ -306,7 +306,7 @@ describe('GitSync sync branch', () => {
     expect(commands).toContain('push origin HEAD:master');
   });
 
-  it('resolves the branch once for every later cycle on the same clone', async () => {
+  it('resolves the branch once for every later cycle on the same worktree', async () => {
     stdoutFor = { [ORIGIN_HEAD]: 'refs/remotes/origin/main\n' };
     const sync = new GitSync(makeWorkspace());
     await Promise.all([sync.openSync(), sync.openSync()]);
@@ -316,14 +316,14 @@ describe('GitSync sync branch', () => {
     expect(commands.filter((c) => c === 'pull --rebase --autostash origin main')).toHaveLength(3);
   });
 
-  it('resolves the branch of a retried clone after a failed provision', async () => {
+  it('resolves the branch of a retried worktree after a failed provision', async () => {
     stdoutFor = { [ORIGIN_HEAD]: 'refs/remotes/origin/main\n' };
     const dir = '/repo/.janissary/workspace/git-sync';
-    const create = vi.fn()
-      .mockReturnValueOnce({ dir, ready: Promise.reject(new Error('clone failed')) })
+    const createWorktree = vi.fn()
+      .mockReturnValueOnce({ dir, ready: Promise.reject(new Error('worktree failed')) })
       .mockReturnValue({ dir, ready: Promise.resolve() });
-    const sync = new GitSync({ create, remove: vi.fn() } as unknown as WorkspaceManager);
-    expect(await sync.openSync()).toEqual({ error: 'clone failed' });
+    const sync = new GitSync({ createWorktree, remove: vi.fn() } as unknown as WorkspaceManager);
+    expect(await sync.openSync()).toEqual({ error: 'worktree failed' });
     expect(commandLines()).not.toContain(ORIGIN_HEAD);
     expect(await sync.openSync()).toEqual({ dir });
     expect(commandLines()).toEqual([ORIGIN_HEAD, 'pull --rebase --autostash origin main']);
