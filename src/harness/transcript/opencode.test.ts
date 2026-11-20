@@ -221,3 +221,121 @@ describe('OpencodeTranscriptSource with data-column schema', () => {
     expect(source.poll()).toEqual(['user: real']);
   });
 });
+
+// opencode 2.0 replaced the session/message/part tables with session_v2/session_message/session_part.
+// A fresh 2.0 store has none of the old tables, so a reader that only knows the old schema resolves
+// nothing and emits the "no harness transcript found" notification.
+describe('OpencodeTranscriptSource with opencode v2 schema', () => {
+  function createV2Schema(database: DatabaseSync): void {
+    database.exec('CREATE TABLE session_v2 (id TEXT PRIMARY KEY, directory TEXT, parent_id TEXT, time_created INTEGER)');
+    database.exec('CREATE TABLE session_message (id TEXT PRIMARY KEY, session_id TEXT, type TEXT, seq INTEGER, time_created INTEGER, data TEXT)');
+    database.exec('CREATE TABLE session_part (message_id TEXT, session_id TEXT, ordinal INTEGER, type TEXT, data TEXT, PRIMARY KEY (message_id, ordinal))');
+  }
+
+  function addV2Session(database: DatabaseSync, id: string, directory: string, timeCreated: number, parentId: string | null): void {
+    database.prepare('INSERT INTO session_v2 (id, directory, parent_id, time_created) VALUES (?, ?, ?, ?)')
+      .run(id, directory, parentId, timeCreated);
+  }
+
+  function addV2Message(database: DatabaseSync, id: string, sessionId: string, type: string, seq: number, timeCreated: number, data: unknown): void {
+    database.prepare('INSERT INTO session_message (id, session_id, type, seq, time_created, data) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(id, sessionId, type, seq, timeCreated, JSON.stringify(data));
+  }
+
+  it('resolves the session and reads user and assistant turns from session_message', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Message(database, 'msg_1', 'ses_mine', 'user', 0, spawnedAt + 10, { type: 'user', text: 'v2 user prompt' });
+    addV2Message(database, 'msg_2', 'ses_mine', 'assistant', 1, spawnedAt + 20, {
+      type: 'assistant', content: [{ type: 'text', text: 'v2 answer' }],
+    });
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['user: v2 user prompt', 'assistant: v2 answer']);
+    expect(source.resolved()).toBe(true);
+  });
+
+  it('renders a tool part whose output is a content block list', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Message(database, 'msg_1', 'ses_mine', 'assistant', 0, spawnedAt + 10, {
+      type: 'assistant',
+      content: [{
+        type: 'tool',
+        id: 'call_1',
+        name: 'shell',
+        state: {
+          status: 'completed',
+          input: { command: 'ls' },
+          content: [{ type: 'text', text: 'a.ts' }],
+        },
+      }],
+    });
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['assistant → shell({"command":"ls"})\nshell result: a.ts']);
+  });
+
+  it('prefers session_part rows over inline content in ordinal order', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Message(database, 'msg_1', 'ses_mine', 'assistant', 0, spawnedAt + 10, {
+      type: 'assistant', content: [{ type: 'text', text: 'inline' }],
+    });
+    database.prepare('INSERT INTO session_part (message_id, session_id, ordinal, type, data) VALUES (?, ?, ?, ?, ?)')
+      .run('msg_1', 'ses_mine', 0, 'text', JSON.stringify({ type: 'text', text: 'part one' }));
+    database.prepare('INSERT INTO session_part (message_id, session_id, ordinal, type, data) VALUES (?, ?, ?, ?, ?)')
+      .run('msg_1', 'ses_mine', 1, 'text', JSON.stringify({ type: 'text', text: 'part two' }));
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['assistant: part one', 'assistant: part two']);
+  });
+
+  it('includes a child session, labeled as a subagent', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Session(database, 'ses_child', cwd, spawnedAt + 5, 'ses_mine');
+    addV2Message(database, 'msg_1', 'ses_child', 'assistant', 0, spawnedAt + 10, {
+      type: 'assistant', content: [{ type: 'text', text: 'subagent working' }],
+    });
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['[subagent ses_child] assistant: subagent working']);
+  });
+
+  it('returns only newer turns on a second read', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Message(database, 'msg_1', 'ses_mine', 'user', 0, spawnedAt + 10, { type: 'user', text: 'first' });
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['user: first']);
+    expect(source.poll()).toEqual([]);
+    addV2Message(database, 'msg_2', 'ses_mine', 'assistant', 1, spawnedAt + 20, {
+      type: 'assistant', content: [{ type: 'text', text: 'second' }],
+    });
+    database.close();
+    expect(source.poll()).toEqual(['assistant: second']);
+  });
+
+  it('ignores opencode bookkeeping message types', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Message(database, 'msg_1', 'ses_mine', 'idle', 0, spawnedAt + 10, { type: 'idle', outcome: 'succeeded' });
+    addV2Message(database, 'msg_2', 'ses_mine', 'model-switched', 1, spawnedAt + 20, { type: 'model-switched' });
+    addV2Message(database, 'msg_3', 'ses_mine', 'user', 2, spawnedAt + 30, { type: 'user', text: 'real prompt' });
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['user: real prompt']);
+  });
+});
