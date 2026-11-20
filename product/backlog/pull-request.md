@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Secure local file list and file stat so a workspace symlink cannot expose paths outside the root.
-
-Existing Issue: The two local cores check only the lexical path before asking the filesystem port for entries and stats, while file exists, file read, file head, and file tail all resolve the target's real path, so a symlink inside the workspace pointing outside is listed or statted. Severity: 7/10
-
-Existing Risk: 6/10 - A user or ACP agent can read file names, sizes, mtimes, and permission bits from outside the workspace through an ordinary symlink, breaching the read-only root rule the other file commands enforce.
-
-Proposal Risk: 2/10 - Both commands resolve the target and check it against the workspace and secret anchors before any listing or stat, matching the far side's physical containment gate; only the added stat calls remain.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2115 "enforce real-path containment in local file list and file stat". In src/file-list/list-core.ts, after checkLexicalPath resolve the requested directory with the canonicalPath plus checkRealTarget pattern used by resolveRealTarget in src/file-exists/exists-core.ts and answer forbidden when it resolves outside the root or to a secret location; apply the same real-target check to each listed entry before rendering its row, so an entry that is an escaping symlink is filtered or refused rather than described. In src/file-stat/stat-core.ts, run the same containment check on the requested path before calling port.statRows. The far-side descriptors already pass through physicallyContainedPath in src/remote/filesystem/refusal.ts, so keep the wording identical to that path. Add local symlink-escape cases to src/file-list/tab-list.test.ts and src/file-stat/tab-stat.test.ts mirroring the escaping-symlink cases in src/file-exists/tab-exists.test.ts (a symlink to an outside directory, one to an outside file, and one to a home secret path), and keep the existing local-versus-remote parity assertions passing.
-
-
 * Correct the description's claim that remote out-of-workspace answers match the local one-word forbidden.
 
 Existing Issue: The description and plan promise the same one-word forbidden for a path outside the workspace with no path echoed, but the new helpers in src/file-navigator/remote/port-reads.ts short-circuit absolute paths to Outside the workspace: <path>. and a far-side containment refusal is mapped by rejectionLine in src/file-read/tab-read.ts to that same verbose echoed line. Severity: 6/10

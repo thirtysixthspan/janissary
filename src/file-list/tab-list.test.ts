@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -113,6 +113,43 @@ describe('listFilesInTab', () => {
     expect(await listFilesInTab(managersWith(), 'janus', 'file list ..')).toBe('forbidden');
     expect(await listFilesInTab(managersWith(), 'janus', `file list ${outside}`)).toBe('forbidden');
     expect(await listFilesInTab(managersWith(), 'janus', 'file list .env')).toBe('forbidden');
+  });
+
+  it('prints forbidden for a symlink to a directory outside the workspace', async () => {
+    symlinkSync(outside, path.join(root, 'out'));
+    expect(await listFilesInTab(managersWith(), 'janus', 'file list out')).toBe('forbidden');
+  });
+
+  it('prints forbidden for a symlink to a file outside the workspace', async () => {
+    const target = path.join(outside, 'secret.txt');
+    writeFileSync(target, 'x');
+    symlinkSync(target, path.join(root, 'escape'));
+    expect(await listFilesInTab(managersWith(), 'janus', 'file list escape')).toBe('forbidden');
+  });
+
+  it('prints forbidden for a symlink to a home secret path', async () => {
+    const home = mkdtempSync(path.join(tmpdir(), 'janus-file-list-home-'));
+    try {
+      vi.stubEnv('HOME', home);
+      const secret = path.join(home, '.ssh');
+      mkdirSync(secret);
+      writeFileSync(path.join(secret, 'id_rsa'), 'x');
+      symlinkSync(secret, path.join(root, 'home-secret'));
+      expect(await listFilesInTab(managersWith(), 'janus', 'file list home-secret')).toBe('forbidden');
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('omits a listed entry whose symlink resolves outside the workspace', async () => {
+    const target = path.join(outside, 'secret.txt');
+    writeFileSync(target, 'x');
+    symlinkSync(target, path.join(root, 'escape'));
+    makeFile('visible.md');
+    const result = await listFilesInTab(managersWith(), 'janus', 'file list .');
+    expect(result).not.toContain('escape');
+    expect(result).toContain('visible.md');
   });
 
   it('resolves to a one-word refusal when the directory read fails', async () => {
