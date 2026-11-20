@@ -108,7 +108,9 @@ export type AcpLoopHandlers = {
     // Present only when the gate refused the command because it is disabled.
     refused?: 'disabled',
   ) => void;
-  // The loop ended: `answered` (no command emitted), `capped` (hit `maxSteps`), or `failed` (a command threw or rejected).
+  // This loop emits `answered` (the reply had no commands) or `capped` (the step cap was hit), never `failed`:
+  // a command that throws or rejects becomes an ordinary result. `failed` stays in the union only for other
+  // producers.
   finished: (reason: 'answered' | 'capped' | 'failed', maxSteps: number) => void;
   // A connection/prompt error occurred.
   error: (message: string) => void;
