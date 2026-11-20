@@ -3,9 +3,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import type * as nodeOs from 'node:os';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseFileRead, type FileReadArgs } from '../file-read/command.js';
+import { parseFileRead, FILE_READ_USAGE, type FileReadArgs } from '../file-read/command.js';
 import { parseFileMutation } from '../file-write/command.js';
 import type * as TabWrite from '../file-write/tab-write.js';
+import type * as TabList from '../file-list/tab-list.js';
+import type * as TabStat from '../file-stat/tab-stat.js';
+import type * as TabExists from '../file-exists/tab-exists.js';
+import type * as TabHeadTail from '../file-head-tail/tab-head-tail.js';
 import { readWorkspaceLines } from '../file-read/read.js';
 import type { Managers } from '../managers.js';
 import type { TabRuntime } from '../tab/types.js';
@@ -27,6 +31,7 @@ import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { BROWSER_PRIMER } from '../browser/command.js';
 import { DB_PRIMER } from '../database/primer.js';
 import { FILE_GREP_PRIMER, FILE_GREP_USAGE } from '../file-grep/command.js';
+import { FILE_LIST_USAGE } from '../file-list/command.js';
 import * as fileGrepCandidates from '../file-grep/candidates.js';
 import * as fileGrepScan from '../file-grep/scan.js';
 import { commandProtocolPrimer } from './command-protocol.js';
@@ -47,6 +52,7 @@ vi.mock('../subagent/launch.js', async (importOriginal) => {
 const mocks = vi.hoisted(() => ({
   runAcpToolLoop: vi.fn(), notify: vi.fn(), readFileInTab: vi.fn(), mutateFileInTab: vi.fn(),
   globFilesInTab: vi.fn(), grepFilesInTab: vi.fn(), runWebInTab: vi.fn(), runToolLoop: vi.fn(),
+  listFilesInTab: vi.fn(), statFileInTab: vi.fn(), fileExistsInTab: vi.fn(), headTailInTab: vi.fn(),
 }));
 const home = vi.hoisted(() => ({ dir: '' }));
 
@@ -75,6 +81,26 @@ vi.mock('../file-grep/tab-grep.js', async (importOriginal) => {
   const actual = await importOriginal<typeof TabGrep>();
   mocks.grepFilesInTab.mockImplementation(actual.grepFilesInTab);
   return { ...actual, grepFilesInTab: mocks.grepFilesInTab };
+});
+vi.mock('../file-list/tab-list.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabList>();
+  mocks.listFilesInTab.mockImplementation(actual.listFilesInTab);
+  return { ...actual, listFilesInTab: mocks.listFilesInTab };
+});
+vi.mock('../file-stat/tab-stat.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabStat>();
+  mocks.statFileInTab.mockImplementation(actual.statFileInTab);
+  return { ...actual, statFileInTab: mocks.statFileInTab };
+});
+vi.mock('../file-exists/tab-exists.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabExists>();
+  mocks.fileExistsInTab.mockImplementation(actual.fileExistsInTab);
+  return { ...actual, fileExistsInTab: mocks.fileExistsInTab };
+});
+vi.mock('../file-head-tail/tab-head-tail.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof TabHeadTail>();
+  mocks.headTailInTab.mockImplementation(actual.headTailInTab);
+  return { ...actual, headTailInTab: mocks.headTailInTab };
 });
 vi.mock('../web/tab-web.js', () => ({ runWebInTab: mocks.runWebInTab }));
 vi.mock('./drive-loop.js', async (importOriginal) => {
@@ -1668,5 +1694,101 @@ describe('runCorePrompt subagent through the real command', () => {
       expect(subagentMock.launch).not.toHaveBeenCalled();
       expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({ answered: true, reply: line }));
     });
+  });
+});
+
+describe('runCorePrompt listing and inspecting commands', () => {
+  let dir: string;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dir = mkdtempSync(path.join(tmpdir(), 'acp-run-prompt-list-'));
+    writeFileSync(path.join(dir, 'a.txt'), 'alpha\nbeta\n');
+    mkdirSync(path.join(dir, 'docs'));
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  const GRANTS = ['file read', 'file list', 'file stat', 'file exists', 'file head', 'file tail'];
+
+  it('runs a granted file list through the listing executor instead of the read usage', async () => {
+    const { start, dispatchNativeLine } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    const result = await deps.runCommand('file list .');
+    expect(result).toContain('a.txt');
+    expect(result).not.toBe(FILE_READ_USAGE);
+    expect(mocks.listFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file list .');
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+
+  it('routes the file ls alias to the listing executor with its own spelling', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    const result = await deps.runCommand('file ls .');
+    expect(result).toContain('a.txt');
+    expect(mocks.listFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file ls .');
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('runs a granted file stat through the stat executor', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    const result = await deps.runCommand('file stat a.txt');
+    expect(result).toContain('a.txt');
+    expect(result).not.toBe(FILE_READ_USAGE);
+    expect(mocks.statFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file stat a.txt');
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('runs a granted file exists through the existence executor', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    expect(await deps.runCommand('file exists a.txt')).toBe('file');
+    expect(mocks.fileExistsInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file exists a.txt');
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('runs granted file head and file tail through the head/tail executor', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    expect(await deps.runCommand('file head a.txt -n 1')).toContain('1\talpha');
+    expect(await deps.runCommand('file tail a.txt -n 1')).toBe('2\tbeta');
+    expect(mocks.headTailInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file head a.txt -n 1');
+    expect(mocks.headTailInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file tail a.txt -n 1');
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('returns the list usage for a bare file list, not the read usage', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps } = start('tell', GRANTS);
+    await expect(deps.runCommand('file list')).resolves.toBe(FILE_LIST_USAGE);
+    expect(mocks.listFilesInTab).toHaveBeenCalled();
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+  });
+
+  it('still sends an unrecognized file lookalike to the read usage', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { host } = start('tell', GRANTS);
+    await expect(host.runWorkspace('file listing .')).resolves.toBe(FILE_READ_USAGE);
+    expect(mocks.readFileInTab).toHaveBeenCalledWith(expect.anything(), 'shell', 'file listing .');
+  });
+
+  it('throws without running a newly routed command when the prompt is aborted', async () => {
+    const { start } = harness({ tab: { workspaceDir: dir } });
+    const { deps, request } = start('tell', GRANTS);
+    request.abort.abort();
+    expect(() => deps.runCommand('file list .')).toThrow('ACP: prompt cancelled.');
+    expect(mocks.listFilesInTab).not.toHaveBeenCalled();
+  });
+
+  it('leaves a local fallback session on a remote tab on the remote transport', async () => {
+    const { start, dispatchNativeLine } = harness({
+      tab: { workspaceDir: dir, remote: { host: 'far' } }, launchDir: dir,
+    });
+    const { deps } = start('tell', GRANTS);
+    const result = await deps.runCommand('file list .');
+    expect(result).toBe('Remote connection unavailable.');
+    expect(mocks.listFilesInTab).toHaveBeenCalled();
+    expect(mocks.readFileInTab).not.toHaveBeenCalled();
+    expect(dispatchNativeLine).not.toHaveBeenCalled();
   });
 });
