@@ -192,12 +192,15 @@ function gateAgentCommand(
   return { runsOn: 'workspace' };
 }
 
-// The command in the reply's labelled block, provided a granted tool owns it.
+// The reply's command blocks, provided a granted tool owns every one of them.
 export function toolExtractor(tools: AcpTool[]): (text: string) => CommandBlockResult {
   return (text) => {
     const result = extractCommandBlock(text, true);
-    if (result.kind !== 'one') return result;
-    const line = result.command.split('\n', 1)[0];
-    return tools.some((tool) => tool.isCommandLine(line)) ? result : { kind: 'absent' };
+    if (result.kind !== 'batch') return result;
+    const owned = result.commands.every(({ command }) => {
+      const line = command.split('\n', 1)[0];
+      return tools.some((tool) => tool.isCommandLine(line));
+    });
+    return owned ? result : { kind: 'mistake', commands: 1 };
   };
 }
