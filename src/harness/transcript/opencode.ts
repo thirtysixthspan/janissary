@@ -3,26 +3,31 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { normalizeOpencodePart } from './normalize.js';
 import { withSource } from './render.js';
-import { asRecord, asString, asNumber } from './json.js';
+import { asString, asNumber } from './json.js';
+import { hasColumn, jsonRecord, partRecord, placeholders, query } from './opencode-db.js';
+import { OpencodeV2TranscriptSource } from './opencode-v2.js';
 import type { TranscriptSource } from './source.js';
 
 // opencode keeps its sessions in a SQLite database rather than in per-session files (the JSON files
 // its `storage/` directory once held are gone in the current version), so this adapter is a database
-// reader. A subagent is an ordinary `session` row whose `parent_id` points at the tailed session.
+// reader. A subagent is an ordinary session row whose `parent_id` points at the tailed session.
 //
-// Three failure modes share one mechanism: reads against a database another process is writing can
-// return a transient busy/locked error, and opencode's schema has already changed twice under this
-// feature — message and part content moved from flat columns (`role`, `type`, `text`, `tool`,
-// `state`) into one JSON document per row in a `data` column. The adapter probes for that column
-// once per opened database and reads both layouts; any other query failure means "nothing new" — a
-// lock clears on the next poll, and an unrecognized schema simply never resolves, which routes the
-// tab into the ordinary fallback plus one notification instead of breaking it.
+// The schema has changed twice under this feature. Content moved from flat columns (`role`, `type`,
+// `text`, `tool`, `state`) into a per-row `data` JSON document, and opencode 2.0 moved the tables
+// themselves (`session_v2` / `session_message` / `session_part`). This class stays the one public
+// source: it detects the 2.0 layout by table presence and hands that case to OpencodeV2TranscriptSource,
+// keeping the original reader below for older databases. Reads against a database another process is
+// writing can also return a transient busy/locked error; any query failure means "nothing new" — a
+// lock clears on the next poll, and an unrecognized schema simply never resolves, which routes the tab
+// into the ordinary fallback plus one notification instead of breaking it.
 export class OpencodeTranscriptSource implements TranscriptSource {
   private database: DatabaseSync | undefined;
   private databaseProbed = false;
   private dataColumns = { message: false, part: false };
   private sessions: string[] = [];
   private position = { time: 0, id: '' };
+  private v2: OpencodeV2TranscriptSource | undefined;
+  private layoutChecked = false;
 
   constructor(
     private cwd: string,
@@ -32,11 +37,19 @@ export class OpencodeTranscriptSource implements TranscriptSource {
   ) {}
 
   resolved(): boolean {
-    return this.sessions.length > 0;
+    return this.v2 ? this.v2.resolved() : this.sessions.length > 0;
   }
 
   poll(): string[] {
     try {
+      if (!this.layoutChecked) {
+        this.layoutChecked = true;
+        const database = this.open();
+        if (database && hasColumn(database, 'session_v2', 'id')) {
+          this.v2 = new OpencodeV2TranscriptSource(this.cwd, this.spawnedAt, this.dataHome);
+        }
+      }
+      if (this.v2) return this.v2.poll();
       const database = this.open();
       if (!database) return [];
       this.detectDataColumns(database);
@@ -138,40 +151,4 @@ export class OpencodeTranscriptSource implements TranscriptSource {
     }
     return blocks;
   }
-}
-
-// A part's `state` is stored as a JSON string; the normalizer wants it as the object it describes.
-function partRecord(row: Record<string, unknown>): Record<string, unknown> {
-  const state = asString(row.state);
-  if (state === undefined) return row;
-  try {
-    return { ...row, state: asRecord(JSON.parse(state)) };
-  } catch {
-    return row;
-  }
-}
-
-function placeholders(count: number): string {
-  return Array.from({ length: count }, () => '?').join(', ');
-}
-
-function hasColumn(database: DatabaseSync, table: string, column: string): boolean {
-  const rows = query(database, `PRAGMA table_info(${table})`, []);
-  return rows.some((row) => asString(row.name) === column);
-}
-
-// A `data` column's JSON document, or undefined when it does not parse — a value opencode wrote
-// that this adapter cannot read is skipped, never thrown.
-function jsonRecord(value: unknown): Record<string, unknown> | undefined {
-  const text = asString(value);
-  if (text === undefined) return asRecord(value);
-  try {
-    return asRecord(JSON.parse(text));
-  } catch {
-    return undefined;
-  }
-}
-
-function query(database: DatabaseSync, sql: string, parameters: (string | number)[]): Record<string, unknown>[] {
-  return database.prepare(sql).all(...parameters);
 }
