@@ -232,6 +232,37 @@ describe('useEditorMouse', () => {
     body.remove();
   });
 
+  it('keeps the selection frozen while the pointer is outside the tab and resumes when it returns', () => {
+    const state = makeState(['hello', 'world', 'third']);
+    const api = makeApi(state);
+    const body = makeEditorBody(3);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus));
+
+    const content = body.querySelector('.editor-content') as HTMLElement;
+    const downEvent = { preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 1, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(downEvent); });
+    expect(api.setState).toHaveBeenCalledTimes(1);
+
+    const otherTab = document.createElement('div');
+    document.body.append(otherTab);
+    (document.elementFromPoint as ReturnType<typeof vi.fn>).mockReturnValue(otherTab);
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 10, clientY: 50 })); });
+    expect(api.setState).toHaveBeenCalledTimes(1);
+
+    const thirdRow = body.querySelectorAll('[data-editor-line]')[2] as HTMLElement;
+    (document.elementFromPoint as ReturnType<typeof vi.fn>).mockReturnValue(thirdRow);
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 10, clientY: 50 })); });
+    expect(api.setState).toHaveBeenCalledTimes(2);
+    const resumed = (api.setState as ReturnType<typeof vi.fn>).mock.calls[1][0] as EditorState;
+    expect(resumed.cursor.line).toBe(2);
+
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
+    otherTab.remove();
+    body.remove();
+  });
+
   it('extends line selection on gutter drag', () => {
     const state = makeState(['hello', 'world', 'third']);
     const api = makeApi(state);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { textOffsetIn, pointToCol, hitFromEvent, visualVerticalHit } from './mouse';
+import { textOffsetIn, pointToCol, hitFromEvent, hitFromPoint, visualVerticalHit } from './mouse';
 
 type DocWithCaretPos = {
   caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
@@ -121,6 +121,55 @@ describe('hitFromEvent', () => {
     const result = hitFromEvent({ target: row, clientX: 0, clientY: 0 });
     expect(result).toBeNull();
     row.remove();
+  });
+});
+
+describe('hitFromPoint', () => {
+  afterEach(() => {
+    delete (document as unknown as DocWithCaretPos).caretPositionFromPoint;
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    vi.restoreAllMocks();
+  });
+
+  function makeBody(): { body: HTMLElement; content: HTMLElement; text: Text } {
+    const body = document.createElement('div');
+    document.body.append(body);
+    for (let line = 0; line < 3; line++) {
+      const row = document.createElement('div');
+      row.dataset.editorLine = String(line);
+      const content = document.createElement('span');
+      content.className = 'editor-content';
+      content.append(document.createTextNode(`line ${line}`));
+      row.append(content);
+      body.append(row);
+    }
+    const content = body.querySelectorAll('.editor-content')[2] as HTMLElement;
+    return { body, content, text: content.firstChild as Text };
+  }
+
+  it('resolves the row under a pointer inside the editor body', () => {
+    const { body, content, text } = makeBody();
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(content);
+    (document as unknown as DocWithCaretPos).caretPositionFromPoint = vi.fn().mockReturnValue({ offsetNode: text, offset: 2 });
+    expect(hitFromPoint(body, 10, 20)).toEqual({ line: 2, col: 2, inGutter: false });
+    body.remove();
+  });
+
+  it('returns null when the pointer is over an element outside the body', () => {
+    const { body } = makeBody();
+    const otherTab = document.createElement('div');
+    document.body.append(otherTab);
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(otherTab);
+    expect(hitFromPoint(body, 10, 500)).toBeNull();
+    otherTab.remove();
+    body.remove();
+  });
+
+  it('returns null when the point resolves to no element', () => {
+    const { body } = makeBody();
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(null);
+    expect(hitFromPoint(body, 10, -5)).toBeNull();
+    body.remove();
   });
 });
 
