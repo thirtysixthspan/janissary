@@ -4,9 +4,9 @@ A core ACP connection used by a shell or another plugin tab can pause its tool l
 
 ### Commands
 
-An agent issues `question ask "<question>"` on its own final response line to request free text.
+An agent issues `question ask "<question>"` by putting the command inside a final fenced block whose info string is exactly `janissary` to request free text. A bare final line naming `question ask` is prose that ends the turn rather than a command.
 
-An agent issues `question approve "<question>" <option> [<option> …]` on its own final response line to request one choice from the supplied labels. The question must be quoted; option labels containing spaces must also be quoted.
+An agent issues `question approve "<question>" <option> [<option> …]` by putting the command inside a final fenced block whose info string is exactly `janissary` to request one choice from the supplied labels. The question must be quoted; option labels containing spaces must also be quoted. A bare final line naming `question approve` is prose that ends the turn rather than a command. Zero or more than one command in the labelled block draws the shared correction sentence for both forms instead of ending the turn.
 
 Janissary removes the command from the visible agent reply, waits for the human, and returns the answer as command output to the same agent's next turn. A malformed question command returns usage text to the agent without opening a panel.
 

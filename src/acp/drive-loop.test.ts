@@ -101,6 +101,7 @@ describe('corePrimer', () => {
 });
 
 const QUERY = 'db sqlite query movies SELECT 1';
+const block = (command: string): string => '```janissary\n' + command + '\n```';
 
 function makeSession(replies: string[]) {
   const sent: string[] = [];
@@ -142,7 +143,7 @@ function drive(snapshot: AcpRunSnapshot, replies: string[]) {
 }
 
 function drivePending() {
-  const { session, sent } = makeSession([QUERY, 'Done.']);
+  const { session, sent } = makeSession([block(QUERY), 'Done.']);
   const { h, events } = makeHandlers();
   const controller = new AbortController();
   const { promise, resolve, reject } = Promise.withResolvers<string>();
@@ -155,7 +156,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const PENDING_EVENTS = [
   ['startTurn', true],
-  ['chunk', QUERY],
+  ['chunk', block(QUERY)],
   ['endTurn', ''],
   ['startCommand', QUERY, false],
 ];
@@ -164,7 +165,7 @@ const ofKind = (events: unknown[][], kind: string) => events.filter((event) => e
 
 describe('driveToolLoop', () => {
   it('routes a caller command to runCaller and feeds its output back', () => {
-    const { sent, host } = drive(coreSnapshot('tell', ['db sqlite query']), [QUERY, 'Done.']);
+    const { sent, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY), 'Done.']);
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
     expect(host.runWorkspace).not.toHaveBeenCalled();
     expect(sent[1]).toContain(`Output of \`${QUERY}\`:`);
@@ -172,7 +173,7 @@ describe('driveToolLoop', () => {
   });
 
   it('routes a file read to runWorkspace and feeds its output back', () => {
-    const { sent, host } = drive(coreSnapshot('tell', ['file read']), ['file read notes.md', 'Done.']);
+    const { sent, host } = drive(coreSnapshot('tell', ['file read']), [block('file read notes.md'), 'Done.']);
     expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
     expect(host.runCaller).not.toHaveBeenCalled();
     expect(sent[1]).toContain('workspace output');
@@ -181,7 +182,7 @@ describe('driveToolLoop', () => {
 
   it('names a file write by path in the follow-up but records the full command', () => {
     const write = 'file write {"path":"notes.md","content":"SECRET BODY"}';
-    const { sent, events } = drive(coreSnapshot('tell', ['file write']), [write, 'Done.']);
+    const { sent, events } = drive(coreSnapshot('tell', ['file write']), [block(write), 'Done.']);
     expect(sent[1]).toContain('Output of `file write notes.md`:\nworkspace output');
     expect(sent[1]).not.toContain('SECRET BODY');
     expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', write, 'workspace output', true, undefined]]);
@@ -189,7 +190,7 @@ describe('driveToolLoop', () => {
 
   it('names a file edit by path in the follow-up without its strings', () => {
     const edit = 'file edit {"path":"a.md","oldString":"OLD TEXT","newString":"NEW TEXT"}';
-    const { sent } = drive(coreSnapshot('tell', ['file edit']), [edit, 'Done.']);
+    const { sent } = drive(coreSnapshot('tell', ['file edit']), [block(edit), 'Done.']);
     expect(sent[1]).toContain('Output of `file edit a.md`:');
     expect(sent[1]).not.toContain('OLD TEXT');
     expect(sent[1]).not.toContain('NEW TEXT');
@@ -201,22 +202,22 @@ describe('driveToolLoop', () => {
       '*** Update File: src/a.ts', '@@', '-old', '+SECRET LINE',
     ].join('\n');
     const command = `file patch ${JSON.stringify({ patchText: patch })}`;
-    const { sent, events } = drive(coreSnapshot('tell', ['file patch']), [command, 'Done.']);
+    const { sent, events } = drive(coreSnapshot('tell', ['file patch']), [block(command), 'Done.']);
     expect(sent[1]).toContain('Output of `file patch src/x.ts -> src/y.ts, src/a.ts`:\nworkspace output');
     expect(sent[1]).not.toContain('SECRET LINE');
     expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', command, 'workspace output', true, undefined]]);
   });
 
   it('names a malformed file patch by the bare command in the follow-up', () => {
-    const { sent } = drive(coreSnapshot('tell', ['file patch']), ['file patch {', 'Done.']);
+    const { sent } = drive(coreSnapshot('tell', ['file patch']), [block('file patch {'), 'Done.']);
     expect(sent[1]).toContain('Output of `file patch`:');
   });
 
   it('fires events in order for one caller step and a plain answer', () => {
-    const { events } = drive(coreSnapshot('tell', ['db sqlite query']), [QUERY, 'Done.']);
+    const { events } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY), 'Done.']);
     expect(events).toEqual([
       ['startTurn', true],
-      ['chunk', QUERY],
+      ['chunk', block(QUERY)],
       ['endTurn', ''],
       ['startCommand', QUERY, false],
       ['ranCommand', QUERY, 'caller output', false, undefined],
@@ -228,7 +229,7 @@ describe('driveToolLoop', () => {
   });
 
   it('reports a file read step as a workspace step', () => {
-    const { events } = drive(coreSnapshot('tell', ['file read']), ['file read notes.md', 'Done.']);
+    const { events } = drive(coreSnapshot('tell', ['file read']), [block('file read notes.md'), 'Done.']);
     expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'file read notes.md', true]]);
     expect(ofKind(events, 'ranCommand')).toEqual([
       ['ranCommand', 'file read notes.md', 'workspace output', true, undefined],
@@ -236,7 +237,7 @@ describe('driveToolLoop', () => {
   });
 
   it('routes a web search to runWorkspace and reports it as a workspace step', () => {
-    const { events, host } = drive(coreSnapshot('tell', ['web search']), ['web search x', 'Done.']);
+    const { events, host } = drive(coreSnapshot('tell', ['web search']), [block('web search x'), 'Done.']);
     expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('web search x');
     expect(host.runCaller).not.toHaveBeenCalled();
     expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'web search x', true]]);
@@ -246,7 +247,7 @@ describe('driveToolLoop', () => {
   });
 
   it('routes a web fetch to runWorkspace and reports it as a workspace step', () => {
-    const { events, host } = drive(coreSnapshot('tell', ['web fetch']), ['web fetch https://x', 'Done.']);
+    const { events, host } = drive(coreSnapshot('tell', ['web fetch']), [block('web fetch https://x'), 'Done.']);
     expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('web fetch https://x');
     expect(host.runCaller).not.toHaveBeenCalled();
     expect(ofKind(events, 'startCommand')).toEqual([['startCommand', 'web fetch https://x', true]]);
@@ -259,7 +260,7 @@ describe('driveToolLoop', () => {
     const snapshot = coreSnapshot('tell', ['db sqlite query'], [
       { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
     ]);
-    const { sent, events, host } = drive(snapshot, [QUERY, 'Done.']);
+    const { sent, events, host } = drive(snapshot, [block(QUERY), 'Done.']);
     const refusal = 'Command is disabled: db sqlite query.';
     expect(ofKind(events, 'startCommand')).toEqual([['startCommand', QUERY, false]]);
     expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', QUERY, refusal, false, 'disabled']]);
@@ -270,7 +271,7 @@ describe('driveToolLoop', () => {
   });
 
   it('returns a role refusal as one step without calling the host', () => {
-    const { sent, events, host } = drive(coreSnapshot('ask', ['db sqlite list']), [QUERY, 'Done.']);
+    const { sent, events, host } = drive(coreSnapshot('ask', ['db sqlite list']), [block(QUERY), 'Done.']);
     const refusal = 'Command not allowed for role "ask": db sqlite query.';
     expect(ofKind(events, 'startCommand')).toEqual([['startCommand', QUERY, false]]);
     expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', QUERY, refusal, false, undefined]]);
@@ -280,7 +281,7 @@ describe('driveToolLoop', () => {
   });
 
   it('stops after eight steps with the capped reason', () => {
-    const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [QUERY]);
+    const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY)]);
     expect(host.runCaller).toHaveBeenCalledTimes(8);
     expect(ofKind(events, 'ranCommand')).toHaveLength(8);
     expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
@@ -317,7 +318,7 @@ describe('driveToolLoop', () => {
   });
 
   it('reports a synchronously throwing host and ends the run', () => {
-    const { session, sent } = makeSession([QUERY, 'Done.']);
+    const { session, sent } = makeSession([block(QUERY), 'Done.']);
     const { h, events } = makeHandlers();
     const host = {
       runCaller: vi.fn(() => { throw new Error('sync boom'); }),
@@ -371,7 +372,7 @@ describe('runToolLoop', () => {
   });
 
   it('drives a core run through the gate-and-route driver', () => {
-    const { session, sent } = makeSession([QUERY, 'Done.']);
+    const { session, sent } = makeSession([block(QUERY), 'Done.']);
     const { h, events } = makeHandlers();
     const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
     runToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, new AbortController().signal);
@@ -381,7 +382,7 @@ describe('runToolLoop', () => {
   });
 
   it('drives an agent run through the gate-and-route driver', () => {
-    const { session, sent } = makeSession(['janissary db sqlite list', 'Done.']);
+    const { session, sent } = makeSession([block('db sqlite list'), 'Done.']);
     const { h, events } = makeHandlers();
     const host = { runCaller: vi.fn(() => 'caller output'), runWorkspace: vi.fn(() => 'workspace output') };
     runToolLoop(session, 'do it', { kind: 'agent', grants: ['db'], askUser: false }, host, h, new AbortController().signal);
@@ -393,7 +394,7 @@ describe('runToolLoop', () => {
 
 describe('driveToolLoop agent runs', () => {
   it('uses only the Markdown primer and routes an extracted caller command', () => {
-    const { sent, events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, ['janissary db sqlite list', 'Done.']);
+    const { sent, events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, [block('db sqlite list'), 'Done.']);
     expect(sent[0]).toBe(`${MARKDOWN_INSTRUCTION}\n\ndo it`);
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith('db sqlite list');
     expect(host.runWorkspace).not.toHaveBeenCalled();
@@ -402,7 +403,7 @@ describe('driveToolLoop agent runs', () => {
   });
 
   it('routes granted file reads to the workspace', () => {
-    const { sent, events, host } = drive({ kind: 'agent', grants: ['file'], askUser: false }, ['janissary file read a.md', 'Done.']);
+    const { sent, events, host } = drive({ kind: 'agent', grants: ['file'], askUser: false }, [block('file read a.md'), 'Done.']);
     expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read a.md');
     expect(host.runCaller).not.toHaveBeenCalled();
     expect(sent[1]).toContain('workspace output');
@@ -411,7 +412,7 @@ describe('driveToolLoop agent runs', () => {
   });
 
   it('feeds an ungranted file read refusal back as one step without invoking either host side', () => {
-    const { sent, events, host } = drive({ kind: 'agent', grants: [], askUser: false }, ['janissary file read a.md', 'Done.']);
+    const { sent, events, host } = drive({ kind: 'agent', grants: [], askUser: false }, [block('file read a.md'), 'Done.']);
     const refusal = 'Agent: command not permitted: file read a.md.';
     expect(host.runWorkspace).not.toHaveBeenCalled();
     expect(host.runCaller).not.toHaveBeenCalled();
@@ -423,7 +424,7 @@ describe('driveToolLoop agent runs', () => {
     ['granted', ['file']],
     ['ungranted', []],
   ])('refuses an extracted file grep before either host side when %s', (_label, grants) => {
-    const { sent, events, host } = drive({ kind: 'agent', grants, askUser: false }, ['janissary file grep TODO', 'Done.']);
+    const { sent, events, host } = drive({ kind: 'agent', grants, askUser: false }, [block('file grep TODO'), 'Done.']);
     const refusal = 'Agent: command not permitted: file grep TODO.';
     expect(host.runWorkspace).not.toHaveBeenCalled();
     expect(host.runCaller).not.toHaveBeenCalled();
@@ -435,7 +436,8 @@ describe('driveToolLoop agent runs', () => {
 
   it.each([false, true])('extracts a bare question only with askUser enabled (%s)', (askUser) => {
     const command = 'question ask "x"';
-    const { sent, host } = drive({ kind: 'agent', grants: ['question'], askUser }, [command, 'Done.']);
+    const replies = askUser ? [block(command), 'Done.'] : [command, 'Done.'];
+    const { sent, host } = drive({ kind: 'agent', grants: ['question'], askUser }, replies);
     if (askUser) {
       expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(command);
       expect(sent).toHaveLength(2);
@@ -447,7 +449,7 @@ describe('driveToolLoop agent runs', () => {
   });
 
   it('runs twenty steps without a cap', () => {
-    const replies = [...Array.from({ length: 20 }, () => 'janissary db sqlite list'), 'Done.'];
+    const replies = [...Array.from({ length: 20 }, () => block('db sqlite list')), 'Done.'];
     const { sent, events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, replies);
     expect(host.runCaller).toHaveBeenCalledTimes(20);
     expect(sent).toHaveLength(21);
@@ -460,20 +462,20 @@ describe('driveToolLoop file mutations', () => {
   const WRITE = 'file write {"path":"a.md","content":"x"}';
 
   it('routes a granted write to runWorkspace and feeds its one-line result back', () => {
-    const { sent, host } = drive(coreSnapshot('tell', ['file write']), [WRITE, 'Done.']);
+    const { sent, host } = drive(coreSnapshot('tell', ['file write']), [block(WRITE), 'Done.']);
     expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith(WRITE);
     expect(host.runCaller).not.toHaveBeenCalled();
     expect(sent[1]).toContain('workspace output');
   });
 
   it('exposes no file tools without tools', () => {
-    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [WRITE]);
+    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [block(WRITE)]);
     expect(host.runWorkspace).not.toHaveBeenCalled();
     expect(sent).toHaveLength(1);
   });
 
   it('caps repeated writes at eight steps', () => {
-    const { events, host } = drive(coreSnapshot('tell', ['file write']), [WRITE]);
+    const { events, host } = drive(coreSnapshot('tell', ['file write']), [block(WRITE)]);
     expect(host.runWorkspace).toHaveBeenCalledTimes(8);
     expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
   });
@@ -493,7 +495,7 @@ describe('driveToolLoop file glob end to end', () => {
     mkdirSync(plans, { recursive: true });
     for (const name of ['editor-split.md', 'editor-tabs.md', 'other.md']) writeFileSync(path.join(plans, name), '');
     const grants = DEFAULT_ROLES.find((role) => role.name === 'ask')?.commands ?? [];
-    const { session, sent } = makeSession([`Let me look.\n${GLOB}`, 'Done.']);
+    const { session, sent } = makeSession([`Let me look.\n${block(GLOB)}`, 'Done.']);
     const { h, events } = makeHandlers();
     const host = {
       runCaller: vi.fn(() => 'caller output'),

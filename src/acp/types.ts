@@ -1,4 +1,5 @@
 import type { ProjectTokens } from '../project/tokens.js';
+import type { CommandBlockResult } from './command-block.js';
 import type { AcpRole } from './role.js';
 
 export type PromptHandlers = {
@@ -80,8 +81,9 @@ export type AcpLoopDeps = {
   // Execute an extracted command and return its textual output. May be async (e.g. a
   // browser command); the loop awaits the result before continuing.
   runCommand: (command: string) => string | Promise<string>;
-  // Pull a runnable command out of an agent reply, or null when there is none.
-  extractCommand: (text: string) => string | null;
+  // Pull the command out of an agent reply: one runnable command with its matched span, a block that
+  // needs correcting, or no block at all (a final answer).
+  extractCommand: (text: string) => CommandBlockResult;
   // Maximum number of auto-run command steps before stopping (default 8).
   maxSteps?: number;
   // Label for a command in the follow-up prompt; defaults to the command text itself.

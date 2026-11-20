@@ -5,7 +5,7 @@ import { describePatchCommand, isFilePatchCommandLine } from '../file-patch/comm
 import { isRecord } from '../value-guards.js';
 
 export const FILE_MUTATION_PRIMER = [
-  'To write or edit a file in the workspace, end your reply with one line:',
+  'To write or edit a file in the workspace, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file write {"path":"<path>","content":"<text>"}',
   'file edit {"path":"<path>","oldString":"<text>","newString":"<text>"}',
   String.raw`Keep the JSON on that one line; write newlines inside strings as \n. Paths are relative to the workspace root.`,

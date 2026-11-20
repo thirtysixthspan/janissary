@@ -11,7 +11,7 @@ question approve "Keep the existing config?" yes no
 
 `question ask "<question>"` opens a panel with a text field, for a free-text answer. `question approve "<question>" <option> [<option> …]` opens a panel with one button per option, for a single choice. Quote the question; quote any option that contains spaces too.
 
-When an agent ends its reply with one of these commands, Janissary strips the command out of the visible reply, opens the panel, and holds the agent's turn until you answer. Your answer comes back to the agent as the result of that command. A malformed command — missing quotes, no options for `approve` — returns usage text instead of opening a panel:
+When an agent puts one of these commands inside a final fenced block whose info string is exactly `janissary`, Janissary strips the command out of the visible reply, opens the panel, and holds the agent's turn until you answer. Your answer comes back to the agent as the result of that command. A malformed command — missing quotes, no options for `approve` — returns usage text instead of opening a panel:
 
 ```
 Usage: question ask "<question>"

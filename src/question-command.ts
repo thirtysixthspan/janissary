@@ -55,8 +55,9 @@ export const QUESTION_PRIMER = [
   'This host can ask the human a question through `question` commands. Syntax:',
   '  question ask "<question>"',
   '  question approve "<question>" <option> [<option> ...]',
-  'Quote the question and any option containing spaces. To ask the human, end your reply with',
-  'exactly one `question` command on its own final line. The host waits for the human and returns',
-  'the answer to you. A cancelled question returns `Question cancelled.`. When the task is done,',
-  'reply with the final answer and NO trailing command.',
+  'Quote the question and any option containing spaces. To ask the human, put exactly one',
+  '`question` command inside a final fenced block whose info string is exactly `janissary`,',
+  'without a `janissary` prefix; prose may follow the block. The host waits for the human and',
+  'returns the answer to you. A cancelled question returns `Question cancelled.`. When the task is',
+  'done, reply with the final answer and NO trailing command.',
 ].join('\n');

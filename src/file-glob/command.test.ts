@@ -163,7 +163,7 @@ describe('formatGlobResult', () => {
 describe('FILE_GLOB_PRIMER', () => {
   it('is the four primer lines', () => {
     expect(FILE_GLOB_PRIMER).toBe([
-      'To find files in the workspace by path, end your reply with one line:',
+      'To find files in the workspace by path, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
       'file glob <pattern> [--path <dir>] [--hidden] [--dirs] [--limit <n>]',
       'Patterns are case-sensitive and relative to --path (default: the workspace root): ** spans folders, * stays within one name, ? is one character, {a,b} is either. Results are workspace-relative paths, at most 100 by default; hidden and git-ignored paths are skipped unless --hidden is given, and --dirs lists folders instead of files.',
       'Example: file glob **/*.test.ts --path src',

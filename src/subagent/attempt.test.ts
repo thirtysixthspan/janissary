@@ -31,6 +31,7 @@ const SETTINGS: AcpRoleSettings = {
 const TASK = 'TASK\nverbatim ';
 const CONTEXT = 'EXTRA\ncontext ';
 const runs: AgentRun[] = [];
+const block = (command: string): string => '```janissary\n' + command + '\n```';
 
 function nativeSettings(): CommandSettingsSnapshot {
   return {
@@ -267,7 +268,7 @@ describe('runSubagentEntry', () => {
     const { options, record } = setup();
     const gate = Promise.withResolvers<string>();
     mocks.runWorkspaceCommandIn.mockReturnValue(gate.promise);
-    scriptedSession([['file read a.md'], ['done']]);
+    scriptedSession([[block('file read a.md')], ['done']]);
     await withRealLoop(async () => {
       const execution = runSubagentEntry(options);
       await vi.waitFor(() => expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]));
@@ -281,7 +282,7 @@ describe('runSubagentEntry', () => {
   it('still records the command text when the command throws before returning a result', async () => {
     const { options, record } = setup();
     mocks.runWorkspaceCommandIn.mockRejectedValue(new Error('command boom'));
-    scriptedSession([['file read a.md']]);
+    scriptedSession([[block('file read a.md')]]);
     await withRealLoop(async () => {
       const result = await runSubagentEntry(options);
       expect(result).toMatchObject({ status: 'failed', reason: 'error' });

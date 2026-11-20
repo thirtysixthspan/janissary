@@ -18,7 +18,7 @@ Select a skill with `with skill <name>`. Its instructions are included with the 
 {"version":1,"commands":["question"]}
 ```
 
-Only listed canonical command names are allowed. The agent asks to run one by ending a reply with `janissary <command>`. Questions require the `ask-user` skill and its `question` grant; the task waits until you answer or cancel.
+Only listed canonical command names are allowed. To run one, the agent puts exactly one command in a final fenced block whose info string is exactly `janissary`; prose may follow the block, and no `janissary` prefix is required inside it. Questions require the `ask-user` skill and its `question` grant; the task waits until you answer or cancel.
 
 Some commands are refused in this version even when a skill grants them. `file write`, `file edit`, `file patch`, `file glob`, `file grep`, and `web` (including `web search` and `web fetch`) all return `Agent: command not permitted: <command>.` The agent receives that line as tool output and can't turn the refusal into permission for another command. Among the file commands, only `file read` runs; it needs a `file` grant and returns the same refusal without one.
 
@@ -58,7 +58,7 @@ For an explicit task path, use a file inside the execution workspace, or a path 
 
 If a selected skill can't be used, `Agent: unknown skill "<name>".` means it wasn't found; `Agent: invalid skill path "<name>".` means its path isn't valid. Repeating a skill name has no effect, and mentioning another skill in a skill's instructions does not select it. A malformed `janissary.json` grant file reports `Agent: malformed skill grants "<name>".` An unrecognized command in that file reports `Agent: unknown command grant "<command>" in skill "<name>".`
 
-If an agent's final command-looking line appears inside a Markdown code fence, Janissary treats it as an example rather than a request to run the command. This applies to fences made with backticks or tildes.
+An unlabelled fenced block, or a fence with any other info string, is just an example and is ignored even when it holds a command line; a closed fenced block whose info string is exactly `janissary` is a real request. This holds for fences made with backticks or tildes. A later `janissary` block left unclosed does not suppress an earlier closed one, which still runs. An unclosed `janissary` block asks for a correction only when no closed `janissary` block exists.
 
 <img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
@@ -82,7 +82,7 @@ The names must be canonical commands. Janissary trims each name and ignores its 
 
 The task receives the parameter text after its filename unchanged, including leading spaces, unmatched quotes, or words that look like launch options. Launch options are parsed only before the task filename.
 
-The agent can request a granted command on the final nonempty reply line as `janissary <command>`. The command must be explicitly granted by a selected skill. A denial is returned to the agent and does not grant another command. Autonomous providers use the least expansive available tool-approval option. If the provider fails or returns an empty final answer, the run is marked failed.
+To request a granted command, the agent puts exactly one command in a final fenced block whose info string is exactly `janissary`; prose may follow the block, and no `janissary` prefix is required inside it. The command must be explicitly granted by a selected skill. A denial is returned to the agent and does not grant another command. Autonomous providers use the least expansive available tool-approval option. If the provider fails or returns an empty final answer, the run is marked failed.
 
 Closing the tab that launched the task terminates its run. Closing the monitor only closes the view; execution continues. A parent run owns nested runs it starts. Ending the parent stops its active children and waits for them to finish cleanup before the parent's own cleanup completes; a child that already finished needs no second cleanup. Tabs created by a run's granted commands close during cleanup. A tab that was already open, or one the command only focused, stays open. Cleanup releases the run's workspace reference and attempts each owned cleanup even if another one fails. Cleanup warnings appear after the result without changing its status.
 

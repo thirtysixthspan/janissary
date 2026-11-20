@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   extractQuestionCommand,
   parseQuestionCommand,
+  QUESTION_PRIMER,
   QUESTION_USAGE,
   runQuestionCommand,
 } from './question-command.js';
@@ -44,6 +45,14 @@ describe('extractQuestionCommand', () => {
 
   it('ignores question-shaped prose', () => {
     expect(extractQuestionCommand('I have a question about which port to use.')).toBeNull();
+  });
+});
+
+describe('QUESTION_PRIMER', () => {
+  it('teaches the labelled block rule and keeps the no-trailing-command rule', () => {
+    expect(QUESTION_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
+    expect(QUESTION_PRIMER).toContain('NO trailing command.');
+    expect(QUESTION_PRIMER).not.toContain('own final line');
   });
 });
 

@@ -27,6 +27,7 @@ import { TAB_PRIMER } from '../commands/tab-primer.js';
 import { NOTIFY_PRIMER } from '../notifications/primer.js';
 
 const setup = (grants: readonly string[] = NATIVE_ACP_COMMANDS) => ({ tools: createAcpToolTable(grants) });
+const block = (command: string): string => '```janissary\n' + command + '\n```';
 
 describe('createAcpToolTable', () => {
   it('builds from grants alone, with no managers object', () => {
@@ -110,15 +111,15 @@ describe('createAcpToolTable', () => {
     expect(toolPrimer(tools, grants)).toBe(
       'browser primer text\n\nOnly these commands are allowed: browser goto.',
     );
-    expect(toolExtractor(tools)('question ask x')).toBeNull();
-    expect(toolExtractor(tools)('db sqlite list')).toBeNull();
+    expect(toolExtractor(tools)('question ask x')).toEqual({ kind: 'absent' });
+    expect(toolExtractor(tools)('db sqlite list')).toEqual({ kind: 'absent' });
   });
 
   it('returns no tools or primer when the role has no grants', () => {
     const { tools } = setup([]);
     expect(tools).toEqual([]);
     expect(toolPrimer(tools, [])).toBe('');
-    expect(toolExtractor(tools)('browser goto x')).toBeNull();
+    expect(toolExtractor(tools)('browser goto x')).toEqual({ kind: 'absent' });
   });
 
   it('runs the file and web entries on the workspace and the others on the caller side', () => {
@@ -151,7 +152,7 @@ describe('createAcpToolTable', () => {
     const { tools } = setup(['browser goto']);
     expect(tools).toHaveLength(1);
     expect(toolPrimer(tools, [])).toBe('browser primer text');
-    expect(toolExtractor(tools)('browser goto x')).toBe('browser goto x');
+    expect(toolExtractor(tools)(block('browser goto x'))).toMatchObject({ kind: 'one', command: 'browser goto x' });
   });
 
   it('builds one caller-side tab tool from a tab grant', () => {
@@ -164,8 +165,8 @@ describe('createAcpToolTable', () => {
 
   it('extracts a trailing tab line and skips near misses', () => {
     const tools = createAcpToolTable(['tab']);
-    expect(toolExtractor(tools)('Here you go\ntab focus notes')).toBe('tab focus notes');
-    expect(toolExtractor(tools)('tabs focus notes')).toBeNull();
+    expect(toolExtractor(tools)(block('tab focus notes'))).toMatchObject({ kind: 'one', command: 'tab focus notes' });
+    expect(toolExtractor(tools)('tabs focus notes')).toEqual({ kind: 'absent' });
   });
 });
 
@@ -418,107 +419,111 @@ describe('gateCommand', () => {
 describe('toolExtractor', () => {
   it('returns the command line a tool recognizes', () => {
     const { tools } = setup();
-    expect(toolExtractor(tools)('Let me look.\nbrowser goto x')).toBe('browser goto x');
-    expect(toolExtractor(tools)('I need to ask.\nquestion ask x')).toBe('question ask x');
+    expect(toolExtractor(tools)(block('browser goto x'))).toMatchObject({ kind: 'one', command: 'browser goto x' });
+    expect(toolExtractor(tools)(block('question ask x'))).toMatchObject({ kind: 'one', command: 'question ask x' });
   });
 
   it('recognizes a database line through isDatabaseCommandLine', () => {
     const { tools } = setup();
-    expect(toolExtractor(tools)('Checking.\ndb sqlite list')).toBe('db sqlite list');
-    expect(toolExtractor(tools)('Checking.\ndb sqlite bogus')).toBeNull();
+    expect(toolExtractor(tools)(block('db sqlite list'))).toMatchObject({ kind: 'one', command: 'db sqlite list' });
+    expect(toolExtractor(tools)('Checking.\ndb sqlite bogus')).toEqual({ kind: 'absent' });
   });
 
   it('picks the last command line even when an earlier line belongs to a tool listed first', () => {
     const { tools } = setup();
-    const reply = 'Earlier I ran:\nbrowser goto x\nNow the data:\ndb sqlite query shop SELECT 1';
-    expect(toolExtractor(tools)(reply)).toBe('db sqlite query shop SELECT 1');
+    const reply = `Earlier I ran:\n${block('browser goto x')}\nNow the data:\n${block('db sqlite query shop SELECT 1')}`;
+    expect(toolExtractor(tools)(reply)).toMatchObject({ kind: 'one', command: 'db sqlite query shop SELECT 1' });
   });
 
   it('picks a trailing browser line over an earlier database line', () => {
     const { tools } = setup();
-    expect(toolExtractor(tools)('db sqlite list\nthen\nbrowser goto x')).toBe('browser goto x');
+    const reply = `${block('db sqlite list')}\nthen\n${block('browser goto x')}`;
+    expect(toolExtractor(tools)(reply)).toMatchObject({ kind: 'one', command: 'browser goto x' });
   });
 
   it('finds a trailing file read case-insensitively when the file entry is granted', () => {
     const { tools } = setup();
-    expect(toolExtractor(tools)('Let me read it.\nfile read notes/a.md')).toBe('file read notes/a.md');
-    expect(toolExtractor(tools)('Let me read it.\nFile Read a.md')).toBe('File Read a.md');
+    expect(toolExtractor(tools)(block('file read notes/a.md'))).toMatchObject({ kind: 'one', command: 'file read notes/a.md' });
+    expect(toolExtractor(tools)(block('File Read a.md'))).toMatchObject({ kind: 'one', command: 'File Read a.md' });
   });
 
   it('returns null for a trailing file read on a table without the file entry', () => {
     const { tools } = setup(['browser goto', 'db sqlite list']);
-    expect(toolExtractor(tools)('Let me read it.\nfile read')).toBeNull();
+    expect(toolExtractor(tools)(block('file read'))).toEqual({ kind: 'absent' });
   });
 
   it('finds a trailing file glob on a table granting file glob', () => {
     const { tools } = setup(['file glob']);
-    expect(toolExtractor(tools)('Let me look.\nfile glob **/*.ts')).toBe('file glob **/*.ts');
+    expect(toolExtractor(tools)(block('file glob **/*.ts'))).toMatchObject({ kind: 'one', command: 'file glob **/*.ts' });
   });
 
   it('returns null for a trailing file glob on a table without the file entry', () => {
     const { tools } = setup(['browser goto', 'db sqlite list']);
-    expect(toolExtractor(tools)('Let me look.\nfile glob **/*.ts')).toBeNull();
+    expect(toolExtractor(tools)(block('file glob **/*.ts'))).toEqual({ kind: 'absent' });
   });
 
   it('still extracts a trailing file glob on a table granting only file read', () => {
     const { tools } = setup(['file read']);
-    expect(toolExtractor(tools)('Let me look.\nfile glob **/*.ts')).toBe('file glob **/*.ts');
+    expect(toolExtractor(tools)(block('file glob **/*.ts'))).toMatchObject({ kind: 'one', command: 'file glob **/*.ts' });
   });
 
   it('extracts a trailing web search line in lowercase, backticks, or bare', () => {
     const { tools } = setup(['web search']);
-    expect(toolExtractor(tools)('Let me look.\nweb search node.js lts')).toBe('web search node.js lts');
-    expect(toolExtractor(tools)('`web search x`')).toBe('web search x');
-    expect(toolExtractor(tools)('web search')).toBe('web search');
+    expect(toolExtractor(tools)(block('web search node.js lts'))).toMatchObject({ kind: 'one', command: 'web search node.js lts' });
+    expect(toolExtractor(tools)(block('web search x'))).toMatchObject({ kind: 'one', command: 'web search x' });
+    expect(toolExtractor(tools)(block('web search'))).toMatchObject({ kind: 'one', command: 'web search' });
   });
 
   it('skips a capitalized web sentence and keeps an earlier web search line', () => {
     const { tools } = setup(['web search']);
-    expect(toolExtractor(tools)('web search x\nWeb search found three results.')).toBe('web search x');
-    expect(toolExtractor(tools)('Web search found three results.')).toBeNull();
-    expect(toolExtractor(tools)('WEB SEARCH x')).toBeNull();
-    expect(toolExtractor(tools)('web searching x')).toBeNull();
+    expect(toolExtractor(tools)(`${block('web search x')}\nWeb search found three results.`))
+      .toMatchObject({ kind: 'one', command: 'web search x' });
+    expect(toolExtractor(tools)('Web search found three results.')).toEqual({ kind: 'absent' });
+    expect(toolExtractor(tools)('WEB SEARCH x')).toEqual({ kind: 'absent' });
+    expect(toolExtractor(tools)('web searching x')).toEqual({ kind: 'absent' });
   });
 
   it('returns null for a trailing web search line on a table without the web entry', () => {
     const { tools } = setup(['file read']);
-    expect(toolExtractor(tools)('web search x')).toBeNull();
+    expect(toolExtractor(tools)(block('web search x'))).toEqual({ kind: 'absent' });
   });
 
   it('extracts a web fetch line from a reply when only web search is granted', () => {
     const { tools } = setup(['web search']);
-    expect(toolExtractor(tools)('Let me read it.\nweb fetch https://example.com')).toBe('web fetch https://example.com');
-    expect(toolExtractor(tools)('web fetch')).toBe('web fetch');
+    expect(toolExtractor(tools)(block('web fetch https://example.com')))
+      .toMatchObject({ kind: 'one', command: 'web fetch https://example.com' });
+    expect(toolExtractor(tools)(block('web fetch'))).toMatchObject({ kind: 'one', command: 'web fetch' });
   });
 
   it('extracts a web search line from a reply when only web fetch is granted', () => {
     const { tools } = setup(['web fetch']);
-    expect(toolExtractor(tools)('Let me look.\nweb search x')).toBe('web search x');
+    expect(toolExtractor(tools)(block('web search x'))).toMatchObject({ kind: 'one', command: 'web search x' });
   });
 
   it('does not extract a capitalized, uppercased, or near-miss web fetch sentence', () => {
     const { tools } = setup(['web fetch']);
     const extract = toolExtractor(tools);
-    expect(extract('Web fetch returned the page.')).toBeNull();
-    expect(extract('WEB FETCH https://x')).toBeNull();
-    expect(extract('web fetcher x')).toBeNull();
-    expect(extract('web fetch https://x\nWeb fetch returned the page.')).toBe('web fetch https://x');
+    expect(extract('Web fetch returned the page.')).toEqual({ kind: 'absent' });
+    expect(extract('WEB FETCH https://x')).toEqual({ kind: 'absent' });
+    expect(extract('web fetcher x')).toEqual({ kind: 'absent' });
+    expect(extract(`${block('web fetch https://x')}\nWeb fetch returned the page.`))
+      .toMatchObject({ kind: 'one', command: 'web fetch https://x' });
   });
 
   it('returns null for a trailing web fetch line on a table without a web command', () => {
     const { tools } = setup(['file read']);
-    expect(toolExtractor(tools)('web fetch https://x')).toBeNull();
+    expect(toolExtractor(tools)(block('web fetch https://x'))).toEqual({ kind: 'absent' });
   });
 
   it('returns a granted command, since the table reads no settings', () => {
     const { tools } = setup(['browser goto']);
-    expect(toolExtractor(tools)('Let me look.\nbrowser goto x')).toBe('browser goto x');
+    expect(toolExtractor(tools)(block('browser goto x'))).toMatchObject({ kind: 'one', command: 'browser goto x' });
   });
 
   it('returns null when no line is a command', () => {
     const { tools } = setup();
-    expect(toolExtractor(tools)('here is the final answer')).toBeNull();
-    expect(toolExtractor(tools)('browser open https://example.com')).toBeNull();
+    expect(toolExtractor(tools)('here is the final answer')).toEqual({ kind: 'absent' });
+    expect(toolExtractor(tools)('browser open https://example.com')).toEqual({ kind: 'absent' });
   });
 });
 
@@ -551,8 +556,9 @@ describe('file mutation tools', () => {
 
   it('extracts a trailing file write and a malformed file edit', () => {
     const extract = toolExtractor(createAcpToolTable(['file write', 'file edit']));
-    expect(extract('Writing.\nfile write {"path":"a.md","content":"x"}')).toBe('file write {"path":"a.md","content":"x"}');
-    expect(extract('Editing.\nfile edit {')).toBe('file edit {');
+    expect(extract(block('file write {"path":"a.md","content":"x"}')))
+      .toMatchObject({ kind: 'one', command: 'file write {"path":"a.md","content":"x"}' });
+    expect(extract(block('file edit {'))).toMatchObject({ kind: 'one', command: 'file edit {' });
   });
 
   it('gives a patch-only grant the file owner with exactly the patch primer', () => {
@@ -710,10 +716,11 @@ describe('file mutation tools', () => {
 
   it('extracts a trailing and a malformed patch line, but not without a file grant', () => {
     const extract = toolExtractor(createAcpToolTable(['file patch']));
-    expect(extract('Patching.\nfile patch {"patchText":"*** Delete File: old.txt"}'))
-      .toBe('file patch {"patchText":"*** Delete File: old.txt"}');
-    expect(extract('Patching.\nfile patch {')).toBe('file patch {');
-    expect(toolExtractor(createAcpToolTable(['db sqlite list']))('Patching.\nfile patch {"patchText":"x"}')).toBeNull();
+    expect(extract(block('file patch {"patchText":"*** Delete File: old.txt"}')))
+      .toMatchObject({ kind: 'one', command: 'file patch {"patchText":"*** Delete File: old.txt"}' });
+    expect(extract(block('file patch {'))).toMatchObject({ kind: 'one', command: 'file patch {' });
+    expect(toolExtractor(createAcpToolTable(['db sqlite list']))('Patching.\nfile patch {"patchText":"x"}'))
+      .toEqual({ kind: 'absent' });
   });
 });
 
@@ -773,34 +780,36 @@ describe('file grep extraction', () => {
   const extract = (grants: readonly string[]) => toolExtractor(createAcpToolTable(grants));
 
   it('extracts a valid flags-first grep through a file-read-only owner', () => {
-    expect(extract(['file read'])('Looking.\nfile grep --literal --path src TODO'))
-      .toBe('file grep --literal --path src TODO');
+    expect(extract(['file read'])(block('file grep --literal --path src TODO')))
+      .toMatchObject({ kind: 'one', command: 'file grep --literal --path src TODO' });
   });
 
   it('extracts a bare grep and a malformed flags line', () => {
-    expect(extract(['file grep'])('Checking.\nfile grep')).toBe('file grep');
-    expect(extract(['file grep'])('Checking.\nfile grep --limit')).toBe('file grep --limit');
+    expect(extract(['file grep'])(block('file grep'))).toMatchObject({ kind: 'one', command: 'file grep' });
+    expect(extract(['file grep'])(block('file grep --limit'))).toMatchObject({ kind: 'one', command: 'file grep --limit' });
   });
 
   it('keeps case and repeated inter-keyword whitespace while preserving pattern spacing', () => {
-    expect(extract(['file grep'])('Looking.\n  FiLe \t  GrEp   two   words  ')).toBe('FiLe \t  GrEp   two   words');
+    expect(extract(['file grep'])(block('  FiLe \t  GrEp   two   words  ')))
+      .toMatchObject({ kind: 'one', command: 'FiLe \t  GrEp   two   words' });
   });
 
   it('cleans fences and common prompt prefixes before extracting grep', () => {
-    expect(extract(['file grep'])('Looking.\n```\n> file grep TODO\n```')).toBe('file grep TODO');
+    expect(extract(['file grep'])(block('file grep TODO'))).toMatchObject({ kind: 'one', command: 'file grep TODO' });
   });
 
   it('picks the last recognized command line', () => {
-    expect(extract(['file glob', 'file grep'])('file grep one\nnotes\nfile glob *.ts')).toBe('file glob *.ts');
+    const reply = `${block('file grep one')}\nnotes\n${block('file glob *.ts')}`;
+    expect(extract(['file glob', 'file grep'])(reply)).toMatchObject({ kind: 'one', command: 'file glob *.ts' });
   });
 
   it('does not extract file greps or file grep-x', () => {
-    expect(extract(['file read'])('file greps x')).toBeNull();
-    expect(extract(['file read'])('file grep-x x')).toBeNull();
+    expect(extract(['file read'])('file greps x')).toEqual({ kind: 'absent' });
+    expect(extract(['file read'])('file grep-x x')).toEqual({ kind: 'absent' });
   });
 
   it('does not extract grep when the file owner is omitted', () => {
-    expect(extract(['browser goto', 'db sqlite list'])('file grep TODO')).toBeNull();
+    expect(extract(['browser goto', 'db sqlite list'])('file grep TODO')).toEqual({ kind: 'absent' });
   });
 });
 
@@ -868,7 +877,7 @@ describe('additional file command tools', () => {
   it.each(NEW)('recognizes a trailing %s line in the reply predicate and extraction', (name, _primer, line) => {
     const tools = createAcpToolTable([name]);
     expect(tools[0].isCommandLine(line)).toBe(true);
-    expect(toolExtractor(tools)(`Let me check.\n${line}`)).toBe(line);
+    expect(toolExtractor(tools)(block(line))).toMatchObject({ kind: 'one', command: line });
   });
 
   it('recognizes the file ls alias in the reply predicate', () => {
@@ -879,7 +888,7 @@ describe('additional file command tools', () => {
   it('extracts the file ls alias and gates it as file list', () => {
     const grants = ['file list'];
     const tools = createAcpToolTable(grants);
-    expect(toolExtractor(tools)('Let me check.\nfile ls docs')).toBe('file ls docs');
+    expect(toolExtractor(tools)(block('file ls docs'))).toMatchObject({ kind: 'one', command: 'file ls docs' });
     const snapshot: AcpRunSnapshot = {
       kind: 'core', role: 'tell', roleName: 'reader', grants, rows: [], withoutTools: false,
     };
@@ -925,22 +934,22 @@ describe('subagent tool', () => {
 
   it('extracts a bare, wrong-flag, and malformed-JSON subagent line before policy validates it', () => {
     const extract = toolExtractor(toolsFor(['subagent']));
-    expect(extract('Thinking.\nsubagent')).toBe('subagent');
-    expect(extract('Thinking.\nsubagent --bogus x')).toBe('subagent --bogus x');
-    expect(extract('Thinking.\nsubagent {"role":')).toBe('subagent {"role":');
+    expect(extract(block('subagent'))).toMatchObject({ kind: 'one', command: 'subagent' });
+    expect(extract(block('subagent --bogus x'))).toMatchObject({ kind: 'one', command: 'subagent --bogus x' });
+    expect(extract(block('subagent {"role":'))).toMatchObject({ kind: 'one', command: 'subagent {"role":' });
   });
 
   it('omits the entry, primer, and extraction when subagent is not granted', () => {
     const tools = toolsFor(['browser goto', 'db sqlite list']);
     expect(tools.some((tool) => tool.primer === SUBAGENT_PRIMER)).toBe(false);
     expect(toolPrimer(tools, ['subagent'])).not.toContain(SUBAGENT_PRIMER);
-    expect(toolExtractor(tools)(LINE)).toBeNull();
+    expect(toolExtractor(tools)(LINE)).toEqual({ kind: 'absent' });
   });
 
   it('selects the last recognized command across mixed database and subagent reply lines', () => {
     const extract = toolExtractor(toolsFor(['subagent', 'db sqlite list']));
-    expect(extract(`db sqlite list\n${LINE}`)).toBe(LINE);
-    expect(extract(`${LINE}\ndb sqlite list`)).toBe('db sqlite list');
+    expect(extract(`${block('db sqlite list')}\n${block(LINE)}`)).toMatchObject({ kind: 'one', command: LINE });
+    expect(extract(`${block(LINE)}\n${block('db sqlite list')}`)).toMatchObject({ kind: 'one', command: 'db sqlite list' });
   });
 
   it('refuses a subagent command whose Enabled setting is off', () => {
@@ -989,14 +998,14 @@ describe('notify tool', () => {
     const tools = toolsFor(['browser goto', 'db sqlite list']);
     expect(tools.some((tool) => tool.primer === NOTIFY_PRIMER)).toBe(false);
     expect(toolPrimer(tools, ['notify'])).not.toContain(NOTIFY_PRIMER);
-    expect(toolExtractor(tools)(LINE)).toBeNull();
+    expect(toolExtractor(tools)(LINE)).toEqual({ kind: 'absent' });
   });
 
   it('extracts a trailing notify line but not a near-miss', () => {
     const extract = toolExtractor(toolsFor(['notify']));
-    expect(extract('Working.\nnotify Build finished')).toBe(LINE);
-    expect(extract('Working.\nnotifies Build finished')).toBeNull();
-    expect(extract('Working.\nnotify-x Build')).toBeNull();
+    expect(extract(block(LINE))).toMatchObject({ kind: 'one', command: LINE });
+    expect(extract('Working.\nnotifies Build finished')).toEqual({ kind: 'absent' });
+    expect(extract('Working.\nnotify-x Build')).toEqual({ kind: 'absent' });
   });
 
   it('refuses an ungranted notify command with the role name', () => {

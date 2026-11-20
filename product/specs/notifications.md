@@ -374,9 +374,10 @@ recorded event — lands in the queue and, when no feed is on screen, appears as
 It is available from any tab with a command bar, including shell and harness tabs (each dispatches it like
 any other command). It records a confirmation entry in the issuing tab. `notify` with no message is
 a usage error (`Usage: notify <message>.`) and records nothing in the feed. `notify` is also a native
-ACP command: a core `ask` or `tell` agent whose role grants it can end a reply with one `notify <message>`
-line to push the same manual event, attributed to its tab, and a bare line returns the same usage error
-as a tool result. The built-in `ask` and `tell` roles grant it by default; saved roles are not migrated.
+ACP command: a core `ask` or `tell` agent whose role grants it puts exactly one `notify <message>` command
+inside a final fenced block whose info string is exactly `janissary` to push the same manual event,
+attributed to its tab. A bare final line outside the block is prose that ends the turn; a malformed
+command in the block returns the same usage error as a tool result. The built-in `ask` and `tell` roles grant it by default; saved roles are not migrated.
 See [[acp]] and [[roles]].
 
 ### Delivery model

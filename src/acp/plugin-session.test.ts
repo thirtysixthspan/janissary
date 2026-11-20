@@ -29,6 +29,8 @@ vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 import { AcpManager } from './manager.js';
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
+
 const projects: { root: string; managers: Managers }[] = [];
 const settingsRoots: string[] = [];
 
@@ -103,7 +105,7 @@ describe('core ACP for plugin tabs', () => {
     const browser = Promise.withResolvers<string>();
     vi.mocked(managers.browser.run).mockReturnValue(browser.promise);
     const pending = managers.acp.prompt('consumer', 'open a page');
-    handlers().onChunk('browser goto https://example.com');
+    handlers().onChunk(block('browser goto https://example.com'));
     handlers().onEnd('end_turn');
     await vi.waitFor(() => { expect(dispatch).toHaveBeenCalledOnce(); });
     const cancel = managers.acp.cancel('consumer');
@@ -140,7 +142,7 @@ describe('core ACP for plugin tabs', () => {
     const pending = managers.acp.prompt('consumer', 'ask ask me');
     const id = managers.tab.byLabel('consumer')!.runtime!.acpRoles!.ask!.recordId!;
     const identity = managers.acp.sessionIdentity('consumer');
-    handlers().onChunk('question ask "ACP request"');
+    handlers().onChunk(block('question ask "ACP request"'));
     handlers().onEnd('end_turn');
     other ??= askOther();
     const cancel = managers.acp.cancel('consumer');
@@ -168,7 +170,7 @@ describe('core ACP for plugin tabs', () => {
   ])('returns the %s refusal to the loop even when notifications are suppressed', async (_state, setting) => {
     const { managers, handlers, session } = setup(undefined, { 'browser goto': setting });
     const pending = managers.acp.prompt('consumer', 'open a page');
-    handlers().onChunk('browser goto https://example.com');
+    handlers().onChunk(block('browser goto https://example.com'));
     handlers().onEnd('end_turn');
 
     await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
@@ -194,7 +196,7 @@ describe('core ACP for plugin tabs', () => {
     const { managers, handlers, session } = setup();
     vi.mocked(managers.browser.run).mockResolvedValue('page title');
     const pending = managers.acp.prompt('consumer', 'open a page');
-    handlers().onChunk('browser goto https://example.com');
+    handlers().onChunk(block('browser goto https://example.com'));
     handlers().onEnd('end_turn');
 
     await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
@@ -213,7 +215,7 @@ describe('core ACP for plugin tabs', () => {
     const { managers, handlers, session } = setup();
     vi.mocked(managers.database.runInTab).mockReturnValue('sqlite tables');
     const pending = managers.acp.prompt('consumer', 'inspect the database');
-    handlers().onChunk('db sqlite list');
+    handlers().onChunk(block('db sqlite list'));
     handlers().onEnd('end_turn');
 
     await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
@@ -231,7 +233,7 @@ describe('core ACP for plugin tabs', () => {
   it('runs a question command through the dispatcher and returns the human answer', async () => {
     const { managers, handlers, session } = setup();
     const pending = managers.acp.prompt('consumer', 'ask a question');
-    handlers().onChunk('question ask "What port?"');
+    handlers().onChunk(block('question ask "What port?"'));
     handlers().onEnd('end_turn');
 
     await vi.waitFor(() => { expect(managers.questions.pendingFor('consumer')).toBeDefined(); });
@@ -522,11 +524,11 @@ describe('core ACP for plugin tabs', () => {
     await managers.command.dispatchLineWithOutput('consumer', 'ask hello', 1);
 
     for (let step = 0; step < 8; step += 1) {
-      handlers().onChunk('browser goto https://example.com');
+      handlers().onChunk(block('browser goto https://example.com'));
       handlers().onEnd('end_turn');
       await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(step + 2); });
     }
-    handlers().onChunk('Partial answer\nbrowser goto https://example.com');
+    handlers().onChunk(`Partial answer\n${block('browser goto https://example.com')}`);
     handlers().onEnd('end_turn');
 
     const tab = managers.tab.byLabel('consumer')!;
@@ -554,13 +556,13 @@ describe('core ACP for plugin tabs', () => {
     await managers.command.dispatchLineWithOutput('consumer', 'ask restricted', 1);
 
     for (let step = 0; step < 8; step += 1) {
-      handlers().onChunk(command);
+      handlers().onChunk(block(command));
       await handlers().onEnd('end_turn');
       if (step < 7) {
         await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(step + 2); });
       }
     }
-    handlers().onChunk(`Partial answer\n${command}`);
+    handlers().onChunk(`Partial answer\n${block(command)}`);
     await handlers().onEnd('end_turn');
 
     const tab = managers.tab.byLabel('consumer')!;
@@ -753,7 +755,7 @@ describe('core ACP for plugin tabs', () => {
     const askOther = () => managers.questions.register({ tab: 'consumer', kind: 'ask', question: 'Other request' });
     let other = queued ? askOther() : undefined;
     const pending = managers.acp.prompt('consumer', 'ask ask me');
-    handlers().onChunk('question ask "ACP request"');
+    handlers().onChunk(block('question ask "ACP request"'));
     handlers().onEnd('end_turn');
     other ??= askOther();
     managers.acp.close('consumer');
@@ -848,7 +850,7 @@ describe('core ACP for plugin tabs', () => {
 
     capabilities.startAcp();
     const answer = capabilities.promptAcp('open the release page');
-    handlers().onChunk('Opening it now.\nbrowser goto https://example.com');
+    handlers().onChunk(`Opening it now.\n${block('browser goto https://example.com')}`);
     handlers().onEnd('end_turn');
     // The browser command ran, so the loop is on its follow-up turn rather than finished.
     await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledTimes(2); });
@@ -918,7 +920,7 @@ describe('core ACP for plugin tabs', () => {
       .mockResolvedValue({ dispatched: true, output: '' });
 
     const answer = capabilities.promptAcpResult('delegate the research');
-    handlers().onChunk('subagent {"role":"research","task":"task.md"}');
+    handlers().onChunk(block('subagent {"role":"research","task":"task.md"}'));
     handlers().onEnd('end_turn');
 
     await vi.waitFor(() => { expect(dispatch).toHaveBeenCalled(); });

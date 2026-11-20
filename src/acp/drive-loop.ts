@@ -1,11 +1,11 @@
 import type { AcpLoopHandlers, AcpLoopSession, AcpRunSnapshot, AcpToolHost } from './types.js';
+import { extractCommandBlock } from './command-block.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
 import { createAcpToolTable, gateCommand, toolExtractor, toolPrimer, type AcpTool } from './tool-table.js';
 import { runAcpToolLoop } from './loop.js';
 import { DISABLED_HARNESS_TOOLS_LINE, NO_BUILTIN_TOOLS_LINE, NO_TOOLS_LINE } from './internal-tools.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
-import { extractAgentCommand } from '../agent/command-extract.js';
 import { describeLoopCommand } from '../file-write/command.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 
@@ -71,7 +71,9 @@ export function driveToolLoop(
     signal,
     primer: snapshot.kind === 'core' ? corePrimer(snapshot, tools) : MARKDOWN_INSTRUCTION,
     runCommand,
-    extractCommand: snapshot.kind === 'core' ? toolExtractor(tools) : (text) => extractAgentCommand(text, snapshot.askUser),
+    extractCommand: snapshot.kind === 'core'
+      ? toolExtractor(tools)
+      : (text) => extractCommandBlock(text, snapshot.askUser),
     maxSteps: snapshot.kind === 'core' ? CORE_MAX_STEPS : Infinity,
     describeCommand: describeLoopCommand,
   }, {

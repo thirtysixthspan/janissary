@@ -46,14 +46,15 @@ only run the native commands its role grants. It can still search the web throug
 `tinyfish-token` file, described on [the tokens page](/user-documentation/advanced-agents/tokens), and
 without one the step reports `Web search: no provider configured.`. It can also read a page through the granted `web fetch` command, which those roles grant too; a fetch needs no token because it falls back to a direct fetch.
 
-To search the web, the agent ends its reply with one lowercase `web search …` line. Only a lowercase
-line counts, so an answer that begins a sentence with `Web search …` stays prose. A bare
-`web search` line answers with the usage line. If the granted `web search` row is disabled or
-agent-off, the tool refuses with `Command is disabled: web search.`, and disabling the parent `web`
-row does the same. An `agent` run refuses every `web` line, so web search is available only to `ask`
-and `tell` sessions.
+To search the web, the agent puts exactly one lowercase `web search …` command inside a final fenced
+block whose info string is exactly `janissary`. Only a lowercase command in that block counts, so an
+answer that begins a sentence with `Web search …` stays prose. A bare `web search` final line outside
+the block is prose that ends the turn, not a command; a malformed `web search` command in the block
+answers with the usage line. If the granted `web search` row is disabled or agent-off, the tool refuses
+with `Command is disabled: web search.`, and disabling the parent `web` row does the same. An `agent`
+run refuses every `web` line, so web search is available only to `ask` and `tell` sessions.
 
-To read a page, the agent ends its reply with one lowercase `web fetch …` line; a bare `web fetch` line answers with the usage line. Only a lowercase line counts, so `Web fetch …`, `WEB FETCH …`, and `web fetcher …` stay prose. A disabled or agent-off `web fetch` row refuses with `Command is disabled: web fetch.`, as does disabling `web`. A role granting either web command has both web reply lines recognised, so a role that grants only `web search` gets a `web fetch` line refused with `Command not allowed for role "<role>": web fetch.` rather than kept as prose.
+To read a page, the agent puts exactly one lowercase `web fetch …` command inside a final fenced block whose info string is exactly `janissary`; a malformed command in the block answers with the usage line, while a bare `web fetch` final line outside the block is prose that ends the turn. Only a lowercase command in the block counts, so `Web fetch …`, `WEB FETCH …`, and `web fetcher …` stay prose. A disabled or agent-off `web fetch` row refuses with `Command is disabled: web fetch.`, as does disabling `web`. A role granting either web command has both web commands extractable from that block, so a role that grants only `web search` gets a `web fetch` command refused with `Command not allowed for role "<role>": web fetch.` rather than kept as prose.
 
 ## Separate ask and tell conversations
 

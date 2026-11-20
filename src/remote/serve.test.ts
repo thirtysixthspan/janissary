@@ -76,6 +76,8 @@ vi.mock('./serve-provision.js', async (importOriginal) => {
   };
 });
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
+
 const SPAWN_FRAME = {
   type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
 } as const;
@@ -425,7 +427,7 @@ describe('RemoteServer', () => {
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
     server.receive(`${encodeFrame(ACP_RUN_FRAME)}\n`);
     const handlers = acpMock.prompt.mock.calls[0][1] as PromptHandlers;
-    handlers.onChunk('db sqlite query movies SELECT 1');
+    handlers.onChunk(block('db sqlite query movies SELECT 1'));
     handlers.onEnd('end_turn');
 
     await vi.waitFor(() => expect(frames.some((f) => f.type === 'acp-tool-request')).toBe(true));
@@ -671,7 +673,7 @@ describe('RemoteServer — workspace selectors', () => {
       snapshot: { kind: 'core', role: 'tell', roleName: 'tell', grants: ['file write'], rows: [], withoutTools: false },
     })}\n`);
     const handlers = acpMock.prompt.mock.calls[0]![1] as PromptHandlers;
-    handlers.onChunk('file write {"path":"mutated.txt","content":"written in clone"}');
+    handlers.onChunk(block('file write {"path":"mutated.txt","content":"written in clone"}'));
     handlers.onEnd('end_turn');
     await vi.waitFor(() => expect(existsSync(path.join(cloneDir, 'mutated.txt'))).toBe(true));
     expect(existsSync(path.join(mainDir, 'mutated.txt'))).toBe(false);

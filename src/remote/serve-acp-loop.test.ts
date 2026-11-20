@@ -64,6 +64,7 @@ import { startRemoteLoop } from './serve-acp-loop.js';
 
 const RUN_ID = 'run-1';
 const QUERY = 'db sqlite query movies SELECT 1';
+const block = (command: string): string => '```janissary\n' + command + '\n```';
 
 type CoreSnapshot = Extract<AcpRunSnapshot, { kind: 'core' }>;
 
@@ -176,11 +177,11 @@ describe('startRemoteLoop workspace steps', () => {
   it('runs a granted file read against the workspace and reports the numbered result', () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
 
-    const { frames, sent } = start([['file read a.md'], ['Done.']], coreSnapshot('tell', ['file read']));
+    const { frames, sent } = start([[block('file read a.md')], ['Done.']], coreSnapshot('tell', ['file read']));
 
     expect(frames).toEqual([
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: true },
-      { type: 'acp-chunk', id: RUN_ID, text: 'file read a.md' },
+      { type: 'acp-chunk', id: RUN_ID, text: block('file read a.md') },
       { type: 'acp-turn', id: RUN_ID, phase: 'end', display: '' },
       { type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md', result: '1\tone\n2\ttwo', workspace: true },
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: false },
@@ -193,7 +194,7 @@ describe('startRemoteLoop workspace steps', () => {
 
   it('runs a granted web search against the workspace and reports the result as a workspace step', async () => {
     const tokens = { tavily: 'tvly-far' };
-    const { frames } = start([['web search x'], ['Done.']], coreSnapshot('tell', ['web search']), tokens);
+    const { frames } = start([[block('web search x')], ['Done.']], coreSnapshot('tell', ['web search']), tokens);
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(mocks.webSearch).toHaveBeenCalledOnce();
@@ -208,7 +209,7 @@ describe('startRemoteLoop workspace steps', () => {
   it('runs a granted web fetch against the workspace and reports the result as a workspace step', async () => {
     const tokens = { tavily: 'tvly-far' };
     const command = 'web fetch https://example.com/page';
-    const { frames } = start([[command], ['Done.']], coreSnapshot('tell', ['web fetch']), tokens);
+    const { frames } = start([[block(command)], ['Done.']], coreSnapshot('tell', ['web fetch']), tokens);
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(mocks.webFetch).toHaveBeenCalledOnce();
@@ -225,7 +226,7 @@ describe('startRemoteLoop workspace steps', () => {
   it('delegates a workspace step to the shared runner with the workspace directory and run signal', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
 
-    const { handle } = start([['file read a.md'], ['Done.']], coreSnapshot('tell', ['file read']));
+    const { handle } = start([[block('file read a.md')], ['Done.']], coreSnapshot('tell', ['file read']));
 
     expect(mocks.runWorkspaceCommandIn).toHaveBeenCalledWith(workspace, 'file read a.md', expect.any(AbortSignal));
     const signal = mocks.runWorkspaceCommandIn.mock.calls[0]?.[2] as AbortSignal;
@@ -238,7 +239,7 @@ describe('startRemoteLoop workspace steps', () => {
   it('caps a core run at eight workspace steps without sending a step count', () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
 
-    const { frames, sent } = start([['file read a.md']], coreSnapshot('tell', ['file read']));
+    const { frames, sent } = start([[block('file read a.md')]], coreSnapshot('tell', ['file read']));
 
     expect(framesOf(frames, 'acp-tool-step')).toHaveLength(8);
     expect(framesOf(frames, 'acp-run-end')).toEqual([{ type: 'acp-run-end', id: RUN_ID, reason: 'capped' }]);
@@ -252,7 +253,7 @@ describe('startRemoteLoop snapshot gate', () => {
       { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
     ]);
 
-    const { frames } = start([[QUERY], ['Done.']], snapshot);
+    const { frames } = start([[block(QUERY)], ['Done.']], snapshot);
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: QUERY,
@@ -261,7 +262,7 @@ describe('startRemoteLoop snapshot gate', () => {
   });
 
   it('refuses a core command the role has not granted without a refused flag', () => {
-    const { frames } = start([[QUERY], ['Done.']], coreSnapshot('ask', ['db sqlite list']));
+    const { frames } = start([[block(QUERY)], ['Done.']], coreSnapshot('ask', ['db sqlite list']));
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: QUERY,
@@ -270,7 +271,7 @@ describe('startRemoteLoop snapshot gate', () => {
   });
 
   it('refuses an agent file read without the file grant', () => {
-    const { frames } = start([['janissary file read a.md'], ['Done.']], agentSnapshot([]));
+    const { frames } = start([[block('file read a.md')], ['Done.']], agentSnapshot([]));
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md',
@@ -287,7 +288,7 @@ describe('startRemoteLoop snapshot gate', () => {
 
 describe('startRemoteLoop caller steps', () => {
   it('sends a caller step as a numbered request and feeds the result into the follow-up prompt', async () => {
-    const { frames, sent, handle } = start([[QUERY], ['The answer.']], coreSnapshot('tell', ['db sqlite query']));
+    const { frames, sent, handle } = start([[block(QUERY)], ['The answer.']], coreSnapshot('tell', ['db sqlite query']));
 
     expect(framesOf(frames, 'acp-tool-request')).toEqual([
       { type: 'acp-tool-request', id: RUN_ID, request: 1, command: QUERY },
@@ -302,7 +303,7 @@ describe('startRemoteLoop caller steps', () => {
   });
 
   it('numbers a second caller round trip as request 2', async () => {
-    const { frames, sent, handle } = start([[QUERY], [QUERY], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+    const { frames, sent, handle } = start([[block(QUERY)], [block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
 
     handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'first' });
     await flush();
@@ -318,7 +319,7 @@ describe('startRemoteLoop caller steps', () => {
   });
 
   it('resolves an empty output as a successful step', async () => {
-    const { frames, sent, handle } = start([[QUERY], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+    const { frames, sent, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
 
     handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: '' });
     await flush();
@@ -329,7 +330,7 @@ describe('startRemoteLoop caller steps', () => {
   });
 
   it('ends the run with a non-fatal error when the result carries an error', async () => {
-    const { frames, handle } = start([[QUERY], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+    const { frames, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
 
     handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, error: 'database unavailable' });
     await flush();
@@ -339,7 +340,7 @@ describe('startRemoteLoop caller steps', () => {
   });
 
   it('ignores a result for an unknown or already settled request', async () => {
-    const { frames, sent, handle } = start([[QUERY], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+    const { frames, sent, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
 
     handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 99, output: 'stray' });
     expect(framesOf(frames, 'acp-tool-request')).toHaveLength(1);
@@ -357,14 +358,14 @@ describe('startRemoteLoop caller steps', () => {
 describe('startRemoteLoop frame order', () => {
   it('emits turn, delta chunks, end, request, and the follow-up turn in order', async () => {
     const { frames, handle } = start([
-      ['Looking at the data.\n', QUERY],
+      ['Looking at the data.\n', block(QUERY)],
       ['Done.'],
     ], coreSnapshot('tell', ['db sqlite query']));
 
     expect(frames).toEqual([
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: true },
       { type: 'acp-chunk', id: RUN_ID, text: 'Looking at the data.\n' },
-      { type: 'acp-chunk', id: RUN_ID, text: QUERY },
+      { type: 'acp-chunk', id: RUN_ID, text: block(QUERY) },
       { type: 'acp-turn', id: RUN_ID, phase: 'end', display: 'Looking at the data.' },
       { type: 'acp-tool-request', id: RUN_ID, request: 1, command: QUERY },
     ]);
@@ -385,7 +386,7 @@ describe('startRemoteLoop agent runs', () => {
   it('runs an agent file read in the workspace', () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
 
-    const { frames } = start([['janissary file read a.md'], ['Done.']], agentSnapshot(['file']));
+    const { frames } = start([[block('file read a.md')], ['Done.']], agentSnapshot(['file']));
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md', result: '1\tone', workspace: true,
@@ -393,7 +394,7 @@ describe('startRemoteLoop agent runs', () => {
   });
 
   it('forwards an agent db reply as a caller request', async () => {
-    const { frames, handle } = start([['janissary db sqlite list'], ['Done.']], agentSnapshot(['db']));
+    const { frames, handle } = start([[block('db sqlite list')], ['Done.']], agentSnapshot(['db']));
 
     expect(framesOf(frames, 'acp-tool-request')).toEqual([
       { type: 'acp-tool-request', id: RUN_ID, request: 1, command: 'db sqlite list' },
@@ -409,7 +410,7 @@ describe('startRemoteLoop agent runs', () => {
   it('strips a leading slash from an agent file read before reading the workspace', () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
 
-    const { frames } = start([['janissary /file read a.md'], ['Done.']], agentSnapshot(['file']));
+    const { frames } = start([[block('/file read a.md')], ['Done.']], agentSnapshot(['file']));
 
     const steps = framesOf(frames, 'acp-tool-step');
     expect(steps).toHaveLength(1);
@@ -425,7 +426,7 @@ describe('startRemoteLoop agent runs', () => {
     mocks.grepWorkspaceCommand.mockClear();
     const read = vi.spyOn(fileRead, 'readWorkspaceCommand');
     try {
-      const { frames, sent } = start([['janissary file grep TODO'], ['Done.']], agentSnapshot(grants));
+      const { frames, sent } = start([[block('file grep TODO')], ['Done.']], agentSnapshot(grants));
       const refusal = 'Agent: command not permitted: file grep TODO.';
 
       expect(framesOf(frames, 'acp-tool-step')).toEqual([{
@@ -472,7 +473,7 @@ describe('startRemoteLoop cancellation', () => {
 
   it('cancels a run waiting on a caller result and ignores a late result', async () => {
     const run = startHeld(coreSnapshot('tell', ['db sqlite query']));
-    run.last().onChunk(QUERY);
+    run.last().onChunk(block(QUERY));
     run.last().onEnd('end_turn');
     await flush();
     expect(framesOf(run.frames, 'acp-tool-request')).toHaveLength(1);
@@ -495,7 +496,7 @@ describe('startRemoteLoop cancellation', () => {
 
   it('aborts a run waiting on a caller result without sending a frame', async () => {
     const run = startHeld(coreSnapshot('tell', ['db sqlite query']));
-    run.last().onChunk(QUERY);
+    run.last().onChunk(block(QUERY));
     run.last().onEnd('end_turn');
     await flush();
     const before = run.frames.length;
@@ -531,7 +532,7 @@ const PATCH = `file patch ${JSON.stringify({ patchText: '*** Update File: a.md\n
 
 describe('startRemoteLoop workspace mutations', () => {
   it('runs a granted file write on the workspace as a workspace step', async () => {
-    const { frames } = start([[WRITE], ['Done.']], coreSnapshot('tell', ['file write']));
+    const { frames } = start([[block(WRITE)], ['Done.']], coreSnapshot('tell', ['file write']));
     await flush();
 
     expect(readFileSync(path.join(workspace, 'b.md'), 'utf8')).toBe('hello\n');
@@ -544,7 +545,7 @@ describe('startRemoteLoop workspace mutations', () => {
   it('runs a granted file edit on the workspace as a workspace step', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
 
-    const { frames } = start([[EDIT], ['Done.']], coreSnapshot('tell', ['file edit']));
+    const { frames } = start([[block(EDIT)], ['Done.']], coreSnapshot('tell', ['file edit']));
     await flush();
 
     expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('uno\ntwo\n');
@@ -554,7 +555,7 @@ describe('startRemoteLoop workspace mutations', () => {
   });
 
   it('answers malformed JSON with the write usage line and writes nothing', async () => {
-    const { frames } = start([['file write {nope'], ['Done.']], coreSnapshot('tell', ['file write']));
+    const { frames } = start([[block('file write {nope')], ['Done.']], coreSnapshot('tell', ['file write']));
     await flush();
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
@@ -564,7 +565,7 @@ describe('startRemoteLoop workspace mutations', () => {
   });
 
   it('refuses an ungranted mutation and writes nothing', async () => {
-    const { frames } = start([[WRITE], ['Done.']], coreSnapshot('tell', ['file read']));
+    const { frames } = start([[block(WRITE)], ['Done.']], coreSnapshot('tell', ['file read']));
     await flush();
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
@@ -575,7 +576,7 @@ describe('startRemoteLoop workspace mutations', () => {
   });
 
   it('refuses every mutation on an agent snapshot', async () => {
-    const { frames } = start([[`janissary ${WRITE}`], ['Done.']], agentSnapshot(['file']));
+    const { frames } = start([[block(WRITE)], ['Done.']], agentSnapshot(['file']));
     await flush();
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
@@ -586,7 +587,7 @@ describe('startRemoteLoop workspace mutations', () => {
   });
 
   it('still forwards a db command after a write as request 1', async () => {
-    const { frames } = start([[WRITE], [QUERY], ['Done.']], coreSnapshot('tell', ['file write', 'db sqlite query']));
+    const { frames } = start([[block(WRITE)], [block(QUERY)], ['Done.']], coreSnapshot('tell', ['file write', 'db sqlite query']));
     await flush();
 
     expect(existsSync(path.join(workspace, 'b.md'))).toBe(true);
@@ -597,7 +598,7 @@ describe('startRemoteLoop workspace mutations', () => {
 
   it('keeps the written file and suppresses later frames after an abort', async () => {
     const run = startHeld(coreSnapshot('tell', ['file write']));
-    run.last().onChunk(WRITE);
+    run.last().onChunk(block(WRITE));
     run.last().onEnd('end_turn');
     await flush();
     expect(framesOf(run.frames, 'acp-tool-step')).toHaveLength(1);
@@ -616,7 +617,7 @@ describe('startRemoteLoop workspace mutations', () => {
     const local = mkdtempSync(path.join(tmpdir(), 'janus-serve-acp-loop-local-'));
     try {
       writeFileSync(path.join(local, 'b.md'), 'local');
-      start([[WRITE], ['Done.']], coreSnapshot('tell', ['file write']));
+      start([[block(WRITE)], ['Done.']], coreSnapshot('tell', ['file write']));
       await flush();
 
       expect(readFileSync(path.join(workspace, 'b.md'), 'utf8')).toBe('hello\n');
@@ -632,7 +633,7 @@ describe('startRemoteLoop workspace mutations', () => {
     const escape = `file write ${JSON.stringify({ path: '../escape.md', content: 'x' })}`;
     const secret = `file write ${JSON.stringify({ path: '.env', content: 'x' })}`;
     const parent = path.dirname(workspace);
-    const { frames } = start([[escape], [secret], ['Done.']], coreSnapshot('tell', ['file write']));
+    const { frames } = start([[block(escape)], [block(secret)], ['Done.']], coreSnapshot('tell', ['file write']));
     await flush();
 
     const steps = framesOf(frames, 'acp-tool-step');
@@ -646,7 +647,7 @@ describe('startRemoteLoop workspace mutations', () => {
 
   it('runs a granted file patch on the workspace as a workspace step', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
-    const { frames } = start([[PATCH], ['Done.']], coreSnapshot('tell', ['file patch']));
+    const { frames } = start([[block(PATCH)], ['Done.']], coreSnapshot('tell', ['file patch']));
     await flush();
 
     expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('one\nuno\n');
@@ -658,7 +659,7 @@ describe('startRemoteLoop workspace mutations', () => {
 
   it('refuses an ungranted file patch and changes nothing', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
-    const { frames } = start([[PATCH], ['Done.']], coreSnapshot('tell', ['file read']));
+    const { frames } = start([[block(PATCH)], ['Done.']], coreSnapshot('tell', ['file read']));
     await flush();
 
     expect(readFileSync(path.join(workspace, 'a.md'), 'utf8')).toBe('one\ntwo\n');
@@ -673,7 +674,7 @@ describe('startRemoteLoop workspace glob routing', () => {
   it('runs a granted file glob against the workspace as a workspace step', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\ntwo\n');
     writeFileSync(path.join(workspace, 'b.txt'), 'other\n');
-    const { frames } = start([['file glob *.md'], ['Done.']], coreSnapshot('tell', ['file glob']));
+    const { frames } = start([[block('file glob *.md')], ['Done.']], coreSnapshot('tell', ['file glob']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toEqual([
       { type: 'acp-tool-step', id: RUN_ID, command: 'file glob *.md', result: 'a.md', workspace: true },
@@ -684,7 +685,7 @@ describe('startRemoteLoop workspace glob routing', () => {
   it('passes the run abort signal to the workspace glob', async () => {
     writeFileSync(path.join(workspace, 'a.md'), 'one\n');
     mocks.globWorkspaceCommand.mockClear();
-    const { frames, handle } = start([['file glob *.md'], ['Done.']], coreSnapshot('tell', ['file glob']));
+    const { frames, handle } = start([[block('file glob *.md')], ['Done.']], coreSnapshot('tell', ['file glob']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(mocks.globWorkspaceCommand).toHaveBeenCalledWith(workspace, 'file glob *.md', expect.any(AbortSignal));
@@ -713,7 +714,7 @@ describe('startRemoteLoop workspace grep routing', () => {
     try {
       writeFileSync(path.join(caller, 'a.txt'), 'caller TODO\n');
       mocks.grepWorkspaceCommand.mockClear();
-      const { frames, sent } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep']));
+      const { frames, sent } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
 
       await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
       expect(framesOf(frames, 'acp-tool-step')).toEqual([{
@@ -731,7 +732,7 @@ describe('startRemoteLoop workspace grep routing', () => {
   });
 
   it('answers the grep usage line for a bare command', async () => {
-    const { frames } = start([['file grep'], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames } = start([[block('file grep')], ['Done.']], coreSnapshot('tell', ['file grep']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
@@ -740,7 +741,7 @@ describe('startRemoteLoop workspace grep routing', () => {
   });
 
   it('prints the missing-path text', async () => {
-    const { frames } = start([['file grep --path missing TODO'], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames } = start([[block('file grep --path missing TODO')], ['Done.']], coreSnapshot('tell', ['file grep']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('Path not found: missing.');
@@ -751,7 +752,7 @@ describe('startRemoteLoop workspace grep routing', () => {
     const discover = vi.spyOn(fileGrepCandidates, 'discoverGrepCandidates');
     const scan = vi.spyOn(fileGrepScan, 'scanFiles');
     try {
-      const { frames } = start([['file grep [unclosed'], ['Done.']], coreSnapshot('tell', ['file grep']));
+      const { frames } = start([[block('file grep [unclosed')], ['Done.']], coreSnapshot('tell', ['file grep']));
 
       await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
       expect(framesOf(frames, 'acp-tool-step')[0]?.result)
@@ -765,7 +766,7 @@ describe('startRemoteLoop workspace grep routing', () => {
   });
 
   it('reports an empty-matching regex before a missing path', async () => {
-    const { frames } = start([['file grep --path missing x*'], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames } = start([[block('file grep --path missing x*')], ['Done.']], coreSnapshot('tell', ['file grep']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')[0]?.result)
@@ -773,7 +774,7 @@ describe('startRemoteLoop workspace grep routing', () => {
   });
 
   it('reports the workspace regex diagnostic before an absolute path', async () => {
-    const { frames } = start([['file grep --path /etc [unclosed'], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames } = start([[block('file grep --path /etc [unclosed')], ['Done.']], coreSnapshot('tell', ['file grep']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')[0]?.result)
@@ -782,7 +783,7 @@ describe('startRemoteLoop workspace grep routing', () => {
 
   it('answers no matches', async () => {
     writeFileSync(path.join(workspace, 'a.txt'), 'nothing here\n');
-    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('(no matches)');
@@ -790,7 +791,7 @@ describe('startRemoteLoop workspace grep routing', () => {
 
   it('emits the existing nonfatal acp-error for an unexpected rejection', async () => {
     mocks.grepWorkspaceCommand.mockImplementationOnce(() => Promise.reject(new Error('grep worker stopped')));
-    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-error')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
@@ -801,7 +802,7 @@ describe('startRemoteLoop workspace grep routing', () => {
 
   it('still forwards a later database command as caller request 1', async () => {
     writeFileSync(path.join(workspace, 'a.txt'), 'TODO\n');
-    const { frames, handle } = start([[GREP], [QUERY], ['Done.']], coreSnapshot('tell', ['file grep', 'db sqlite query']));
+    const { frames, handle } = start([[block(GREP)], [block(QUERY)], ['Done.']], coreSnapshot('tell', ['file grep', 'db sqlite query']));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-tool-step')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-request')).toEqual([
@@ -815,7 +816,7 @@ describe('startRemoteLoop workspace grep routing', () => {
   });
 
   it('refuses an ungranted grep with workspace false and no refused marker', () => {
-    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file read']));
+    const { frames } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file read']));
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: GREP,
@@ -829,7 +830,7 @@ describe('startRemoteLoop workspace grep routing', () => {
     ['agent-off', { effectiveEnabled: true, effectiveAgentAccess: false }],
   ] as const)('refuses a %s grep with workspace false and the disabled marker', (_label, setting) => {
     const rows = [{ name: 'file grep', ...setting }];
-    const { frames } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep'], rows));
+    const { frames } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep'], rows));
 
     expect(framesOf(frames, 'acp-tool-step')).toEqual([{
       type: 'acp-tool-step', id: RUN_ID, command: GREP,
@@ -841,7 +842,7 @@ describe('startRemoteLoop workspace grep routing', () => {
 
 describe('startRemoteLoop grep loop preservation', () => {
   it('extracts no grep on a withoutTools snapshot even with the grant', async () => {
-    const { frames, sent } = start([[GREP], ['Done.']], coreSnapshot('tell', ['file grep'], [], true));
+    const { frames, sent } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep'], [], true));
 
     await vi.waitFor(() => expect(framesOf(frames, 'acp-run-end')).toHaveLength(1));
     expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
@@ -854,7 +855,7 @@ describe('startRemoteLoop grep loop preservation', () => {
     const previous = mocks.grepWorkspaceCommand.getMockImplementation();
     mocks.grepWorkspaceCommand.mockImplementation(() => Promise.resolve('a.txt:1: TODO'));
     try {
-      const { frames, sent } = start([[GREP]], coreSnapshot('tell', ['file grep']));
+      const { frames, sent } = start([[block(GREP)]], coreSnapshot('tell', ['file grep']));
 
       await vi.waitFor(() => expect(framesOf(frames, 'acp-run-end')).toHaveLength(1));
       expect(framesOf(frames, 'acp-tool-step')).toHaveLength(8);
@@ -868,7 +869,7 @@ describe('startRemoteLoop grep loop preservation', () => {
 
   it('runs no grep when the run is aborted before execution', async () => {
     const run = startHeld(coreSnapshot('tell', ['file grep']));
-    run.last().onChunk(GREP);
+    run.last().onChunk(block(GREP));
     run.handle.abort();
     run.last().onEnd('end_turn');
     await flush();
@@ -882,7 +883,7 @@ describe('startRemoteLoop grep loop preservation', () => {
     const pending = deferred<string>();
     mocks.grepWorkspaceCommand.mockImplementationOnce(() => pending.promise);
     const run = startHeld(coreSnapshot('tell', ['file grep']));
-    run.last().onChunk(GREP);
+    run.last().onChunk(block(GREP));
     run.last().onEnd('end_turn');
     await vi.waitFor(() => expect(mocks.grepWorkspaceCommand).toHaveBeenCalledOnce());
     const before = run.frames.length;
@@ -1038,7 +1039,7 @@ describe('startRemoteLoop web routing', () => {
       deps.signal?.addEventListener('abort', () => reject(deps.signal?.reason));
     }));
     const run = startHeld(coreSnapshot('tell', ['web fetch']));
-    run.last().onChunk('web fetch https://example.com/page');
+    run.last().onChunk(block('web fetch https://example.com/page'));
     run.last().onEnd('end_turn');
     await vi.waitFor(() => expect(mocks.webFetch).toHaveBeenCalledOnce());
     const before = run.frames.length;

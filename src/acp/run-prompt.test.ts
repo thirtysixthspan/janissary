@@ -258,6 +258,8 @@ function reply(providerPrompt: ReturnType<typeof vi.fn>, text: string): void {
   handlers.onEnd('end_turn');
 }
 
+const block = (command: string): string => '```janissary\n' + command + '\n```';
+
 type RemoteCall = [string, AcpRunSnapshot, AcpToolHost['runCaller'], AcpLoopHandlers];
 
 function remoteCall(run: ReturnType<typeof vi.fn>): RemoteCall {
@@ -406,7 +408,7 @@ describe('runCorePrompt tool runner', () => {
   it('treats a web search line as prose when the role does not grant it', () => {
     const { start } = harness({ settings: settingsWith({}) });
     const { deps } = start('ask', ['file read']);
-    expect(deps.extractCommand('web search x')).toBeNull();
+    expect(deps.extractCommand('web search x')).toEqual({ kind: 'absent' });
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
   });
 
@@ -437,7 +439,7 @@ describe('runCorePrompt tool runner', () => {
   it('treats a web fetch line as prose when the role does not grant it', () => {
     const { start } = harness({ settings: settingsWith({}) });
     const { deps } = start('ask', ['file read']);
-    expect(deps.extractCommand('web fetch https://x')).toBeNull();
+    expect(deps.extractCommand('web fetch https://x')).toEqual({ kind: 'absent' });
     expect(mocks.runWebInTab).not.toHaveBeenCalled();
   });
 
@@ -641,7 +643,7 @@ describe('runCorePrompt tool runner', () => {
   it('builds no tools on a without-tools tab', () => {
     const { start } = harness({ withoutTools: true });
     const { deps } = start('ask', ['db sqlite query']);
-    expect(deps.extractCommand('Checking.\ndb sqlite query shop SELECT 1')).toBeNull();
+    expect(deps.extractCommand('Checking.\ndb sqlite query shop SELECT 1')).toEqual({ kind: 'absent' });
     expect(deps.primer.startsWith(NO_TOOLS_LINE)).toBe(true);
   });
 });
@@ -1174,7 +1176,7 @@ describe('runCorePrompt file grep routing', () => {
       const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
       const { request } = start('tell', ['file grep'], 'tell', 'record-1');
 
-      reply(providerPrompt, command);
+      reply(providerPrompt, block(command));
       await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(2));
 
       expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', command);
@@ -1256,7 +1258,7 @@ describe('runCorePrompt file grep routing', () => {
       mocks.grepFilesInTab.mockImplementationOnce(() => Promise.reject(failure));
       const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
       const { request } = start('tell', ['file grep'], 'tell', 'record-1');
-      reply(providerPrompt, GREP);
+      reply(providerPrompt, block(GREP));
       await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
 
       expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
@@ -1316,7 +1318,7 @@ describe('runCorePrompt file grep routing', () => {
       const { start, providerPrompt, managers, dispatchNativeLine, tab } = harness({ tab: { workspaceDir: dir } });
       const { request } = start('tell', ['file read', 'file grep'], 'tell', 'record-1');
 
-      reply(providerPrompt, grep);
+      reply(providerPrompt, block(grep));
       await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(2));
 
       expect(providerPrompt.mock.calls[0]?.[0]).toContain(FILE_GREP_PRIMER);
@@ -1324,7 +1326,7 @@ describe('runCorePrompt file grep routing', () => {
       expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', grep);
       expect(mocks.grepFilesInTab.mock.calls[0]).toHaveLength(3);
 
-      reply(providerPrompt, read);
+      reply(providerPrompt, block(read));
       await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(3));
 
       expect(providerPrompt.mock.calls[2]?.[0]).toContain(`Output of \`${read}\`:\n${readResult}`);
@@ -1389,10 +1391,10 @@ describe('runCorePrompt file grep loop preservation', () => {
         const { start, providerPrompt } = harness({ tab: { workspaceDir: dir } });
         const { request } = start('tell', ['file grep'], 'tell', 'record-1');
         for (let step = 0; step < 8; step += 1) {
-          reply(providerPrompt, GREP);
+          reply(providerPrompt, block(GREP));
           await vi.waitFor(() => expect(providerPrompt).toHaveBeenCalledTimes(step + 2));
         }
-        reply(providerPrompt, GREP);
+        reply(providerPrompt, block(GREP));
         await vi.waitFor(() => expect(request.finish).toHaveBeenCalled());
 
         expect(mocks.grepFilesInTab).toHaveBeenCalledTimes(8);
@@ -1428,7 +1430,7 @@ describe('runCorePrompt file grep loop preservation', () => {
     await withRealLoop(async () => {
       const { start, providerPrompt, managers } = harness({ tab: { workspaceDir: dir } });
       const { request } = start('tell', ['file grep'], 'tell', 'record-1');
-      reply(providerPrompt, GREP);
+      reply(providerPrompt, block(GREP));
       await vi.waitFor(() => expect(mocks.grepFilesInTab).toHaveBeenCalledOnce());
 
       request.abort.abort();
@@ -1639,7 +1641,7 @@ describe('runCorePrompt subagent through the real command', () => {
       const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
       seam.start('tell', GRANTS, 'tell', 'record-1');
       const line = 'subagent --role research --task t.md';
-      reply(seam.providerPrompt, line);
+      reply(seam.providerPrompt, block(line));
       await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
 
       const prompt = seam.providerPrompt.mock.calls[1]?.[0] as string;
@@ -1656,7 +1658,7 @@ describe('runCorePrompt subagent through the real command', () => {
     await withRealLoop(async () => {
       const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
       const { request } = seam.start('tell', GRANTS, 'tell', 'record-1');
-      reply(seam.providerPrompt, 'subagent {"role":');
+      reply(seam.providerPrompt, block('subagent {"role":'));
       await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
 
       const prompt = seam.providerPrompt.mock.calls[1]?.[0] as string;
@@ -1671,7 +1673,7 @@ describe('runCorePrompt subagent through the real command', () => {
       const seam = harness({ realCommand: true, launchDir: subagentLaunchDir() });
       seam.start('tell', GRANTS, 'tell', 'record-1');
       const line = 'subagent {"role":"research","task":"t.md"}';
-      reply(seam.providerPrompt, line);
+      reply(seam.providerPrompt, block(line));
       await vi.waitFor(() => expect(seam.providerPrompt).toHaveBeenCalledTimes(2));
 
       expect(subagentMock.launch).toHaveBeenCalledTimes(1);

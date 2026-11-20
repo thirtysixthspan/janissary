@@ -160,7 +160,7 @@ describe('file grep text', () => {
 
   it('exports exactly four primer lines with a single backslash and no trailing newline', () => {
     expect(FILE_GREP_PRIMER).toBe([
-      'To find text inside workspace files, end your reply with one line:',
+      'To find text inside workspace files, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
       syntax,
       'Flags come first; the rest of the line is the pattern, a case-insensitive regular expression unless --literal or --case-sensitive. Results are path:line: text, at most 100 by default; --include and --exclude take comma-separated globs such as *.ts,*.tsx.',
       String.raw`Example: file grep --include *.ts function\s+parse`,
