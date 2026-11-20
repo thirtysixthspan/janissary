@@ -80,7 +80,6 @@
 | `monitors left` | Dock the monitors list in the left sidebar |
 | `monitors right` | Dock the monitors list in the right sidebar |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
-| `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `next` | Switch to the next tab |
 | `notifications` | Open the notifications feed; per-type settings control desktop banners and sounds in `.janissary/config.json` |
