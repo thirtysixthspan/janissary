@@ -10,6 +10,7 @@ import { DB_PRIMER } from '../database/primer.js';
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import type { AcpSessionListener } from '../remote/channel/acp.js';
 import type { RemoteAcpSession } from '../remote/acp-session.js';
+import { getConfig } from '../config.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
@@ -696,6 +697,7 @@ describe('AcpManager role sessions', () => {
 describe('AcpManager — remote tabs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getConfig().maxToolTurns = 8;
   });
 
   function remoteSetup(options: { attached?: boolean; channel?: boolean } = {}) {

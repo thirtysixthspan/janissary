@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getConfig } from '../config.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -80,6 +81,7 @@ function providerSession(): AcpSession {
 }
 
 beforeEach(() => {
+  getConfig().maxToolTurns = 8;
   scratch = mkdtempSync(path.join(os.tmpdir(), 'subagent-integration-'));
   initWorkspaceDir(scratch, path.join(scratch, '.claude.json'));
   controller = project.create();

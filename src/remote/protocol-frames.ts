@@ -311,8 +311,8 @@ export type ServerFrame =
   // a successful step, not a missing one.
   | { type: 'acp-tool-step'; id: string; command: string; result: string; workspace: boolean; refused?: 'disabled' }
   // A run's terminal frame. `answered` and `capped` are the loop's `finished` reasons; `cancelled`
-  // is the far side's cancellation path. Only a `core` run can be capped, and both sides share
-  // `CORE_MAX_STEPS`, so no step count travels.
+  // is the far side's cancellation path. Only a `core` run can be capped, and both sides read the
+  // configured tool-turn cap from their own config, so no step count travels.
   | { type: 'acp-run-end'; id: string; reason: 'answered' | 'capped' | 'cancelled' }
   | { type: 'acp-activity'; id: string; kind: RemoteAcpActivityKind; text: string }
   | { type: 'acp-closed'; id: string; released: boolean }

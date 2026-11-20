@@ -87,8 +87,9 @@ The agent can use the file, database, browser, question, and web tools granted t
 can read a file from the workspace, find workspace files by path, find text inside workspace files, list and query databases, open a page, read its content, search the web, read a web page, and ask or
 approve a question. Tell has those commands plus database create/delete, browser eval, writing and editing workspace files, and applying a multi-file patch. If the model
 tries a known command its role doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose another action. The result of each allowed tool step goes back to the model,
-up to eight tool steps per prompt. If a prompt reaches that cap, the settled shell reply and the record's final answer in
-the connection tab end with a `(stopped after 8 tool steps)` paragraph, so you can tell the answer was
+up to the `maxToolTurns` limit per prompt. That limit defaults to 20 and is set in `.janissary/config.json`; see
+[Configuration](/user-documentation/getting-started/configuration). If a prompt reaches that cap, the settled shell reply and the record's final answer in
+the connection tab end with a `(stopped after N tool steps)` paragraph naming the limit, so you can tell the answer was
 cut short and retry a narrower request.
 
 Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought entries start collapsed there and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these five tools are available in this loop; it cannot run arbitrary shell commands.

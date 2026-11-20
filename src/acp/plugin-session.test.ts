@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AcpOptions, PromptHandlers } from './types.js';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,6 +23,7 @@ import { NativeCommandSettingsManager } from '../native-commands/manager.js';
 import { notify } from '../notifications/index.js';
 import { openConnectionRecord } from '../controller/connection-records.js';
 import { recordConnectionName } from '../plugins/connections/shared.js';
+import { getConfig } from '../config.js';
 
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
 vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
@@ -30,6 +31,8 @@ vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 import { AcpManager } from './manager.js';
 
 const block = (command: string): string => '```janissary\n' + command + '\n```';
+
+beforeEach(() => { getConfig().maxToolTurns = 8; });
 
 const projects: { root: string; managers: Managers }[] = [];
 const settingsRoots: string[] = [];

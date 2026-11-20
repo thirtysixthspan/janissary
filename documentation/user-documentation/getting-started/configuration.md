@@ -20,7 +20,7 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | Setting | Default | What it controls |
 |---|---:|---|
 | `transcriptMaxLines` | `25000` | Maximum transcript entries kept per tab. The activity list in an [`agent` monitor tab](/user-documentation/advanced-agents/agent-command) uses the same cap. Older entries are dropped first. |
-| `maxToolTurns` | `20` | Stored tool-turn limit, written into your config with a default of `20` and added to older configs the next time they load. Like `clipboardHistoryMaxEntries`, it must be a whole number above zero; text, zero, negatives, and fractions reset it to `20`. |
+| `maxToolTurns` | `20` | The maximum number of command steps an agent may run for a single request, covering ask and tell prompts, agent runs, subagents, and remote sessions. The instructions sent to the agent name the same limit. It is written into your config with a default of `20` and added to older configs the next time they load. Like `clipboardHistoryMaxEntries`, it must be a whole number above zero; text, zero, negatives, and fractions reset it to `20`. |
 | `tabNameMaxLength` | `16` | Display limit for inactive tab names, including the final ellipsis. Full names remain available for routing. |
 | `activeTabNameMaxLength` | `50` | Display limit for the focused tab name, including the final ellipsis. |
 | `clipboardHistoryMaxEntries` | `15` | Clipboard-history entries kept in the popup. It must be a whole number above zero and no larger than `9007199254740991`; anything else resets to `15`. The list never holds more than this many entries, and the oldest drop first. See [Clipboard history](/user-documentation/command-bar/clipboard). |
