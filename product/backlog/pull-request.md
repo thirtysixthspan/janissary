@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the agent-command spec's stale claim that an agent requests a command on its final reply line.
-
-Existing Issue: product/specs/agent-command.md still states that the agent requests a Janissary command on its final nonempty reply line as `janissary <command>`, immediately above the paragraph this pull request rewrote to say the command comes from a labelled fenced block. Severity: 6/10
-
-Existing Risk: 6/10 - The behaviour spec contradicts itself, so a reader implementing or checking the agent path can follow the stale sentence and reintroduce the bare-line rule this pull request is removing.
-
-Proposal Risk: 2/10 - The spec line becomes consistent with the code and the paragraph below it; the only residual risk is a wording mismatch with the primer, which a direct comparison against src/agent/command-tools.ts resolves.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2127 "update the agent-command spec's stale bare-final-line claim". Replace that sentence with a statement that the agent puts exactly one command in a final fenced block whose info string is exactly `janissary`, that prose may follow the block and no `janissary` prefix is required inside it, matching the rewritten agent primer in src/agent/command-tools.ts and the block-rule paragraph already in the same spec. Leave the rest of the paragraph about question grants, denials, and subagent refusals intact. No code change is needed: the agent-path extractor in src/acp/command-block.ts and its tests already implement this rule, so keep them passing untouched.
-
-
 * Make the labelled-block extractor use the last closed block when a later labelled block is left unclosed.
 
 Existing Issue: Candidate selection in src/acp/command-block.ts overwrites the candidate at every labelled opening fence, so a valid closed labelled block followed by an unclosed one reports a zero-command mistake instead of running the earlier closed block, although the plan says the host reads only the last closed block and an unclosed block is not a candidate. Severity: 4/10
