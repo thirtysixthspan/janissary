@@ -43,7 +43,8 @@ export type AcpTool = {
 // `src/commands/index.ts` uses. The gate stops at the first entry whose `match` claims the command,
 // so order is the tie-break and the database entry stays last — its `match` accepts anything, making
 // it the fall-through for a command no other tool recognized. Extraction does not use table order:
-// the reply's last line that any tool recognizes is the command, whichever tool owns it.
+// the extractor reads the command inside the last closed labelled block in the reply, whichever
+// tool owns it.
 export function createAcpToolTable(grants: readonly string[]): AcpTool[] {
   const allowed = NATIVE_ACP_COMMANDS.filter((command) => grants.includes(command));
   const ownedTools: Array<{ owner: NativeCommandTool; tool: AcpTool }> = [
