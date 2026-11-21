@@ -33,6 +33,6 @@ describe('clipboard writes', () => {
 
   it('publishes the one writer from the tab-plugin client API, which a plugin may import', () => {
     const source = readFileSync('web/src/plugins/api.ts', 'utf8');
-    expect(source).toContain("export { copyText } from '../shared/system-clipboard'");
+    expect(source).toContain("export { copyText, tryCopyText } from '../shared/system-clipboard'");
   });
 });

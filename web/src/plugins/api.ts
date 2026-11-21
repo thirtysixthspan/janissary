@@ -161,11 +161,11 @@ export { handlePickerKey } from '../shared/picker-keyboard';
 export { isRecord } from '@shared/value-guards';
 
 // The one clipboard writer, published so a plugin's copy reaches the same capture seam every other
-// copy in the application does rather than being invisible to the clipboard history. The optional
-// second argument is for the one plugin copy with something to say when the clipboard refuses;
-// everything else stays silent, which is the shared writer's own behavior. Additive, so
+// copy in the application does rather than being invisible to the clipboard history. `copyText` is
+// the fire-and-forget form every copy uses; `tryCopyText` reports whether the write landed for the
+// one copy with something to say when the clipboard refuses. Publishing is additive, so
 // `TAB_PLUGIN_API_VERSION` does not move.
-export { copyText } from '../shared/system-clipboard';
+export { copyText, tryCopyText } from '../shared/system-clipboard';
 
 // A value that shows for a fixed time and then clears itself, published so a plugin's brief
 // confirmation (a saved file name) restarts on each new one and cannot fire after unmount, instead

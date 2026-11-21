@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { copyText } from './system-clipboard';
+import { copyText, tryCopyText } from './system-clipboard';
 import { captureCopiedText, subscribeClipboardCopies } from './clipboard-captures';
 
 afterEach(() => {
@@ -74,5 +74,59 @@ describe('copyText', () => {
 
     expect(seen).toEqual(['after the first left']);
     second();
+  });
+});
+
+describe('tryCopyText', () => {
+  it('resolves true after writing the text to the system clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    await expect(tryCopyText('selected text')).resolves.toBe(true);
+    expect(writeText).toHaveBeenCalledWith('selected text');
+  });
+
+  it('resolves false without throwing when the browser withholds the clipboard', async () => {
+    vi.stubGlobal('navigator', {});
+    await expect(tryCopyText('selected text')).resolves.toBe(false);
+  });
+
+  it('resolves false when the clipboard refuses the write', async () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } });
+    await expect(tryCopyText('selected text')).resolves.toBe(false);
+  });
+
+  it('publishes the copied text exactly once on a successful write', async () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    const seen: string[] = [];
+    const unsubscribe = subscribeClipboardCopies((text) => { seen.push(text); });
+
+    await tryCopyText('from the editor');
+
+    expect(seen).toEqual(['from the editor']);
+    unsubscribe();
+  });
+
+  it('publishes the copied text exactly once even when the clipboard refuses the write', async () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } });
+    const seen: string[] = [];
+    const unsubscribe = subscribeClipboardCopies((text) => { seen.push(text); });
+
+    await expect(tryCopyText('from the grid')).resolves.toBe(false);
+
+    expect(seen).toEqual(['from the grid']);
+    unsubscribe();
+  });
+
+  it('resolves false and publishes nothing for an empty copy', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const seen: string[] = [];
+    const unsubscribe = subscribeClipboardCopies((text) => { seen.push(text); });
+
+    await expect(tryCopyText('')).resolves.toBe(false);
+
+    expect(writeText).not.toHaveBeenCalled();
+    expect(seen).toEqual([]);
+    unsubscribe();
   });
 });
