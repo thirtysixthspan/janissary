@@ -13,17 +13,6 @@
 
 
 
-* Move the crop overlay's pointer-to-image coordinate mapping into a pure module so its scaling and zero-width guard can be tested without a pointer gesture.
-
-Existing Debt: §5 (components render; they do not decide) — `web/src/plugins/image/CropOverlay.tsx` computes `toImagePoint` from `getBoundingClientRect` and image size, including a guard for an unlaid-out surface, and `percent` for the rect style inside the component, so the coordinate math behind every crop drag is verified only through pointer events in a render. Severity: 4/10
-
-Existing Risk: 4/10 - A surface measured at zero width is exactly when a divide-by-zero would produce an infinite crop rectangle, and the guard plus the scale factors live in a handler that no plain function test can call, so a regression reaches the image editor as a broken drag.
-
-Proposal Risk: 2/10 - The transform becomes a pure function of bounds, pointer coordinates, and size, but it still depends on the DOM rect the component reads, so a test passes synthetic bounds rather than exercising the real layout and a layout-only bug would slip through.
-
-Proposal: In `web/src/plugins/image/CropOverlay.tsx`, `toImagePoint(host, event, size)` reads `host.getBoundingClientRect()` and scales client coordinates into image pixels with a `bounds.width > 0` guard, and `percent(value, extent)` formats the rect style. Add `web/src/plugins/image/crop-point.ts` exporting a pure `imagePoint(bounds, clientX, clientY, size)` that holds the scale math and both zero guards, and a pure `percent(value, extent)`; import both into the component, have `toImagePoint` become a one-line read of `host.getBoundingClientRect()` passed to `imagePoint`, and replace the inline percent calls. Props, drag state, and the rendered handles are unchanged, so no other file's imports need to move. `web/src/plugins/image/ImageEditor.test.tsx` renders the overlay and pins crop drags through pointer events; it needs no edit and must keep its assertions byte-for-byte. Only the one component file is edited and the new module is a leaf. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/image/CropOverlay.tsx`.
-
-
 ## deferred
 
 * Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site. — deferred: complexity 6/10, a context-object refactor of an already-long projection module plus 63 test call sites across three suites with a compatibility wrapper.

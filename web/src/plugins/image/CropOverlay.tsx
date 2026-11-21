@@ -3,22 +3,14 @@ import {
   clampCrop, nudgeRect, rectFromDrag,
   type CropHandle, type CropRect, type Size,
 } from './edit-model';
+import { imagePoint, percent } from './crop-point';
 
 const HANDLES: CropHandle[] = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
 
 // A crop rectangle over the canvas, in image pixels. The user drags it out anywhere and nudges it
 // by its edges and corners. The live readout tells them the dimensions they will get.
 function toImagePoint(host: HTMLElement, event: React.PointerEvent, size: Size) {
-  const bounds = host.getBoundingClientRect();
-  // A surface with no measured width is one no browser has laid out yet; treat it as 1:1 rather
-  // than dividing by zero and producing a rectangle of infinities.
-  const scaleX = bounds.width > 0 ? size.width / bounds.width : 1;
-  const scaleY = bounds.height > 0 ? size.height / bounds.height : 1;
-  return { x: (event.clientX - bounds.left) * scaleX, y: (event.clientY - bounds.top) * scaleY };
-}
-
-function percent(value: number, extent: number): string {
-  return `${(value / extent) * 100}%`;
+  return imagePoint(host.getBoundingClientRect(), event.clientX, event.clientY, size);
 }
 
 export function CropOverlay({
