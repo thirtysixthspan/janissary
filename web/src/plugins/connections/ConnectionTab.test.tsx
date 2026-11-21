@@ -135,7 +135,7 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('db query select 1').tagName).toBe('DIV');
   });
 
-  it('renders a message section from Markdown and keeps other activity kinds literal', () => {
+  it('renders a message section as literal text and keeps other activity kinds literal', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [
       { kind: 'message', text: '**bold** and `code`\n\n- one\n- two', timestamp: 1 },
@@ -143,36 +143,36 @@ describe('ConnectionTab', () => {
     ];
     setup(value);
     const message = document.querySelector('.connections-activity-text')!;
-    expect(message.querySelector('strong')?.textContent).toBe('bold');
-    expect(message.querySelector('code')?.textContent).toBe('code');
-    expect([...message.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['one', 'two']);
+    expect(message.textContent).toBe('**bold** and `code`\n\n- one\n- two');
+    expect(message.querySelector('strong')).toBeNull();
+    expect(message.querySelector('code')).toBeNull();
+    expect(message.querySelector('li')).toBeNull();
     const thought = document.querySelectorAll('.connections-activity-text')[1]!;
     expect(thought.textContent).toBe('**bold** and `code`\n\n- one\n- two');
   });
 
-  it('shows janissary fences literally in a rendered message section', () => {
+  it('shows janissary fences and formatting verbatim in a message section', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [
       { kind: 'message', text: '**Here.**\n```janissary\nfile list config\n```\nDone.', timestamp: 1 },
     ];
     setup(value);
     const message = document.querySelector('.connections-activity-text')!;
-    expect(message.querySelector('strong')?.textContent).toBe('Here.');
-    expect(message.textContent).toContain('```janissary');
-    expect(message.textContent).toContain('```');
-    expect(message.textContent).toContain('file list config');
+    expect(message.textContent).toBe('**Here.**\n```janissary\nfile list config\n```\nDone.');
+    expect(message.querySelector('strong')).toBeNull();
     expect(message.querySelector('pre')).toBeNull();
   });
 
-  it('routes a link clicked in a rendered message section through openLink without navigating', () => {
+  it('renders no link in a message section but still routes a preamble link through openLink', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'See [the docs](https://example.com/docs).', timestamp: 1 }];
+    value.window!.blocks[0]!.preamble = 'See [the primer](https://example.com/primer).';
     const { openLink } = setup(value);
-    const link = document.querySelector('.connections-activity-text a')!;
+    expect(document.querySelector('.connections-activity-text a')).toBeNull();
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
-    link.dispatchEvent(click);
+    document.querySelector('.connections-preamble a')!.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(true);
-    expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
+    expect(openLink).toHaveBeenCalledWith('https://example.com/primer');
   });
 
   it('keeps a message that is a whole JSON object as indented JSON', () => {
@@ -183,16 +183,16 @@ describe('ConnectionTab', () => {
       .toBe('{\n  "query": "select 1"\n}');
   });
 
-  it('re-renders a message section from its new text after a streamed update', () => {
+  it('re-renders a message section as literal text after a streamed update', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'first **draft**', timestamp: 1 }];
     const { view, capabilities } = setup(value);
-    expect(document.querySelector('.connections-activity-text strong')?.textContent).toBe('draft');
+    expect(document.querySelector('.connections-activity-text')?.textContent).toBe('first **draft**');
     view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
       blocks: [{ ...value.window!.blocks[0]!,
         entries: [{ kind: 'message', text: 'revised **answer**', timestamp: 2 }] }] } }} capabilities={capabilities} />);
-    expect(document.querySelector('.connections-activity-text')?.textContent?.trim()).toBe('revised answer');
-    expect(document.querySelector('.connections-activity-text strong')?.textContent).toBe('answer');
+    expect(document.querySelector('.connections-activity-text')?.textContent).toBe('revised **answer**');
+    expect(document.querySelector('.connections-activity-text strong')).toBeNull();
     expect(screen.queryByText('draft')).toBeNull();
   });
 
@@ -513,12 +513,12 @@ describe('ConnectionTab', () => {
   });
 
   it.each(['Completed', 'Failed', 'Partial', 'Terminated'] as const)(
-    'offers no Terminate for a %s agent record and renders message activity as Markdown', (status) => {
+    'offers no Terminate for a %s agent record and renders message activity as literal text', (status) => {
       const value = record('agent', status);
       value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
       setup(value);
       expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
-      expect(screen.getByText('plain').tagName).toBe('B');
+      expect(screen.getByText('<b>plain</b>').tagName).toBe('DIV');
     },
   );
 
