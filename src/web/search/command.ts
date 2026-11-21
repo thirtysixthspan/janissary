@@ -1,4 +1,5 @@
 import { positiveInteger } from '../../positive-integer.js';
+import { commandExample } from '../../acp/command-example.js';
 import { flagValue, scanFlagArguments } from '../flag-scan.js';
 
 export type WebSearchDepth = 'basic' | 'advanced';
@@ -36,7 +37,8 @@ export const WEB_SEARCH_PRIMER = [
   'The result is a Markdown list of up to 10 results by default, each a title linked to its URL with a snippet beneath. For time-sensitive searches, include the year in the query; the search does not infer freshness.',
   '--depth advanced gives better snippets but costs more; use it only when basic results are not enough.',
   'Search only when the answer needs current or external information; never put file contents or secrets in a query.',
-  'Example: web search node.js permission model 2026 --results 5',
+  'Example:',
+  commandExample('web search node.js permission model 2026 --results 5'),
 ].join('\n');
 
 type ScannedArgs = Partial<Pick<WebSearchCommand, 'numResults' | 'maxChars' | 'depth' | 'provider'>>;

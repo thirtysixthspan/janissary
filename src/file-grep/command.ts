@@ -1,4 +1,5 @@
 import { positiveInteger } from '../positive-integer.js';
+import { commandExample } from '../acp/command-example.js';
 import { SEARCH_MAX_RESULTS } from '../search/types.js';
 
 export type FileGrepArgs = {
@@ -106,5 +107,6 @@ export const FILE_GREP_PRIMER = [
   'To find text inside workspace files, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file grep [--literal] [--word] [--case-sensitive] [--path <path>] [--include <globs>] [--exclude <globs>] [--limit <n>] [--] <pattern>',
   'Flags come first; the rest of the line is the pattern, a case-insensitive regular expression unless --literal or --case-sensitive. Results are path:line: text, at most 100 by default; --include and --exclude take comma-separated globs such as *.ts,*.tsx.',
-  String.raw`Example: file grep --include *.ts function\s+parse`,
+  'Example:',
+  commandExample(String.raw`file grep --include *.ts function\s+parse`),
 ].join('\n');

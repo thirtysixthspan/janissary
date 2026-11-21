@@ -31,6 +31,15 @@ describe('DatabaseManager', () => {
     expect(DB_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
     expect(DB_PRIMER).toContain('NO trailing `db` command.');
     expect(DB_PRIMER).not.toContain('no code fence');
+    expect(DB_PRIMER.split('\n').filter((line) => line === '```janissary')).toHaveLength(4);
+    for (const example of [
+      'db sqlite create analytics',
+      'db sqlite delete analytics',
+      'db sqlite query analytics "select * from users limit 10"',
+      'db sqlite list',
+    ]) {
+      expect(DB_PRIMER).toContain(`\`\`\`janissary\n${example}\n\`\`\``);
+    }
   });
 
   it('tracks a database a tab creates', () => {

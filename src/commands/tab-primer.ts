@@ -1,3 +1,4 @@
+import { commandExample } from '../acp/command-example.js';
 import { TAB_SUBCOMMANDS } from './parse-tab.js';
 
 export const TAB_PRIMER = [
@@ -5,6 +6,8 @@ export const TAB_PRIMER = [
   'Write it as one line: tab <subcommand> <tab> [argument]',
   `The subcommands are ${TAB_SUBCOMMANDS.join(', ')}. Quote a tab name that contains spaces.`,
   'The result arrives as your next message. When the task is done, reply with the final answer and NO trailing command.',
+  'Example:',
+  commandExample('tab focus Editor'),
 ].join('\n');
 
 export function isTabCommandLine(line: string): boolean {

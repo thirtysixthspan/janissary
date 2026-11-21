@@ -52,6 +52,10 @@ describe('BROWSER_PRIMER', () => {
     expect(BROWSER_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
     expect(BROWSER_PRIMER).toContain('NO trailing command.');
     expect(BROWSER_PRIMER).not.toContain('no code fence');
+    expect(BROWSER_PRIMER.split('\n').filter((line) => line === '```janissary')).toHaveLength(3);
+    expect(BROWSER_PRIMER).toContain('```janissary\nbrowser goto https://example.com\n```');
+    expect(BROWSER_PRIMER).toContain('```janissary\nbrowser content\n```');
+    expect(BROWSER_PRIMER).toContain('```janissary\nbrowser eval document.title\n```');
   });
 });
 

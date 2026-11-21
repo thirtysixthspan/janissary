@@ -1,4 +1,5 @@
 import { findLastCommandLine } from '../acp/command-line.js';
+import { commandExample } from '../acp/command-example.js';
 
 // Primer injected into an ACP agent so it understands the `db` grammar and can
 // drive an autonomous tool loop: it emits a command, the host runs it, and the
@@ -14,6 +15,11 @@ export const DB_PRIMER = [
   'without a `janissary` prefix; prose may follow the block. The host runs it automatically and returns the output to you,',
   'so you can issue further commands. When the task is done, reply with the final answer and NO trailing `db` command.',
   'Be concise: do not explain what you are doing. Only output `db` commands and the final answer.',
+  'Examples:',
+  commandExample('db sqlite create analytics'),
+  commandExample('db sqlite delete analytics'),
+  commandExample('db sqlite query analytics "select * from users limit 10"'),
+  commandExample('db sqlite list'),
 ].join('\n');
 
 // Whether a cleaned reply line is a `db` command the ACP tool loop can run.

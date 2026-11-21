@@ -188,14 +188,22 @@ describe('file grep text', () => {
     expect(FILE_GREP_USAGE).toBe(`Usage: ${syntax}`);
   });
 
-  it('exports exactly four primer lines with a single backslash and no trailing newline', () => {
+  it('exports the primer with one fenced example, a single backslash and no trailing newline', () => {
     expect(FILE_GREP_PRIMER).toBe([
       'To find text inside workspace files, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
       syntax,
       'Flags come first; the rest of the line is the pattern, a case-insensitive regular expression unless --literal or --case-sensitive. Results are path:line: text, at most 100 by default; --include and --exclude take comma-separated globs such as *.ts,*.tsx.',
-      String.raw`Example: file grep --include *.ts function\s+parse`,
+      'Example:',
+      '```janissary',
+      String.raw`file grep --include *.ts function\s+parse`,
+      '```',
     ].join('\n'));
-    expect(FILE_GREP_PRIMER.split('\n')).toHaveLength(4);
+    expect(FILE_GREP_PRIMER.split('\n')).toHaveLength(7);
+    expect(FILE_GREP_PRIMER.split('\n').slice(-3)).toEqual([
+      '```janissary',
+      String.raw`file grep --include *.ts function\s+parse`,
+      '```',
+    ]);
     expect(FILE_GREP_PRIMER.match(/\\/g)).toHaveLength(1);
     expect(FILE_GREP_PRIMER.endsWith('\n')).toBe(false);
   });

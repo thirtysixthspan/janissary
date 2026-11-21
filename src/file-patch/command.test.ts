@@ -58,8 +58,8 @@ describe('file patch command', () => {
 });
 
 describe('FILE_PATCH_PRIMER', () => {
-  it('shows the command form and the reply summary on five lines', () => {
-    expect(FILE_PATCH_PRIMER.split('\n')).toHaveLength(5);
+  it('shows the command form, a fenced example and the reply summary', () => {
+    expect(FILE_PATCH_PRIMER.split('\n')).toHaveLength(8);
     expect(FILE_PATCH_PRIMER).toContain('file patch {"patchText":"<patch>"}');
     expect(FILE_PATCH_PRIMER).toContain('`Patched <n> files:`');
     expect(FILE_PATCH_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
@@ -67,8 +67,8 @@ describe('FILE_PATCH_PRIMER', () => {
   });
 
   it('gives an example line that parses as an update and a delete', () => {
-    const example = FILE_PATCH_PRIMER.split('\n').find((line) => line.startsWith('Example'))!;
-    const command = example.slice(example.indexOf('file patch'));
+    const lines = FILE_PATCH_PRIMER.split('\n');
+    const command = lines[lines.indexOf('```janissary') + 1]!;
     const parsedCommand = parseFilePatchCommand(command);
     if ('error' in parsedCommand) throw new Error('expected the example to parse');
     expect(parsePatchText(parsedCommand.patchText)).toMatchObject({

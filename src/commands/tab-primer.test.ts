@@ -6,6 +6,7 @@ describe('tab primer', () => {
   it('tells the agent the one-line form and every subcommand', () => {
     expect(TAB_PRIMER).toContain('tab <subcommand> <tab> [argument]');
     for (const subcommand of TAB_SUBCOMMANDS) expect(TAB_PRIMER).toContain(subcommand);
+    expect(TAB_PRIMER.split('\n').slice(-3)).toEqual(['```janissary', 'tab focus Editor', '```']);
   });
 
   it.each([
