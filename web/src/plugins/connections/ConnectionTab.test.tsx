@@ -103,6 +103,53 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('db query select 1').tagName).toBe('DIV');
   });
 
+  it('renders a message section from Markdown and keeps other activity kinds literal', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'message', text: '**bold** and `code`\n\n- one\n- two', timestamp: 1 },
+      { kind: 'thought', text: '**bold** and `code`\n\n- one\n- two', timestamp: 2 },
+    ];
+    setup(value);
+    const message = document.querySelector('.connections-activity-text')!;
+    expect(message.querySelector('strong')?.textContent).toBe('bold');
+    expect(message.querySelector('code')?.textContent).toBe('code');
+    expect([...message.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['one', 'two']);
+    const thought = document.querySelectorAll('.connections-activity-text')[1]!;
+    expect(thought.textContent).toBe('**bold** and `code`\n\n- one\n- two');
+  });
+
+  it('routes a link clicked in a rendered message section through openLink without navigating', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'See [the docs](https://example.com/docs).', timestamp: 1 }];
+    const { openLink } = setup(value);
+    const link = document.querySelector('.connections-activity-text a')!;
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
+  });
+
+  it('keeps a message that is a whole JSON object as indented JSON', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'message', text: '{"query":"select 1"}', timestamp: 1 }];
+    setup(value);
+    expect(document.querySelector('pre.connections-activity-json')?.textContent)
+      .toBe('{\n  "query": "select 1"\n}');
+  });
+
+  it('re-renders a message section from its new text after a streamed update', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'first **draft**', timestamp: 1 }];
+    const { view, capabilities } = setup(value);
+    expect(document.querySelector('.connections-activity-text strong')?.textContent).toBe('draft');
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!,
+        entries: [{ kind: 'message', text: 'revised **answer**', timestamp: 2 }] }] } }} capabilities={capabilities} />);
+    expect(document.querySelector('.connections-activity-text')?.textContent?.trim()).toBe('revised answer');
+    expect(document.querySelector('.connections-activity-text strong')?.textContent).toBe('answer');
+    expect(screen.queryByText('draft')).toBeNull();
+  });
+
   it('renders a tool call embedded mid-line in an activity entry and keeps the prose', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [
@@ -280,7 +327,7 @@ describe('ConnectionTab', () => {
     expect(openLink).toHaveBeenCalledOnce();
     expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
     const activityClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-    screen.getByText('message', { selector: '.connections-activity-text' }).dispatchEvent(activityClick);
+    document.querySelector('.connections-activity-text')!.dispatchEvent(activityClick);
     expect(activityClick.defaultPrevented).toBe(false);
     expect(openLink).toHaveBeenCalledOnce();
   });
@@ -391,12 +438,12 @@ describe('ConnectionTab', () => {
   });
 
   it.each(['Completed', 'Failed', 'Partial', 'Terminated'] as const)(
-    'offers no Terminate for a %s agent record and renders activity text plainly', (status) => {
+    'offers no Terminate for a %s agent record and renders message activity as Markdown', (status) => {
       const value = record('agent', status);
       value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
       setup(value);
       expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
-      expect(screen.getByText('<b>plain</b>')).toBeInTheDocument();
+      expect(screen.getByText('plain').tagName).toBe('B');
     },
   );
 

@@ -40,7 +40,9 @@ export function ConnectionHistory({ window, openLink }: {
               );
             }
             const entry = row.entry;
-            const content = <ActivityText text={entry.text} />;
+            const content = entry.kind === 'message'
+              ? <MessageText text={entry.text} />
+              : <ActivityText text={entry.text} />;
             return entry.kind === 'thought'
               ? <details className="connections-activity" key={`${entry.timestamp}:${row.index}`}>
                   <summary>thought</summary>{content}
@@ -70,6 +72,16 @@ function ActivityText({ text }: { text: string }) {
   return json === undefined
     ? <div className="connections-activity-text">{text}</div>
     : <pre className="connections-activity-text connections-activity-json">{json}</pre>;
+}
+
+function MessageText({ text }: { text: string }) {
+  if (parseToolCalls(text).some((segment) => segment.kind === 'tool-call')) return <ActivityText text={text} />;
+  const json = prettyJson(text);
+  if (json !== undefined) return <pre className="connections-activity-text connections-activity-json">{json}</pre>;
+  const html = renderMarkdown(text);
+  return html === undefined
+    ? <div className="connections-activity-text">{text}</div>
+    : <div className="connections-activity-text" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 function Preamble({ preamble }: { preamble: string }) {
