@@ -8,17 +8,6 @@
 ## development
 
 
-* Move the harness launch dialog's flag-compatibility and field-reconciliation rules into a pure module beside its command builder, so a harness switch can be checked without rendering.
-
-Existing Debt: §5 (components render; they do not decide) — the launch dialog computes its defaults, clears or re-enables auto-approve and auto-resume when the harness changes, and drops a model absent from the new harness's catalog inside its `setFields` updater and render body, while the sibling schedule dialog keeps the same kind of rule in a pure selection module. Severity: 5/10
-
-Existing Risk: 5/10 - The same flag-validity rules are written at default time, on update, and at render time, so a change to which harness supports `-y` or `--auto-resume` applied in one place leaves a checkbox enabled for a command the parser rejects, and the only guard is a render test.
-
-Proposal Risk: 2/10 - The rules become plain functions over the delivered catalog and field values, but the dialog's remembered-selection state stays in the component, so the extraction is behaviour-preserving by eye and a transcription slip would only show up in the rendered form.
-
-Proposal: `web/src/harness/HarnessLaunchDialog.tsx` holds `initialFields`, `autoApproveSupported`, `autoResumeSupported`, the body of `update` (the name-change branch that clears an invalid model and flips the two flags when support changes), and `modelValid` in the render body. Add a pure module `web/src/harness/harness-launch-selection.ts` beside the existing `web/src/harness/harness-launch-command.ts` that owns `initialFields(view)`, `autoApproveSupported`, `autoResumeSupported`, `modelValid`, and a `nextFields(previous, patch, view)` reducer carrying the name-change and flag-compatibility rules, and call those from the component's initializer, `update` callback, and render check. Keep `remembered` and `resetHarnessLaunchDialogMemory` in the component: they are the dialog's session memory, not field rules, and that export is what its tests call. `HarnessLaunchView` comes from `@shared/protocol` and `HarnessLaunchFields` from `web/src/harness/harness-launch-command.ts`, so no wire type moves. Only `web/src/harness/HarnessLaunchDialog.tsx` and `web/src/harness/HarnessLaunchDialog.test.tsx` import the component; the test imports just the reset helper, needs no edit, and must keep its assertions byte-for-byte. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/harness/HarnessLaunchDialog.tsx`.
-
-
 * Move the SQL console's history-update and in-flight-submit rules into a pure module beside it, so statement recall and draft preservation can be checked without rendering.
 
 Existing Debt: §5 (components render; they do not decide) — the console computes its history update (drop a repeat, append, cap at fifty), its duplicate-submit guard, and the decision not to clear a newer draft inside its async `send` function, while the shell feature keeps the same kind of recall rule in a pure history module. Severity: 5/10
