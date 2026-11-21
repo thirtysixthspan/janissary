@@ -26,6 +26,7 @@ Open a database browser with table filtering, sorting, paging, editing, export, 
 **Notes**
 
 - Keywords are lower case only and must be followed by whitespace; the value is the trimmed remainder taken verbatim. There is no trailing dock-word special case: `sql file <path> left` treats ` left` as part of the path.
+- A relative `sql file` path resolves against the application's project/launch directory; an absolute path is used unchanged.
 - An unrecognized argument — an old bare name such as `sql inventory`, a removed dock word such as `sql left`, a keyword with no separating whitespace such as `sql file/path`, or a keyword with no value — prints `Usage: sql [file <path>|database <name>]`.
 - `sql file` never creates a database. A missing path prints `No database file at "<path>".` with the resolved absolute path and opens no tab.
 - `sql database` never creates a database. A name with no database prints `No database named "<name>". Create it with: db sqlite create <name>`, and bare `sql` with no databases prints `No databases. Create one with: db sqlite create <name>`.

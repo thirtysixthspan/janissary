@@ -24,11 +24,12 @@ ends and taken verbatim, so a path with interior or repeated spaces survives —
 space-separated `left` or `right`, which is part of the path rather than a dock word. No form docks:
 every SQL tab the command opens lands in the centre.
 
-`sql file <path>` opens and browses the SQLite file at that path. A relative path is resolved against
-the project directory. If no file exists there, the command reports
-`No database file at "<path>".` and opens no tab; no file is created. The `<path>` in that line is
-the resolved absolute path that was checked, so a relative argument and an absolute one report the
-same way. A path-backed tab is keyed by that resolved absolute path and titled with the file's
+`sql file <path>` opens and browses the SQLite file at that path. A relative path resolves against
+the application's project/launch directory; an absolute path passes through unchanged. If no file
+exists there, the command reports `No database file at "<path>".` and opens no tab; no file is
+created. The `<path>` in that line is the resolved absolute path that was checked, so a relative
+argument and an absolute one report the same way. A path-backed tab is keyed by that resolved
+absolute path and titled with the file's
 basename with exactly one trailing `.sqlite` removed case-insensitively; any other extension, such
 as `.db`, is kept. Opening the same path again focuses the one tab, while two paths that share a
 basename stay two distinct tabs. A path under `.janissary/db/sqlite/` is still path-keyed and
