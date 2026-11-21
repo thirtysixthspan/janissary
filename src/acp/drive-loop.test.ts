@@ -375,7 +375,7 @@ describe('driveToolLoop', () => {
   it('stops after eight steps with the capped reason', () => {
     const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY)]);
     expect(host.runCaller).toHaveBeenCalledTimes(8);
-    expect(ofKind(events, 'ranCommand')).toHaveLength(8);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(9);
     expect(events.at(-1)).toEqual(['finished', 'capped', 8]);
   });
 
@@ -383,7 +383,7 @@ describe('driveToolLoop', () => {
     getConfig().maxToolTurns = 3;
     const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY)]);
     expect(host.runCaller).toHaveBeenCalledTimes(3);
-    expect(ofKind(events, 'ranCommand')).toHaveLength(3);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(4);
     expect(events.at(-1)).toEqual(['finished', 'capped', 3]);
   });
 
@@ -556,7 +556,7 @@ describe('driveToolLoop agent runs', () => {
     getConfig().maxToolTurns = 3;
     const { events, host } = drive({ kind: 'agent', grants: ['db'], askUser: false }, [block('db sqlite list')]);
     expect(host.runCaller).toHaveBeenCalledTimes(3);
-    expect(ofKind(events, 'ranCommand')).toHaveLength(3);
+    expect(ofKind(events, 'ranCommand')).toHaveLength(4);
     expect(events.at(-1)).toEqual(['finished', 'capped', 3]);
   });
 });

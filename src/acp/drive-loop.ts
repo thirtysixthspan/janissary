@@ -32,7 +32,27 @@ export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, 
   ].filter(Boolean).join('\n\n');
 }
 
-type DrivenStep = { workspace: boolean; refused?: 'disabled' };
+type GateMeta = { workspace: boolean; refused?: 'disabled' };
+
+// Metadata is paired with the command that produced it, not with a position in a shared queue, so a
+// parallel batch can settle in any order without a result picking up another command's workspace or
+// refusal flag. Repeated command strings keep their own FIFO so duplicates stay matched.
+function metadataLedger() {
+  const ledger = new Map<string, GateMeta[]>();
+  return {
+    add(command: string, meta: GateMeta): void {
+      const entries = ledger.get(command);
+      if (entries) entries.push(meta);
+      else ledger.set(command, [meta]);
+    },
+    take(command: string): GateMeta | undefined {
+      const entries = ledger.get(command);
+      const meta = entries?.shift();
+      if (entries?.length === 0) ledger.delete(command);
+      return meta;
+    },
+  };
+}
 
 async function settleUnlessAborted(result: Promise<string>, signal: AbortSignal): Promise<string> {
   try {
@@ -47,41 +67,21 @@ function dropLateRejection(result: string | Promise<string>, signal: AbortSignal
   return result instanceof Promise ? settleUnlessAborted(result, signal) : result;
 }
 
-async function rememberOnSettle(
-  result: Promise<string>, step: DrivenStep, completed: DrivenStep[],
-): Promise<string> {
-  try {
-    return await result;
-  } finally {
-    completed.push(step);
-  }
-}
-
 function gatedRunner(
   snapshot: AcpRunSnapshot, tools: readonly AcpTool[], host: AcpToolHost, events: AcpLoopHandlers,
-  completed: DrivenStep[], signal: AbortSignal,
+  record: (command: string, meta: GateMeta) => void, signal: AbortSignal,
 ): (command: string) => string | Promise<string> {
   return (command) => {
     const decision = gateCommand(snapshot, tools, command);
     if ('refusal' in decision) {
-      completed.push({ workspace: false, ...(decision.refused !== undefined && { refused: decision.refused }) });
+      record(command, { workspace: false, ...(decision.refused !== undefined && { refused: decision.refused }) });
       events.startCommand?.(command, false);
       return decision.refusal;
     }
-    const step: DrivenStep = { workspace: decision.runsOn === 'workspace' };
-    events.startCommand?.(command, step.workspace);
-    let settled: string | Promise<string>;
-    try {
-      settled = dropLateRejection(step.workspace ? host.runWorkspace(command) : host.runCaller(command), signal);
-    } catch (error) {
-      completed.push(step);
-      throw error;
-    }
-    if (settled instanceof Promise) {
-      return rememberOnSettle(settled, step, completed);
-    }
-    completed.push(step);
-    return settled;
+    const workspace = decision.runsOn === 'workspace';
+    record(command, { workspace });
+    events.startCommand?.(command, workspace);
+    return dropLateRejection(workspace ? host.runWorkspace(command) : host.runCaller(command), signal);
   };
 }
 
@@ -90,8 +90,8 @@ export function driveToolLoop(
   host: AcpToolHost, events: AcpLoopHandlers, signal: AbortSignal,
 ): void {
   const tools: AcpTool[] = snapshot.kind === 'core' && !snapshot.withoutTools ? createAcpToolTable(snapshot.grants) : [];
-  const completed: DrivenStep[] = [];
-  const runCommand = gatedRunner(snapshot, tools, host, events, completed, signal);
+  const ledger = metadataLedger();
+  const runCommand = gatedRunner(snapshot, tools, host, events, ledger.add, signal);
   runAcpToolLoop(session, prompt, {
     signal,
     primer: snapshot.kind === 'core' ? corePrimer(snapshot, tools) : MARKDOWN_INSTRUCTION,
@@ -105,9 +105,9 @@ export function driveToolLoop(
     startTurn: (isFirst) => { events.startTurn(isFirst); },
     chunk: (cumulative) => { events.chunk(cumulative); },
     endTurn: (final) => { events.endTurn(final); },
-    ranCommand: (command, result) => {
-      const step = completed.shift() ?? { workspace: false };
-      events.ranCommand(command, result, step.workspace, step.refused);
+    ranCommand: (command, result, workspace, refused) => {
+      const meta = ledger.take(command);
+      events.ranCommand(command, result, meta?.workspace ?? workspace ?? false, meta?.refused ?? refused);
     },
     finished: (reason, maxSteps) => { events.finished(reason, maxSteps); },
     error: (message) => { events.error(message); },
