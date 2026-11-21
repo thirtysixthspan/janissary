@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
-import { containedAbsolute, containedPath, containedStrictly } from './path-containment.js';
+import { containedAbsolute, containedPath, containedPathOrRoot, containedStrictly } from './path-containment.js';
 
 describe('containedAbsolute', () => {
   it('counts the root itself and anything beneath it', () => {
@@ -88,5 +88,34 @@ describe('containedPath', () => {
 
   it('resolves against the process directory for an empty root', () => {
     expect(containedPath('', 'a.ts')).toBe(path.join(process.cwd(), 'a.ts'));
+  });
+});
+
+describe('containedPathOrRoot', () => {
+  it('resolves an empty path and . to the root', () => {
+    expect(containedPathOrRoot('/repo', '')).toBe('/repo');
+    expect(containedPathOrRoot('/repo', '.')).toBe('/repo');
+    expect(containedPathOrRoot('/repo/', '')).toBe('/repo');
+  });
+
+  it('resolves a relative path inside the root', () => {
+    expect(containedPathOrRoot('/repo', 'src/a.ts')).toBe('/repo/src/a.ts');
+    expect(containedPathOrRoot('/repo', '..notes')).toBe('/repo/..notes');
+  });
+
+  it('refuses .. and a path that escapes the root', () => {
+    expect(containedPathOrRoot('/repo', '..')).toBeUndefined();
+    expect(containedPathOrRoot('/repo', '../x')).toBeUndefined();
+    expect(containedPathOrRoot('/repo', 'src/../../x')).toBeUndefined();
+  });
+
+  it('refuses an absolute path, even one inside the root', () => {
+    expect(containedPathOrRoot('/repo', '/repo/src')).toBeUndefined();
+    expect(containedPathOrRoot('/repo', '/etc/passwd')).toBeUndefined();
+  });
+
+  it('resolves against the process directory for an empty root', () => {
+    expect(containedPathOrRoot('', '')).toBe(process.cwd());
+    expect(containedPathOrRoot('', 'a.ts')).toBe(path.join(process.cwd(), 'a.ts'));
   });
 });

@@ -32,3 +32,11 @@ export function containedPath(root: string, relPath: string): string | undefined
   const absolute = path.resolve(root, relPath);
   return containedAbsolute(root, absolute) ? absolute : undefined;
 }
+
+// The same resolution with the root exception folded in: an empty path or `.` names the root itself,
+// and every other value delegates to `containedPath`, so escape and absolute-path refusal stay in one
+// place. `containedPath` remains strict for callers that must reject the root.
+export function containedPathOrRoot(root: string, relPath: string): string | undefined {
+  if (!relPath || relPath === '.') return path.resolve(root);
+  return containedPath(root, relPath);
+}

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { abbreviateWorkspaceDir } from '../paths.js';
-import { containedPath } from '../path-containment.js';
+import { containedPath, containedPathOrRoot } from '../path-containment.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
 import type { BasePort, NavigationPort } from './port.js';
@@ -26,7 +26,7 @@ function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
 export function toggleDir(port: NavPort, label: string, relPath: string): void {
   const state = port.states.get(label);
   if (!state) return;
-  const absolute = relPath ? containedPath(state.root, relPath) : state.root;
+  const absolute = containedPathOrRoot(state.root, relPath);
   if (!absolute) return;
   if (state.expanded.has(relPath)) {
     state.expanded.delete(relPath);
@@ -105,9 +105,7 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   const previousRoot = state.root;
   const target = relPath === undefined
     ? path.resolve(state.root, '..')
-    : relPath === '' || relPath === '.'
-      ? state.root
-      : containedPath(state.root, relPath);
+    : containedPathOrRoot(state.root, relPath);
   if (!target) return;
   if (state.remoteRoot) {
     const relative = path.relative(path.resolve(state.remoteRoot), target);
@@ -138,7 +136,7 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
 // command restore.
 export function expandAndWatch(port: NavPort, label: string, state: FilesTabState, relPath: string): void {
   if (state.expanded.has(relPath)) return;
-  const absolute = relPath ? containedPath(state.root, relPath) : state.root;
+  const absolute = containedPathOrRoot(state.root, relPath);
   if (!absolute) return;
   state.expanded.add(relPath);
   port.watchDir(label, absolute, relPath);
