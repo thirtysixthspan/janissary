@@ -1,15 +1,9 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { LauncherCommand } from '@shared/plugins/launcher/shared';
-import { nextListSelection, useListSelection, type ListRowClick, type ListSelection } from '../api';
+import { nextListSelection, useListSelection, type ListSelection } from '../api';
+import { commandClickSelection } from './launcher-click';
 import { launchIcon } from './launcher-icons';
 import { useComposedListRef } from './list-ref';
-
-// A click highlights and confirms in one step; the row opens on the second click of an already
-// highlighted one. One rule for every list here, because "click twice to run" is what a terminal user's
-// muscle memory expects and a rail that ran on every click would fire while the user is still reading.
-function openOnConfirm(index: number, confirmed: number | null): ListRowClick {
-  return { selected: index, opens: confirmed === index };
-}
 
 // One row of the command rail. The label is the user's own wording for the command, so the row shows
 // exactly what `launcher.json` says and nothing derived from the command itself; the command line is
@@ -29,7 +23,7 @@ export function LauncherCommandRow({ entry, index, selection, onOpen }: {
       role="option"
       aria-selected={selection.selected === index}
       title={entry.command}
-      onClick={() => { if (selection.rowClicked(index, openOnConfirm)) onOpen(index); }}
+      onClick={() => { if (selection.rowClicked(index, commandClickSelection)) onOpen(index); }}
     >
       <span className={`launcher-command-icon${known ? '' : ' fallback'}`}>
         <FontAwesomeIcon icon={icon} />

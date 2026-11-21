@@ -2,15 +2,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFlag } from '@fortawesome/free-regular-svg-icons';
 import { faCircle } from '@fortawesome/free-solid-svg-icons';
 import { isSummaryEligibleType, type LauncherTabRow } from '@shared/plugins/launcher/shared';
-import type { ListRowClick, ListSelection } from '../api';
+import type { ListSelection } from '../api';
+import { tabClickSelection } from './launcher-click';
 import { relativeTime } from './time-ago';
-
-// A tab row is navigation rather than a command, so an inactive row focuses on one click — the way
-// clicking the tab in the strip does. The host's active fact is authoritative; a remembered position
-// may now hold another row after a tier reorder, or be inactive after focus moved elsewhere.
-function openOnClick(index: number, active: boolean): ListRowClick {
-  return { selected: index, opens: !active };
-}
 
 // One tab row: its dot, its name, its unread flag, its relative time, and its status paragraph. The dot
 // is the host's own colour for that tab, so a row matches its tab in the strip. A tab with no summary
@@ -35,7 +29,7 @@ export function LauncherTabRowView({ row, summary, index, selection, expanded, o
       role="option"
       aria-selected={selection.selected === index}
       aria-expanded={summary === undefined ? undefined : expanded}
-      onClick={() => { if (selection.rowClicked(index, (at) => openOnClick(at, row.active))) onFocus(row); }}
+      onClick={() => { if (selection.rowClicked(index, (at) => tabClickSelection(at, row.active))) onFocus(row); }}
     >
       <span className="launcher-tab-primary">
         <span className="launcher-dot" style={{ color: row.dotColor }}>

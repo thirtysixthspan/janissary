@@ -8,15 +8,7 @@
 ## development
 
 
-* Give the launcher's two row lists the same extracted, testable click-confirmation rules that its sibling lists already have.
 
-Existing Debt: §5 (components render; they do not decide) — the launcher's command row and tab row each define a pure `openOnConfirm` / `openOnClick` rule inside their component files and assert it only through a full render, while the sessions, conversations, and hosts features keep the identical rule in `*-keys` modules with colocated tests. Severity: 4/10
-
-Existing Risk: 4/10 - A change to "click once selects, click again opens" has to be made and verified in two component bodies with no pure seam, so the two lists drift on which click opens a row and neither gets the fast rule-level tests the sibling lists have.
-
-Proposal Risk: 2/10 - Both rules become plain functions with their own tests, but they stay two separate copies rather than one shared helper, so a future change still has to be applied twice; folding the features' click rules together is a separate cross-feature change.
-
-Proposal: `web/src/plugins/launcher/CommandRail.tsx` defines `openOnConfirm(index, confirmed)` returning `{ selected, opens: confirmed === index }`, and `web/src/plugins/launcher/LauncherTabRowView.tsx` defines `openOnClick(index, active)` returning `{ selected, opens: !active }`; both pass the result to `selection.rowClicked` from `web/src/shared/list-selection.ts`. Add a pure module `web/src/plugins/launcher/launcher-click.ts` exporting `commandClickSelection` and `tabClickSelection` with those same signatures and results, plus a colocated `web/src/plugins/launcher/launcher-click.test.ts` covering a repeat click on the same row, a click on a different row, and an active versus inactive tab row; import the two functions in the component files and delete the inline copies. Leave the shared `ListRowClick` type and `useListSelection` alone, and leave `web/src/plugins/sessions/sessions-keys.ts`, `web/src/plugins/conversations/conversation-list-keys.ts`, and `web/src/plugins/hosts/hosts-keys.ts` alone — unifying several features' click rules is larger than one sitting. `web/src/plugins/launcher/LauncherTab.test.tsx` renders both lists and pins the interaction; it needs no edit and must keep its assertions byte-for-byte.
 
 
 ## deferred
