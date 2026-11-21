@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { normalizeOpencodePart } from './normalize.js';
 import { withSource } from './render.js';
 import { asString, asNumber } from './json.js';
-import { hasColumn, jsonRecord, partRecord, placeholders, query } from './opencode-db.js';
+import { discoverDescendants, hasColumn, jsonRecord, partRecord, placeholders, query } from './opencode-db.js';
 import { OpencodeV2TranscriptSource } from './opencode-v2.js';
 import type { TranscriptSource } from './source.js';
 
@@ -99,17 +99,9 @@ export class OpencodeTranscriptSource implements TranscriptSource {
     if (id) this.sessions = [id];
   }
 
-  // Subagent sessions appear over the parent's life, so the child set is re-read on every poll.
+  // Subagent sessions appear over the parent's life, so the descendant set is re-read on every poll.
   private discoverChildren(database: DatabaseSync): void {
-    const rows = query(
-      database,
-      `SELECT id FROM session WHERE parent_id IN (${placeholders(this.sessions.length)})`,
-      this.sessions,
-    );
-    for (const row of rows) {
-      const id = asString(row.id);
-      if (id && !this.sessions.includes(id)) this.sessions.push(id);
-    }
+    discoverDescendants(database, 'session', this.sessions);
   }
 
   // Messages after the private `(time_created, id)` position, each rendered from its `part` rows.
