@@ -2,7 +2,5 @@
 
 # pull-request
 
-* In acp connection tabs, All sections should have the same styling including the default background color.
-
 * in the shell tab, each message section should be rendered from markdown as soon as it is available, not just waiting for a final message.
 
