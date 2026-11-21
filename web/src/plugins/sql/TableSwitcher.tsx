@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SqlPayload } from '@shared/plugins/sql/shared';
+import { isBrowsableKind, tableGroups } from './table-groups';
 
 // The metadata row's table dropdown: every object in the database, grouped by kind, with the one on
 // screen marked. It is the schema navigator in the form a select can take, which is what a metadata
@@ -12,22 +13,11 @@ import type { SqlPayload } from '@shared/plugins/sql/shared';
 // A trigger is offered and cannot be chosen. The navigator said so in words beside the row; a
 // `disabled` option says the same thing in the only way a select can.
 
-const GROUP_LABELS = [
-  { kind: 'table', label: 'Tables' },
-  { kind: 'view', label: 'Views' },
-  { kind: 'index', label: 'Indexes' },
-  { kind: 'trigger', label: 'Triggers' },
-] as const;
-
-const BROWSABLE = new Set<string>(['table', 'view']);
-
 export function TableSwitcher({ payload, onOpen }: {
   payload: SqlPayload;
   onOpen(object: string): void;
 }) {
-  const groups = GROUP_LABELS
-    .map(({ kind, label }) => ({ kind, label, entries: payload.objects.filter((object) => object.kind === kind) }))
-    .filter((group) => group.entries.length > 0);
+  const groups = tableGroups(payload.objects);
 
   return (
     <select
@@ -40,7 +30,7 @@ export function TableSwitcher({ payload, onOpen }: {
       {groups.map((group) => (
         <optgroup key={group.kind} label={group.label}>
           {group.entries.map((object) => (
-            <option key={object.name} value={object.name} disabled={!BROWSABLE.has(object.kind)}>
+            <option key={object.name} value={object.name} disabled={!isBrowsableKind(object.kind)}>
               {object.name}
             </option>
           ))}

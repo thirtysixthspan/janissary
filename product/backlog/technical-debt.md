@@ -11,16 +11,6 @@
 
 
 
-* Move the SQL table dropdown's kind-grouping and browsability rules into a pure module so the schema navigator's order and choices can be tested without rendering a select.
-
-Existing Debt: §5 (components render; they do not decide) — `web/src/plugins/sql/TableSwitcher.tsx` declares `GROUP_LABELS` and `BROWSABLE` and builds its option groups with an inline map/filter and a per-option `disabled` check, so the kind order, the group labels, and which objects may be opened are rules a reader can only verify by rendering the select. Severity: 4/10
-
-Existing Risk: 4/10 - A change to which kinds are browsable, their labels, or their order is made inside markup and proven through a render, so a trigger becoming selectable or a group vanishing reaches the user before any rule-level test could catch it.
-
-Proposal Risk: 2/10 - The rules become plain functions anyone can call, but the disable decision stays a boolean the select interprets, so a kind added to the schema but not the label table would render with no group and only a render test would notice.
-
-Proposal: In `web/src/plugins/sql/TableSwitcher.tsx`, `GROUP_LABELS` and `BROWSABLE` sit above the component and its `groups` value is built in the body by mapping those labels over `payload.objects`, dropping empty groups, and disabling non-browsable kinds in JSX. Add `web/src/plugins/sql/table-groups.ts` exporting `tableGroups(objects)` — returning `{ kind, label, entries }[]` in the current table/view/index/trigger order with empty groups removed — and `isBrowsableKind(kind)` for the current table/view allowlist, then import both and use them in place of the inline constants, chain, and `disabled` expression. Props and rendered markup are unchanged; the only production importer, `web/src/plugins/sql/SqlTab.tsx`, needs no edit and no import path moves. `web/src/plugins/sql/TableSwitcher.test.tsx` pins group order, group labels, and that a trigger option is disabled while a view is enabled; it needs no edit and must keep its assertions byte-for-byte. Only the one component file is edited and the new module is a leaf. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/TableSwitcher.tsx`.
-
 
 * Move the schedule dialog's default-field and target-decoding rules beside its command builder so a target-format change can be checked without rendering the form.
 
