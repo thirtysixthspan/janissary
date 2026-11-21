@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { commands } from './commands/index.js';
 import { RESERVED_NON_COMMAND_NAMES } from './commands/reserved.js';
 import { readCommandTable, readHelpPage } from './help-pages.js';
+import { normalizeCommandName } from './shared/command-matching.js';
 
 // What the classifier decided, rather than three meanings folded into `string | null` and told
 // apart by the leading words of a user-facing message. Two callers used to recover the third case
@@ -59,7 +60,7 @@ export function unknownCommandMessage(command: string): string {
 // `ask`, `db`, `connections`, `next` — is a `Command` now, and both callers loop the registry before
 // reaching here, so those branches were unreachable.
 export const getOutput = (command: string): CommandOutput => {
-  const trimmed = command.trim().toLowerCase();
+  const trimmed = normalizeCommandName(command);
 
   const help = parseHelpCommand(trimmed);
   if (help) return { kind: 'output', text: helpText(help.query) };

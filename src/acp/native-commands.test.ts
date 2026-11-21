@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isNativeCommand, nativeCommandName, nativeCommandTool } from './native-commands.js';
 import { createAcpToolTable } from './tool-table.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
+import { resolveCommand } from '../resolve.js';
 
 describe('native ACP commands', () => {
   it('publishes the ordered command vocabulary', () => {
@@ -79,6 +80,13 @@ describe('native ACP commands', () => {
     expect(nativeCommandTool('DB SQLITE QUERY store SELECT 1')).toBe('database');
     expect(nativeCommandName('  FILE   GREP\t--literal TODO  ')).toBe('file grep');
     expect(nativeCommandTool('FILE GREP')).toBe('file');
+  });
+
+  it('command bar and ACP gate agree on a mixed-case, multi-space line', () => {
+    const line = '  TAB   FOCUS  notes  ';
+    const native = nativeCommandName(line);
+    expect(native).toBe('tab');
+    expect(resolveCommand(line)).toMatchObject({ kind: 'app', name: native });
   });
 
   it('resolves the file ls alias to the file list native name', () => {

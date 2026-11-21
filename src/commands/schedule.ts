@@ -7,6 +7,7 @@ import { byLabelOrAlias } from '../tab/lookup.js';
 import { canRunSchedules } from '../schedule/targets.js';
 import { appendCommandOutput } from '../command/append.js';
 import { readRunscript } from '../schedule/system/runscript-files.js';
+import { normalizeCommandName } from '../shared/command-matching.js';
 
 // Resolve the tab a schedule operation applies to: the issuing tab by default, or the
 // `in <tab>` target, typed as a label or display alias like any other tab reference. Only a
@@ -44,7 +45,7 @@ export const command: Command = {
   match: (command_) => /^schedule\b/i.test(command_),
   samples: ['schedule', 'schedule list'],
   run: (command_, tab, managers, invocation) => {
-    if (command_.trim().toLowerCase() === 'schedule') { managers.schedule.openScheduleLaunch(); return; }
+    if (normalizeCommandName(command_) === 'schedule') { managers.schedule.openScheduleLaunch(); return; }
     const parsed = parseScheduleCommand(command_.replace(/^schedule\b\s*/i, ''), new Date());
     const append = (text: string) => appendCommandOutput(managers, tab.label, { input: command_, output: text }, invocation);
     if ('error' in parsed) { append(parsed.error); return; }
