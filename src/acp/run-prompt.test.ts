@@ -142,7 +142,7 @@ function subagentLaunchDir(): string {
   return dir;
 }
 
-const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Gather all the input you need from your commands and execute all the tasks before providing a final summary message. The final summary must be a summary of the work that was done.';
 const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
 const NO_TOOLS_LINE = 'You have no tools; answer in prose.';
@@ -295,6 +295,16 @@ describe('runCorePrompt role primer', () => {
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
+  });
+
+  it('directs tell to finish gathering input and tasks before a final work summary, but not ask', () => {
+    const tell = primer('tell');
+    expect(tell).toContain('Gather all the input you need from your commands and execute all the tasks before providing a final summary message.');
+    expect(tell).toContain('The final summary must be a summary of the work that was done.');
+    expect(tell).not.toContain('briefly report what you did');
+    const ask = primer('ask');
+    expect(ask).not.toContain(TELL_INSTRUCTION);
+    expect(ask).not.toContain('The final summary must be a summary of the work that was done.');
   });
 
   it('places the ask instruction after available tool text and the protocol, before Markdown', () => {

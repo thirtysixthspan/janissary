@@ -10,7 +10,7 @@ import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import { describeLoopCommand } from '../file-write/command.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 
-const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Gather all the input you need from your commands and execute all the tasks before providing a final summary message. The final summary must be a summary of the work that was done.';
 const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 
 export function maxToolSteps(): number {

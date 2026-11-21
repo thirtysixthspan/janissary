@@ -15,7 +15,7 @@ import { DB_PRIMER } from '../database/primer.js';
 import { globWorkspaceCommand } from '../file-glob/glob.js';
 import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
 
-const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Gather all the input you need from your commands and execute all the tasks before providing a final summary message. The final summary must be a summary of the work that was done.';
 const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 
 beforeEach(() => { getConfig().maxToolTurns = 8; });
@@ -43,6 +43,14 @@ describe('corePrimer', () => {
       TELL_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
+  });
+
+  it('directs tell to finish gathering input and tasks before a final work summary', () => {
+    const result = primerFor(coreSnapshot('tell', ['db sqlite query']));
+    expect(result).toContain('Gather all the input you need from your commands and execute all the tasks before providing a final summary message.');
+    expect(result).toContain('The final summary must be a summary of the work that was done.');
+    expect(result).not.toContain('briefly report what you did');
+    expect(primerFor(coreSnapshot('ask', ['db sqlite query']))).not.toContain(TELL_INSTRUCTION);
   });
 
   it('orders tool text, the tools line, the protocol, the ask instruction, and Markdown for ask', () => {
