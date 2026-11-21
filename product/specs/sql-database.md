@@ -1,8 +1,9 @@
 # SQL database browser
 
-A dockable tab that browses one of the project's SQLite databases: a metadata row naming the database
-and the object, and a data grid with filtering, ordering, paging, cell editing, row insert and delete,
-export, and a SQL console. Reached by the `sql` command. It is a bundled tab plugin like the other
+A dockable tab that browses a SQLite database — one of the project's named databases, or a file
+reached by path: a metadata row naming the database and the object, and a data grid with filtering,
+ordering, paging, cell editing, row insert and delete, export, and a SQL console. Reached by the
+`sql` command. It is a bundled tab plugin like the other
 file and list views, so everything about how it
 is loaded, docked, and broken is described in [[tab-plugins]]; this describes what it does.
 
@@ -12,32 +13,47 @@ unchanged. See [[database]] for the registry, the name rules, and the file layou
 
 ### The `sql` command
 
-`sql` opens or focuses the tab for the database whose connection was opened most recently, by
+The command has three forms and nothing else: `sql file <path>`, `sql database <name>`, and bare
+`sql`. Any other argument is refused with the exact usage line
+`Usage: sql [file <path>|database <name>]` and opens no tab. That includes the old bare name
+(`sql shop`), the removed dock words (`sql left` and `sql right`), an upper-case keyword, a keyword
+with no separating whitespace such as `file/path`, and a keyword with no value (`sql file`,
+`sql database`, or a value that is only whitespace). Keywords are lower case only and must be
+followed by whitespace; the value is the remainder after that first whitespace run, trimmed at the
+ends and taken verbatim, so a path with interior or repeated spaces survives — including a trailing
+space-separated `left` or `right`, which is part of the path rather than a dock word. No form docks:
+every SQL tab the command opens lands in the centre.
+
+`sql file <path>` opens and browses the SQLite file at that path. A relative path is resolved against
+the project directory. If no file exists there, the command reports
+`No database file at "<path>".` and opens no tab; no file is created. The `<path>` in that line is
+the resolved absolute path that was checked, so a relative argument and an absolute one report the
+same way. A path-backed tab is keyed by that resolved absolute path and titled with the file's
+basename with exactly one trailing `.sqlite` removed case-insensitively; any other extension, such
+as `.db`, is kept. Opening the same path again focuses the one tab, while two paths that share a
+basename stay two distinct tabs. A path under `.janissary/db/sqlite/` is still path-keyed and
+distinct from the same file opened by name.
+
+`sql database <name>` opens or focuses that database's tab, and refuses a name the registry has never
+heard of with `No database named "<name>". Create it with: db sqlite create <name>` — a typed command
+is far more likely to carry a typo than a wish for a new database, so it does not create one. A
+database is made with `db sqlite create <name>`, which is the only way to make one: the tab's
+switcher lists the databases the registry has and refuses an unknown name the same way the command
+does. A name the registry's own rule would refuse — anything with a `/`, a `..`, or a character
+outside letters, digits, `-`, and `_` — is refused with `Invalid database name "<name>".` before
+anything is opened.
+
+Bare `sql` opens or focuses the tab for the database whose connection was opened most recently, by
 anything in the application — a `db` command in any tab counts as much as a `sql` tab does, and
 reaching a database whose connection is already open does not change which one that is. With no
-connection open it opens the first database by name. `sql <name>` opens or focuses that database's
-tab, and refuses a name the registry has never heard of with
-`No database named "<name>". Create it with: db sqlite create <name>` — a typed command is far more
-likely to carry a typo than a wish for a new database, so it does not create one. A database is made
-with `db sqlite create <name>`, which is the only way to make one: the tab's switcher lists the
-databases the registry has and refuses an unknown name the same way the command does.
+connection open it opens the first database by name. With no database named and none in the registry
+at all, it reports `No databases. Create one with: db sqlite create <name>`.
 
-`sql left` and `sql right` dock the current database's tab into that sidebar, and `sql <name> left`
-and `sql <name> right` dock that database's tab. A bare `sql` brings the current database's tab back
-to the centre, and `sql <name>` leaves the tab wherever it is. `left` and `right` are recognised in
-lower case only, as the last word, so a database actually named `left` or `right` is unreachable by
-name.
-
-With no database named and none in the registry at all, `sql` reports `No databases. Create one with:
-db sqlite create <name>`. A name the registry's own rule would refuse — anything with a `/`, a `..`,
-or a character outside letters, digits, `-`, and `_` — is refused with `Invalid database name
-"<name>".` before anything is opened.
-
-One tab per database, named after it, so two databases can be browsed side by side and `sql notes`
-twice focuses the tab already open rather than opening a second one. Reopening keeps that tab's
-filters, search term, hidden columns, order, page, and exports, and reads nothing again. A tab that
-was closed starts over: opening its database again reads the schema afresh, and nothing from the
-closed tab comes back.
+One tab per opened database, titled after it, so two databases can be browsed side by side and
+`sql database notes` twice focuses the tab already open rather than opening a second one. Reopening
+keeps that tab's filters, search term, hidden columns, order, page, and exports, and reads nothing
+again. A tab that was closed starts over: opening its database again reads the schema afresh, and
+nothing from the closed tab comes back.
 
 ### What the tab shows
 
@@ -48,7 +64,10 @@ view switch.
 
 The row carries a database dropdown and, beside it, a table dropdown, then the actions: **Insert
 row**, **Columns**, the **CSV** and **JSON** exports, any finished exports as download links, and the
-split control. **Insert row** is offered only for an object that can be written to.
+split control. **Insert row** is offered only for an object that can be written to. For a
+path-backed tab the database control is a read-only label instead of a dropdown: it shows the file's
+basename, with one trailing `.sqlite` removed case-insensitively, and carries the full resolved path
+in its tooltip.
 
 The table dropdown lists every table, view, index, and trigger in the database, under the headings
 `Tables`, `Views`, `Indexes`, and `Triggers`. Indexes and triggers are listed but cannot be chosen;
@@ -407,8 +426,9 @@ the empty database back.
 
 ### What it does not do
 
-- It browses only the project's own databases, by name. A `.sqlite` file anywhere else on disk is
-  not reachable, because the registry derives every path from a validated name.
+- The `sql` command is the only surface that reaches a database by path: `sql file <path>` opens any
+  SQLite file on disk. The metadata-row dropdown still lists only the named databases the registry
+  has, so a path-backed tab cannot be reopened from another tab's dropdown by name.
 - It does not make a database. Its switcher offers the ones the registry has and refuses an unknown
   name, because reading a schema opens a connection and that would create the file behind a name
   that is more likely a typo than a wish. `db sqlite create <name>` is the way to make one, and
@@ -424,5 +444,8 @@ the empty database back.
   showing what it last read, which is what **Refresh** is for.
 - It does not undo. A cell edit commits or it does not.
 - It adds no `sqlite:` row to the tab's own connections panel: a plugin tab runs no `db` command, so
-  the tab is not credited with the connection. The connection is global, so the database appears in
-  `connections list` and in tab-completion app-wide, and `connections close sqlite:<name>` closes it.
+  the tab is not credited with the connection. A named database's connection is global, so it appears
+  in `connections list` and in tab-completion app-wide, and `connections close sqlite:<name>` closes
+  it. A path-backed database is not in the registry, so it is absent from `connections list`, from
+  tab-completion, and from the tab's own connections panel, and `connections close sqlite:<name>`
+  cannot close it.
