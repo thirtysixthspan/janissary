@@ -6,6 +6,8 @@ The scrollable output area that displays command inputs and their results. The t
 
 Log entries are flattened into a `BufferLine[]` array. Each entry produces one prompt line (`>` + command text). If the entry is in `Running...` state, it produces one running-indicator line. Otherwise, its output text is split by newlines, producing one output line per segment.
 
+Every display attribute a transcript entry carries — its sender and color, message kind, running or ACP state, terminal card, and file or tab links — is preserved on the line the entry produces. The transcript, the search matches, and each tab body therefore show the same attributes the entry records, and a new display attribute cannot reach the transcript without reaching the lines that render it.
+
 ### Inline terminal cards
 
 An inline terminal card inside a transcript hosts an interactive PTY. Plain keys and Ctrl+T reach the PTY while the card is focused. Other Ctrl and Shift chords bubble to the window, so tab switching, tab reordering, and the application's other shortcuts keep working.

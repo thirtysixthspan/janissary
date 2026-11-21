@@ -1,5 +1,5 @@
 import type { LogEntry, BufferLine } from './types.js';
-import { formatMessageContent, tryCollapseToolSteps } from '../buffer.js';
+import { formatMessageContent, renderablePayload, tryCollapseToolSteps } from '../buffer.js';
 import { expandTabs } from './expand-tabs.js';
 
 export function handleCollapsedToolSteps(
@@ -23,7 +23,7 @@ export function handleCollapsedToolSteps(
 export function handleTerminalEntry(entry: LogEntry, lines: BufferLine[]): boolean {
   if (!entry.terminal) return false;
   if (lines.length > 0) lines.push({ type: 'spacer', text: '' });
-  lines.push({ type: 'terminal', text: '', terminal: entry.terminal });
+  lines.push({ type: 'terminal', text: '', ...renderablePayload(entry) });
   return true;
 }
 
@@ -43,8 +43,7 @@ export function handleInputOutput(entry: LogEntry, lines: BufferLine[]): boolean
       type: 'prompt',
       text: expandTabs(entry.input),
       cwd: entry.cwd,
-      acp: entry.acp,
-      running: entry.running,
+      ...renderablePayload(entry),
     });
   }
   if (entry.output) {
