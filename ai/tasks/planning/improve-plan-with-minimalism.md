@@ -17,7 +17,7 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 Before a plan proposes any new module, function, file, dependency, or abstraction, it should be able to justify surviving to the first rung below that actually holds. This task's whole job is checking that and rewriting the plan where it doesn't:
 
 1. **Does this need to exist at all?** If a planned piece of work isn't needed to satisfy the plan's stated goal, cut it (YAGNI) — don't shrink it, remove it.
-2. **Does it already exist in this codebase?** If an existing helper, module, or pattern already does this, the plan should point at it (`./product/plans/ready/` plans call this the "What already exists (reuse, don't rebuild)" table), not describe building a new one.
+2. **Does it already exist in this codebase?** If an existing helper, module, or pattern already does this, the plan should point at it (the "What already exists (reuse, don't rebuild)" table in `ai/guidelines/plan-template.md`), not describe building a new one.
 3. **Does the standard library already do this?** Prefer language/runtime stdlib over a hand-rolled equivalent.
 4. **Does a native platform feature cover it?** Prefer what the platform (Electron, the browser, the OS, the terminal) already gives you over a library or custom implementation.
 5. **Does an already-installed dependency solve it?** Prefer a dependency already in `package.json` over adding a new one, and over hand-rolling what it already does.
@@ -66,7 +66,7 @@ State your pick in one sentence.
 1. Read the entire plan.
 2. For every new module, function, file, or dependency the plan proposes, open the real codebase around it: check whether a helper, util, or pattern already covers the same need, and what the relevant stdlib/platform/existing-dependency options actually are. Grep for symbols rather than trusting quoted line numbers — line anchors drift.
 3. Read the project constraints in [`AGENTS.md`](../../../AGENTS.md): the 200-line file-size limit and its guidance to extract rather than compact, the ESLint rules, and the general instruction not to add abstractions, error handling, or validation for scenarios that can't happen.
-4. Skim one or two plans in `./product/plans/ready/` to match the house style, in particular their "What already exists (reuse, don't rebuild)" tables.
+4. Read `ai/guidelines/plan-template.md`; it is the single owner of the plan's section list and each section's format and content, including the "What already exists (reuse, don't rebuild)" table. The plan you trim must follow the template. Do not work from a second copy of the section list or treat an older ready plan as the authority on shape.
 
 ---
 

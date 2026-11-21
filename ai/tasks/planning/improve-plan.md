@@ -45,7 +45,7 @@ State your pick in one sentence.
 1. Read the entire plan.
 2. For **every** file path, function, type, command, line anchor, and behavioral claim the plan makes, open the real thing and check it. Grep for symbols rather than trusting quoted line numbers — line anchors drift.
 3. Read the project constraints that shape any implementation here: the ESLint rules and file-size limit in [`AGENTS.md`](../../../AGENTS.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
-4. Skim one or two plans in `./product/plans/ready/` to match the house style — they follow a shape like: Goal, Design decisions, "What already exists (reuse, don't rebuild)" table, Implementation steps, Tests, Verification, Out of scope.
+4. Read `ai/guidelines/plan-template.md`; it is the single owner of the plan's section list and each section's format and content, and the plan you improve must follow it. Do not work from a second copy of the section list or treat an older plan in `./product/plans/ready/` as the authority on shape — the template governs.
 
 ---
 

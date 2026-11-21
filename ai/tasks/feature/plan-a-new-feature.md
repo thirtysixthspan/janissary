@@ -74,21 +74,11 @@ If you are unsure whether a check is "yes" or "no," treat it as "no" — the def
 
 ### 2c. Write the initial draft
 
-Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name derived from the feature's `### ` title (lowercase, spaces to hyphens, strip punctuation — e.g. "profile launcher" → `profile-launcher.md`). Follow the house style used in `./product/plans/ready/` (skim an existing one, e.g. `./product/plans/ready/monitor-page-tab-content-feed.md`, for shape).
+Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name derived from the feature's `### ` title (lowercase, spaces to hyphens, strip punctuation — e.g. "profile launcher" → `profile-launcher.md`). Follow `ai/guidelines/plan-template.md` for the plan's sections and each section's format and content; that template is the single owner of plan shape, so do not work from a section list copied out of an older plan. `./product/plans/ready/sql-path.md` is the plan currently in `ready/` if you want a sense of the house tone and level of detail, but the template governs structure.
 
-The initial draft records only the feature text and facts established in Step 2a. Do not invent a design decision that needs the user's input. It must contain, in this order:
+The initial draft records only the feature text and facts established in Step 2a. Do not invent a design decision that needs the user's input. Use every section the template requires, in the template's order, with the content it prescribes for a draft at this stage. In particular, record just the UI facts Step 2a established in the `UI design` section (the surface the feature extends and the existing components it resembles), and leave that section out entirely when the feature has no UI, as the template specifies.
 
-1. `# <Feature name>` title.
-2. A short summary paragraph describing the known goal and why it matters.
-3. Design decisions established by the feature text or existing behavior.
-4. A "What already exists (reuse, don't rebuild)" table when Step 2a surfaced precedent to point at. If 2a found nothing relevant, write "None found" rather than omitting the section.
-5. Proposed changes, described in prose (module/function/type names and their contracts) — no code blocks.
-6. UI design, only when the feature has a UI (see 2e for what counts). In the initial draft, record just the UI facts Step 2a established: the surface the feature extends and the existing components it resembles. Leave the section out entirely when the feature has no UI.
-7. Tests section naming what should be covered and where (mirroring existing test conventions for the touched area).
-8. Out of scope, listing boundaries already established by the feature text.
-9. Verification section: `$janissary/scripts/run.mjs check-diff` plus a concrete manual check.
-
-Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's.
+Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's. The template documents this as the one phase-specific exception to its common shape.
 
 ### Phased questioning — the decision tree
 
@@ -124,7 +114,7 @@ Keep asking questions until the phase's frontier is empty — every product deci
 
 ### 2e. Phase 2 — resolve UI decisions
 
-**This phase runs only when the feature has a UI**: it adds or changes something the user sees or operates in the web UI, such as a tab view, sidebar panel, popup, picker, dialog, control, status display, or key binding. A feature that changes only a command's behavior or its transcript text has no UI for this purpose; Phase 1's naming/wording category already covers transcript text. If the feature has no UI, skip directly to 2f without asking anything here, and leave the UI design section out of the plan.
+**This phase runs only when the feature has a UI.** `ai/guidelines/plan-template.md` defines what counts as a UI and when the plan carries a `UI design` section; apply that definition here rather than a local rule. If the feature has no UI, skip directly to 2f without asking anything here, and leave the section out of the plan as the template requires.
 
 UI decisions hang off product decisions, so start this phase only once Phase 1's frontier is empty. Before the first question, open the existing UI surface closest to the feature (the component it extends, or the one it most resembles) and read it, so every option can name a real component, style, or convention rather than a hypothetical one.
 
@@ -138,7 +128,7 @@ Work the UI-decision tree using the same mechanism and no limits. Ask the user q
 
 Every question uses the question format above, exactly as in Phase 1. Skip a category only when the feature text or Phase 1's answers already settle it unambiguously, and quote that text back to the user as your understanding.
 
-Keep asking questions until the phase's frontier is empty. After each answer, write it into the plan's UI design section as a layout, interaction, state, binding, or convention it must follow. That section also states, as fact rather than as a question for the user, where the client code goes under `ai/guidelines/react-code-organization.md`: a feature directory named for the feature, decisions in pure modules and hooks, thin components, and no import from another feature. It keeps every piece of state the server owns on the server, per `ai/guidelines/architecture-principles.md` §1.
+Keep asking questions until the phase's frontier is empty. After each answer, write it into the plan's `UI design` section as a layout, interaction, state, binding, or convention it must follow, in the format the template prescribes for that section. The template also owns what that section states about client-code placement under `ai/guidelines/react-code-organization.md` and about keeping server-owned state on the server per `ai/guidelines/architecture-principles.md` §1; do not restate those rules here.
 
 ### 2f. Phase 3 — resolve implementation decisions
 
@@ -179,7 +169,7 @@ If every box is checked and both improvement passes surfaced nothing new, the pl
 Before moving on, check the completed plan against this list:
 
 - [ ] No code blocks containing function bodies, JSX, or CSS.
-- [ ] All 9 sections above are present, in order. The UI design section is present only when the feature has a UI.
+- [ ] The plan has every section `ai/guidelines/plan-template.md` requires, in the template's order, with `UI design` present only when the feature has a UI.
 - [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
 - [ ] Every question identified by the final review is resolved in the plan.
 - [ ] Both improvement tasks passed their separate 2g gates before this review.
