@@ -21,6 +21,8 @@ let shopFile = '';
 let spacedFile = '';
 let firstShopFile = '';
 let secondShopFile = '';
+let leftFile = '';
+let upperLeftFile = '';
 
 beforeAll(() => {
   tempDir = mkdtempSync(path.join(tmpdir(), 'janus-sql-command-'));
@@ -28,7 +30,9 @@ beforeAll(() => {
   spacedFile = path.join(tempDir, 'my  spaced.sqlite');
   firstShopFile = path.join(tempDir, 'one', 'shop.sqlite');
   secondShopFile = path.join(tempDir, 'two', 'shop.sqlite');
-  for (const file of [shopFile, spacedFile, firstShopFile, secondShopFile]) {
+  leftFile = path.join(tempDir, 'dock left');
+  upperLeftFile = path.join(tempDir, 'dock LEFT');
+  for (const file of [shopFile, spacedFile, firstShopFile, secondShopFile, leftFile, upperLeftFile]) {
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, '');
   }
@@ -234,9 +238,23 @@ describe('sql command grammar', () => {
     expect(outcome('database/shop').reason).toBe(USAGE);
   });
 
-  it('refuses the old bare name, the removed dock words, and a trailing dock word', () => {
-    for (const argument of ['shop', 'left', 'right', 'shop left', `file ${shopFile} left`]) {
+  it('refuses the old bare name and removed dock words, but keeps a trailing dock word in the path', () => {
+    for (const argument of ['shop', 'left', 'right', 'shop left']) {
       expect(outcome(argument)).toMatchObject({ reason: USAGE, opened: 0 });
+    }
+    const withDockWord = `${shopFile} left`;
+    expect(outcome(`file ${withDockWord}`)).toMatchObject({
+      reason: `No database file at "${path.resolve(process.cwd(), withDockWord)}".`,
+      opened: 0,
+    });
+  });
+
+  it('opens a real file whose path ends in a space-separated left or LEFT', () => {
+    for (const file of [leftFile, upperLeftFile]) {
+      const result = outcome(`file ${file}`);
+      expect(result.reason).toBeUndefined();
+      expect(result.key).toBe(`sqlite:${file}`);
+      expect(result.action).toMatchObject({ database: file });
     }
   });
 
@@ -350,8 +368,9 @@ describe('sql plugin command', () => {
     const fixture = fakeCapabilities();
     expect(() => fixture.activation.command?.('shop', fixture.capabilities))
       .toThrow(new TabPluginRejection(USAGE));
-    expect(() => fixture.activation.command?.(`file ${shopFile} left`, fixture.capabilities))
-      .toThrow(new TabPluginRejection(USAGE));
+    const withDockWord = `${shopFile} left`;
+    expect(() => fixture.activation.command?.(`file ${withDockWord}`, fixture.capabilities))
+      .toThrow(new TabPluginRejection(`No database file at "${path.resolve(process.cwd(), withDockWord)}".`));
     expect(fixture.opened).toEqual([]);
   });
 

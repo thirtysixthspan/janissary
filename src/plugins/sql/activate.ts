@@ -46,8 +46,8 @@ const USAGE = 'Usage: sql [file <path>|database <name>]';
 
 // `sql [file <path>|database <name>]`. The keyword is the text up to the first whitespace run; the
 // value is the remainder after it, trimmed at the ends and taken verbatim so a path with spaces
-// survives. Both keywords are lower case only. Anything else — including a removed trailing dock
-// word — is a usage error; no form docks.
+// survives — including one ending in a space-separated `left` or `right`. Both keywords are lower
+// case only. Anything else is a usage error; no form docks.
 function runCommand(argument: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): void {
   const data = databasesFrom(capabilities);
   const text = argument.trim();
@@ -55,7 +55,7 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
   const keyword = split === -1 ? text : text.slice(0, split);
   const value = split === -1 ? '' : text.slice(split).trim();
   if (keyword === 'file' || keyword === 'database') {
-    if (!value || /\s(?:left|right)$/i.test(value)) {
+    if (!value) {
       capabilities.rejectRequest(USAGE);
       return;
     }
