@@ -1,4 +1,4 @@
-export const SQL_PAYLOAD_SCHEMA_VERSION = 1;
+export const SQL_PAYLOAD_SCHEMA_VERSION = 2;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -107,6 +107,9 @@ export type SqlPending = {
 
 export type SqlPayload = {
   database: string;
+  // Present only on a path-backed tab: the resolved absolute path. A named database omits it, so the
+  // client never has to guess path-ness from a name that happens to be missing from the dropdown.
+  databasePath?: string | null;
   databases: SqlDatabaseRef[];
   objects: SqlObject[];
   // The object the grid is showing, and the query it is showing it with. The grid's own statement
@@ -249,6 +252,7 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
   if (!isRecord(value)) return false;
   const parts: [unknown, (part: unknown) => boolean][] = [
     [value.database, isString],
+    [value.databasePath, isOptional(isString)],
     [value.object, isString],
     [value.objects, isListOf(isObject)],
     [value.global, isString],

@@ -41,6 +41,25 @@ describe('isSqlPayload', () => {
     expect(isSqlPayload(payload())).toBe(true);
   });
 
+  it('accepts a path payload whose databasePath is a string', () => {
+    expect(isSqlPayload(payload({ databasePath: '/data/shop.sqlite' }))).toBe(true);
+  });
+
+  it('accepts a named payload with no databasePath at all', () => {
+    const named: Record<string, unknown> = { ...payload() };
+    delete named.databasePath;
+    expect(isSqlPayload(named)).toBe(true);
+  });
+
+  it('accepts a payload whose databasePath is null', () => {
+    expect(isSqlPayload(payload({ databasePath: null }))).toBe(true);
+  });
+
+  it('rejects a databasePath that is a number or an object', () => {
+    expect(isSqlPayload(payload({ databasePath: 7 as never }))).toBe(false);
+    expect(isSqlPayload(payload({ databasePath: { path: '/data/shop.sqlite' } as never }))).toBe(false);
+  });
+
   it('rejects an array and null', () => {
     expect(isSqlPayload([])).toBe(false);
     expect(isSqlPayload(null)).toBe(false);

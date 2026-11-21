@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SqlPayload } from '@shared/plugins/sql/shared';
+import { databaseLabel } from './database-label';
 
 // The header's database switcher: every database the registry knows, and nothing else. Making one is
 // `db sqlite create <name>` and has always been — a name in front of a user is a name that can be a
@@ -9,6 +10,13 @@ export function DatabaseSwitcher({ payload, onOpen }: {
   payload: SqlPayload;
   onOpen(name: string): void;
 }) {
+  if (typeof payload.databasePath === 'string') {
+    return (
+      <span className="sql-database" title={payload.databasePath}>
+        {databaseLabel(payload.databasePath)}
+      </span>
+    );
+  }
   return (
     <select
       className="sql-database"

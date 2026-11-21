@@ -40,7 +40,8 @@ export function openDatabase(
     capabilities.openOrFocusTab(key, () => ({ title, payload: existing }));
     return;
   }
-  const seed: SqlPayload = emptyPayload(database, refs(databasesFrom(capabilities).databases));
+  const empty = emptyPayload(database, refs(databasesFrom(capabilities).databases));
+  const seed: SqlPayload = isPath ? { ...empty, databasePath: database } : empty;
   // The tab is opened and recorded before the schema is asked for: the host delivers the answer
   // synchronously, and a notification for a plugin with no open tab is dropped rather than queued,
   // so asking first loses the answer outright and leaves the tab on `Loading…` forever.
