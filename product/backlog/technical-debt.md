@@ -12,16 +12,6 @@
 
 
 
-* Move the schedule dialog's default-field and target-decoding rules beside its command builder so a target-format change can be checked without rendering the form.
-
-Existing Debt: §5 (components render; they do not decide) — `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx` defines `initialFields` and `selectTarget`, the latter slicing the `tab:` prefix off a select value to reconstruct a `ScheduleTarget`, in the component body while the sibling field rules live in `schedule-selection.ts`, so the default set and the option encoding are only exercised through a render. Severity: 4/10
-
-Existing Risk: 5/10 - The `tab:` prefix is written when the options are built and parsed again in the change handler, so a change to that encoding applied to one side leaves the dialog submitting `in <label>` for a wrong target while the option still looks correct, and only the full render suite notices.
-
-Proposal Risk: 2/10 - Both rules become plain functions, but the encoding is still duplicated between the option values in the JSX and the decoder, so a future target kind added to the select but not the decoder would submit a malformed clause with no compile error.
-
-Proposal: In `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx`, `initialFields(view)` sets the name, target, type, and time defaults and `selectTarget(value)` turns `'system'` or `'tab:<label>'` back into a `ScheduleTarget`; both are plain functions in the component file. Move them into a new `web/src/ScheduleLaunchDialog/schedule-fields.ts` (importing `initialScheduleTarget` from `./schedule-selection` and the `ScheduleFields`/`ScheduleTarget` types from `./schedule-command`), export them, and import them back into the dialog. Keep `remembered`, `resetScheduleDialogMemory`, and `reconcileScheduleFields` where they are — the first two are the dialog's session memory and the third already lives in `schedule-selection.ts`; do not edit that module or any test. `web/src/ScheduleLaunchDialog/ScheduleDialog.test.tsx` pins the default active target, the `tab:` option values, and the `in <label>` clause of a submitted command; it needs no edit and must keep its assertions byte-for-byte. The only production importer, `web/src/AppMain.tsx`, is unaffected and no import path moves. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx`.
-
 
 * Move the SQL grid's word-versus-row-run copy decision into a pure module so the rule that keeps a run copy intact can be tested directly.
 
