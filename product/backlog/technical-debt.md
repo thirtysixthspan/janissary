@@ -8,17 +8,6 @@
 ## development
 
 
-* Give the shared clipboard writer one plain contract and let the SQL grid own its own copy-failure fallback.
-
-Existing Debt: §2 (colocate; promote to shared only on the second consumer) — the shared clipboard writer takes an optional `onFailure` callback that only the SQL grid passes, while roughly ten other call sites omit it, so a shared primitive carries one feature's error UI. Severity: 5/10
-
-Existing Risk: 4/10 - A second caller needing different failure behaviour either gets no answer from the write and silently loses the copy, or adds another branch to a helper every feature uses, while the SQL grid's fallback wording stays hostage to a shared module.
-
-Proposal Risk: 2/10 - Callers keep the same one-argument call and a denied write stays silent everywhere else, but the capture side effect and the success result must both still fire exactly once or the clipboard history and the grid's message drift apart.
-
-Proposal: `web/src/shared/system-clipboard.ts` exports `copyText(text, onFailure?)`, and its own comment already names the SQL grid as the one caller of `onFailure`; `web/src/plugins/sql/selection.tsx` is the only file that passes it, to show a message through `onError` when a copy is refused. Change the shared module to keep `copyText(text)` as a one-argument fire-and-forget writer and add a promise-returning `tryCopyText(text): Promise<boolean>` that performs the same `navigator.clipboard.writeText` attempt and calls `captureCopiedText(text)` exactly once; remove the feature-specific callback from the shared signature. In `web/src/plugins/sql/selection.tsx`, call that promise-returning function from the copy handler and invoke `onError` with the existing "Copy is unavailable here. Select and copy this text: …" wording only when it resolves false. The other call sites — `web/src/plugins/shell/command-bar-keys.ts`, `web/src/file-navigator/file/navigator-copy.ts`, `web/src/context-menu/DefaultContextMenu.tsx`, `web/src/editor/applyKeyAction.ts`, `web/src/shared/terminal/app-terminal.ts`, `web/src/shared/terminal/useXterm.ts`, and `web/src/plugins/api.ts`, which re-exports `copyText` to plugins — keep their one-argument calls and need no edit. `web/src/shared/system-clipboard.test.ts` pins the capture and no-throw behaviour and `web/src/plugins/sql/Selection.test.tsx` pins the grid's error text; both must keep their assertions byte-for-byte.
-
-
 * Move the harness launch dialog's flag-compatibility and field-reconciliation rules into a pure module beside its command builder, so a harness switch can be checked without rendering.
 
 Existing Debt: §5 (components render; they do not decide) — the launch dialog computes its defaults, clears or re-enables auto-approve and auto-resume when the harness changes, and drops a model absent from the new harness's catalog inside its `setFields` updater and render body, while the sibling schedule dialog keeps the same kind of rule in a pure selection module. Severity: 5/10

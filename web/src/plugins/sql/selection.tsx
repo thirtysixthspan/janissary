@@ -4,7 +4,7 @@ import type { SqlRow } from '@shared/plugins/sql/shared';
 import { GRID_NAVIGATION_KEYS, nextRowSelection } from './sql-keys';
 import { rowRange, selectionToTsv, type RowRange } from './grid-view';
 import { revealRow } from './reveal-row';
-import { copyText } from '../api';
+import { tryCopyText } from '../api';
 
 // The highlighted run of rows, the keys that move it, and its copy.
 //
@@ -106,10 +106,11 @@ export function useGridSelection({
       if (!text) return;
       event.preventDefault();
       // The published writer rather than a direct write, so this copy reaches the same capture seam
-      // every other one does. `onFailure` is why: a tab plugin may not reach the shared writer's
-      // module directly, and this is the one copy in the application with something to say when the
-      // clipboard refuses.
-      copyText(text, (failed) => onError(`Copy is unavailable here. Select and copy this text: ${failed}`));
+      // every other one does. The promise form tells us when the clipboard refuses, which is the one
+      // thing this copy has to say that every other one does not.
+      void tryCopyText(text).then((written) => {
+        if (!written) onError(`Copy is unavailable here. Select and copy this text: ${text}`);
+      });
     };
     globalThis.addEventListener('keydown', onKey);
     return () => globalThis.removeEventListener('keydown', onKey);
