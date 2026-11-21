@@ -2,8 +2,6 @@
 
 ## ready
 
-* `sql <path>` opens the sql tab and opens the named sql database.
-
 ## development
 
 ## deferred
