@@ -26,7 +26,7 @@ Required. Facts about the code taken as true that an implementer should not re-d
 
 ### Requirements
 
-Required. The behaviors and edge cases the implementation must satisfy, one per bullet, each traceable to the feature text or a user answer. These are the acceptance criteria: an implementer reads them and knows when the feature is done. Include the empty, duplicate, error, and boundary cases the feature promises, stated as observable behavior rather than a vague verb like "handle errors" or "update the UI".
+Required. The behaviors and edge cases the implementation must satisfy, written as a numbered list (`1.`, `2.`, …) so they can be counted and tied back reproducibly. Each numbered requirement carries exactly one behavior: split any sentence that joins two behaviors with "and" into two requirements. Quote the feature text or the settled user answer each requirement comes from rather than restating it in the plan's own words. These are the acceptance criteria: an implementer reads them and knows when the feature is done. Include the empty, duplicate, error, and boundary cases the feature promises, stated as observable behavior rather than a vague verb like "handle errors" or "update the UI".
 
 ### What already exists (reuse, don't rebuild)
 
