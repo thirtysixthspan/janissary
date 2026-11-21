@@ -83,6 +83,41 @@ describe('ConnectionTab', () => {
     expect(answers[0]?.querySelector('strong')?.textContent).toBe('reply');
   });
 
+  it('renders a final answer that differs from the captured replies as a further response', () => {
+    const value = record();
+    value.window!.blocks[0]!.replies = ['first **reply**', 'second reply'];
+    value.window!.blocks[0]!.answer = 'final **answer**';
+    setup(value);
+    const answers = [...document.querySelectorAll('.connections-answer')];
+    expect(answers).toHaveLength(3);
+    expect(answers.map((element) => element.textContent?.trim())).toEqual(['first reply', 'second reply', 'final answer']);
+    expect(answers[2]?.querySelector('strong')?.textContent).toBe('answer');
+    const responses = screen.getAllByText('response', { selector: 'summary' });
+    expect(responses).toHaveLength(3);
+    for (const summary of responses) {
+      expect(summary.closest('details')).toHaveAttribute('open');
+    }
+  });
+
+  it('does not duplicate the final answer when it is already the last reply', () => {
+    const value = record();
+    value.window!.blocks[0]!.replies = ['earlier reply', 'final **answer**'];
+    value.window!.blocks[0]!.answer = 'final **answer**';
+    setup(value);
+    const answers = [...document.querySelectorAll('.connections-answer')];
+    expect(answers).toHaveLength(2);
+    expect(answers.map((element) => element.textContent?.trim())).toEqual(['earlier reply', 'final answer']);
+  });
+
+  it('renders every captured reply when the block has no final answer', () => {
+    const value = record();
+    delete value.window!.blocks[0]!.answer;
+    value.window!.blocks[0]!.replies = ['one', 'two', 'three'];
+    setup(value);
+    const answers = [...document.querySelectorAll('.connections-answer')];
+    expect(answers.map((element) => element.textContent?.trim())).toEqual(['one', 'two', 'three']);
+  });
+
   it('keeps a query or response the reader collapsed closed through a streamed update', () => {
     const value = record();
     value.window!.blocks[0]!.answer = 'first answer';
