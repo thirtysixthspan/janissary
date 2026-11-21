@@ -1,9 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { CommandBarShell, useCommandBarKeys } from '../api';
-
-// How many statements the console recalls. Long enough to walk back through a session of
-// experimenting, short enough that the recall walk stays instant.
-const HISTORY_LIMIT = 50;
+import { HISTORY_LIMIT, appendHistory, shouldClearDraft } from './console-history';
 
 export type SqlConsoleProperties = {
   // Whether this tab is the visible one in its pane. A plugin tab stays mounted while hidden, so the
@@ -61,9 +58,9 @@ export function SqlConsole({
     try {
       const accepted = await onSend(sql);
       if (!accepted) return;
-      setHistory((previous) => [...previous.filter((entry) => entry !== sql), sql].slice(-HISTORY_LIMIT));
+      setHistory((previous) => appendHistory(previous, sql, HISTORY_LIMIT));
       resetHistoryWalk.current();
-      if (draftRevision.current === submittedRevision) updateValue('');
+      if (shouldClearDraft(submittedRevision, draftRevision.current)) updateValue('');
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

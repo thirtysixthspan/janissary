@@ -8,17 +8,6 @@
 ## development
 
 
-* Move the SQL console's history-update and in-flight-submit rules into a pure module beside it, so statement recall and draft preservation can be checked without rendering.
-
-Existing Debt: §5 (components render; they do not decide) — the console computes its history update (drop a repeat, append, cap at fifty), its duplicate-submit guard, and the decision not to clear a newer draft inside its async `send` function, while the shell feature keeps the same kind of recall rule in a pure history module. Severity: 5/10
-
-Existing Risk: 5/10 - A correction to recall order, the fifty-statement cap, or the typed-while-in-flight rule has to be made inside a component and proven through a render, so a wrong recall or a clobbered statement reaches the user before a test can catch it.
-
-Proposal Risk: 2/10 - The rules become plain functions anyone can call, but the submit guard still depends on refs held by the component, so in-flight behaviour remains verified only through the render suite and a transcription slip would survive a pure-function test.
-
-Proposal: `web/src/plugins/sql/SqlConsole.tsx` owns `HISTORY_LIMIT` and three rules in `send`: the `submittingRef` guard, the `draftRevision` comparison that skips clearing a newer draft, and `setHistory((previous) => [...previous.filter((entry) => entry !== sql), sql].slice(-HISTORY_LIMIT))`. Add `web/src/plugins/sql/console-history.ts` with a pure `appendHistory(previous, sql, limit)` that dedupes, appends, and caps, and a pure `shouldClearDraft(submittedRevision, currentRevision)` for the in-flight rule, then call both from `send` in place of the inline expressions and move `HISTORY_LIMIT` into the new module. `useCommandBarKeys` in `web/src/shared/command-bar/useCommandBarKeys.ts` consumes the history as a prop, so no shared code changes and no import path outside this file moves. `web/src/plugins/sql/SqlConsole.test.tsx` already renders submit, duplicate-submit, rejection, and recall cases; it needs no edit and must keep its assertions byte-for-byte. The sibling rule lives in `web/src/plugins/shell/shell-history.ts` (`appendShellHistory`) behind `web/src/plugins/shell/useTerminalCommandHistory.ts`; leave it alone, since unifying the two features' histories is larger than one sitting. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/SqlConsole.tsx`.
-
-
 * Move the command bar's quit-versus-close reporting rules into a small pure module so the same blocked line is judged the same way at every call site.
 
 Existing Debt: §5 (components render; they do not decide) — the command-bar provider file defines `blockedCommandWord` and `consumeBlockedCommand`, which strip a leading slash and re-check `isCloseCommand` to decide whether a blocked line is reported as quit or close, while the verdict rules for those same lines live in a colocated submit-classifier module. Severity: 4/10
