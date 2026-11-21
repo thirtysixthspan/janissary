@@ -11,6 +11,7 @@ import { describeLoopCommand } from '../file-write/command.js';
 import { commandProtocolPrimer } from './command-protocol.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 
 export function maxToolSteps(): number {
   return getConfig().maxToolTurns;
@@ -26,6 +27,7 @@ export function corePrimer(snapshot: Extract<AcpRunSnapshot, { kind: 'core' }>, 
     toolsAvailable ? DISABLED_HARNESS_TOOLS_LINE : '',
     toolsAvailable ? commandProtocolPrimer(maxToolSteps()) : '',
     snapshot.role === 'tell' ? TELL_INSTRUCTION : '',
+    toolsAvailable && snapshot.role === 'ask' ? ASK_INSTRUCTION : '',
     MARKDOWN_INSTRUCTION,
   ].filter(Boolean).join('\n\n');
 }

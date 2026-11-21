@@ -143,6 +143,7 @@ function subagentLaunchDir(): string {
 }
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 const NO_BUILTIN_TOOLS_LINE = 'You have no built-in tools; use only the commands listed here.';
 const NO_TOOLS_LINE = 'You have no tools; answer in prose.';
 
@@ -296,6 +297,18 @@ describe('runCorePrompt role primer', () => {
     ].join('\n\n'));
   });
 
+  it('places the ask instruction after available tool text and the protocol, before Markdown', () => {
+    expect(primer('ask')).toBe([
+      DB_PRIMER,
+      'Only these commands are allowed: db sqlite query.',
+      NO_BUILTIN_TOOLS_LINE,
+      DISABLED_HARNESS_TOOLS_LINE,
+      commandProtocolPrimer(maxToolSteps()),
+      ASK_INSTRUCTION,
+      MARKDOWN_INSTRUCTION,
+    ].join('\n\n'));
+  });
+
   it('does not give the ask role the tell instruction', () => {
     const result = primer('ask');
     expect(result).not.toContain(TELL_INSTRUCTION);
@@ -312,6 +325,7 @@ describe('runCorePrompt role primer', () => {
     const result = primer('ask', { withoutTools: true });
     expect(result).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
     expect(result).not.toContain(TELL_INSTRUCTION);
+    expect(result).not.toContain(ASK_INSTRUCTION);
   });
 
   it('starts the primer with the no-tools line for a role with no grants', () => {

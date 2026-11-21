@@ -16,6 +16,7 @@ import { globWorkspaceCommand } from '../file-glob/glob.js';
 import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
 
 const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 
 beforeEach(() => { getConfig().maxToolTurns = 8; });
 
@@ -40,6 +41,18 @@ describe('corePrimer', () => {
       DISABLED_HARNESS_TOOLS_LINE,
       commandProtocolPrimer(maxToolSteps()),
       TELL_INSTRUCTION,
+      MARKDOWN_INSTRUCTION,
+    ].join('\n\n'));
+  });
+
+  it('orders tool text, the tools line, the protocol, the ask instruction, and Markdown for ask', () => {
+    expect(primerFor(coreSnapshot('ask', ['db sqlite query']))).toBe([
+      DB_PRIMER,
+      'Only these commands are allowed: db sqlite query.',
+      NO_BUILTIN_TOOLS_LINE,
+      DISABLED_HARNESS_TOOLS_LINE,
+      commandProtocolPrimer(maxToolSteps()),
+      ASK_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
   });
@@ -73,7 +86,9 @@ describe('corePrimer', () => {
 
   it('gives only the no-tools line and Markdown when the caller passes no tools', () => {
     const snapshot = coreSnapshot('ask', ['db sqlite query'], [], true);
-    expect(corePrimer(snapshot, [])).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+    const result = corePrimer(snapshot, []);
+    expect(result).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(result).not.toContain(ASK_INSTRUCTION);
   });
 
   it('omits the disabled harness tools line when no command is available', () => {
