@@ -42,7 +42,7 @@ describe('ConnectionTab', () => {
     expect([...document.querySelectorAll('.connections-activity-label')].map((el) => el.textContent))
       .toEqual(['message', 'plan', 'permission']);
     expect(screen.getByText('thought', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
-    expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
+    expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
   });
 
   it('renders the preamble first in a collapsed section and the query in an expanded section', () => {
@@ -133,17 +133,17 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('**/*.ts')).toBeInTheDocument();
   });
 
-  it('keeps a tool entry the reader collapsed closed through a streamed update', () => {
+  it('keeps a tool section the reader expanded open through a streamed update', () => {
     const value = record();
     const { view, capabilities } = setup(value);
     const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
-    details.open = false;
+    details.open = true;
     const entries = value.window!.blocks[0]!.entries.map((entry) =>
       entry.kind === 'tool' ? { ...entry, text: 'tool output' } : entry);
     view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
       blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
     expect(screen.getByText('tool output').closest('details')).toBe(details);
-    expect(details).not.toHaveAttribute('open');
+    expect(details).toHaveAttribute('open');
   });
 
   it('groups a tool command and its reply into one labelled collapsible section', () => {
@@ -156,7 +156,7 @@ describe('ConnectionTab', () => {
     const summaries = screen.getAllByText('tool', { selector: 'summary' });
     expect(summaries).toHaveLength(1);
     const details = summaries[0].closest('details');
-    expect(details).toHaveAttribute('open');
+    expect(details).not.toHaveAttribute('open');
     expect([...details!.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
       .toEqual(['command', 'reply']);
     expect(screen.getByText('grep foo')).toBeInTheDocument();
@@ -187,11 +187,11 @@ describe('ConnectionTab', () => {
       .toEqual(['command', 'reply']);
   });
 
-  it('keeps a grouped tool section collapsed when its reply streams in', () => {
+  it('keeps a grouped tool section open when its reply streams in', () => {
     const value = record();
     const { view, capabilities } = setup(value);
     const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
-    details.open = false;
+    details.open = true;
     const original = value.window!.blocks[0]!.entries;
     const entries = [
       ...original.slice(0, 3),
@@ -201,7 +201,7 @@ describe('ConnectionTab', () => {
     view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
       blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
     expect(screen.getByText('the reply').closest('details')).toBe(details);
-    expect(details).not.toHaveAttribute('open');
+    expect(details).toHaveAttribute('open');
     expect([...details.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
       .toEqual(['command', 'reply']);
   });

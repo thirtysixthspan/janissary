@@ -28,7 +28,7 @@ export function ConnectionHistory({ window, openLink }: {
             if (row.kind === 'tool') {
               const parts = row.reply === undefined ? [row.command] : [row.command, row.reply];
               return (
-                <details className="connections-activity" key={`${row.command.timestamp}:${row.index}`} open>
+                <details className="connections-activity" key={`${row.command.timestamp}:${row.index}`}>
                   <summary>tool</summary>
                   {parts.map((part, partIndex) => (
                     <div className="connections-tool-part" key={partIndex}>

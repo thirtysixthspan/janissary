@@ -92,7 +92,7 @@ up to the `maxToolTurns` limit per prompt. That limit defaults to 20 and is set 
 `(stopped after N tool steps)` paragraph naming the limit, so you can tell the answer was
 cut short and retry a narrower request.
 
-Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought entries start collapsed there and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these five tools are available in this loop; it cannot run arbitrary shell commands.
+Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought and tool entries start collapsed there. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these five tools are available in this loop; it cannot run arbitrary shell commands.
 
 Questions identify the tab asking them. Answer or cancel in the question surface owned by that tab. A selected docked shell can show its question too. A hidden docked shell does not raise a question panel, and a centre question renders once.
 
