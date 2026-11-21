@@ -7,28 +7,6 @@
 
 ## development
 
-* Define the agent outcome-to-status mapping once and share it across the run lifecycle, the record feed, and both clients' terminal-status checks.
-
-Existing Debt: The four `AgentOutcome` variants are mapped to terminal status strings by hand twice in `src/agent/run.ts` (`setStatus` and `finish`) and again in `src/agent/record-feed.ts`, while the resulting terminal-status set is restated as string-literal lists in `src/plugins/connections/shared.ts`, `src/acp-records/validation.ts`, `web/src/plugins/connections/ConnectionTab.tsx`, and `web/src/plugins/agent-monitor/view.tsx`, so the vocabulary has no owner and each new consumer copies it. Severity: 5/10
-
-Existing Risk: 4/10 - Adding an outcome variant falls through the catch-all `Partial` branch in the two server mappers and goes unmentioned in the four terminal-status lists, so a monitor and its connection record can disagree about whether a run completed, failed, or was terminated while every existing test of the current four outcomes stays green.
-
-Proposal Risk: 2/10 - One exported mapping and one terminal-status set make a new variant a compile error until it is classified, but the non-terminal statuses (`Provisioning`, `Waiting for answer`, `Cleaning up`) remain a separate client-side vocabulary, so the two halves of the status model still have to be kept in step by hand.
-
-Proposal: Add `src/agent/outcome.ts` exporting `AgentOutcome` (moved from `src/agent/run.ts`), one `terminalStatusFor(outcome): AgentRunView['status']` function, and one `TERMINAL_STATUSES` set derived from it, and re-export the three from `src/protocol.ts` so client code can import them through `@shared/protocol` without reaching into a server module. Replace the inline conditional in `setStatus` and the one in `finish` in `src/agent/run.ts` with calls to that mapping, and replace the inline conditional in `AgentRecordFeed.finish` in `src/agent/record-feed.ts` with the same call. Point the terminal checks in `src/plugins/connections/shared.ts` (`ConnectionStatus` and its `statuses` array), `src/acp-records/validation.ts`, `web/src/plugins/connections/ConnectionTab.tsx`, and `web/src/plugins/agent-monitor/view.tsx` at the shared set, keeping each call site's own text and disabled-button behavior unchanged. There is no `src/agent/run.test.ts` today, so add one covering every outcome mapping and the fact that `setStatus` cannot overwrite a terminal status, and keep the outcome text asserted by `src/agent/record-feed.test.ts`, `src/agent/manager.test.ts`, `src/agent/execute.test.ts`, and `src/plugins/host.test.ts` byte-for-byte. The catch-all branches in the current mappers are the behavior at stake, so verify each of the four outcomes round-trips before deleting them.
-
-
-* Derive the client's buffer-line shape from the server's transcript entry so a renderable field is declared and forwarded in one place.
-
-Existing Debt: `LogEntry` and `BufferLine` in `src/tab/types.ts` restate the same renderable fields — sender and color, message kind, running state, terminal card, and file/tab links — while the translation between them is spread across `formatMessageContent` in `src/buffer.ts`, `flattenBuffer` in `src/tab/formatting.ts`, and the four handlers in `src/tab/formatting-handlers.ts`, so the stored transcript and the view model can drift with nothing tying their fields together. Severity: 4/10
-
-Existing Risk: 4/10 - A field added to a transcript entry compiles, is broadcast, and reaches `TabView.bufferLines` in `src/protocol/tab.ts`, but is silently dropped during flattening, leaving the feed, the search matches in `src/search-matches.ts`, and every tab body unable to show it while the tests of the older fields keep passing.
-
-Proposal Risk: 2/10 - A shared field set and one flattening path make a new renderable field a compile error until it is forwarded, but the two types still differ in purpose — one is the durable transcript, the other a transient render row with a `type` discriminator and spacer lines — so that boundary has to stay explicit rather than being merged into one type.
-
-Proposal: Introduce one shared payload type in `src/tab/types.ts` holding the fields `LogEntry` and `BufferLine` both carry (`from`, `fromColor`, `msgKind`, `acp`, `running`, `terminal`, `openFiles`, `openTab`) and have both declarations compose from it instead of repeating the fields, with `LogEntry` keeping `input`/`output` and `BufferLine` keeping `type`/`text`. Fold `formatMessageContent` from `src/buffer.ts` and the three entry handlers in `src/tab/formatting-handlers.ts` into the single `flattenBuffer` path in `src/tab/formatting.ts`, forwarding the shared payload once and leaving only the genuinely shape-specific work — splitting output into lines, inserting spacers, and collapsing tool steps — in small helpers. Keep every rendered string byte-for-byte, including the `(N tool steps)` label and tab expansion. `src/buffer.test.ts`, `src/tab/formatting-handlers.test.ts`, and `src/search-matches.test.ts` pin the current rows, so keep them green and add a case that builds a `LogEntry` with every shared field populated and asserts each one survives onto the corresponding `BufferLine`; that case is what catches the silent-drop failure above.
-
-
 * Replace the ACP tool loop's flag-based coordination with one explicit state so a capped command is refused the same way at every entry point.
 
 Existing Debt: `runAcpToolLoop` in `src/acp/loop.ts` coordinates one asynchronous flow with five overlapping flags (`done`, `busy`, `launching`, `pendingCap`, `inFlight`) and two queues, and applies the step cap in two different branches — `launchBatch` emits a refusal for each skipped command, while the `onEnd` branch only sets `pendingCap` — so an over-budget command is reported differently depending on when the cap is reached. Severity: 5/10
@@ -41,6 +19,17 @@ Proposal: In `src/acp/loop.ts`, replace the five booleans and counters with one 
 
 
 ## deferred
+
+* Define the agent outcome-to-status mapping once and share it across the run lifecycle, the record feed, and both clients' terminal-status checks. — deferred: complexity 6/10, quantitative rating crossed the threshold once the shared vocabulary had to be published through both the server and client tab-plugin contracts to respect the plugin import boundaries; the four client and plugin call sites cannot import a core module directly.
+
+Existing Debt: The four `AgentOutcome` variants are mapped to terminal status strings by hand twice in `src/agent/run.ts` (`setStatus` and `finish`) and again in `src/agent/record-feed.ts`, while the resulting terminal-status set is restated as string-literal lists in `src/plugins/connections/shared.ts`, `src/acp-records/validation.ts`, `web/src/plugins/connections/ConnectionTab.tsx`, and `web/src/plugins/agent-monitor/view.tsx`, so the vocabulary has no owner and each new consumer copies it. Severity: 5/10
+
+Existing Risk: 4/10 - Adding an outcome variant falls through the catch-all `Partial` branch in the two server mappers and goes unmentioned in the four terminal-status lists, so a monitor and its connection record can disagree about whether a run completed, failed, or was terminated while every existing test of the current four outcomes stays green.
+
+Proposal Risk: 2/10 - One exported mapping and one terminal-status set make a new variant a compile error until it is classified, but the non-terminal statuses (`Provisioning`, `Waiting for answer`, `Cleaning up`) remain a separate client-side vocabulary, so the two halves of the status model still have to be kept in step by hand.
+
+Proposal: Add `src/agent/outcome.ts` exporting `AgentOutcome` (moved from `src/agent/run.ts`), one `terminalStatusFor(outcome): AgentRunView['status']` function, and one `TERMINAL_STATUSES` set derived from it, and re-export the three from `src/protocol.ts` so client code can import them through `@shared/protocol` without reaching into a server module. Replace the inline conditional in `setStatus` and the one in `finish` in `src/agent/run.ts` with calls to that mapping, and replace the inline conditional in `AgentRecordFeed.finish` in `src/agent/record-feed.ts` with the same call. Point the terminal checks in `src/plugins/connections/shared.ts` (`ConnectionStatus` and its `statuses` array), `src/acp-records/validation.ts`, `web/src/plugins/connections/ConnectionTab.tsx`, and `web/src/plugins/agent-monitor/view.tsx` at the shared set, keeping each call site's own text and disabled-button behavior unchanged. There is no `src/agent/run.test.ts` today, so add one covering every outcome mapping and the fact that `setStatus` cannot overwrite a terminal status, and keep the outcome text asserted by `src/agent/record-feed.test.ts`, `src/agent/manager.test.ts`, `src/agent/execute.test.ts`, and `src/plugins/host.test.ts` byte-for-byte. The catch-all branches in the current mappers are the behavior at stake, so verify each of the four outcomes round-trips before deleting them.
+
 
 * Extract the shared SQLite polling cursor and subagent-discovery scaffold the two opencode transcript readers duplicate into one helper. — deferred: complexity 6/10, introduces a new shared polling module with schema-specific hooks that rewrites both readers' state machines.
 

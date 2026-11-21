@@ -7,24 +7,17 @@ import type { QueueEntry } from '../command-queue/entry.js';
 import type { ReceiptRecord } from '../command-queue/receipts.js';
 import type { RemoteTargetView } from '../protocol/tab.js';
 
-export type LogEntry = {
-  input: string;
-  output: string;
-  background?: string;
-  // Set on a settled ACP reply whose prompt reached a record: the record holding the prompt's final
-  // block and the title of its connection tab.
-  backgroundRecord?: { id: string; name: string };
-  running?: boolean;
-  cwd?: string;
+// The fields a stored transcript entry and its rendered buffer line both carry. Declared once so a
+// new renderable field becomes a compile error in `renderablePayload` until it is forwarded.
+export type RenderablePayload = {
   // Set when this entry is a cross-agent message from another agent.
   from?: string;
   fromColor?: string;
-  msgKind?: 'info' | 'request' | 'response';
+  msgKind?: MessageRenderKind;
   // Set when this entry is an auto-ran agent command (e.g. ACP db loop).
   acp?: boolean;
-  // Set when this entry's output is Markdown (an ACP agent reply): the renderer keeps it as one
-  // block and interprets the Markdown rather than splitting it into plain text lines.
-  markdown?: boolean;
+  // A shell command still in flight: the prompt line and its `Running...` indicator line.
+  running?: boolean;
   // Set when this entry hosts an inline terminal card (an interactive program or AI harness
   // running in a PTY). Used by the web renderer to mount an xterm.js pane. `ptyId` keys the live PTY stream.
   terminal?: TerminalEntry;
@@ -32,6 +25,19 @@ export type LogEntry = {
   // (e.g. the screen capture behind each auto-approved permission prompt a folded line stands for).
   openFiles?: string[];
   openTab?: string;
+};
+
+export type LogEntry = RenderablePayload & {
+  input: string;
+  output: string;
+  background?: string;
+  // Set on a settled ACP reply whose prompt reached a record: the record holding the prompt's final
+  // block and the title of its connection tab.
+  backgroundRecord?: { id: string; name: string };
+  cwd?: string;
+  // Set when this entry's output is Markdown (an ACP agent reply): the renderer keeps it as one
+  // block and interprets the Markdown rather than splitting it into plain text lines.
+  markdown?: boolean;
 };
 
 export type TerminalEntry = {
@@ -43,21 +49,10 @@ export type TerminalEntry = {
 
 export type MessageRenderKind = 'info' | 'request' | 'response';
 
-export type BufferLine = {
+export type BufferLine = RenderablePayload & {
   type: 'prompt' | 'output' | 'spacer' | 'message' | 'collapsed' | 'terminal' | 'markdown';
   text: string;
   cwd?: string;
-  from?: string;
-  fromColor?: string;
-  msgKind?: MessageRenderKind;
-  acp?: boolean;
-  // A shell command still in flight: the prompt line and its `Running...` indicator line.
-  running?: boolean;
-  // Populated for `type: 'terminal'` lines.
-  terminal?: TerminalEntry;
-  // Absolute paths of files this line links to, one link each (see `LogEntry.openFiles`).
-  openFiles?: string[];
-  openTab?: string;
 };
 
 // An in-app file view mounted in a tab instead of the agent transcript/command-line body. A tab

@@ -5,6 +5,7 @@ import {
   handleMessageEntry,
   handleInputOutput,
 } from './formatting-handlers.js';
+import { flattenBuffer } from './formatting.js';
 import type { LogEntry, BufferLine } from './types.js';
 
 function makeEntry(overrides: Partial<LogEntry> = {}): LogEntry {
@@ -114,5 +115,34 @@ describe('handleInputOutput', () => {
     const lines: BufferLine[] = [{ type: 'output', text: 'prior' }];
     handleInputOutput(makeEntry({ output: 'next' }), lines);
     expect(lines[1]).toEqual({ type: 'spacer', text: '' });
+  });
+});
+
+describe('flattenBuffer shared payload', () => {
+  it('forwards every shared renderable field onto the buffer line', () => {
+    const terminal = { ptyId: 'p1', program: 'claude', status: 'running' as const };
+    const entry: LogEntry = {
+      input: '',
+      output: 'hello',
+      from: 'agent',
+      fromColor: '#abc',
+      msgKind: 'response',
+      acp: true,
+      running: true,
+      terminal,
+      openFiles: ['/captures/one.txt'],
+      openTab: 'agent',
+    };
+    const lines = flattenBuffer([entry]);
+    expect(lines[0]).toMatchObject({
+      from: 'agent',
+      fromColor: '#abc',
+      msgKind: 'response',
+      acp: true,
+      running: true,
+      terminal,
+      openFiles: ['/captures/one.txt'],
+      openTab: 'agent',
+    });
   });
 });

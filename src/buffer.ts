@@ -1,4 +1,4 @@
-import type { LogEntry, BufferLine } from './tab/types.js';
+import type { LogEntry, BufferLine, RenderablePayload } from './tab/types.js';
 import { expandTabs } from './tab/expand-tabs.js';
 
 function isEmptyEntry(entry: LogEntry): boolean {
@@ -20,6 +20,11 @@ export function tryCollapseToolSteps(log: LogEntry[], index: number): { count: n
   return { count, newIndex: index_ - 1 };
 }
 
+export function renderablePayload(entry: LogEntry): RenderablePayload {
+  const { from, fromColor, msgKind, acp, running, terminal, openFiles, openTab } = entry;
+  return { from, fromColor, msgKind, acp, running, terminal, openFiles, openTab };
+}
+
 export function formatMessageContent(entry: LogEntry, parts: string[]): BufferLine[] {
   const kind = entry.msgKind ?? 'info';
   const lines: BufferLine[] = [];
@@ -28,11 +33,8 @@ export function formatMessageContent(entry: LogEntry, parts: string[]): BufferLi
     lines.push({
       type: 'message',
       text: '',
-      from: entry.from,
-      fromColor: entry.fromColor,
+      ...renderablePayload(entry),
       msgKind: 'response',
-      ...(entry.openFiles && { openFiles: entry.openFiles }),
-      ...(entry.openTab && { openTab: entry.openTab }),
     });
     for (const line of parts) {
       lines.push({ type: 'output', text: expandTabs(line), fromColor: entry.fromColor });
@@ -41,11 +43,8 @@ export function formatMessageContent(entry: LogEntry, parts: string[]): BufferLi
     lines.push({
       type: 'message',
       text: expandTabs(parts[0] ?? ''),
-      from: entry.from,
-      fromColor: entry.fromColor,
+      ...renderablePayload(entry),
       msgKind: kind,
-      ...(entry.openFiles && { openFiles: entry.openFiles }),
-      ...(entry.openTab && { openTab: entry.openTab }),
     });
     for (const extra of parts.slice(1)) {
       lines.push({ type: 'output', text: expandTabs(extra), fromColor: entry.fromColor });
