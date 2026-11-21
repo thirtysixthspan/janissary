@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   REMOTE_PROTOCOL_VERSION, HANDSHAKE_SENTINEL, encodeFrame, decodeFrame, encodeHandshake,
   parseHandshake, heldBackLength,
@@ -1220,6 +1221,12 @@ describe('protocol version', () => {
   it('is 48', () => {
     expect(REMOTE_PROTOCOL_VERSION).toBe(48);
   });
+
+  it('mentions the current version in the source changelog', () => {
+    const source = readFileSync(new URL('protocol.ts', import.meta.url), 'utf8');
+    const history = source.slice(0, source.indexOf(`export const REMOTE_PROTOCOL_VERSION = ${REMOTE_PROTOCOL_VERSION};`));
+    expect(history).toContain(`Version ${REMOTE_PROTOCOL_VERSION}`);
+  });
 });
 
 // The records are keyed by the frame unions, so the compiler already refuses an entry the union does
@@ -1365,21 +1372,8 @@ describe('handshake', () => {
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
   });
 
-  // Versions 1 through 5 each carried one more named token field on `provision`; version 6 replaced
-  // all of them with a `tokens` map. A remote speaking any of them decodes the frame happily and
-  // finds none of the fields it reads, so it would provision a workspace with no credentials at all
-  // — which is what refusing at the handshake exists to prevent, for every one of them.
-  // Version 7 added workspace filesystem sessions and knows none of the ACP frames: it would refuse
-  // each as unknown while the local tab sat waiting on a reply that never comes — accepting prompts
-  // and answering nothing. Version 8 does not know the `git-pull` filesystem operation.
-  // Version 9 does not know `provision`'s `identity`, and is the quietest failure of the set: it
-  // provisions a workspace that looks entirely healthy and attributes every commit made in it to the
-  // ssh destination's own account rather than to the user who opened janissary.
-  // Version 10 answers a `git-pull` with no result. Version 11 ignores `spawn`'s `browser` flag: a
-  // `-b` tab on that host comes up looking healthy with no browser variables set at all, so every
-  // `chromium.connect` inside it fails with nothing to point at. Version 12 does not know the
-  // `git-commit` filesystem operation, so the navigator's commit button would fail there. Version
-  // 29 cannot resolve autonomous tasks on the execution host or acknowledge ACP release.
+  // What each older version gets wrong is told once in the version history beside
+  // `REMOTE_PROTOCOL_VERSION` in `protocol.ts`; this case only pins the handshake's refusal.
   it.each(Array.from({ length: REMOTE_PROTOCOL_VERSION - 1 }, (_unused, index) => index + 1))(
     'rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);

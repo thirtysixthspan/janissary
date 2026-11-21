@@ -186,6 +186,10 @@
 // Version 33 adds the `kilo` name to the `provision` token map. A version-32 remote decodes that map
 // against its own table, refuses an unknown name, and so rejects the whole frame as malformed the
 // moment a Kilo key is forwarded, which fails the provisioning instead of leaving the key out.
+// Version 34 adds the `search-text` filesystem operation, so a text search on a remote tab runs on
+// the far side and returns only the capped matching rows instead of transferring candidate file
+// contents for local matching. A version-33 remote refuses the unknown operation after the
+// handshake has already passed, so the exact-version handshake rejects that pairing first.
 // Version 35 adds `depth` to `provision`, so a remote workspace clone is as shallow as a local one:
 // one commit of each branch for a shell, ten for a harness. A version-34 remote would drop the field
 // and clone the full history while both ends looked healthy.
@@ -244,23 +248,21 @@
 // version-45 remote would refuse it as unknown after the handshake had already passed, so the
 // exact-version handshake refuses that pairing first.
 //
-// Version 47 adds `acp-session-started`, sent as soon as the far side's `newSession` succeeds and
-// before effort configuration, carrying the provider's id. `acp-ready` gains the same id as an
-// optional field. A version-46 remote has no way to report an id before readiness, so an effort
-// failure after a successful handshake would lose it while both ends looked healthy; the
-// exact-version handshake refuses that pairing. The new frame is server-only.
-//
-// Version 47 opens this feature's single unreleased protocol version, not one bump per frame. The
-// run-clone frames extend this same version and comment without another increment: a client
-// `run-clone` asks for a shallow run clone to be created or released under a supplied label, and a
-// server `run-clone-result` answers with its directory, nothing beyond the id, or an error. Both are
-// request/reply frames, not channel notifications, so neither is admitted as a tab-level frame.
-// Workspace-selector fields further down the same feature also belong to 47, and add to this comment
-// rather than moving the constant. The `acp-open` and `agent-resolve` requests each carry an optional
-// `workspace` selector naming one ready run clone owned by the provisioned workspace; both fall back
-// to the main workspace directory when it is absent. They are fields on existing request frames, not
-// new frames, so neither the constant nor the pinned version literal moves. Bumping again would break
-// the exact-version handshake between peers of the same unreleased feature set.
+// Version 47 groups several additions under one bump rather than one per frame. It adds
+// `acp-session-started`, sent as soon as the far side's `newSession` succeeds and before effort
+// configuration, carrying the provider's id; `acp-ready` gains the same id as an optional field. A
+// version-46 remote has no way to report an id before readiness, so an effort failure after a
+// successful handshake would lose it while both ends looked healthy; the exact-version handshake
+// refuses that pairing. The new frame is server-only. The same version adds the run-clone frames: a
+// client `run-clone` asks for a shallow run clone to be created or released under a supplied label,
+// and a server `run-clone-result` answers with its directory, nothing beyond the id, or an error.
+// Both are request/reply frames, not channel notifications, so neither is admitted as a tab-level
+// frame. The `acp-open` and `agent-resolve` requests each carry an optional `workspace` selector
+// naming one ready run clone owned by the provisioned workspace; both fall back to the main
+// workspace directory when absent. Those selectors are fields on existing request frames, not new
+// frames, so they extend this comment without moving the constant or the pinned version literal; a
+// further bump would break the exact-version handshake between peers of the same feature set.
+// Version 48 below takes the next bump, so this group is no longer unreleased.
 //
 // Version 48 adds the read-only `list-directory`, `stat-path`, `path-exists`, `head-lines`, and
 // `tail-lines` operations, so typed file commands on a remote tab run against the remote clone and

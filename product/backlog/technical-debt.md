@@ -7,17 +7,6 @@
 
 ## development
 
-* Keep one canonical remote protocol changelog instead of two that already disagree.
-
-Existing Debt: `src/remote/protocol.ts` carries a version-history comment that skips version 34 and describes version 47 twice, while `src/remote/protocol.test.ts` repeats the same history in a test comment that assigns the `identity` field to version 9 and `git-pull` to version 8, contradicting the module that owns the exact-version handshake. Severity: 4/10
-
-Existing Risk: 4/10 - The exact-version gate is the only thing stopping a peer that silently ignores a new field or frame from looking healthy, and an engineer bumping the version while reading two conflicting narratives can misjudge which mismatch the gate is protecting against and which peers the bump will lock out.
-
-Proposal Risk: 2/10 - One history sits beside the constant and the test keeps only a short pointer, so a bump updates a single place; the residual risk is that the prose still drifts from the constant itself, which the existing pinned-version assertion in `src/remote/protocol.test.ts` does not check.
-
-Proposal: Keep the version history beside `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts` as the single source, repair the two concrete errors there (the missing version-34 entry and the duplicated version-47 block, including the note that 47 is no longer unreleased), and replace the narrative comment above the older-version test in `src/remote/protocol.test.ts` with a short pointer to that history. Add an assertion beside the existing pinned-version test that the history mentions the current version number, so a bump that forgets the prose fails; leave `src/remote/serve-detach.ts` and the relay tests alone because they read the constant, not the comment.
-
-
 ## deferred
 
 * Retire the ambiguous `promptAcp` capability and make the ACP command gate use `promptAcpResult`. — deferred: complexity 6/10, retires a published v3 capability and needs a deprecation-window and backward-compatibility decision across the contract union and table, two manifests, the ACP gate, and six pinned test suites.
