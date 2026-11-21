@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ConnectionBlock, ConnectionWindow } from '@shared/plugins/connections/shared';
+import type { ConnectionWindow } from '@shared/plugins/connections/shared';
 import { renderMarkdown } from '../api';
 import { groupToolEntries, parseToolCalls, prettyJson } from './activity-text';
 import { ToolCallBlock } from './ToolCallBlock';
@@ -49,17 +49,10 @@ export function ConnectionHistory({ window, openLink }: {
                   <div className="connections-activity-label">{entry.kind}</div>{content}
                 </div>;
           })}
-          {responseTexts(block).map((answer, answerIndex) =>
-            <Answer answer={answer} key={answerIndex} />)}
         </article>
       ))}
     </div>
   );
-}
-
-function responseTexts(block: ConnectionBlock): string[] {
-  const replies = block.replies ?? (block.answer === undefined ? [] : [block.answer]);
-  return block.answer !== undefined && replies.at(-1) !== block.answer ? [...replies, block.answer] : replies;
 }
 
 function ActivityText({ text }: { text: string }) {
@@ -89,12 +82,3 @@ function Preamble({ preamble }: { preamble: string }) {
   </details>;
 }
 
-function Answer({ answer }: { answer: string }) {
-  const html = renderMarkdown(answer);
-  return <details className="connections-activity" open>
-    <summary>response</summary>
-    <div className="connections-answer">
-      {html === undefined ? answer : <div dangerouslySetInnerHTML={{ __html: html }} />}
-    </div>
-  </details>;
-}

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* In acp connection tabs, remove the rendered response sections. 
-
 * In acp connection tabs, the preamble section should be closed by default, the tool and thought sections closed by default, the query and message sections open by default. 
 
 * In acp connection tabs, All sections should have the same styling including the default background color.

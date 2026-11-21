@@ -35,11 +35,10 @@ function record(
 }
 
 describe('ConnectionTab', () => {
-  it('shows captured owner, started time, ordered labels and rendered answer', () => {
+  it('shows captured owner, started time and ordered labels', () => {
     setup(record());
     expect(screen.getByText('Captured owner')).toBeInTheDocument();
     expect(screen.getAllByText(new Date(0).toLocaleString(), { exact: false })).toHaveLength(1);
-    expect(screen.getByText('answer', { exact: false })).toBeInTheDocument();
     expect([...document.querySelectorAll('.connections-activity-label')].map((el) => el.textContent))
       .toEqual(['message', 'plan', 'permission']);
     expect(screen.getByText('thought', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
@@ -67,80 +66,28 @@ describe('ConnectionTab', () => {
     expect(order.indexOf('query')).toBeLessThan(order.indexOf('connections-activity'));
   });
 
-  it('renders every recorded reply as its own expanded Markdown response section in order', () => {
+  it('does not render captured replies or the final answer as response sections', () => {
     const value = record();
-    value.window!.blocks[0]!.answer = 'final **answer**';
-    value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up', 'final **answer**'];
-    setup(value);
-    const responses = screen.getAllByText('response', { selector: 'summary' });
-    expect(responses).toHaveLength(3);
-    for (const summary of responses) {
-      expect(summary.closest('details')).toHaveAttribute('open');
-    }
-    const answers = [...document.querySelectorAll('.connections-answer')];
-    expect(answers).toHaveLength(3);
-    expect(answers.map((element) => element.textContent?.trim())).toEqual(['first reply', 'follow-up', 'final answer']);
-    expect(answers[0]?.querySelector('strong')?.textContent).toBe('reply');
-  });
-
-  it('renders a final answer that differs from the captured replies as a further response', () => {
-    const value = record();
-    value.window!.blocks[0]!.replies = ['first **reply**', 'second reply'];
+    value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up'];
     value.window!.blocks[0]!.answer = 'final **answer**';
     setup(value);
-    const answers = [...document.querySelectorAll('.connections-answer')];
-    expect(answers).toHaveLength(3);
-    expect(answers.map((element) => element.textContent?.trim())).toEqual(['first reply', 'second reply', 'final answer']);
-    expect(answers[2]?.querySelector('strong')?.textContent).toBe('answer');
-    const responses = screen.getAllByText('response', { selector: 'summary' });
-    expect(responses).toHaveLength(3);
-    for (const summary of responses) {
-      expect(summary.closest('details')).toHaveAttribute('open');
-    }
+    expect(screen.queryAllByText('response', { selector: 'summary' })).toHaveLength(0);
+    expect(document.querySelectorAll('.connections-answer')).toHaveLength(0);
+    expect(screen.queryByText('first reply')).toBeNull();
+    expect(screen.queryByText('follow-up')).toBeNull();
+    expect(screen.queryByText('final answer')).toBeNull();
   });
 
-  it('does not duplicate the final answer when it is already the last reply', () => {
+  it('keeps a query the reader collapsed closed through a streamed update', () => {
     const value = record();
-    value.window!.blocks[0]!.replies = ['earlier reply', 'final **answer**'];
-    value.window!.blocks[0]!.answer = 'final **answer**';
-    setup(value);
-    const answers = [...document.querySelectorAll('.connections-answer')];
-    expect(answers).toHaveLength(2);
-    expect(answers.map((element) => element.textContent?.trim())).toEqual(['earlier reply', 'final answer']);
-  });
-
-  it('renders every captured reply when the block has no final answer', () => {
-    const value = record();
-    delete value.window!.blocks[0]!.answer;
-    value.window!.blocks[0]!.replies = ['one', 'two', 'three'];
-    setup(value);
-    const answers = [...document.querySelectorAll('.connections-answer')];
-    expect(answers.map((element) => element.textContent?.trim())).toEqual(['one', 'two', 'three']);
-  });
-
-  it('keeps a query or response the reader collapsed closed through a streamed update', () => {
-    const value = record();
-    value.window!.blocks[0]!.answer = 'first answer';
     const { view, capabilities } = setup(value);
     const query = screen.getByText('query', { selector: 'summary' }).closest('details')!;
-    const response = screen.getByText('response', { selector: 'summary' }).closest('details')!;
     query.open = false;
-    response.open = false;
     view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
-      blocks: [{ ...value.window!.blocks[0]!, answer: 'updated answer' }] } }} capabilities={capabilities} />);
+      blocks: [{ ...value.window!.blocks[0]!, prompt: 'updated prompt' }] } }} capabilities={capabilities} />);
     expect(screen.getByText('query', { selector: 'summary' }).closest('details')).toBe(query);
     expect(query).not.toHaveAttribute('open');
-    expect(screen.getByText('response', { selector: 'summary' }).closest('details')).toBe(response);
-    expect(response).not.toHaveAttribute('open');
-    expect(screen.getByText('updated answer')).toBeInTheDocument();
-  });
-
-  it('falls back to the single answer for a block without replies', () => {
-    setup(record());
-    const answers = [...document.querySelectorAll('.connections-answer')];
-    expect(answers).toHaveLength(1);
-    expect(answers[0]?.textContent?.trim()).toBe('answer');
-    expect(screen.getByText('response', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
+    expect(document.querySelector('.connections-prompt')?.textContent).toBe('updated prompt');
   });
 
   it('pretty-prints an entry whose text is JSON and leaves plain text as it is', () => {
@@ -323,12 +270,12 @@ describe('ConnectionTab', () => {
     expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
   });
 
-  it('routes answer links through openLink without navigating and leaves activity text alone', () => {
+  it('routes preamble links through openLink without navigating and leaves activity text alone', () => {
     const value = record();
-    value.window!.blocks[0]!.answer = 'See [the docs](https://example.com/docs).';
+    value.window!.blocks[0]!.preamble = 'See [the docs](https://example.com/docs).';
     const { openLink } = setup(value);
     const linkClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-    screen.getByRole('link', { name: 'the docs' }).dispatchEvent(linkClick);
+    document.querySelector('.connections-preamble a')!.dispatchEvent(linkClick);
     expect(linkClick.defaultPrevented).toBe(true);
     expect(openLink).toHaveBeenCalledOnce();
     expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
