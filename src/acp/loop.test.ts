@@ -22,7 +22,10 @@ function lineSpan(extract: (text: string) => string | null): (text: string) => C
     }
     for (let index = lines.length - 1; index >= 0; index--) {
       if (cleanCommandLine(lines[index]) === command) {
-        return { kind: 'one', command, span: { start: starts[index], end: starts[index] + lines[index].length } };
+        return {
+          kind: 'batch',
+          commands: [{ command, span: { start: starts[index], end: starts[index] + lines[index].length } }],
+        };
       }
     }
     return { kind: 'absent' };
@@ -104,10 +107,11 @@ describe('runAcpToolLoop', () => {
     ]);
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
 
-    // The extracted command line is stripped from the agent reply shown to the user.
-    // First endTurn: command removed, only prose remains.
+    // The agent's whole reply is shown, including the command line it issued.
     const firstEnd = events.find((event) => event[0] === 'endTurn');
-    expect(firstEnd).toEqual(['endTurn', 'Looking it up.']);
+    expect(firstEnd).toEqual([
+      'endTurn', 'Looking it up.\ndb sqlite query movies SELECT name FROM actors',
+    ]);
     // ranCommand appears after the first endTurn.
     const firstEndIndex = events.indexOf(firstEnd!);
     expect(events[firstEndIndex + 1]).toEqual([
@@ -138,7 +142,7 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('strips the extracted command line from the agent reply before endTurn', () => {
+  it('keeps the extracted command line in the agent reply at endTurn', () => {
     const { session } = makeSession([
       'First line.\nSecond line.\ndb sqlite query movies SELECT 1',
       'Final answer.',
@@ -147,10 +151,10 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
-    // The command line is removed; trailing blank lines after removal are trimmed.
+    // The reply is emitted unchanged, with the command line the agent wrote.
     const endTurns = events.filter((event) => event[0] === 'endTurn');
-    expect(endTurns[0]).toEqual(['endTurn', 'First line.\nSecond line.']);
-    // Second turn has no command, full text preserved.
+    expect(endTurns[0]).toEqual(['endTurn', 'First line.\nSecond line.\ndb sqlite query movies SELECT 1']);
+    // Second turn has no command, so its text is emitted as written too.
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);
   });
 
@@ -167,7 +171,7 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('strips command-only replies to empty endTurn', () => {
+  it('keeps a command-only reply in endTurn', () => {
     const { session } = makeSession([
       'db sqlite query movies SELECT 1',
       'Done.',
@@ -177,8 +181,8 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
     const endTurns = events.filter((event) => event[0] === 'endTurn');
-    // Only the command line exists, stripping leaves empty string.
-    expect(endTurns[0]).toEqual(['endTurn', '']);
+    // A reply that is only a command is still shown in full.
+    expect(endTurns[0]).toEqual(['endTurn', 'db sqlite query movies SELECT 1']);
     expect(endTurns[1]).toEqual(['endTurn', 'Done.']);
   });
 
@@ -242,7 +246,7 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('strips code fences around the extracted command from endTurn', () => {
+  it('keeps the code fences around the extracted command in endTurn', () => {
     const { session } = makeSession([
       'Looking up.\n```\ndb sqlite query movies SELECT 1\n```\nDone.',
       'Final answer.',
@@ -252,8 +256,10 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
     const endTurns = events.filter((event) => event[0] === 'endTurn');
-    // Fence lines removed along with the command.
-    expect(endTurns[0]).toEqual(['endTurn', 'Looking up.\nDone.']);
+    // The fenced block is preserved, fences and command together.
+    expect(endTurns[0]).toEqual([
+      'endTurn', 'Looking up.\n```\ndb sqlite query movies SELECT 1\n```\nDone.',
+    ]);
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);
   });
 
@@ -278,7 +284,7 @@ describe('runAcpToolLoop', () => {
     expect(events).toContainEqual(['endTurn', 'The page is about widgets.']);
   });
 
-  it('removes the command line that ran, not an earlier copy of it, from endTurn', () => {
+  it('keeps both the command line that ran and an earlier copy of it in endTurn', () => {
     const { session } = makeSession([
       'db sqlite list\nThat was the old list; refreshing.\ndb sqlite list',
       'Final answer.',
@@ -288,7 +294,9 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
     const firstEndTurn = events.find((event) => event[0] === 'endTurn');
-    expect(firstEndTurn).toEqual(['endTurn', 'db sqlite list\nThat was the old list; refreshing.']);
+    expect(firstEndTurn).toEqual([
+      'endTurn', 'db sqlite list\nThat was the old list; refreshing.\ndb sqlite list',
+    ]);
   });
 
   it('surfaces session errors without running a command', () => {
@@ -302,43 +310,46 @@ describe('runAcpToolLoop', () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
-  it('emits a terminal event after a throwing command and starts no further turn', () => {
-    const { session, sent } = makeSession(['db sqlite query movies SELECT 1', 'Done.']);
+  it('delivers a throwing command as an ordinary result and keeps going', () => {
+    const command = 'db sqlite query movies SELECT 1';
+    const { session, sent } = makeSession([command, 'Done.']);
     const { h, events } = makeHandlers();
     const runCommand = vi.fn(() => { throw new Error('boom'); });
 
     runAcpToolLoop(session, 'list actors', { runCommand, extractCommand: database }, h);
 
-    expect(events).toContainEqual(['error', 'boom']);
-    expect(events.at(-1)).toEqual(['finished', 'failed', 8]);
-    expect(events.findIndex((event) => event[0] === 'error'))
-      .toBeLessThan(events.findIndex((event) => event[0] === 'finished'));
-    expect(events.filter((event) => event[0] === 'startTurn')).toEqual([['startTurn', true]]);
-    expect(sent).toHaveLength(1);
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith(command);
+    expect(sent[1]).toContain(`Output of \`${command}\`:\nACP error: boom`);
+    expect(events).toContainEqual(['ranCommand', command, 'ACP error: boom']);
+    expect(events.some((event) => event[0] === 'error')).toBe(false);
+    expect(events.some((event) => event[0] === 'finished' && event[1] === 'failed')).toBe(false);
+    expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('emits a terminal event after an async command rejection', async () => {
-    const { session, sent } = makeSession(['db sqlite query movies SELECT 1', 'Done.']);
+  it('delivers an async command rejection as an ordinary result and keeps going', async () => {
+    const command = 'db sqlite query movies SELECT 1';
+    const { session, sent } = makeSession([command, 'Done.']);
     const { h, events } = makeHandlers();
     const runCommand = vi.fn(() => Promise.reject(new Error('late boom')));
 
     runAcpToolLoop(session, 'list actors', { runCommand, extractCommand: database }, h);
 
-    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', 8]); });
-    expect(events).toContainEqual(['error', 'late boom']);
-    expect(sent).toHaveLength(1);
+    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'answered', 8]); });
+    expect(sent[1]).toContain(`Output of \`${command}\`:\nACP error: late boom`);
+    expect(events).toContainEqual(['ranCommand', command, 'ACP error: late boom']);
+    expect(events.some((event) => event[0] === 'error')).toBe(false);
+    expect(events.some((event) => event[0] === 'finished' && event[1] === 'failed')).toBe(false);
   });
 
-  it('removes only the final block when a command is echoed twice, leaving one copy displayed', () => {
+  it('keeps every matched block when a command is echoed twice', () => {
     const text = '```janissary\nnotify hello\n```\n\n```janissary\nnotify hello\n```';
     const { session } = makeSession([text, 'Final answer.']);
     const { h, events } = makeHandlers();
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
 
-    expect(events.find((event) => event[0] === 'endTurn'))
-      .toEqual(['endTurn', '```janissary\nnotify hello\n```']);
-    expect(events.filter((event) => event[0] === 'ranCommand')).toHaveLength(1);
+    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', text]);
+    expect(events.filter((event) => event[0] === 'ranCommand')).toHaveLength(2);
   });
 
   it('keeps prose after the block in the displayed reply', () => {
@@ -350,7 +361,9 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
 
-    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', 'Looking up.\nDone.']);
+    expect(events.find((event) => event[0] === 'endTurn')).toEqual([
+      'endTurn', 'Looking up.\n```janissary\nnotify hello\n```\nDone.',
+    ]);
   });
 
   it('feeds back the shared correction sentence for a block with zero commands', () => {
@@ -425,5 +438,186 @@ describe('runAcpToolLoop', () => {
     expect(runCommand).not.toHaveBeenCalled();
     expect(events.filter((event) => event[0] === 'endTurn')).toEqual([['endTurn', 'Just a final answer.']]);
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
+  });
+
+  function pendingCommands() {
+    const resolvers: { command: string; resolve: (value: string) => void }[] = [];
+    const runCommand = vi.fn((command: string) => {
+      const pending = Promise.withResolvers<string>();
+      resolvers.push({ command, resolve: pending.resolve });
+      return pending.promise;
+    });
+    return { resolvers, runCommand };
+  }
+
+  it('launches every command in a batch in parallel before any result is fed back', async () => {
+    const text = '```janissary\nnotify a\n```\n\n```janissary\nnotify b\n```';
+    const { session, sent } = makeSession([text]);
+    const { h, events } = makeHandlers();
+    const { resolvers, runCommand } = pendingCommands();
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block }, h);
+
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(resolvers.map((entry) => entry.command)).toEqual(['notify a', 'notify b']);
+    expect(sent).toHaveLength(1);
+    resolvers[0].resolve('A');
+    resolvers[1].resolve('B');
+    await vi.waitFor(() => {
+      expect(events.filter((event) => event[0] === 'ranCommand')).toHaveLength(2);
+    });
+    expect(events).toContainEqual(['ranCommand', 'notify a', 'A']);
+    expect(events).toContainEqual(['ranCommand', 'notify b', 'B']);
+  });
+
+  it('sends one follow-up per finished command in completion order with the unchanged block', async () => {
+    const text = '```janissary\nnotify a\n```\n\n```janissary\nnotify b\n```';
+    const { session, sent } = makeSession([text]);
+    const { h } = makeHandlers();
+    const { resolvers, runCommand } = pendingCommands();
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block }, h);
+
+    resolvers[1].resolve('B first');
+    await vi.waitFor(() => { expect(sent).toHaveLength(2); });
+    expect(sent[1]).toContain('Output of `notify b`:\nB first\n\n');
+    resolvers[0].resolve('A second');
+    await vi.waitFor(() => { expect(sent).toHaveLength(3); });
+    expect(sent[2]).toContain('Output of `notify a`:\nA second\n\n');
+    expect(sent[2]).toContain(
+      'If the task is complete, reply with the final answer and no command. ' +
+      'Otherwise issue the next command. ' +
+      'Be concise: do not explain what you are doing. Only output commands and the final answer.',
+    );
+  });
+
+  it('keeps all matched blocks and the prose between and after them', () => {
+    const text = 'Intro.\n```janissary\nnotify a\n```\nBetween.\n```janissary\nnotify b\n```\nAfter.';
+    const { session } = makeSession([text, 'Done.']);
+    const { h, events } = makeHandlers();
+
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
+
+    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', text]);
+  });
+
+  it('finishes as answered when the agent replies with no command after a batch', () => {
+    const { session } = makeSession(['```janissary\nnotify a\n```', 'All done.']);
+    const { h, events } = makeHandlers();
+
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
+
+    expect(events).toContainEqual(['ranCommand', 'notify a', 'r']);
+    expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
+  });
+
+  it('queues a new batch behind results already waiting so follow-ups stay in completion order', () => {
+    const batchA = '```janissary\nnotify a\n```\n\n```janissary\nnotify b\n```';
+    const batchC = '```janissary\nnotify c\n```';
+    const { session, sent } = makeSession([batchA, batchC]);
+    const { h } = makeHandlers();
+
+    runAcpToolLoop(session, 'q', { runCommand: (command) => `out:${command}`, extractCommand: block }, h);
+
+    expect(sent[1]).toContain('Output of `notify a`:\nout:notify a');
+    expect(sent[2]).toContain('Output of `notify b`:\nout:notify b');
+    expect(sent[3]).toContain('Output of `notify c`:\nout:notify c');
+  });
+
+  it('delivers an executed result before the over-budget refusal when the command is async', async () => {
+    const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```';
+    const { session, sent } = makeSession([batch, 'All done.']);
+    const { h, events } = makeHandlers();
+    const { promise: output, resolve: resolveOutput } = Promise.withResolvers<string>();
+    const runCommand = vi.fn(() => output);
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify one');
+    expect(sent).toHaveLength(1);
+
+    resolveOutput('A');
+    await vi.waitFor(() => { expect(sent).toHaveLength(3); });
+    expect(sent[1]).toContain('Output of `notify one`:\nA');
+    expect(sent[1]).not.toContain('ACP: step limit reached; command not run.');
+    expect(sent[2]).toContain('Output of `notify two`:\nACP: step limit reached; command not run.');
+    expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
+  });
+
+  it('runs only the commands that fit and refuses the rest of an over-budget batch', () => {
+    const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```\n\n```janissary\nnotify three\n```';
+    const { session, sent } = makeSession([batch]);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => 'r');
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify one');
+    const refusals = sent.filter((prompt) => prompt.includes('ACP: step limit reached; command not run.'));
+    expect(refusals).toHaveLength(2);
+    expect(refusals[0]).toContain('Output of `notify two`:\nACP: step limit reached; command not run.');
+    expect(refusals[1]).toContain('Output of `notify three`:\nACP: step limit reached; command not run.');
+    expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
+  });
+
+  it('delivers every over-budget refusal before finishing capped when the agent answers early', () => {
+    const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```\n\n```janissary\nnotify three\n```';
+    const { session, sent } = makeSession([batch, 'All done.']);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => 'r');
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify one');
+    const refusals = sent.filter((prompt) => prompt.includes('ACP: step limit reached; command not run.'));
+    expect(refusals).toHaveLength(2);
+    expect(refusals[0]).toContain('Output of `notify two`:\nACP: step limit reached; command not run.');
+    expect(refusals[1]).toContain('Output of `notify three`:\nACP: step limit reached; command not run.');
+    expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
+  });
+
+  it('sends the correction and runs nothing for a malformed reply without spending a step', () => {
+    const { session, sent } = makeSession([
+      '```janissary\njust prose\n```',
+      '```janissary\nnotify hello\n```',
+      'Final answer.',
+    ]);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => 'r');
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(sent[1]).toBe(CORRECTION_PROMPT);
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify hello');
+    expect(events.at(-1)).toEqual(['finished', 'answered', 1]);
+  });
+
+  it('sends no further prompt when the signal aborts while a batch is in flight', async () => {
+    const text = '```janissary\nnotify a\n```\n\n```janissary\nnotify b\n```';
+    const controller = new AbortController();
+    const { session, sent } = makeSession([text]);
+    const { h, events } = makeHandlers();
+    const { resolvers, runCommand } = pendingCommands();
+
+    runAcpToolLoop(session, 'q', { signal: controller.signal, runCommand, extractCommand: block }, h);
+
+    expect(sent).toHaveLength(1);
+    controller.abort();
+    resolvers[0].resolve('A');
+    resolvers[1].resolve('B');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sent).toHaveLength(1);
+    expect(events.filter((event) => event[0] === 'ranCommand')).toHaveLength(0);
+    expect(events.some((event) => event[0] === 'finished')).toBe(false);
+  });
+
+  it('uses the new sentence for a zero-command correction', () => {
+    expect(CORRECTION_PROMPT)
+      .toBe('Your reply must contain one or more commands, each inside its own ```janissary fenced block. Try again.');
+    const { session, sent } = makeSession(['```janissary\njust prose\n```', 'Done.']);
+
+    runAcpToolLoop(session, 'q', { runCommand: vi.fn(), extractCommand: block }, makeHandlers().h);
+
+    expect(sent[1]).toBe(CORRECTION_PROMPT);
   });
 });

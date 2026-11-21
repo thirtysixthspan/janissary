@@ -17,8 +17,9 @@ export function ConnectionTab({ record, capabilities }: {
   const latestBlock = window?.blocks.at(-1);
   const latestActivityText = latestBlock?.entries.at(-1)?.text;
   const contentKey = useMemo(() => [window?.offset, window?.blocks.length, latestBlock?.answer,
-    latestActivityText, latestBlock?.entries.length, latestBlock?.prompt], [window?.offset, window?.blocks.length,
-    latestActivityText, latestBlock?.answer, latestBlock?.entries.length, latestBlock?.prompt]);
+    latestBlock?.replies?.length, latestActivityText, latestBlock?.entries.length, latestBlock?.prompt],
+  [window?.offset, window?.blocks.length, latestBlock?.answer, latestBlock?.replies?.length,
+    latestActivityText, latestBlock?.entries.length, latestBlock?.prompt]);
   const scroll = useConnectionHistoryScroll(historyRef, capabilities.active, window?.offset,
     window?.hasOlder ?? false, () => controller.loadOlder(record.id), contentKey);
 
@@ -32,13 +33,14 @@ export function ConnectionTab({ record, capabilities }: {
         record={record}
         pendingTerminate={controller.pendingTerminate}
         onFocus={() => { controller.focus(record.id); }}
+        onOpenRecordJson={() => { controller.openRecordJson(record.id); }}
         onCancel={() => { controller.cancel(record.id); }}
         onCloseSession={() => { controller.closeSession(record.id); }}
         onTerminate={() => { controller.terminate(record.id); }}
       />
       {controller.error && <div className="connections-record-error" role="alert">{controller.error}</div>}
       <div className="connections-history" ref={historyRef} onScroll={(event) => scroll.onScroll(event.currentTarget)}>
-        <ConnectionHistory window={window} openLink={(href) => capabilities.openLink?.(href)} />
+        <ConnectionHistory window={window} />
       </div>
     </section>
   );

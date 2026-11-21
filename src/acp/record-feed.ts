@@ -27,7 +27,7 @@ export function beginCoreRecord(records: AcpSessionRecords, runtime: TabRuntime,
 export function promptCoreRecord(records: AcpSessionRecords, runtime: TabRuntime, pending: AcpPendingPrompt): void {
   const recordId = acpRoleRuntime(runtime, pending.role).recordId;
   if (!recordId || pending.recordId) return;
-  if (records.prompt(recordId, pending.recordPrompt ?? pending.prompt, pending.prompt)) {
+  if (records.prompt(recordId, pending.prompt, pending.prompt, pending.preamble)) {
     pending.recordId = recordId;
     const recordName = acpRoleRuntime(runtime, pending.role).recordName;
     if (recordName) pending.recordName = recordName;
@@ -36,11 +36,23 @@ export function promptCoreRecord(records: AcpSessionRecords, runtime: TabRuntime
 
 export function coreActivity(
   records: AcpSessionRecords, runtime: TabRuntime, kind: AcpActivityKind, text: string,
-  role: AcpRole = DEFAULT_ACP_ROLE,
+  role: AcpRole = DEFAULT_ACP_ROLE, toolPhase?: 'command' | 'reply', toolCommand?: string,
 ): void {
   const state = acpRoleRuntime(runtime, role);
   const id = state.prompt?.recordId;
-  if (id && id === state.recordId) records.activity(id, kind, text);
+  if (!id || id !== state.recordId) return;
+  if (toolPhase === undefined) records.activity(id, kind, text);
+  else if (toolCommand === undefined) records.activity(id, kind, text, toolPhase);
+  else records.activity(id, kind, text, toolPhase, toolCommand);
+}
+
+export function replyCoreRecord(
+  records: AcpSessionRecords, runtime: TabRuntime, text: string, role: AcpRole = DEFAULT_ACP_ROLE,
+): void {
+  const state = acpRoleRuntime(runtime, role);
+  const id = state.prompt?.recordId;
+  if (!id || id !== state.recordId) return;
+  records.reply(id, text);
 }
 
 export function answerCoreRecord(records: AcpSessionRecords, pending: AcpPendingPrompt, result: AcpPromptResult): void {

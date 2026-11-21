@@ -4,6 +4,7 @@ import type { ConnectionsTopicAction } from './api-topics-connections.js';
 import { ACP_RECORD_WINDOW_SIZE } from '../acp-records/model.js';
 import { listLines } from '../connection/list.js';
 import { composeConnectionsTopicData } from './connections-topic-rows.js';
+import { openRecordJson } from '../controller/connection-records.js';
 
 function consume(pending: Promise<unknown>): void {
   void pending.catch(() => {});
@@ -88,6 +89,14 @@ function focusRecordOwner(managers: Managers, action: FocusAction, requested: Ma
   return undefined;
 }
 
+type RecordJsonAction = Extract<ConnectionsTopicAction, { action: 'recordJson' }>;
+
+function openRecordJsonFile(managers: Managers, action: RecordJsonAction): string | undefined {
+  if (managers.acpRecords.rows().every((row) => row.id !== action.id)) return 'The record no longer exists.';
+  if (!openRecordJson(managers, action.id)) return 'The record file could not be opened.';
+  return undefined;
+}
+
 type TerminateAction = Extract<ConnectionsTopicAction, { action: 'terminate' }>;
 
 function actOnAgentRecord(managers: Managers, action: TerminateAction, requested: Map<string, number>): string | undefined {
@@ -126,6 +135,9 @@ export function connectionsTopicAction(
   }
   if (action.action === 'focus') {
     return focusRecordOwner(managers, action, requested);
+  }
+  if (action.action === 'recordJson') {
+    return openRecordJsonFile(managers, action);
   }
   return actOnAgentRecord(managers, action, requested);
 }

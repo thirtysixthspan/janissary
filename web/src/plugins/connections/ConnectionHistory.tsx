@@ -1,30 +1,24 @@
 import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
-import { renderMarkdown } from '../api';
 import { groupToolEntries, parseToolCalls, prettyJson } from './activity-text';
 import { ToolCallBlock } from './ToolCallBlock';
 
-export function ConnectionHistory({ window, openLink }: {
-  window: ConnectionWindow | undefined;
-  openLink?: (href: string) => void;
-}) {
+export function ConnectionHistory({ window }: { window: ConnectionWindow | undefined }) {
   if (!window) return <div className="connections-history-loading">Loading connection history…</div>;
-  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
-    if (!anchor || !event.currentTarget.contains(anchor)) return;
-    event.preventDefault();
-    openLink?.(anchor.getAttribute('href') ?? '');
-  };
   return (
-    <div className="connections-history-content" onClick={handleClick}>
+    <div className="connections-history-content">
       {window.blocks.map((block, index) => (
         <article className="connections-block" key={window.offset + index}>
-          <div className="connections-prompt">{block.prompt}</div>
+          {block.preamble !== undefined && <Preamble preamble={block.preamble} />}
+          <details className="connections-activity" open>
+            <summary>query</summary>
+            <div className="connections-prompt">{block.prompt}</div>
+          </details>
           {groupToolEntries(block.entries).map((row) => {
             if (row.kind === 'tool') {
               const parts = row.reply === undefined ? [row.command] : [row.command, row.reply];
               return (
-                <details className="connections-activity" key={`${row.command.timestamp}:${row.index}`} open>
+                <details className="connections-activity" key={`${row.command.timestamp}:${row.index}`}>
                   <summary>tool</summary>
                   {parts.map((part, partIndex) => (
                     <div className="connections-tool-part" key={partIndex}>
@@ -45,7 +39,6 @@ export function ConnectionHistory({ window, openLink }: {
                   <div className="connections-activity-label">{entry.kind}</div>{content}
                 </div>;
           })}
-          {block.answer !== undefined && <Answer answer={block.answer} />}
         </article>
       ))}
     </div>
@@ -69,9 +62,10 @@ function ActivityText({ text }: { text: string }) {
     : <pre className="connections-activity-text connections-activity-json">{json}</pre>;
 }
 
-function Answer({ answer }: { answer: string }) {
-  const html = renderMarkdown(answer);
-  return <div className="connections-answer">
-    {html === undefined ? answer : <div dangerouslySetInnerHTML={{ __html: html }} />}
-  </div>;
+function Preamble({ preamble }: { preamble: string }) {
+  return <details className="connections-activity">
+    <summary>preamble</summary>
+    <div className="connections-preamble">{preamble}</div>
+  </details>;
 }
+

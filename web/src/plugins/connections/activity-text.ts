@@ -21,19 +21,34 @@ export type ActivityRow =
 
 export function groupToolEntries(entries: readonly ConnectionActivity[]): ActivityRow[] {
   const rows: ActivityRow[] = [];
+  const openCommands: { row: Extract<ActivityRow, { kind: 'tool' }>; command: string }[] = [];
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index];
     if (entry.kind !== 'tool') {
       rows.push({ kind: 'activity', entry, index });
       continue;
     }
-    const next = entries[index + 1];
-    if (next?.kind === 'tool') {
-      rows.push({ kind: 'tool', command: entry, reply: next, index });
-      index += 1;
-    } else {
-      rows.push({ kind: 'tool', command: entry, index });
+    if (entry.toolPhase === undefined) {
+      const next = entries[index + 1];
+      if (next?.kind === 'tool' && next.toolPhase === undefined) {
+        rows.push({ kind: 'tool', command: entry, reply: next, index });
+        index += 1;
+      } else {
+        rows.push({ kind: 'tool', command: entry, index });
+      }
+      continue;
     }
+    if (entry.toolPhase === 'command') {
+      const row: Extract<ActivityRow, { kind: 'tool' }> = { kind: 'tool', command: entry, index };
+      rows.push(row);
+      openCommands.push({ row, command: entry.toolCommand ?? entry.text });
+      continue;
+    }
+    const match = openCommands.find((candidate) =>
+      candidate.row.reply === undefined && candidate.command === entry.toolCommand)
+      ?? openCommands.find((candidate) => candidate.row.reply === undefined);
+    if (match) match.row.reply = entry;
+    else rows.push({ kind: 'tool', command: entry, index });
   }
   return rows;
 }

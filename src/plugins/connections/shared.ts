@@ -4,12 +4,20 @@ export type AcpRole = 'ask' | 'tell';
 
 export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
 export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
-export type ConnectionActivity = { kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission'; text: string; timestamp: number };
+export type ConnectionActivity = {
+  kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission';
+  text: string;
+  timestamp: number;
+  toolPhase?: 'command' | 'reply';
+  toolCommand?: string;
+};
 export type ConnectionBlock = {
   prompt: string;
+  preamble?: string;
   startedAt: number;
   entries: ConnectionActivity[];
   answer?: string;
+  replies?: string[];
   endedAt?: number;
 };
 export type ConnectionSource =
@@ -60,7 +68,7 @@ export type ConnectionsIntent =
   | { intent: 'open' | 'close'; payload: { kind: ConnectionKind; id: string; ownerLabel: string } }
   | { intent: 'open-record'; payload: { id: string } }
   | { intent: 'refresh'; payload: Record<string, never> }
-  | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older'; payload: { id: string } };
+  | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older' | 'open-record-json'; payload: { id: string } };
 
 const kinds = ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const;
 const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const;
@@ -89,15 +97,19 @@ function optionalNumber(row: Record<string, unknown>, key: string): boolean {
 }
 
 function isActivity(value: unknown): value is ConnectionActivity {
-  return object(value) && ['message', 'thought', 'tool', 'plan', 'permission'].includes(String(value.kind))
-    && typeof value.text === 'string' && typeof value.timestamp === 'number' && Number.isFinite(value.timestamp);
+  if (!object(value) || !['message', 'thought', 'tool', 'plan', 'permission'].includes(String(value.kind))
+    || typeof value.text !== 'string' || typeof value.timestamp !== 'number' || !Number.isFinite(value.timestamp)) return false;
+  if (hasOwn(value, 'toolPhase') && value.toolPhase !== 'command' && value.toolPhase !== 'reply') return false;
+  return !hasOwn(value, 'toolCommand') || typeof value.toolCommand === 'string';
 }
 
 function isBlock(value: unknown): value is ConnectionBlock {
   return object(value) && typeof value.prompt === 'string'
     && typeof value.startedAt === 'number' && Number.isFinite(value.startedAt)
     && Array.isArray(value.entries) && value.entries.every(isActivity)
-    && optionalString(value, 'answer') && optionalNumber(value, 'endedAt');
+    && optionalString(value, 'preamble') && optionalString(value, 'answer') && optionalNumber(value, 'endedAt')
+    && (!hasOwn(value, 'replies') || (Array.isArray(value.replies)
+      && value.replies.every((reply: unknown) => typeof reply === 'string')));
 }
 
 function isSource(value: unknown): value is ConnectionSource {

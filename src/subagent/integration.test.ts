@@ -199,7 +199,8 @@ describe('subagent integration — local command to human reply', () => {
       const snapshot = mocks.runToolLoop.mock.calls[0]![2] as Extract<AcpRunSnapshot, { kind: 'core' }>;
       const primer = corePrimer(snapshot, createAcpToolTable(snapshot.grants));
       const record = controller.managers.acpRecords.window(receipt!.recordId)!;
-      expect(record.blocks[0]!.prompt).toBe(`${primer}\n\n${loopPrompt(0)}`);
+      expect(record.blocks[0]!.prompt).toBe(loopPrompt(0));
+      expect(record.blocks[0]!.preamble).toBe(primer);
       expect(mocks.resolve).toHaveBeenCalledWith('task.md', [], expect.objectContaining({ workspaceDir: expect.stringContaining('subagent-') }), []);
 
       handshake(0, 'provider-A');
@@ -279,7 +280,9 @@ describe('subagent integration — local command to human reply', () => {
       for (let step = 0; step < 8; step += 1) answer(0, block('file read x.md'));
       answer(0, `${block('file read x.md')}\neight commands done`);
       await drain();
-      expect(humanReplies().at(-1)!.output).toBe('Subagent research partial.\n\neight commands done');
+      expect(humanReplies().at(-1)!.output).toBe(
+        `Subagent research partial.\n\n${block('file read x.md')}\neight commands done`,
+      );
     });
   });
 

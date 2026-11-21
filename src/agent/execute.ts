@@ -60,7 +60,7 @@ export async function executeAgentRun(
 ): Promise<AgentResult> {
   if (run.outcome || run.abortController.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
   const prompt = taskPrompt(agentPrimer(run.snapshot), parameters);
-  run.record?.prompt(`${MARKDOWN_INSTRUCTION}\n\n${prompt}`);
+  run.record?.prompt(prompt, MARKDOWN_INSTRUCTION);
   const selected = selectedModel(model, managers.models.modelsFor('opencode'));
   const launch = acpLaunchFor({ harness: 'opencode', model: selected, variant: effort ?? 'medium' });
   const env = {
@@ -160,9 +160,11 @@ export async function executeAgentRun(
     }, guardAcpHandlers({
       startTurn: () => {},
       chunk: () => {},
-      endTurn: (answer) => { finalAnswer = answer; },
-      startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace)); },
-      ranCommand: (_command, result, workspace) => { run.record?.activity('tool', tagged(result, workspace)); },
+      endTurn: (answer) => { finalAnswer = answer; run.record?.reply(answer); },
+      startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace), 'command'); },
+      ranCommand: (command, result, workspace) => {
+        run.record?.activity('tool', tagged(result, workspace), 'reply', tagged(command, workspace));
+      },
       finished: () => {
         if (finalAnswer.trim()) finish(finalAnswer);
         else fail(new Error('Agent: task returned an empty response.'));

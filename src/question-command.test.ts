@@ -53,6 +53,9 @@ describe('QUESTION_PRIMER', () => {
     expect(QUESTION_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
     expect(QUESTION_PRIMER).toContain('NO trailing command.');
     expect(QUESTION_PRIMER).not.toContain('own final line');
+    expect(QUESTION_PRIMER.split('\n').filter((line) => line === '```janissary')).toHaveLength(2);
+    expect(QUESTION_PRIMER).toContain('```janissary\nquestion ask "Is the build green?"\n```');
+    expect(QUESTION_PRIMER).toContain('```janissary\nquestion approve "Deploy to production?" yes no\n```');
   });
 });
 

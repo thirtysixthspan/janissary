@@ -183,7 +183,7 @@ afterEach(() => {
 });
 
 describe('core record feeds', () => {
-  it('stores the provider preamble and user prompt together while titling from the user prompt', async () => {
+  it('stores the provider preamble apart from the user prompt while titling from the user prompt', async () => {
     const f = setup();
     const pending = f.managers.acp.prompt('owner', 'ask first\nsecond line');
     f.handshake();
@@ -192,9 +192,29 @@ describe('core record feeds', () => {
     f.end();
     await pending;
     const window = f.records.window(id);
-    expect(window?.blocks[0].prompt).toBe(f.sent()[0]);
-    expect(window?.blocks[0].prompt).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.blocks[0].prompt).toBe('first\nsecond line');
+    expect(window?.blocks[0].preamble).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.blocks[0].preamble).not.toContain('first\nsecond line');
+    expect(f.sent()[0]).toBe(`${window?.blocks[0].preamble}\n\n${window?.blocks[0].prompt}`);
     expect(window?.title).toBe('ACP: first');
+  });
+
+  it('records the provider preamble once, on the first block of a multi-prompt session', async () => {
+    const f = setup();
+    const first = f.managers.acp.prompt('owner', 'ask first');
+    f.handshake();
+    f.chunk('first answer');
+    f.end();
+    await first;
+    const second = f.managers.acp.prompt('owner', 'ask second');
+    f.chunk('second answer');
+    f.end();
+    await second;
+    const window = f.records.window(f.records.rows()[0].id);
+    expect(window?.blocks).toHaveLength(2);
+    expect(window?.blocks[0].preamble).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.blocks[1].prompt).toBe('second');
+    expect(window?.blocks[1].preamble).toBeUndefined();
   });
 
   it('isolates concurrent role streams and keeps the tab busy until both settle', async () => {
@@ -357,6 +377,52 @@ describe('core record feeds', () => {
     const restarted = new AcpSessionRecords({ projectDir: f.root });
     expect(restarted.window(id)?.status).toBe('Closed');
     restarted.dispose();
+  });
+
+  it('stores one reply for a single-reply prompt', async () => {
+    const f = setup();
+    const pending = f.managers.acp.prompt('owner', 'hello');
+    f.handshake();
+    const id = f.records.rows()[0].id;
+    f.chunk('just one');
+    f.end();
+    await expect(pending).resolves.toBe('just one');
+    expect(f.records.window(id)?.blocks[0]?.replies).toEqual(['just one']);
+  });
+
+  it('records every reply in one block when the model answers before all queries settle', async () => {
+    const f = setup();
+    writeFileSync(path.join(f.root, 'a.txt'), 'first\n');
+    writeFileSync(path.join(f.root, 'b.txt'), 'beta\n');
+    f.managers.tab.tabs[0].workspaceDir = f.root;
+    const pending = f.managers.acp.prompt('owner', 'search both');
+    f.handshake();
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+
+    f.chunk(`${block('file grep first')}\n${block('file grep beta')}`);
+    f.end();
+    await vi.waitFor(() => { expect(f.sessions[0].control.current).toBeDefined(); });
+
+    f.chunk('first partial reply');
+    f.end();
+    await vi.waitFor(() => { expect(f.sessions[0].control.current).toBeDefined(); });
+    f.chunk('second reply');
+    f.end();
+    await expect(pending).resolves.toBe('second reply');
+
+    const recorded = f.records.window(id)?.blocks[0];
+    expect(recorded).toMatchObject({
+      prompt: expect.stringContaining('search both'),
+      replies: [
+        `${block('file grep first')}\n${block('file grep beta')}`,
+        'first partial reply',
+        'second reply',
+      ],
+      answer: 'second reply',
+    });
+    expect(recorded?.entries.map((entry) => entry.text)).toEqual(expect.arrayContaining([
+      'file grep first', 'a.txt:1: first', 'file grep beta', 'b.txt:1: beta',
+    ]));
   });
 
   it('records a local grep step and reopens its block without touching command history', async () => {

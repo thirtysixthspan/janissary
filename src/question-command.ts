@@ -1,4 +1,5 @@
 import { findLastCommandLine } from './acp/command-line.js';
+import { commandExample } from './acp/command-example.js';
 import type { QuestionKind } from './protocol.js';
 import type { Questions } from './questions.js';
 
@@ -60,4 +61,7 @@ export const QUESTION_PRIMER = [
   'without a `janissary` prefix; prose may follow the block. The host waits for the human and',
   'returns the answer to you. A cancelled question returns `Question cancelled.`. When the task is',
   'done, reply with the final answer and NO trailing command.',
+  'Examples:',
+  commandExample('question ask "Is the build green?"'),
+  commandExample('question approve "Deploy to production?" yes no'),
 ].join('\n');

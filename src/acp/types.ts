@@ -81,8 +81,8 @@ export type AcpLoopDeps = {
   // Execute an extracted command and return its textual output. May be async (e.g. a
   // browser command); the loop awaits the result before continuing.
   runCommand: (command: string) => string | Promise<string>;
-  // Pull the command out of an agent reply: one runnable command with its matched span, a block that
-  // needs correcting, or no block at all (a final answer).
+  // Pull the commands out of an agent reply: a batch of runnable commands with their matched spans,
+  // a reply that needs correcting, or no block at all (a final answer).
   extractCommand: (text: string) => CommandBlockResult;
   // Maximum number of auto-run command steps before stopping (default 8).
   maxSteps?: number;
@@ -108,7 +108,9 @@ export type AcpLoopHandlers = {
     // Present only when the gate refused the command because it is disabled.
     refused?: 'disabled',
   ) => void;
-  // The loop ended: `answered` (no command emitted), `capped` (hit `maxSteps`), or `failed` (a command threw or rejected).
+  // This loop emits `answered` (the reply had no commands) or `capped` (the step cap was hit), never `failed`:
+  // a command that throws or rejects becomes an ordinary result. `failed` stays in the union only for other
+  // producers.
   finished: (reason: 'answered' | 'capped' | 'failed', maxSteps: number) => void;
   // A connection/prompt error occurred.
   error: (message: string) => void;

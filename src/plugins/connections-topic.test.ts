@@ -6,6 +6,9 @@ import { ACP_RECORD_WINDOW_SIZE, recordWindow } from '../acp-records/model.js';
 import { messageBus } from '../bus.js';
 import { SHELL_NAME } from '../shell/manager.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
+import { openRecordJson } from '../controller/connection-records.js';
+
+vi.mock('../controller/connection-records.js', () => ({ openRecordJson: vi.fn() }));
 
 function fixture() {
   const tabs: Tab[] = [
@@ -97,6 +100,27 @@ describe('connections topic delivery', () => {
 });
 
 describe('connections topic actions', () => {
+  it('opens a record JSON file through the controller helper', () => {
+    const { managers } = fixture();
+    vi.mocked(openRecordJson).mockClear().mockReturnValue(true);
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'recordJson', id: 'core-id' })).toBeUndefined();
+    expect(openRecordJson).toHaveBeenCalledWith(managers, 'core-id');
+  });
+
+  it('refuses a record JSON request for a missing record or a file that could not be opened', () => {
+    const { managers } = fixture();
+    vi.mocked(openRecordJson).mockClear().mockReturnValue(true);
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'recordJson', id: 'missing' }))
+      .toBe('The record no longer exists.');
+    expect(openRecordJson).not.toHaveBeenCalled();
+
+    vi.mocked(openRecordJson).mockReturnValue(false);
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'recordJson', id: 'agent-id' }))
+      .toBe('The record file could not be opened.');
+  });
+
   it('loads and pages requested windows, resets on load, and isolates manager state', () => {
     const { managers, windows, totalBlocks } = fixture();
     const row = () => {

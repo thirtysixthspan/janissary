@@ -15,7 +15,8 @@ import { DB_PRIMER } from '../database/primer.js';
 import { globWorkspaceCommand } from '../file-glob/glob.js';
 import { DEFAULT_ROLES } from '../plugins/roles/default-roles.js';
 
-const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Do it with the commands available to you, then briefly report what you did.';
+const TELL_INSTRUCTION = 'The user is instructing you to carry out a task. Gather all the input you need from your commands and execute all the tasks before providing a final summary message. The final summary must be a summary of the work that was done.';
+const ASK_INSTRUCTION = 'Gather all the input you need from your commands before providing a final response. The final response must answer the question in the user prompt.';
 
 beforeEach(() => { getConfig().maxToolTurns = 8; });
 
@@ -40,6 +41,26 @@ describe('corePrimer', () => {
       DISABLED_HARNESS_TOOLS_LINE,
       commandProtocolPrimer(maxToolSteps()),
       TELL_INSTRUCTION,
+      MARKDOWN_INSTRUCTION,
+    ].join('\n\n'));
+  });
+
+  it('directs tell to finish gathering input and tasks before a final work summary', () => {
+    const result = primerFor(coreSnapshot('tell', ['db sqlite query']));
+    expect(result).toContain('Gather all the input you need from your commands and execute all the tasks before providing a final summary message.');
+    expect(result).toContain('The final summary must be a summary of the work that was done.');
+    expect(result).not.toContain('briefly report what you did');
+    expect(primerFor(coreSnapshot('ask', ['db sqlite query']))).not.toContain(TELL_INSTRUCTION);
+  });
+
+  it('orders tool text, the tools line, the protocol, the ask instruction, and Markdown for ask', () => {
+    expect(primerFor(coreSnapshot('ask', ['db sqlite query']))).toBe([
+      DB_PRIMER,
+      'Only these commands are allowed: db sqlite query.',
+      NO_BUILTIN_TOOLS_LINE,
+      DISABLED_HARNESS_TOOLS_LINE,
+      commandProtocolPrimer(maxToolSteps()),
+      ASK_INSTRUCTION,
       MARKDOWN_INSTRUCTION,
     ].join('\n\n'));
   });
@@ -73,7 +94,9 @@ describe('corePrimer', () => {
 
   it('gives only the no-tools line and Markdown when the caller passes no tools', () => {
     const snapshot = coreSnapshot('ask', ['db sqlite query'], [], true);
-    expect(corePrimer(snapshot, [])).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+    const result = corePrimer(snapshot, []);
+    expect(result).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(result).not.toContain(ASK_INSTRUCTION);
   });
 
   it('omits the disabled harness tools line when no command is available', () => {
@@ -86,13 +109,13 @@ describe('corePrimer', () => {
   it('states the exchange protocol with the loop step cap when commands are available', () => {
     const result = primerFor(coreSnapshot('ask', ['file write']));
     expect(result).toContain(commandProtocolPrimer(maxToolSteps()));
-    expect(result).toContain('At most 8 commands run for one request.');
+    expect(result).toContain('At most 8 commands run for one request, counting every command in a batch.');
   });
 
   it('states the configured step cap in the protocol', () => {
     getConfig().maxToolTurns = 3;
     const result = primerFor(coreSnapshot('ask', ['file write']));
-    expect(result).toContain('At most 3 commands run for one request.');
+    expect(result).toContain('At most 3 commands run for one request, counting every command in a batch.');
     expect(maxToolSteps()).toBe(3);
   });
 
@@ -167,7 +190,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const PENDING_EVENTS = [
   ['startTurn', true],
   ['chunk', block(QUERY)],
-  ['endTurn', ''],
+  ['endTurn', block(QUERY)],
   ['startCommand', QUERY, false],
 ];
 
@@ -228,7 +251,7 @@ describe('driveToolLoop', () => {
     expect(events).toEqual([
       ['startTurn', true],
       ['chunk', block(QUERY)],
-      ['endTurn', ''],
+      ['endTurn', block(QUERY)],
       ['startCommand', QUERY, false],
       ['ranCommand', QUERY, 'caller output', false, undefined],
       ['startTurn', false],
@@ -290,6 +313,65 @@ describe('driveToolLoop', () => {
     expect(sent[1]).toContain(refusal);
   });
 
+  it('tags each parallel command result with its own host when the batch settles out of launch order', async () => {
+    const caller = Promise.withResolvers<string>();
+    const workspace = Promise.withResolvers<string>();
+    const batch = `${block(QUERY)}\n\n${block('file read notes.md')}`;
+    const { session } = makeSession([batch, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = {
+      runCaller: vi.fn(() => caller.promise),
+      runWorkspace: vi.fn(() => workspace.promise),
+    };
+
+    driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query', 'file read']), host, h, new AbortController().signal);
+
+    expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
+    expect(ofKind(events, 'startCommand')).toEqual([
+      ['startCommand', QUERY, false],
+      ['startCommand', 'file read notes.md', true],
+    ]);
+
+    workspace.resolve('workspace output');
+    caller.resolve('caller output');
+    await vi.waitFor(() => { expect(ofKind(events, 'ranCommand')).toHaveLength(2); });
+
+    const ran = ofKind(events, 'ranCommand');
+    expect(ran.map((event) => event[1])).toEqual(['file read notes.md', QUERY]);
+    expect(ran[0]).toEqual(['ranCommand', 'file read notes.md', 'workspace output', true, undefined]);
+    expect(ran[1]).toEqual(['ranCommand', QUERY, 'caller output', false, undefined]);
+  });
+
+  it('attaches the disabled refusal only to the disabled command in a parallel batch', async () => {
+    const workspace = Promise.withResolvers<string>();
+    const refusal = 'Command is disabled: db sqlite query.';
+    const snapshot = coreSnapshot('tell', ['db sqlite query', 'file read'], [
+      { name: 'db sqlite query', effectiveEnabled: true, effectiveAgentAccess: false },
+    ]);
+    const batch = `${block(QUERY)}\n\n${block('file read notes.md')}`;
+    const { session } = makeSession([batch, 'Done.']);
+    const { h, events } = makeHandlers();
+    const host = {
+      runCaller: vi.fn(() => 'caller output'),
+      runWorkspace: vi.fn(() => workspace.promise),
+    };
+
+    driveToolLoop(session, 'do it', snapshot, host, h, new AbortController().signal);
+
+    expect(host.runCaller).not.toHaveBeenCalled();
+    expect(ofKind(events, 'ranCommand')).toEqual([['ranCommand', QUERY, refusal, false, 'disabled']]);
+
+    workspace.resolve('workspace output');
+    await vi.waitFor(() => { expect(ofKind(events, 'ranCommand')).toHaveLength(2); });
+
+    expect(ofKind(events, 'ranCommand')).toEqual([
+      ['ranCommand', QUERY, refusal, false, 'disabled'],
+      ['ranCommand', 'file read notes.md', 'workspace output', true, undefined],
+    ]);
+    expect(host.runWorkspace).toHaveBeenCalledExactlyOnceWith('file read notes.md');
+  });
+
   it('stops after eight steps with the capped reason', () => {
     const { events, host } = drive(coreSnapshot('tell', ['db sqlite query']), [block(QUERY)]);
     expect(host.runCaller).toHaveBeenCalledTimes(8);
@@ -325,17 +407,19 @@ describe('driveToolLoop', () => {
     expect(sent).toHaveLength(1);
   });
 
-  it('reports a host rejection before any abort as one error', async () => {
+  it('delivers a host rejection as an ordinary result and keeps going', async () => {
     const { sent, events, host, reject } = drivePending();
     expect(host.runCaller).toHaveBeenCalledExactlyOnceWith(QUERY);
     reject(new Error('host failed'));
-    await vi.waitFor(() => { expect(ofKind(events, 'error')).toEqual([['error', 'host failed']]); });
-    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'failed', maxToolSteps()]); });
-    expect(ofKind(events, 'ranCommand')).toEqual([]);
-    expect(sent).toHaveLength(1);
+    await vi.waitFor(() => { expect(events.at(-1)).toEqual(['finished', 'answered', maxToolSteps()]); });
+    expect(ofKind(events, 'error')).toEqual([]);
+    const ran = ofKind(events, 'ranCommand');
+    expect(ran).toHaveLength(1);
+    expect(ran[0][2]).toBe('ACP error: host failed');
+    expect(sent[1]).toContain('ACP error: host failed');
   });
 
-  it('reports a synchronously throwing host and ends the run', () => {
+  it('delivers a synchronously throwing host as an ordinary result', () => {
     const { session, sent } = makeSession([block(QUERY), 'Done.']);
     const { h, events } = makeHandlers();
     const host = {
@@ -345,10 +429,12 @@ describe('driveToolLoop', () => {
 
     driveToolLoop(session, 'do it', coreSnapshot('tell', ['db sqlite query']), host, h, new AbortController().signal);
 
-    expect(ofKind(events, 'error')).toEqual([['error', 'sync boom']]);
-    expect(events.at(-1)).toEqual(['finished', 'failed', maxToolSteps()]);
-    expect(ofKind(events, 'ranCommand')).toEqual([]);
-    expect(sent).toHaveLength(1);
+    expect(ofKind(events, 'error')).toEqual([]);
+    expect(events.at(-1)).toEqual(['finished', 'answered', maxToolSteps()]);
+    const ran = ofKind(events, 'ranCommand');
+    expect(ran).toHaveLength(1);
+    expect(ran[0][2]).toBe('ACP error: sync boom');
+    expect(sent[1]).toContain('ACP error: sync boom');
   });
 });
 
@@ -486,9 +572,9 @@ describe('driveToolLoop file mutations', () => {
   });
 
   it('exposes no file tools without tools', () => {
-    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [block(WRITE)]);
+    const { sent, host } = drive(coreSnapshot('tell', ['file write'], [], true), [block(WRITE), 'Done.']);
     expect(host.runWorkspace).not.toHaveBeenCalled();
-    expect(sent).toHaveLength(1);
+    expect(sent).toHaveLength(2);
   });
 
   it('caps repeated writes at eight steps', () => {

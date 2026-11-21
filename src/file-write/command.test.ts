@@ -85,7 +85,7 @@ describe('FILE_MUTATION_PRIMER', () => {
     expect(FILE_MUTATION_PRIMER).toContain('replaceAll');
     expect(FILE_MUTATION_PRIMER).toContain('creates missing parent folders.');
     expect(FILE_MUTATION_PRIMER).not.toContain('expectedHash');
-    expect(FILE_MUTATION_PRIMER.split('\n')).toHaveLength(9);
+    expect(FILE_MUTATION_PRIMER.split('\n')).toHaveLength(16);
     expect(FILE_MUTATION_PRIMER).toContain('inside a final fenced block whose info string is exactly `janissary`');
     expect(FILE_MUTATION_PRIMER).not.toContain('end your reply with one line');
   });
@@ -98,8 +98,21 @@ describe('FILE_MUTATION_PRIMER', () => {
   });
 
   it('gives an example line that parses as a write creating the named file', () => {
-    const example = FILE_MUTATION_PRIMER.split('\n').find((line) => line.startsWith('Example'))!;
-    const command = example.slice(example.indexOf('file write'));
+    const lines = FILE_MUTATION_PRIMER.split('\n');
+    const command = lines[lines.indexOf('```janissary') + 1]!;
     expect(parseFileMutation(command)).toEqual({ kind: 'write', path: 'notes/todo.md', content: '# Todo\n- first item\n' });
+  });
+
+  it('gives an edit example in its own fence that parses', () => {
+    const lines = FILE_MUTATION_PRIMER.split('\n');
+    const first = lines.indexOf('```janissary');
+    const command = lines[lines.indexOf('```janissary', first + 1) + 1]!;
+    expect(parseFileMutation(command)).toEqual({
+      kind: 'edit',
+      path: 'notes/todo.md',
+      oldString: 'first item',
+      newString: 'second item',
+      replaceAll: false,
+    });
   });
 });

@@ -59,22 +59,41 @@ export class AcpSessionRecords {
     return record.id;
   }
 
-  prompt(id: string, text: string, titleText = text): boolean {
+  prompt(id: string, text: string, titleText = text, preamble?: string): boolean {
     const record = this.open(id);
     if (!record || typeof text !== 'string' || !text.trim() || unansweredBlock(record)) return false;
-    if (record.blocks.length === 0) record.title = recordTitle(record.source, titleText);
+    const first = record.blocks.length === 0;
+    if (first) record.title = recordTitle(record.source, titleText);
     const timestamp = this.touch(record);
-    record.blocks.push({ prompt: text, startedAt: timestamp, entries: [] });
+    record.blocks.push({
+      prompt: text,
+      ...(first && preamble !== undefined && { preamble }),
+      startedAt: timestamp,
+      entries: [],
+    });
     this.save(record);
     this.changed();
     return true;
   }
 
-  activity(id: string, kind: AcpActivityKind, text: string): boolean {
+  activity(id: string, kind: AcpActivityKind, text: string, toolPhase?: 'command' | 'reply', toolCommand?: string): boolean {
     const record = this.open(id);
     const block = record && unansweredBlock(record);
     if (!record || !block || !isAcpActivityKind(kind) || typeof text !== 'string' || !text) return false;
-    appendActivity(block, { kind, text, timestamp: this.touch(record) });
+    appendActivity(block, {
+      kind, text, timestamp: this.touch(record),
+      ...(toolPhase !== undefined && { toolPhase }),
+      ...(toolCommand !== undefined && { toolCommand }),
+    });
+    this.changed();
+    return true;
+  }
+
+  reply(id: string, text: string): boolean {
+    const record = this.open(id);
+    const block = record && unansweredBlock(record);
+    if (!record || !block || typeof text !== 'string' || !text.trim()) return false;
+    (block.replies ??= []).push(text);
     this.changed();
     return true;
   }
@@ -84,6 +103,7 @@ export class AcpSessionRecords {
     const block = record && unansweredBlock(record);
     if (!record || !block || typeof text !== 'string') return false;
     block.answer = text;
+    if (block.replies === undefined && text.trim()) block.replies = [text];
     block.endedAt = this.touch(record);
     this.save(record);
     this.changed();
@@ -116,6 +136,10 @@ export class AcpSessionRecords {
   }
 
   rows() { return recordRows(this.records.values()); }
+
+  filePath(id: string): string | undefined {
+    return isRecordId(id) ? this.store.path(id) : undefined;
+  }
 
   window(id: string, count = ACP_RECORD_WINDOW_SIZE) {
     validateWindowCount(count);

@@ -150,7 +150,7 @@ describe('runSubagentEntry', () => {
       const primer = corePrimer(expected, createAcpToolTable(expected.grants));
       const taskPrompt = subagentTaskPrompt(TASK, CONTEXT);
       const fullPrompt = `${primer}\n\n${taskPrompt}`;
-      expect(record.prompt.mock.calls).toEqual([[fullPrompt]]);
+      expect(record.prompt.mock.calls).toEqual([[taskPrompt, primer]]);
       expect(prompts).toHaveLength(1);
       expect(prompts[0]).toBe(fullPrompt);
       expect(prompts[0].split(primer)).toHaveLength(2);
@@ -169,7 +169,7 @@ describe('runSubagentEntry', () => {
         rows: coreSnapshotRows(settings), withoutTools: false,
       } as Extract<AcpRunSnapshot, { kind: 'core' }>;
       const primer = corePrimer(expected, createAcpToolTable(expected.grants));
-      expect(record.prompt.mock.calls).toEqual([[`${primer}\n\n${subagentTaskPrompt(TASK)}`]]);
+      expect(record.prompt.mock.calls).toEqual([[subagentTaskPrompt(TASK), primer]]);
     });
   });
 
@@ -260,7 +260,10 @@ describe('runSubagentEntry', () => {
     events.startCommand?.('file read x.md', true);
     events.ranCommand('file read x.md', 'tool output', true);
     answer(events, 'final');
-    expect(record.activity.mock.calls).toEqual([['tool', 'file read x.md'], ['tool', 'tool output']]);
+    expect(record.activity.mock.calls).toEqual([
+      ['tool', 'file read x.md', 'command'],
+      ['tool', 'tool output', 'reply', 'file read x.md'],
+    ]);
     expect(mocks.runToolLoop).toHaveBeenCalledTimes(1);
   });
 
@@ -271,11 +274,14 @@ describe('runSubagentEntry', () => {
     scriptedSession([[block('file read a.md')], ['done']]);
     await withRealLoop(async () => {
       const execution = runSubagentEntry(options);
-      await vi.waitFor(() => expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]));
+      await vi.waitFor(() => expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md', 'command']]));
       expect(mocks.runWorkspaceCommandIn).toHaveBeenCalledWith('/clone', 'file read a.md', expect.any(AbortSignal));
       gate.resolve('1\tone');
       expect(await execution).toMatchObject({ status: 'completed', response: 'done', reason: 'answered' });
-      expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md'], ['tool', '1\tone']]);
+      expect(record.activity.mock.calls).toEqual([
+        ['tool', 'file read a.md', 'command'],
+        ['tool', '1\tone', 'reply', 'file read a.md'],
+      ]);
     });
   });
 
@@ -285,8 +291,10 @@ describe('runSubagentEntry', () => {
     scriptedSession([[block('file read a.md')]]);
     await withRealLoop(async () => {
       const result = await runSubagentEntry(options);
-      expect(result).toMatchObject({ status: 'failed', reason: 'error' });
-      expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]);
+      expect(result).toMatchObject({ status: 'partial', reason: 'capped' });
+      expect(record.activity.mock.calls[0]).toEqual(['tool', 'file read a.md', 'command']);
+      expect(record.activity.mock.calls.some(([kind, text]) =>
+        kind === 'tool' && String(text).includes('ACP error: command boom'))).toBe(true);
     });
   });
 

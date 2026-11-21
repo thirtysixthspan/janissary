@@ -1,6 +1,7 @@
 import { connectionCatalog } from '../connection/catalog.js';
 import type { ConnectionKind } from '../connection/types.js';
 import type { AcpRef } from '../protocol/tab.js';
+import { DEFAULT_ACP_ROLE } from '../acp/role.js';
 import { bareHost } from '../remote/address.js';
 import type { Tab, TabRuntime } from '../tab/types.js';
 import type { Managers } from '../managers.js';
@@ -121,6 +122,9 @@ function durableRows(
     return {
       type: 'record', ...record, host: record.host ?? LOCAL_HOST, orderingTimestamp: record.updatedAt,
       ...(ownsRecord(managers, record.ownerLabel, record.id) && { focusTarget: record.ownerLabel }),
+      ...(record.kind === 'acp' && {
+        acpRef: { scope: 'tab', label: record.ownerLabel, role: record.role ?? DEFAULT_ACP_ROLE } satisfies AcpRef,
+      }),
       ...(window && { window }),
     };
   });

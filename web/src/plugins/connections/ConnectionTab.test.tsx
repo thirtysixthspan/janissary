@@ -35,15 +35,89 @@ function record(
 }
 
 describe('ConnectionTab', () => {
-  it('shows captured owner, started time, ordered labels and rendered answer', () => {
+  it('shows captured owner, started time and ordered labels', () => {
     setup(record());
     expect(screen.getByText('Captured owner')).toBeInTheDocument();
     expect(screen.getAllByText(new Date(0).toLocaleString(), { exact: false })).toHaveLength(1);
-    expect(screen.getByText('answer', { exact: false })).toBeInTheDocument();
     expect([...document.querySelectorAll('.connections-activity-label')].map((el) => el.textContent))
       .toEqual(['message', 'plan', 'permission']);
     expect(screen.getByText('thought', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
-    expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
+    expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('renders the preamble first in a collapsed section and the query in an expanded section', () => {
+    const value = record();
+    value.window!.blocks[0]!.prompt = 'user question';
+    value.window!.blocks[0]!.preamble = '**tool primer**';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble');
+    expect(preamble?.textContent).toBe('**tool primer**');
+    expect(preamble?.querySelector('strong')).toBeNull();
+    const preambleSummary = screen.getByText('preamble', { selector: 'summary' });
+    const preambleDetails = preambleSummary.closest('details');
+    expect(preambleDetails).not.toHaveAttribute('open');
+    expect(document.querySelector('.connections-block')?.firstElementChild).toBe(preambleDetails);
+    const querySummary = screen.getByText('query', { selector: 'summary' });
+    expect(querySummary.closest('details')).toHaveAttribute('open');
+    expect(document.querySelector('.connections-prompt')?.textContent).toBe('user question');
+    expect(document.querySelector('.connections-prompt')?.textContent).not.toContain('tool primer');
+    const order = [...document.querySelector('.connections-block')!.children]
+      .map((child) => child.querySelector('summary')?.textContent ?? child.className);
+    expect(order.indexOf('preamble')).toBeLessThan(order.indexOf('query'));
+    expect(order.indexOf('query')).toBeLessThan(order.indexOf('connections-activity'));
+  });
+
+  it('shows a preamble janissary fence verbatim', () => {
+    const value = record();
+    value.window!.blocks[0]!.preamble = 'How commands work:\n```janissary\nfile list config\n```\nDone.';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toBe('How commands work:\n```janissary\nfile list config\n```\nDone.');
+    expect(preamble.querySelector('pre')).toBeNull();
+  });
+
+  it('shows a tilde janissary fence verbatim in the preamble', () => {
+    const value = record();
+    value.window!.blocks[0]!.preamble = '~~~janissary\nfile grep janissary\n~~~';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toBe('~~~janissary\nfile grep janissary\n~~~');
+    expect(preamble.querySelector('pre')).toBeNull();
+  });
+
+  it('renders all preamble formatting verbatim', () => {
+    const value = record();
+    value.window!.blocks[0]!.preamble = '**Rules**\n\n```janissary\nfile list config\n```\n\n- one\n- two';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toBe('**Rules**\n\n```janissary\nfile list config\n```\n\n- one\n- two');
+    expect(preamble.querySelector('strong')).toBeNull();
+    expect(preamble.querySelector('li')).toBeNull();
+    expect(preamble.querySelector('pre')).toBeNull();
+  });
+
+  it('does not render captured replies or the final answer as response sections', () => {
+    const value = record();
+    value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up'];
+    value.window!.blocks[0]!.answer = 'final **answer**';
+    setup(value);
+    expect(screen.queryAllByText('response', { selector: 'summary' })).toHaveLength(0);
+    expect(document.querySelectorAll('.connections-answer')).toHaveLength(0);
+    expect(screen.queryByText('first reply')).toBeNull();
+    expect(screen.queryByText('follow-up')).toBeNull();
+    expect(screen.queryByText('final answer')).toBeNull();
+  });
+
+  it('keeps a query the reader collapsed closed through a streamed update', () => {
+    const value = record();
+    const { view, capabilities } = setup(value);
+    const query = screen.getByText('query', { selector: 'summary' }).closest('details')!;
+    query.open = false;
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!, prompt: 'updated prompt' }] } }} capabilities={capabilities} />);
+    expect(screen.getByText('query', { selector: 'summary' }).closest('details')).toBe(query);
+    expect(query).not.toHaveAttribute('open');
+    expect(document.querySelector('.connections-prompt')?.textContent).toBe('updated prompt');
   });
 
   it('pretty-prints an entry whose text is JSON and leaves plain text as it is', () => {
@@ -57,6 +131,68 @@ describe('ConnectionTab', () => {
     expect(json?.textContent).toBe('{\n  "query": "select 1",\n  "rows": [\n    1\n  ]\n}');
     expect(document.querySelectorAll('pre')).toHaveLength(1);
     expect(screen.getByText('db query select 1').tagName).toBe('DIV');
+  });
+
+  it('renders a message section as literal text and keeps other activity kinds literal', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'message', text: '**bold** and `code`\n\n- one\n- two', timestamp: 1 },
+      { kind: 'thought', text: '**bold** and `code`\n\n- one\n- two', timestamp: 2 },
+    ];
+    setup(value);
+    const message = document.querySelector('.connections-activity-text')!;
+    expect(message.textContent).toBe('**bold** and `code`\n\n- one\n- two');
+    expect(message.querySelector('strong')).toBeNull();
+    expect(message.querySelector('code')).toBeNull();
+    expect(message.querySelector('li')).toBeNull();
+    const thought = document.querySelectorAll('.connections-activity-text')[1]!;
+    expect(thought.textContent).toBe('**bold** and `code`\n\n- one\n- two');
+  });
+
+  it('shows janissary fences and formatting verbatim in a message section', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'message', text: '**Here.**\n```janissary\nfile list config\n```\nDone.', timestamp: 1 },
+    ];
+    setup(value);
+    const message = document.querySelector('.connections-activity-text')!;
+    expect(message.textContent).toBe('**Here.**\n```janissary\nfile list config\n```\nDone.');
+    expect(message.querySelector('strong')).toBeNull();
+    expect(message.querySelector('pre')).toBeNull();
+  });
+
+  it('renders no link in a message section or the preamble and does not call openLink', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'See [the docs](https://example.com/docs).', timestamp: 1 }];
+    value.window!.blocks[0]!.preamble = 'See [the primer](https://example.com/primer).';
+    const { openLink } = setup(value);
+    expect(document.querySelector('.connections-activity-text a')).toBeNull();
+    expect(document.querySelector('.connections-preamble a')).toBeNull();
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    document.querySelector('.connections-preamble')!.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
+  });
+
+  it('keeps a message that is a whole JSON object as indented JSON', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'message', text: '{"query":"select 1"}', timestamp: 1 }];
+    setup(value);
+    expect(document.querySelector('pre.connections-activity-json')?.textContent)
+      .toBe('{\n  "query": "select 1"\n}');
+  });
+
+  it('re-renders a message section as literal text after a streamed update', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'first **draft**', timestamp: 1 }];
+    const { view, capabilities } = setup(value);
+    expect(document.querySelector('.connections-activity-text')?.textContent).toBe('first **draft**');
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!,
+        entries: [{ kind: 'message', text: 'revised **answer**', timestamp: 2 }] }] } }} capabilities={capabilities} />);
+    expect(document.querySelector('.connections-activity-text')?.textContent).toBe('revised **answer**');
+    expect(document.querySelector('.connections-activity-text strong')).toBeNull();
+    expect(screen.queryByText('draft')).toBeNull();
   });
 
   it('renders a tool call embedded mid-line in an activity entry and keeps the prose', () => {
@@ -89,17 +225,17 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('**/*.ts')).toBeInTheDocument();
   });
 
-  it('keeps a tool entry the reader collapsed closed through a streamed update', () => {
+  it('keeps a tool section the reader expanded open through a streamed update', () => {
     const value = record();
     const { view, capabilities } = setup(value);
     const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
-    details.open = false;
+    details.open = true;
     const entries = value.window!.blocks[0]!.entries.map((entry) =>
       entry.kind === 'tool' ? { ...entry, text: 'tool output' } : entry);
     view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
       blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
     expect(screen.getByText('tool output').closest('details')).toBe(details);
-    expect(details).not.toHaveAttribute('open');
+    expect(details).toHaveAttribute('open');
   });
 
   it('groups a tool command and its reply into one labelled collapsible section', () => {
@@ -112,7 +248,7 @@ describe('ConnectionTab', () => {
     const summaries = screen.getAllByText('tool', { selector: 'summary' });
     expect(summaries).toHaveLength(1);
     const details = summaries[0].closest('details');
-    expect(details).toHaveAttribute('open');
+    expect(details).not.toHaveAttribute('open');
     expect([...details!.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
       .toEqual(['command', 'reply']);
     expect(screen.getByText('grep foo')).toBeInTheDocument();
@@ -143,11 +279,11 @@ describe('ConnectionTab', () => {
       .toEqual(['command', 'reply']);
   });
 
-  it('keeps a grouped tool section collapsed when its reply streams in', () => {
+  it('keeps a grouped tool section open when its reply streams in', () => {
     const value = record();
     const { view, capabilities } = setup(value);
     const details = screen.getByText('tool', { selector: 'summary' }).closest('details')!;
-    details.open = false;
+    details.open = true;
     const original = value.window!.blocks[0]!.entries;
     const entries = [
       ...original.slice(0, 3),
@@ -157,7 +293,7 @@ describe('ConnectionTab', () => {
     view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
       blocks: [{ ...value.window!.blocks[0]!, entries }] } }} capabilities={capabilities} />);
     expect(screen.getByText('the reply').closest('details')).toBe(details);
-    expect(details).not.toHaveAttribute('open');
+    expect(details).toHaveAttribute('open');
     expect([...details.querySelectorAll('.connections-tool-part-label')].map((el) => el.textContent))
       .toEqual(['command', 'reply']);
   });
@@ -213,7 +349,9 @@ describe('ConnectionTab', () => {
     value.window = undefined;
     setup(value);
     expect(screen.getByText('Loading connection history…')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Close session' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
   });
 
   it('disables Terminate while pending and clears it with the rejection message', async () => {
@@ -226,19 +364,17 @@ describe('ConnectionTab', () => {
     expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
   });
 
-  it('routes answer links through openLink without navigating and leaves activity text alone', () => {
+  it('does not route a clicked preamble link through openLink', () => {
     const value = record();
-    value.window!.blocks[0]!.answer = 'See [the docs](https://example.com/docs).';
+    value.window!.blocks[0]!.preamble = 'See [the docs](https://example.com/docs).';
     const { openLink } = setup(value);
-    const linkClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-    screen.getByRole('link', { name: 'the docs' }).dispatchEvent(linkClick);
-    expect(linkClick.defaultPrevented).toBe(true);
-    expect(openLink).toHaveBeenCalledOnce();
-    expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
-    const activityClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-    screen.getByText('message', { selector: '.connections-activity-text' }).dispatchEvent(activityClick);
-    expect(activityClick.defaultPrevented).toBe(false);
-    expect(openLink).toHaveBeenCalledOnce();
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toBe('See [the docs](https://example.com/docs).');
+    expect(preamble.querySelector('a')).toBeNull();
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    preamble.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
   });
 
   describe('metadata bar', () => {
@@ -285,26 +421,50 @@ describe('ConnectionTab', () => {
       setup(record());
       expect(bar().lastElementChild).toHaveClass('plugin-actions');
       expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
         { label: 'Cancel', icon: 'circle-stop', text: '' },
         { label: 'Close session', icon: 'circle-xmark', text: '' },
       ]);
     });
 
-    it('offers only the close icon while an ACP record is idle', () => {
+    it('floats an Open record JSON clipboard icon ahead of the other actions and sends its intent', () => {
+      const { intent } = setup(record());
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Cancel', icon: 'circle-stop', text: '' },
+        { label: 'Close session', icon: 'circle-xmark', text: '' },
+      ]);
+      fireEvent.click(screen.getByRole('button', { name: 'Open record JSON' }));
+      expect(intent).toHaveBeenCalledWith('open-record-json', { id: 'uuid' });
+    });
+
+    it('offers the record JSON icon even when the record has no ACP session', () => {
+      const { intent } = setup(record('agent', 'Completed'));
+      fireEvent.click(screen.getByRole('button', { name: 'Open record JSON' }));
+      expect(intent).toHaveBeenCalledWith('open-record-json', { id: 'uuid' });
+    });
+
+    it('offers the record JSON and close icons while an ACP record is idle', () => {
       setup(record('acp', 'Idle'));
-      expect(actions()).toEqual([{ label: 'Close session', icon: 'circle-xmark', text: '' }]);
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Close session', icon: 'circle-xmark', text: '' },
+      ]);
     });
 
     it('leads the icons with Focus tab while the owning tab is open and sends its intent', () => {
       const { intent } = setup({ ...record('acp', 'Closed'), focusTarget: 'other-label' });
-      expect(actions()).toEqual([{ label: 'Focus tab', icon: 'location-crosshairs', text: '' }]);
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Focus tab', icon: 'location-crosshairs', text: '' },
+      ]);
       fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
       expect(intent).toHaveBeenCalledWith('focus', { id: 'uuid' });
     });
 
     it('puts Focus tab before a running record\'s stop and close icons', () => {
       setup({ ...record(), focusTarget: 'other-label' });
-      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Cancel', 'Close session']);
+      expect(actions().map((action) => action.label)).toEqual(['Open record JSON', 'Focus tab', 'Cancel', 'Close session']);
     });
 
     it('offers no Focus tab without a focus target', () => {
@@ -322,7 +482,10 @@ describe('ConnectionTab', () => {
 
     it('offers a running agent run only the stop icon, as Terminate', () => {
       const { intent } = setup(record('agent'));
-      expect(actions()).toEqual([{ label: 'Terminate', icon: 'circle-stop', text: '' }]);
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Terminate', icon: 'circle-stop', text: '' },
+      ]);
       fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
       expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
     });
@@ -338,7 +501,7 @@ describe('ConnectionTab', () => {
 
     it('offers the usual Terminate and Focus tab actions for a subagent run', () => {
       const { intent } = setup({ ...record('agent', 'Running', 'research'), focusTarget: 'caller-label' });
-      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Terminate']);
+      expect(actions().map((action) => action.label)).toEqual(['Open record JSON', 'Focus tab', 'Terminate']);
       fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
       expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
       fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
@@ -347,12 +510,12 @@ describe('ConnectionTab', () => {
   });
 
   it.each(['Completed', 'Failed', 'Partial', 'Terminated'] as const)(
-    'offers no Terminate for a %s agent record and renders activity text plainly', (status) => {
+    'offers no Terminate for a %s agent record and renders message activity as literal text', (status) => {
       const value = record('agent', status);
       value.window!.blocks[0]!.entries = [{ kind: 'message', text: '<b>plain</b>', timestamp: 1 } satisfies ConnectionActivity];
       setup(value);
       expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
-      expect(screen.getByText('<b>plain</b>')).toBeInTheDocument();
+      expect(screen.getByText('<b>plain</b>').tagName).toBe('DIV');
     },
   );
 

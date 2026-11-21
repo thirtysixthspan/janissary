@@ -42,13 +42,18 @@ function inRange(value: unknown, start: number, end: number): value is number {
 }
 
 function isEntry(value: unknown): value is AcpRecordEntry {
-  return isRecord(value) && isAcpActivityKind(value.kind)
-    && typeof value.text === 'string' && value.text.length > 0 && timestamp(value.timestamp);
+  if (!isRecord(value) || !isAcpActivityKind(value.kind)
+    || typeof value.text !== 'string' || value.text.length === 0 || !timestamp(value.timestamp)) return false;
+  if (Object.hasOwn(value, 'toolPhase') && value.toolPhase !== 'command' && value.toolPhase !== 'reply') return false;
+  return !Object.hasOwn(value, 'toolCommand') || typeof value.toolCommand === 'string';
 }
 
 function isBlock(value: unknown): value is AcpRecordBlock {
   if (!isRecord(value) || !nonempty(value.prompt) || !timestamp(value.startedAt)
     || !Array.isArray(value.entries) || value.entries.some((entry: unknown) => !isEntry(entry))) return false;
+  if (value.preamble !== undefined && typeof value.preamble !== 'string') return false;
+  if (value.replies !== undefined && (!Array.isArray(value.replies)
+    || value.replies.some((reply: unknown) => typeof reply !== 'string'))) return false;
   if (value.answer === undefined) return value.endedAt === undefined;
   return typeof value.answer === 'string' && timestamp(value.endedAt) && value.endedAt >= value.startedAt;
 }

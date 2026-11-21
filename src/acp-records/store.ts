@@ -52,7 +52,7 @@ export class AcpRecordStore {
   }
 
   read(id: string): AcpRecord | undefined {
-    const file = this.file(id);
+    const file = this.path(id);
     let content: string;
     try {
       if (!lstatSync(file).isFile()) return undefined;
@@ -72,13 +72,13 @@ export class AcpRecordStore {
   }
 
   write(record: AcpRecord): void {
-    const file = this.file(record.id);
+    const file = this.path(record.id);
     mkdirSync(this.root, { recursive: true });
     this.writeFile(file, `${JSON.stringify(durableRecord(record), null, 2)}\n`);
   }
 
   delete(id: string): void {
-    const file = this.file(id);
+    const file = this.path(id);
     try {
       this.removeFile(file);
     } catch (error) {
@@ -86,7 +86,7 @@ export class AcpRecordStore {
     }
   }
 
-  private file(id: string): string {
+  path(id: string): string {
     if (!isRecordId(id)) throw new Error('Invalid ACP record id.');
     return path.join(this.root, `${id}.json`);
   }

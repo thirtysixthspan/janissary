@@ -76,6 +76,13 @@ function intent(
     tabs.openRecord(row, capabilities);
     return null;
   }
+  if (request.intent === 'open-record-json') {
+    if (!isIdIntent(request.payload)) return capabilities.rejectRequest('invalid open-record-json payload');
+    const row = rowForId(connectionsData(capabilities).rows, request.payload.id);
+    if (!row || row.type !== 'record') return capabilities.rejectRequest('invalid open-record-json payload');
+    const refusal = capabilities.topicAction({ topic: 'connections', action: 'recordJson', id: request.payload.id });
+    return refusal === undefined ? null : capabilities.rejectRequest(refusal);
+  }
   if (request.intent === 'open' || request.intent === 'close') {
     if (!isKindIdOwnerIntent(request.payload)) return capabilities.rejectRequest(`invalid ${request.intent} payload`);
     const row = rowForTarget(connectionsData(capabilities).rows, request.payload);

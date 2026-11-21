@@ -77,6 +77,14 @@ describe('SUBAGENT_PRIMER', () => {
     }
     expect(primer).toContain('no role list');
   });
+
+  it('shows a fenced example of the JSON form', () => {
+    expect(primer.split('\n').slice(-3)).toEqual([
+      '```janissary',
+      'subagent {"role":"scout","context":"investigate the parser"}',
+      '```',
+    ]);
+  });
 });
 
 describe('subagentTaskPrompt', () => {

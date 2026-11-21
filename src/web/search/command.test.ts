@@ -197,7 +197,7 @@ describe('isWebSearchReplyLine', () => {
 });
 
 describe('WEB_SEARCH_PRIMER', () => {
-  it('is the six primer lines', () => {
+  it('names the grammar and shows a fenced example', () => {
     expect(WEB_SEARCH_PRIMER).toBe(
       [
         'To search the web, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
@@ -205,9 +205,13 @@ describe('WEB_SEARCH_PRIMER', () => {
         'The result is a Markdown list of up to 10 results by default, each a title linked to its URL with a snippet beneath. For time-sensitive searches, include the year in the query; the search does not infer freshness.',
         '--depth advanced gives better snippets but costs more; use it only when basic results are not enough.',
         'Search only when the answer needs current or external information; never put file contents or secrets in a query.',
-        'Example: web search node.js permission model 2026 --results 5',
+        'Example:',
+        '```janissary',
+        'web search node.js permission model 2026 --results 5',
+        '```',
       ].join('\n'),
     );
+    expect(WEB_SEARCH_PRIMER).toContain('```janissary\nweb search node.js permission model 2026 --results 5\n```');
   });
 
   it('names no four-digit year other than the example', () => {

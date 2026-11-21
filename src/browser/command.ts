@@ -4,6 +4,7 @@
 // The host (src/browser/index.ts) performs the actual Playwright actions against the tab's browser.
 
 import { findLastCommandLine } from '../acp/command-line.js';
+import { commandExample } from '../acp/command-example.js';
 import type { BrowserParsed } from './types.js';
 
 const USAGE =
@@ -105,4 +106,8 @@ export const BROWSER_PRIMER = [
   'To read a web page, put exactly one `browser` command inside a final fenced block whose info string is exactly `janissary`,',
   'without a `janissary` prefix; prose may follow the block. The host runs it and returns the output to you, so you can issue',
   'further commands. When the task is done, reply with the final answer and NO trailing command.',
+  'Examples:',
+  commandExample('browser goto https://example.com'),
+  commandExample('browser content'),
+  commandExample('browser eval document.title'),
 ].join('\n');

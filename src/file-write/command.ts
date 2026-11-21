@@ -3,6 +3,7 @@ import { displayPath } from './messages.js';
 import { FILE_POLICY_MAX_BYTES } from '../file-read/policy.js';
 import { describePatchCommand, isFilePatchCommandLine } from '../file-patch/command.js';
 import { isRecord } from '../value-guards.js';
+import { commandExample } from '../acp/command-example.js';
 
 export const FILE_MUTATION_PRIMER = [
   'To write or edit a file in the workspace, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
@@ -12,7 +13,10 @@ export const FILE_MUTATION_PRIMER = [
   'A write creates or overwrites the file and creates missing parent folders.',
   'An edit replaces exact text that must match once, unless "replaceAll" is true. Files and arguments are limited to 5 MB.',
   String.raw`Inside JSON strings escape " as \" and \ as \\.`,
-  String.raw`Example, creating notes/todo.md: file write {"path":"notes/todo.md","content":"# Todo\n- first item\n"}`,
+  'Example, creating notes/todo.md:',
+  commandExample(String.raw`file write {"path":"notes/todo.md","content":"# Todo\n- first item\n"}`),
+  'Example, editing that file:',
+  commandExample('file edit {"path":"notes/todo.md","oldString":"first item","newString":"second item"}'),
   'A write answers `Wrote <path>.`; an edit answers `Edited <path> (<n> replacements).`',
 ].join('\n');
 

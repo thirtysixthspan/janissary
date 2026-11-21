@@ -102,6 +102,21 @@ describe('connections list styles', () => {
     expect(text).toContain('white-space: pre-wrap');
     expect(text).toContain('overflow-wrap: anywhere');
   });
+
+  it('gives every section the same default background and one shared treatment', () => {
+    const styles = readFileSync('web/src/plugins/connections/connections.css', 'utf8');
+    const content = styles.match(/\.connections-prompt, \.connections-preamble \{[^}]+\}/)?.[0];
+    expect(content).toContain('white-space: pre-wrap');
+    expect(content).toContain('overflow-wrap: anywhere');
+    expect(content).not.toContain('background');
+    expect(content).not.toContain('border-radius');
+    expect(content).not.toContain('padding');
+    const activity = styles.match(/\.connections-activity \{[^}]+\}/)?.[0];
+    expect(activity).toContain('border-left: 2px solid var(--border)');
+    expect(activity).toContain('padding-left: 10px');
+    expect(styles.match(/background: var\(--bg-soft\)/g)).toEqual(['background: var(--bg-soft)']);
+    expect(styles).toContain('.connections-row.selected { background: var(--bg-soft); }');
+  });
 });
 
 describe('connections rows follow the sessions rows', () => {

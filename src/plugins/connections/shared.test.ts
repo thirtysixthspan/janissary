@@ -35,6 +35,40 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'connection', record: live })).toBe(false);
   });
 
+  it('accepts an optional string preamble on a record block and rejects a non-string one', () => {
+    const withPreamble = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], preamble: 'tool primer' }],
+      },
+    };
+    const badPreamble = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], preamble: 3 }],
+      },
+    };
+    expect(isConnectionsPayload({ kind: 'connection', record: withPreamble })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: badPreamble })).toBe(false);
+  });
+
+  it('accepts an array of reply strings on a record block and rejects malformed replies', () => {
+    const withReplies = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], replies: ['first', 'answer'] }],
+      },
+    };
+    const badReplies = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], replies: ['first', 3] }],
+      },
+    };
+    expect(isConnectionsPayload({ kind: 'connection', record: withReplies })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: badReplies })).toBe(false);
+  });
+
   it('requires a role on live ACP refs while accepting legacy retained records', () => {
     const oldLiveRef = { ...live, acpRef: { scope: 'tab', label: 'Owner' } };
 
@@ -109,6 +143,37 @@ describe('connections shared contract', () => {
     { kind: 'connection', record: { ...record, model: undefined } },
   ])('rejects malformed payload %j', (value) => {
     expect(isConnectionsPayload(value)).toBe(false);
+  });
+
+  it('accepts connection windows whose tool entries carry a phase and correlation', () => {
+    const withPhase = {
+      ...record,
+      window: {
+        ...record.window,
+        blocks: [{
+          ...record.window.blocks[0],
+          entries: [
+            { kind: 'tool', text: 'file list .', timestamp: 1, toolPhase: 'command' },
+            { kind: 'tool', text: 'a.md', timestamp: 2, toolPhase: 'reply', toolCommand: 'file list .' },
+          ],
+        }],
+      },
+    };
+    expect(isConnectionsPayload({ kind: 'connection', record: withPhase })).toBe(true);
+  });
+
+  it.each(['start', 3, null])('rejects a connection window with invalid tool phase %j', (toolPhase) => {
+    const withPhase = {
+      ...record,
+      window: {
+        ...record.window,
+        blocks: [{
+          ...record.window.blocks[0],
+          entries: [{ kind: 'tool', text: 'x', timestamp: 1, toolPhase }],
+        }],
+      },
+    };
+    expect(isConnectionsPayload({ kind: 'connection', record: withPhase })).toBe(false);
   });
 
   it('validates exact intent shapes', () => {

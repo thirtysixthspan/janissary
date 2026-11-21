@@ -20,13 +20,17 @@ export type AcpRecordEntry = {
   kind: AcpActivityKind;
   text: string;
   timestamp: number;
+  toolPhase?: 'command' | 'reply';
+  toolCommand?: string;
 };
 
 export type AcpRecordBlock = {
   prompt: string;
+  preamble?: string;
   startedAt: number;
   entries: AcpRecordEntry[];
   answer?: string;
+  replies?: string[];
   endedAt?: number;
 };
 

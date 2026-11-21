@@ -27,7 +27,7 @@ import { isFileHeadTailCommandLine } from '../file-head-tail/command.js';
 import { headTailInTab } from '../file-head-tail/tab-head-tail.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { runWebInTab } from '../web/tab-web.js';
-import { coreActivity, promptCoreRecord } from './record-feed.js';
+import { coreActivity, promptCoreRecord, replyCoreRecord } from './record-feed.js';
 import type { AcpSessionRecords } from '../acp-records/manager.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
@@ -69,7 +69,7 @@ export function prepareCorePromptRecord(
   records: AcpSessionRecords, runtime: TabRuntime, request: AcpPendingPrompt,
   settings: CommandSettingsSnapshot | undefined,
 ): void {
-  request.recordPrompt = `${corePromptPrimer(runtime, request, settings)}\n\n${request.prompt}`;
+  request.preamble = corePromptPrimer(runtime, request, settings);
   promptCoreRecord(records, runtime, request);
 }
 
@@ -118,7 +118,8 @@ export function runCorePrompt(
     managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
   const snapshot = coreSnapshot(runtime, request, nativeSettings);
-  const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
+  const recordTool = (text: string, toolPhase?: 'command' | 'reply', toolCommand?: string) =>
+    coreActivity(managers.acpRecords, runtime, 'tool', text, request.role, toolPhase, toolCommand);
   const host: AcpToolHost = {
     runCaller: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
@@ -153,11 +154,16 @@ export function runCorePrompt(
       appendAcp(managers, label, entry);
     },
     chunk: (buffer) => updateRunning(buffer, true),
-    endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
-    startCommand: (command, workspace) => { recordTool(tagged(command, workspace)); },
+    endTurn: (final) => {
+      updateRunning(final, false);
+      lastAnswer = final;
+      request.replied = true;
+      replyCoreRecord(managers.acpRecords, runtime, final, request.role);
+    },
+    startCommand: (command, workspace) => { recordTool(tagged(command, workspace), 'command'); },
     ranCommand: (command, result, workspace, refused) => {
       if (refused === 'disabled') notify(managers, 'command-disabled', label, result);
-      recordTool(tagged(result, workspace));
+      recordTool(tagged(result, workspace), 'reply', tagged(command, workspace));
       appendAcp(managers, label, { input: tagged(command, workspace), output: result, acp: true });
     },
     finished: (reason, maxSteps) => {

@@ -150,7 +150,8 @@ describe('AcpManager.run', () => {
     expect(first.primer).not.toContain('Only these commands are allowed');
     expect(first.primer).not.toContain(DB_PRIMER);
     expect(first.primer).toContain(NO_TOOLS_LINE);
-    expect(first.extractCommand(block('question ask "Who?"'))).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
+    expect(first.extractCommand(block('question ask "Who?"')))
+      .toMatchObject({ kind: 'batch', commands: [expect.objectContaining({ command: 'question ask "Who?"' })] });
     expect(first.extractCommand('db sqlite list')).toEqual({ kind: 'absent' });
     expect(settingsCurrent).toHaveBeenCalledOnce();
 
@@ -165,7 +166,8 @@ describe('AcpManager.run', () => {
     expect(retry.primer).toContain('question ask');
     expect(retry.primer).not.toContain('Only these commands are allowed');
     expect(retry.primer).toContain(NO_TOOLS_LINE);
-    expect(retry.extractCommand(block('question ask "Who?"'))).toMatchObject({ kind: 'one', command: 'question ask "Who?"' });
+    expect(retry.extractCommand(block('question ask "Who?"')))
+      .toMatchObject({ kind: 'batch', commands: [expect.objectContaining({ command: 'question ask "Who?"' })] });
     expect(retry.runCommand('question ask "Who?"')).toBe('Command is disabled: question ask.');
     expect(dispatchNativeLine).not.toHaveBeenCalled();
 
@@ -182,7 +184,7 @@ describe('AcpManager.run', () => {
     expect(next.primer).toContain('Only these commands are allowed: db sqlite query.');
     expect(next.primer).toContain(NO_BUILTIN_TOOLS_LINE);
     expect(next.extractCommand(block('db sqlite query store SELECT 1')))
-      .toMatchObject({ kind: 'one', command: 'db sqlite query store SELECT 1' });
+      .toMatchObject({ kind: 'batch', commands: [expect.objectContaining({ command: 'db sqlite query store SELECT 1' })] });
     expect(next.extractCommand('question ask "Who?"')).toEqual({ kind: 'absent' });
     await expect(next.runCommand('db sqlite query store SELECT 1')).resolves.toBe('db ran');
     expect(dispatchNativeLine).toHaveBeenCalledWith(
@@ -210,7 +212,7 @@ describe('AcpManager.run', () => {
 
     expect(dependencies.primer).toContain('question ask "<question>"');
     expect(dependencies.extractCommand(block('question ask "What port?"')))
-      .toMatchObject({ kind: 'one', command: 'question ask "What port?"' });
+      .toMatchObject({ kind: 'batch', commands: [expect.objectContaining({ command: 'question ask "What port?"' })] });
     dispatchNativeLine.mockResolvedValue({ dispatched: true, output: 'Production' });
     await expect(dependencies.runCommand(
       'question approve "Deploy?" Staging Production',
@@ -252,7 +254,7 @@ describe('AcpManager.run', () => {
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
     expect(deps.primer).toContain(DB_PRIMER);
     expect(deps.extractCommand(block('question ask "What port?"')))
-      .toMatchObject({ kind: 'one', command: 'question ask "What port?"' });
+      .toMatchObject({ kind: 'batch', commands: [expect.objectContaining({ command: 'question ask "What port?"' })] });
   });
 
   // The restriction is the tab's own policy rather than a manager's collection, so a session that dies

@@ -56,6 +56,13 @@ describe('AcpSessionRecords transitions', () => {
     expect(next.rows().find((row) => row.id === nextId)?.status).toBe('Idle');
   });
 
+  it('hands out the persisted file path for a valid id and nothing for a malformed one', () => {
+    const records = create();
+    const id = records.begin(core);
+    expect(records.filePath(id)).toBe(file(id));
+    expect(records.filePath('../outside')).toBeUndefined();
+  });
+
   it('projects role tags on core record rows while keeping legacy rows untagged', () => {
     const records = create();
     const tellId = records.begin({ ...core, role: 'tell' });
@@ -112,6 +119,19 @@ describe('AcpSessionRecords transitions', () => {
     expect(changes).toHaveBeenCalledTimes(10);
   });
 
+  it('stores a tool phase and correlation on the record entry', () => {
+    const records = create();
+    const id = records.begin(core);
+    records.prompt(id, 'list files');
+    expect(records.activity(id, 'tool', 'file list .', 'command')).toBe(true);
+    expect(records.activity(id, 'tool', 'a.md', 'reply', 'file list .')).toBe(true);
+    records.answer(id, 'a.md');
+    expect(read(id).blocks[0].entries).toEqual([
+      { kind: 'tool', text: 'file list .', timestamp: 100, toolPhase: 'command' },
+      { kind: 'tool', text: 'a.md', timestamp: 100, toolPhase: 'reply', toolCommand: 'file list .' },
+    ]);
+  });
+
   it('titles from an explicit text while storing the full prompt, and keeps that title later', () => {
     const records = create();
     const id = records.begin(core);
@@ -122,6 +142,51 @@ describe('AcpSessionRecords transitions', () => {
     expect(read(id).blocks[0].prompt).toBe(stored);
     records.prompt(id, 'second', 'ignored');
     expect(records.rows()[0].title).toBe('ACP: user prompt');
+  });
+
+  it('stores an optional preamble on the first block only', () => {
+    const records = create();
+    const id = records.begin(core);
+    expect(records.prompt(id, 'first', 'first', 'tool primer')).toBe(true);
+    records.answer(id, 'one');
+    expect(read(id).blocks[0].preamble).toBe('tool primer');
+    expect(records.prompt(id, 'second', 'second', 'tool primer')).toBe(true);
+    records.answer(id, 'two');
+    expect(read(id).blocks[1].prompt).toBe('second');
+    expect(read(id).blocks[1].preamble).toBeUndefined();
+  });
+
+  it('leaves records without a preamble unchanged', () => {
+    const records = create();
+    const id = records.begin(core);
+    expect(records.prompt(id, 'first')).toBe(true);
+    records.answer(id, 'one');
+    expect(read(id).blocks[0]).not.toHaveProperty('preamble');
+  });
+
+  it('appends several replies to one open block without settling it', () => {
+    const records = create();
+    const id = records.begin(core);
+    records.prompt(id, 'question');
+    expect(records.reply(id, 'first reply')).toBe(true);
+    expect(records.activity(id, 'tool', 'still running')).toBe(true);
+    expect(records.reply(id, 'second reply')).toBe(true);
+    expect(records.rows()[0].status).toBe('Running');
+    expect(records.answer(id, 'second reply')).toBe(true);
+    expect(records.rows()[0].status).toBe('Idle');
+    expect(records.window(id)?.blocks[0]?.replies).toEqual(['first reply', 'second reply']);
+    expect(read(id).blocks[0]?.replies).toEqual(['first reply', 'second reply']);
+  });
+
+  it('seeds replies from the final answer and ignores empty or late replies', () => {
+    const records = create();
+    const id = records.begin(core);
+    records.prompt(id, 'question');
+    expect(records.reply(id, ' '.repeat(3))).toBe(false);
+    expect(records.answer(id, 'the answer')).toBe(true);
+    expect(records.window(id)?.blocks[0]?.replies).toEqual(['the answer']);
+    expect(records.reply(id, 'too late')).toBe(false);
+    expect(records.window(id)?.blocks[0]?.replies).toEqual(['the answer']);
   });
 
   it('keeps an empty first-line title and keeps agents Running after settlement', () => {

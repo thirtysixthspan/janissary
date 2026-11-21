@@ -1,4 +1,5 @@
 import { positiveInteger } from '../positive-integer.js';
+import { commandExample } from '../acp/command-example.js';
 
 export type FileReadArgs = {
   path: string;
@@ -45,6 +46,8 @@ export const FILE_READ_PRIMER = [
   'To read a file in the workspace, put exactly one command inside a final fenced block whose info string is exactly `janissary`. Write the command without a `janissary` prefix; prose may follow the block.',
   'file read <path> [--offset <line>] [--limit <lines>]',
   'Paths are relative to the workspace root. The output is numbered lines, at most 2000 per read; use --offset to continue a long file.',
+  'Example:',
+  commandExample('file read README.md'),
 ].join('\n');
 
 export function isFileReadCommandLine(line: string): boolean {

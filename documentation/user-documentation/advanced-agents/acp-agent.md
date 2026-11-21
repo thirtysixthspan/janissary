@@ -88,11 +88,11 @@ can read a file from the workspace, find workspace files by path, find text insi
 approve a question. Tell has those commands plus database create/delete, browser eval, writing and editing workspace files, and applying a multi-file patch. If the model
 tries a known command its role doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose another action. The result of each allowed tool step goes back to the model,
 up to the `maxToolTurns` limit per prompt. That limit defaults to 20 and is set in `.janissary/config.json`; see
-[Configuration](/user-documentation/getting-started/configuration). If a prompt reaches that cap, the settled shell reply and the record's final answer in
-the connection tab end with a `(stopped after N tool steps)` paragraph naming the limit, so you can tell the answer was
+[Configuration](/user-documentation/getting-started/configuration). If a prompt reaches that cap, the settled shell reply ends with a
+`(stopped after N tool steps)` paragraph naming the limit, so you can tell the answer was
 cut short and retry a narrower request.
 
-Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought entries start collapsed there and tool entries start expanded. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these five tools are available in this loop; it cannot run arbitrary shell commands.
+Tool steps and the agent's thinking appear in the connection tab, not in the shell output. Thought and tool entries start collapsed there. Click an entry's label to open or close it. A tool step whose text is JSON reads as indented JSON. Only these five tools are available in this loop; it cannot run arbitrary shell commands.
 
 Questions identify the tab asking them. Answer or cancel in the question surface owned by that tab. A selected docked shell can show its question too. A hidden docked shell does not raise a question panel, and a centre question renders once.
 
@@ -100,7 +100,7 @@ Questions identify the tab asking them. Answer or cancel in the question surface
 
 Every ACP session started from a shell has a retained connection record. The shell's row in the connections window, and its row in the connections tab, opens the session's connection tab. The record survives the shell closing and an application restart, and a closed record opens read-only. A clean close saves completed history; a crash can lose activity from the prompt that was running, because streaming activity is not written continuously. Records closed more than 30 days before startup are removed then, not on a rolling timer.
 
-The connection tab is the full live view: metadata, prompt blocks, activity, and the final answer. It is not a plain-text snapshot. A shell row has no snapshot button; the separate **Open transcript** button in the shell metadata row opens the terminal's own transcript file. Only an editor tab's connections panel draws the monitor and persona snapshot buttons; shell and harness windows do not.
+The connection tab is the full live view: metadata, prompt blocks, and activity. It is not a plain-text snapshot. A shell row has no snapshot button; the separate **Open transcript** button in the shell metadata row opens the terminal's own transcript file. Only an editor tab's connections panel draws the monitor and persona snapshot buttons; shell and harness windows do not.
 
 A run started from this tab with `agent in a tab` also appears in the window as an `Agent: <task filename>` row while it runs. That row opens the run's connection tab and disappears when the run ends. See [Connections](/user-documentation/command-bar/connections) for the list, lookup, close, delete, and retention rules.
 

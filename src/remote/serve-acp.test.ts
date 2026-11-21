@@ -574,7 +574,7 @@ describe('RemoteAcp — running', () => {
     expect(acpMock.prompt).toHaveBeenCalledTimes(2);
   });
 
-  it('admits another run after a caller result ends the first with acp-error', async () => {
+  it('admits another run after a caller error is delivered as a tool step', async () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
     acp.run({ ...RUN_FRAME, snapshot: coreSnapshot('tell', ['db sqlite query']) });
@@ -584,13 +584,17 @@ describe('RemoteAcp — running', () => {
     await flush();
 
     acp.toolResult({ type: 'acp-tool-result', id: 'racp1', request: 1, error: 'database unavailable' });
+    await vi.waitFor(() => expect(acpMock.prompt).toHaveBeenCalledTimes(2));
+    lastHandlers().onChunk('Done.');
+    lastHandlers().onEnd('end_turn');
     await flush();
 
-    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: 'racp1', message: 'database unavailable', fatal: false });
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: 'racp1', reason: 'answered' });
+    expect(frames.some((frame) => frame.type === 'acp-error')).toBe(false);
 
     acp.run(RUN_FRAME);
 
-    expect(acpMock.prompt).toHaveBeenCalledTimes(2);
+    expect(acpMock.prompt).toHaveBeenCalledTimes(3);
   });
 
   it('leaves no stale run handle when the loop finishes during startRemoteLoop', () => {

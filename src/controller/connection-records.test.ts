@@ -1,5 +1,9 @@
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { openConnectionRecord } from './connection-records.js';
+import { openConnectionRecord, openRecordJson } from './connection-records.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
@@ -88,5 +92,40 @@ describe('openConnectionRecord', () => {
     openConnectionRecord(managers, { tab: 'main', acpRef: { scope: 'tab', label: 'main', role: 'ask' } });
 
     expect(dispatchTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('openRecordJson', () => {
+  const withManagers = (filePath: (id: string) => string | undefined) => {
+    const edit = vi.fn();
+    const managers = {
+      acpRecords: { filePath },
+      openFile: { edit },
+      tab: { cur: () => ({ label: 'main' }) },
+    } as unknown as Managers;
+    return { managers, edit };
+  };
+
+  it('opens the record JSON file in an editor tab named after its id', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'connection-record-json-'));
+    const id = randomUUID();
+    const file = path.join(dir, `${id}.json`);
+    writeFileSync(file, '{}');
+    const { managers, edit } = withManagers((candidate) => candidate === id ? file : undefined);
+
+    expect(openRecordJson(managers, id)).toBe(true);
+
+    expect(edit).toHaveBeenCalledWith(`connection ${id}`, file, 'main');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('refuses an unknown id or a record file that no longer exists', () => {
+    const unknown = withManagers(() => '');
+    expect(openRecordJson(unknown.managers, 'missing')).toBe(false);
+    expect(unknown.edit).not.toHaveBeenCalled();
+
+    const gone = withManagers(() => path.join(tmpdir(), `missing-${randomUUID()}.json`));
+    expect(openRecordJson(gone.managers, 'record-1')).toBe(false);
+    expect(gone.edit).not.toHaveBeenCalled();
   });
 });

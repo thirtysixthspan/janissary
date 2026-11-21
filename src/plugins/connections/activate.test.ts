@@ -279,6 +279,25 @@ describe('connections plugin activation', () => {
     expect(f.topicAction).toHaveBeenCalledTimes(1);
   });
 
+  it('passes an open-record-json intent through even without an acpRef and refuses bad requests', () => {
+    const f = fixture([recordRow]);
+    const request = (payload: unknown) => ({
+      tab: 'connections', intent: 'open-record-json', payload, tabPayload: { kind: 'connection', record: recordRow },
+    });
+
+    expect(f.activation.intent(request({ id: 'uuid' }), f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'recordJson', id: 'uuid' });
+    expect(() => f.activation.intent(request({ id: 'uuid', extra: true }), f.capabilities))
+      .toThrow('invalid open-record-json payload');
+    expect(() => f.activation.intent(request({ id: 'missing' }), f.capabilities))
+      .toThrow('invalid open-record-json payload');
+    expect(f.topicAction).toHaveBeenCalledTimes(1);
+
+    f.topicAction.mockReturnValue('The record file could not be opened.');
+    expect(() => f.activation.intent(request({ id: 'uuid' }), f.capabilities))
+      .toThrow('The record file could not be opened.');
+  });
+
   it('leaves load-older without a refusal even when the topic answers', () => {
     const f = fixture([recordRow]);
     f.topicAction.mockReturnValue('ignored');

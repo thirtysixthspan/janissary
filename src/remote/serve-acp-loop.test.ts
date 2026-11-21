@@ -184,7 +184,7 @@ describe('startRemoteLoop workspace steps', () => {
     expect(frames).toEqual([
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: true },
       { type: 'acp-chunk', id: RUN_ID, text: block('file read a.md') },
-      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: '' },
+      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: block('file read a.md') },
       { type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md', result: '1\tone\n2\ttwo', workspace: true },
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: false },
       { type: 'acp-chunk', id: RUN_ID, text: 'Done.' },
@@ -331,14 +331,16 @@ describe('startRemoteLoop caller steps', () => {
     expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
   });
 
-  it('ends the run with a non-fatal error when the result carries an error', async () => {
-    const { frames, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+  it('delivers a caller error as a tool step and keeps the run going', async () => {
+    const { frames, sent, handle } = start([[block(QUERY)], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
 
     handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, error: 'database unavailable' });
     await flush();
 
-    expect(frames.at(-1)).toEqual({ type: 'acp-error', id: RUN_ID, message: 'database unavailable', fatal: false });
-    expect(framesOf(frames, 'acp-run-end')).toEqual([]);
+    expect(framesOf(frames, 'acp-error')).toEqual([]);
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+    expect(sent[1]).toContain('ACP error: database unavailable');
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
   });
 
   it('ignores a result for an unknown or already settled request', async () => {
@@ -357,6 +359,137 @@ describe('startRemoteLoop caller steps', () => {
   });
 });
 
+describe('startRemoteLoop parallel caller correlation', () => {
+  const Q2 = 'db sqlite query movies SELECT 2';
+  const Q3 = 'db sqlite query movies SELECT 3';
+
+  it('correlates every caller block in one reply with its own request and emits no tool step', async () => {
+    const batch = [QUERY, Q2, Q3].map((command) => block(command)).join('\n\n');
+    const { frames, handle } = start([[batch], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+
+    const requests = framesOf(frames, 'acp-tool-request');
+    expect(requests.map((frame) => frame.request)).toEqual([1, 2, 3]);
+    expect(requests.map((frame) => frame.command)).toEqual([QUERY, Q2, Q3]);
+
+    for (const frame of requests) {
+      handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: frame.request, output: `out-${frame.request}` });
+    }
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+  });
+
+  it('consumes one pending entry per identical command in a batch', async () => {
+    const batch = `${block(QUERY)}\n\n${block(QUERY)}`;
+    const { frames, handle } = start([[batch], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+
+    expect(framesOf(frames, 'acp-tool-request').map((frame) => frame.request)).toEqual([1, 2]);
+
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'first' });
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 2, output: 'second' });
+    await flush();
+
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+  });
+
+  it('correlates identical commands whose results arrive in reverse request order', async () => {
+    const batch = `${block(QUERY)}\n\n${block(QUERY)}`;
+    const { frames, sent, handle } = start([[batch], ['Done.']], coreSnapshot('tell', ['db sqlite query']));
+
+    expect(framesOf(frames, 'acp-tool-request').map((frame) => frame.request)).toEqual([1, 2]);
+
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 2, output: 'second' });
+    await flush();
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'first' });
+    await flush();
+
+    expect(sent[1]).toContain(`Output of \`${QUERY}\`:\nsecond`);
+    expect(sent[2]).toContain(`Output of \`${QUERY}\`:\nfirst`);
+    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
+    expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' });
+
+    const framesBeforeLate = frames.length;
+    const promptsBeforeLate = sent.length;
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 2, output: 'late-second' });
+    handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'late-first' });
+    await flush();
+    expect(sent).toHaveLength(promptsBeforeLate);
+    expect(frames).toHaveLength(framesBeforeLate);
+  });
+
+  it('keeps a workspace step when its text matches a pending caller command', async () => {
+    writeFileSync(path.join(workspace, 'a.md'), 'one\n');
+    const stepCommand = 'file read a.md';
+    const run = startHeld(coreSnapshot('tell', ['db sqlite query', 'file read']));
+    void lastHost().runCaller(stepCommand);
+    const batch = `${block(QUERY)}\n\n${block(stepCommand)}`;
+    run.last().onChunk(batch);
+    run.last().onEnd('end_turn');
+    await flush();
+
+    expect(framesOf(run.frames, 'acp-tool-request').map((frame) => frame.command)).toEqual([stepCommand, QUERY]);
+    const step: Extract<ServerFrame, { type: 'acp-tool-step' }> = {
+      type: 'acp-tool-step', id: RUN_ID, command: stepCommand, result: '1\tone', workspace: true,
+    };
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([step]);
+
+    run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'first' });
+    run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 2, output: '42' });
+    await flush();
+
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([step]);
+  });
+
+  it('keeps a gate refusal step when its text matches a pending caller command', async () => {
+    const snapshot = coreSnapshot('tell', ['db sqlite query', 'file read'], [
+      { name: 'file read', effectiveEnabled: false, effectiveAgentAccess: true },
+    ]);
+    const stepCommand = 'file read a.md';
+    const run = startHeld(snapshot);
+    void lastHost().runCaller(stepCommand);
+    const batch = `${block(QUERY)}\n\n${block(stepCommand)}`;
+    run.last().onChunk(batch);
+    run.last().onEnd('end_turn');
+    await flush();
+
+    expect(framesOf(run.frames, 'acp-tool-request').map((frame) => frame.command)).toEqual([stepCommand, QUERY]);
+    const step: Extract<ServerFrame, { type: 'acp-tool-step' }> = {
+      type: 'acp-tool-step', id: RUN_ID, command: stepCommand,
+      result: 'Command is disabled: file read.', workspace: false, refused: 'disabled',
+    };
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([step]);
+
+    run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 1, output: 'first' });
+    run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request: 2, output: '42' });
+    await flush();
+
+    expect(framesOf(run.frames, 'acp-tool-step')).toEqual([step]);
+  });
+
+  it('rejects several pending caller requests on abort and sends no further frames', async () => {
+    const run = startHeld(coreSnapshot('tell', ['db sqlite query']));
+    const batch = [QUERY, Q2, Q3].map((command) => block(command)).join('\n\n');
+    run.last().onChunk(batch);
+    run.last().onEnd('end_turn');
+    await flush();
+    expect(framesOf(run.frames, 'acp-tool-request').map((frame) => frame.request)).toEqual([1, 2, 3]);
+    const before = run.frames.length;
+
+    run.handle.abort();
+    await flush();
+
+    for (const request of [1, 2, 3]) {
+      run.handle.toolResult({ type: 'acp-tool-result', id: RUN_ID, request, output: `out-${request}` });
+    }
+    run.last().onChunk('late');
+    run.last().onEnd('end_turn');
+    await flush();
+
+    expect(run.frames).toHaveLength(before);
+    expect(run.sent).toHaveLength(1);
+  });
+});
+
 describe('startRemoteLoop frame order', () => {
   it('emits turn, delta chunks, end, request, and the follow-up turn in order', async () => {
     const { frames, handle } = start([
@@ -368,7 +501,7 @@ describe('startRemoteLoop frame order', () => {
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: true },
       { type: 'acp-chunk', id: RUN_ID, text: 'Looking at the data.\n' },
       { type: 'acp-chunk', id: RUN_ID, text: block(QUERY) },
-      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: 'Looking at the data.' },
+      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: `Looking at the data.\n${block(QUERY)}` },
       { type: 'acp-tool-request', id: RUN_ID, request: 1, command: QUERY },
     ]);
 
@@ -791,15 +924,14 @@ describe('startRemoteLoop workspace grep routing', () => {
     expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('(no matches)');
   });
 
-  it('emits the existing nonfatal acp-error for an unexpected rejection', async () => {
+  it('delivers an unexpected rejection as a tool step instead of an error frame', async () => {
     mocks.grepWorkspaceCommand.mockImplementationOnce(() => Promise.reject(new Error('grep worker stopped')));
-    const { frames } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
+    const { frames, sent } = start([[block(GREP)], ['Done.']], coreSnapshot('tell', ['file grep']));
 
-    await vi.waitFor(() => expect(framesOf(frames, 'acp-error')).toHaveLength(1));
-    expect(framesOf(frames, 'acp-tool-step')).toEqual([]);
-    expect(frames.at(-1)).toEqual({
-      type: 'acp-error', id: RUN_ID, message: 'grep worker stopped', fatal: false,
-    });
+    await vi.waitFor(() => expect(frames.at(-1)).toEqual({ type: 'acp-run-end', id: RUN_ID, reason: 'answered' }));
+    expect(framesOf(frames, 'acp-error')).toEqual([]);
+    expect(framesOf(frames, 'acp-tool-step')[0]?.result).toBe('ACP error: grep worker stopped');
+    expect(sent[1]).toContain('ACP error: grep worker stopped');
   });
 
   it('still forwards a later database command as caller request 1', async () => {
