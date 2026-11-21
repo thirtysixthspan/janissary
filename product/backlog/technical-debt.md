@@ -11,6 +11,50 @@
 
 
 
+* Move the SQL table dropdown's kind-grouping and browsability rules into a pure module so the schema navigator's order and choices can be tested without rendering a select.
+
+Existing Debt: §5 (components render; they do not decide) — `web/src/plugins/sql/TableSwitcher.tsx` declares `GROUP_LABELS` and `BROWSABLE` and builds its option groups with an inline map/filter and a per-option `disabled` check, so the kind order, the group labels, and which objects may be opened are rules a reader can only verify by rendering the select. Severity: 4/10
+
+Existing Risk: 4/10 - A change to which kinds are browsable, their labels, or their order is made inside markup and proven through a render, so a trigger becoming selectable or a group vanishing reaches the user before any rule-level test could catch it.
+
+Proposal Risk: 2/10 - The rules become plain functions anyone can call, but the disable decision stays a boolean the select interprets, so a kind added to the schema but not the label table would render with no group and only a render test would notice.
+
+Proposal: In `web/src/plugins/sql/TableSwitcher.tsx`, `GROUP_LABELS` and `BROWSABLE` sit above the component and its `groups` value is built in the body by mapping those labels over `payload.objects`, dropping empty groups, and disabling non-browsable kinds in JSX. Add `web/src/plugins/sql/table-groups.ts` exporting `tableGroups(objects)` — returning `{ kind, label, entries }[]` in the current table/view/index/trigger order with empty groups removed — and `isBrowsableKind(kind)` for the current table/view allowlist, then import both and use them in place of the inline constants, chain, and `disabled` expression. Props and rendered markup are unchanged; the only production importer, `web/src/plugins/sql/SqlTab.tsx`, needs no edit and no import path moves. `web/src/plugins/sql/TableSwitcher.test.tsx` pins group order, group labels, and that a trigger option is disabled while a view is enabled; it needs no edit and must keep its assertions byte-for-byte. Only the one component file is edited and the new module is a leaf. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/TableSwitcher.tsx`.
+
+
+* Move the schedule dialog's default-field and target-decoding rules beside its command builder so a target-format change can be checked without rendering the form.
+
+Existing Debt: §5 (components render; they do not decide) — `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx` defines `initialFields` and `selectTarget`, the latter slicing the `tab:` prefix off a select value to reconstruct a `ScheduleTarget`, in the component body while the sibling field rules live in `schedule-selection.ts`, so the default set and the option encoding are only exercised through a render. Severity: 4/10
+
+Existing Risk: 5/10 - The `tab:` prefix is written when the options are built and parsed again in the change handler, so a change to that encoding applied to one side leaves the dialog submitting `in <label>` for a wrong target while the option still looks correct, and only the full render suite notices.
+
+Proposal Risk: 2/10 - Both rules become plain functions, but the encoding is still duplicated between the option values in the JSX and the decoder, so a future target kind added to the select but not the decoder would submit a malformed clause with no compile error.
+
+Proposal: In `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx`, `initialFields(view)` sets the name, target, type, and time defaults and `selectTarget(value)` turns `'system'` or `'tab:<label>'` back into a `ScheduleTarget`; both are plain functions in the component file. Move them into a new `web/src/ScheduleLaunchDialog/schedule-fields.ts` (importing `initialScheduleTarget` from `./schedule-selection` and the `ScheduleFields`/`ScheduleTarget` types from `./schedule-command`), export them, and import them back into the dialog. Keep `remembered`, `resetScheduleDialogMemory`, and `reconcileScheduleFields` where they are — the first two are the dialog's session memory and the third already lives in `schedule-selection.ts`; do not edit that module or any test. `web/src/ScheduleLaunchDialog/ScheduleDialog.test.tsx` pins the default active target, the `tab:` option values, and the `in <label>` clause of a submitted command; it needs no edit and must keep its assertions byte-for-byte. The only production importer, `web/src/AppMain.tsx`, is unaffected and no import path moves. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx`.
+
+
+* Move the SQL grid's word-versus-row-run copy decision into a pure module so the rule that keeps a run copy intact can be tested directly.
+
+Existing Debt: §6 (hooks are the seam between logic and view) — `web/src/plugins/sql/selection.tsx` keeps `cellOf` and `selectedWithinOneCell` as private helpers in the hook file, and the latter decides whether the browser's word selection sits inside one cell so the grid's run copy can stand aside or proceed; that decision is only exercised by rendering the grid and firing a copy key. Severity: 4/10
+
+Existing Risk: 5/10 - The rule was written because a shift-click left a browser selection spanning the run and the grid lost its first value, so a regression in the anchor/focus comparison silently truncates a pasted statement and only the one render case covers it.
+
+Proposal Risk: 2/10 - The helpers become plain functions a test can call with a stubbed selection, but they still read the global `getSelection()`, so a test has to fake that global and the hook's gating on `active` and focus remains verified only through the render suite.
+
+Proposal: In `web/src/plugins/sql/selection.tsx`, `cellOf(node)` resolves a DOM node to its `td.sql-cell` and `selectedWithinOneCell()` compares the anchor and focus cells of the page selection; the copy effect calls the latter to decide its early return. Move both into a new `web/src/plugins/sql/selection-cell.ts` exporting them unchanged and import them back into `selection.tsx`; the new module is a leaf that needs no imports beyond the DOM types. The hook's signature, return shape, and window-listener wiring do not change, so `web/src/plugins/sql/DataGrid.tsx` (its only production importer) needs no edit and no import path moves. `web/src/plugins/sql/Selection.test.tsx` pins the copy of a run, the word-inside-one-cell case, and the shift-click case where a browser selection spans the run; it needs no edit and must keep its assertions byte-for-byte. Only the one hook file is edited. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/selection.tsx`.
+
+
+* Move the crop overlay's pointer-to-image coordinate mapping into a pure module so its scaling and zero-width guard can be tested without a pointer gesture.
+
+Existing Debt: §5 (components render; they do not decide) — `web/src/plugins/image/CropOverlay.tsx` computes `toImagePoint` from `getBoundingClientRect` and image size, including a guard for an unlaid-out surface, and `percent` for the rect style inside the component, so the coordinate math behind every crop drag is verified only through pointer events in a render. Severity: 4/10
+
+Existing Risk: 4/10 - A surface measured at zero width is exactly when a divide-by-zero would produce an infinite crop rectangle, and the guard plus the scale factors live in a handler that no plain function test can call, so a regression reaches the image editor as a broken drag.
+
+Proposal Risk: 2/10 - The transform becomes a pure function of bounds, pointer coordinates, and size, but it still depends on the DOM rect the component reads, so a test passes synthetic bounds rather than exercising the real layout and a layout-only bug would slip through.
+
+Proposal: In `web/src/plugins/image/CropOverlay.tsx`, `toImagePoint(host, event, size)` reads `host.getBoundingClientRect()` and scales client coordinates into image pixels with a `bounds.width > 0` guard, and `percent(value, extent)` formats the rect style. Add `web/src/plugins/image/crop-point.ts` exporting a pure `imagePoint(bounds, clientX, clientY, size)` that holds the scale math and both zero guards, and a pure `percent(value, extent)`; import both into the component, have `toImagePoint` become a one-line read of `host.getBoundingClientRect()` passed to `imagePoint`, and replace the inline percent calls. Props, drag state, and the rendered handles are unchanged, so no other file's imports need to move. `web/src/plugins/image/ImageEditor.test.tsx` renders the overlay and pins crop drags through pointer events; it needs no edit and must keep its assertions byte-for-byte. Only the one component file is edited and the new module is a leaf. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/image/CropOverlay.tsx`.
+
+
 ## deferred
 
 * Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site. — deferred: complexity 6/10, a context-object refactor of an already-long projection module plus 63 test call sites across three suites with a compatibility wrapper.
