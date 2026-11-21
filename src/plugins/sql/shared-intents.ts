@@ -1,6 +1,4 @@
-import { parseDockArgument } from '../api.js';
 import type { SqlFilterOperator } from './shared.js';
-import type { Dock } from './open-tab.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -81,18 +79,6 @@ export function isValidDatabaseName(value: unknown): value is string {
 
 export function isOpenIntent(value: unknown): value is OpenIntent {
   return isRecord(value) && isValidDatabaseName(value.name);
-}
-
-// `sql [name] [left|right]`, split the way the command reads it: the dock side is the trailing token
-// when the published `parseDockArgument` reads one there, and the name is whatever is left. A bare
-// argument is a name of `''` with a `null` side — the current database, wherever it already sits —
-// and a trailing token that is not a side leaves the dock `undefined`, which leaves an already
-// docked tab docked. Reading the side through the published parser is what keeps `sql shop LEFT`
-// from arriving here as a database named `LEFT`.
-export function parseSqlArgument(argument: string): { name: string; dock: Dock } {
-  const words = argument.trim().split(/\s+/).filter(Boolean);
-  const dock = parseDockArgument(words.at(-1) ?? '');
-  return { name: dock === undefined ? words.join(' ') : words.slice(0, -1).join(' '), dock };
 }
 
 export function isSelectObjectIntent(value: unknown): value is SelectObjectIntent {
