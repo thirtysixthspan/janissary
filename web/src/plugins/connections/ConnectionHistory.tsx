@@ -2,6 +2,7 @@ import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
 import { renderMarkdown } from '../api';
 import { groupToolEntries, parseToolCalls, prettyJson } from './activity-text';
+import { preserveJanissaryFences } from './janissary-fences';
 import { ToolCallBlock } from './ToolCallBlock';
 
 export function ConnectionHistory({ window, openLink }: {
@@ -78,7 +79,7 @@ function MessageText({ text }: { text: string }) {
   if (parseToolCalls(text).some((segment) => segment.kind === 'tool-call')) return <ActivityText text={text} />;
   const json = prettyJson(text);
   if (json !== undefined) return <pre className="connections-activity-text connections-activity-json">{json}</pre>;
-  const html = renderMarkdown(text);
+  const html = renderMarkdown(preserveJanissaryFences(text));
   return html === undefined
     ? <div className="connections-activity-text">{text}</div>
     : <div className="connections-activity-text" dangerouslySetInnerHTML={{ __html: html }} />;

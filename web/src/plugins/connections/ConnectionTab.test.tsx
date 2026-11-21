@@ -118,6 +118,20 @@ describe('ConnectionTab', () => {
     expect(thought.textContent).toBe('**bold** and `code`\n\n- one\n- two');
   });
 
+  it('shows janissary fences literally in a rendered message section', () => {
+    const value = record();
+    value.window!.blocks[0]!.entries = [
+      { kind: 'message', text: '**Here.**\n```janissary\nfile list config\n```\nDone.', timestamp: 1 },
+    ];
+    setup(value);
+    const message = document.querySelector('.connections-activity-text')!;
+    expect(message.querySelector('strong')?.textContent).toBe('Here.');
+    expect(message.textContent).toContain('```janissary');
+    expect(message.textContent).toContain('```');
+    expect(message.textContent).toContain('file list config');
+    expect(message.querySelector('pre')).toBeNull();
+  });
+
   it('routes a link clicked in a rendered message section through openLink without navigating', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'See [the docs](https://example.com/docs).', timestamp: 1 }];
