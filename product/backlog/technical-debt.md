@@ -13,17 +13,6 @@
 
 
 
-* Lift the schedule dialog's submit-validity rules out of its launch hook into a pure module so the field constraints can be exercised without rendering the dialog.
-
-Existing Debt: §6 (hooks are the seam between logic and view) — the launch hook in `web/src/ScheduleLaunchDialog/useScheduleLaunchActions.ts` holds a private `isValid` with a trimmed-name check, a system-versus-tab command branch, and a five-way switch over schedule type, so the rule that gates submission is reachable only through the hook's `canSubmit` return in a render. Severity: 4/10
-
-Existing Risk: 4/10 - A new schedule type or a change to the target rule can flip `canSubmit` the wrong way and ship a dialog that refuses a valid schedule or accepts an invalid one, with the mistake visible only through a full form render.
-
-Proposal Risk: 2/10 - The rule becomes a plain function anyone can call with a fields fixture, but its input is still the hand-assembled `ScheduleFields`, so a field added to the form but not to the validator stays unchecked until someone notices the disabled button.
-
-Proposal: `web/src/ScheduleLaunchDialog/useScheduleLaunchActions.ts` defines a private `isValid(fields)` that checks the trimmed name, picks `script` for a system target versus a trimmed `command` for a tab target, and switches on `type` for `at`/`on`/`every`/`everyDay`/`everyWeekday`; the hook returns it as `canSubmit` and `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx` uses that value to disable the Create button. Add `web/src/ScheduleLaunchDialog/schedule-validity.ts` exporting `isValid` as a pure function of `ScheduleFields` from `web/src/ScheduleLaunchDialog/schedule-command.ts`, import it back into the hook, and delete the local copy; the hook's return shape and both intent-sending callbacks stay byte-for-byte. Only that one hook file changes and no import path outside it moves; `web/src/ScheduleLaunchDialog/ScheduleDialog.test.tsx` renders the form and asserts the button's disabled state across the name, system-script, and type-specific cases, so it needs no edit and must keep its assertions. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/ScheduleLaunchDialog/useScheduleLaunchActions.ts`.
-
-
 * Move the harness tab's key-routing rule into a pure module so which chords reach the terminal and which bubble to the window can be tested without mounting an xterm.
 
 Existing Debt: §5 (components render; they do not decide) — `web/src/harness/HarnessTab.tsx` defines a private `harnessKeyFilter` that decides whether each keydown is sent to the PTY or bubbles, combining a `keydown` gate, two picker-open flags, and the negation of four chord predicates, so the decision is reachable only through a rendered terminal's `keyFilter` callback. Severity: 4/10
