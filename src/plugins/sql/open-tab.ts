@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
 import type { SqlPayload } from './shared.js';
 import type { SqlTabs } from './tabs.js';
@@ -29,15 +30,19 @@ export function openDatabase(
   capabilities: TabPluginServerCapabilities,
   tabs: SqlTabs,
 ): void {
-  const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
-  if (!known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
+  const isPath = path.isAbsolute(database);
+  if (!isPath) {
+    const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
+    if (!known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
+  }
+  const title = isPath ? path.basename(database).replace(/\.sqlite$/i, '') : database;
   const key = instanceKeyFor(database);
   // A tab closed since its payload was kept would otherwise come back with that payload — and any
   // request it was still waiting on — instead of reading its schema afresh.
   tabs.prune(capabilities.ownTabKeys());
   const existing = tabs.read(key);
   if (existing) {
-    capabilities.openOrFocusTab(key, () => ({ title: database, payload: existing }));
+    capabilities.openOrFocusTab(key, () => ({ title, payload: existing }));
     if (dock !== undefined) capabilities.dockTab(key, dock);
     return;
   }
@@ -46,7 +51,7 @@ export function openDatabase(
   // synchronously, and a notification for a plugin with no open tab is dropped rather than queued,
   // so asking first loses the answer outright and leaves the tab on `Loading…` forever.
   dispatch(key, seed, planRequest('schema', seed), capabilities, tabs, (payload) => {
-    capabilities.openOrFocusTab(key, () => ({ title: database, payload }));
+    capabilities.openOrFocusTab(key, () => ({ title, payload }));
     if (dock !== undefined) capabilities.dockTab(key, dock);
   });
 }
