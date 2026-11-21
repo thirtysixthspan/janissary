@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { ScheduleLaunchView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
-import type { ScheduleFields, ScheduleTarget, ScheduleType } from './schedule-command';
-import { initialScheduleTarget, reconcileScheduleFields } from './schedule-selection';
+import type { ScheduleFields, ScheduleType } from './schedule-command';
+import { initialFields, selectTarget } from './schedule-fields';
+import { reconcileScheduleFields } from './schedule-selection';
 import { useScheduleLaunchActions } from './useScheduleLaunchActions';
 
 type Properties = { view: ScheduleLaunchView; client: JanusClient };
@@ -17,13 +18,6 @@ const SCHEDULE_TYPES: { value: ScheduleType; label: string }[] = [
 ];
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-function initialFields(view: ScheduleLaunchView): ScheduleFields {
-  return {
-    name: '', target: initialScheduleTarget(view), activeTarget: view.active, command: '', script: '',
-    type: 'at', time: '', date: '', interval: '', weekday: 'monday',
-  };
-}
 
 // Remembered across reopen within a single app run (module-level, never persisted to disk).
 let remembered: ScheduleFields | null = null;
@@ -54,10 +48,6 @@ export function ScheduleDialog({ view, client }: Properties) {
       return next;
     });
   }, [view]);
-
-  const selectTarget = (value: string): ScheduleTarget => value === 'system'
-    ? { kind: 'system' }
-    : { kind: 'tab', label: value.slice('tab:'.length) };
 
   const { cancel, create, canSubmit } = useScheduleLaunchActions(client, fields);
   const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, canSubmit, hadRemembered);
