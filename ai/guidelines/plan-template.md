@@ -50,4 +50,9 @@ Required. The boundaries of this version: what the feature deliberately does not
 
 ### Verification
 
-Required. How to confirm the implementation is correct. End the plan with the diff-scoped check command `$janissary/scripts/run.mjs check-diff`, followed by at least one concrete manual end-to-end check a reader can actually perform against the running app: the exact command or interaction, what they should see, and what a failure looks like. The diff-scoped command alone proves only that there is no lint, typecheck, or test regression; the manual check is what proves the change really does what the plan promised.
+Required. How to confirm the implementation is correct. Every plan ends with the diff-scoped check command `$janissary/scripts/run.mjs check-diff`, followed by at least one concrete manual check a reader can actually perform. The diff-scoped command alone proves only that there is no lint, typecheck, or test regression; the manual check is what proves the change really does what the plan promised, so `check-diff` is never sufficient proof on its own. The manual check's form is set by the plan's surface:
+
+- A plan that adds or changes application behavior ends with a concrete end-to-end check against the running app: the exact command or interaction, what the reader should see, and what a failure looks like.
+- A plan that changes no application behavior and adds no code ends with a concrete reading-based check instead: the exact files to read and the specific consistency claims to confirm in them, stating what a reader should find and what would show the change was not made correctly.
+
+Both forms exist because a documentation-, spec-, or configuration-only plan has no running app to exercise, but every plan still needs one concrete, reader-performable manual check. The Verification section of `product/plans/complete/plan-template.md` — the documentation-only plan that introduced this template — is the worked example of the no-code form: it pairs `check-diff` with manual checks that read the changed documents and draft a scratch plan under `./temp/`, rather than driving a running app.
