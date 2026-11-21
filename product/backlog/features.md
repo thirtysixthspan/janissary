@@ -2,6 +2,9 @@
 
 ## ready
 
+* extract a plan template from plan-a-new-feature.md and stope it in /ai/guidelines/plan-template.md. revise plan-a-new-feature.md to refer to the requirements layed out in the plan template. The template should lay out the required format, sections, and content of plans. update decompose-plan.md to respect the plan template when decomposing plans. update improve-plan.md and improve-plan-with-minimalism.md to respect the plan template when changing plans. Each section of the plan template must describe the expected format and content for that section. 
+
+
 ## development
 
 ## deferred
