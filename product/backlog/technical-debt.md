@@ -7,39 +7,6 @@
 
 ## development
 
-* Extract the shared SQLite polling cursor and subagent-discovery scaffold the two opencode transcript readers duplicate into one helper.
-
-Existing Debt: `src/harness/transcript/opencode.ts` and `src/harness/transcript/opencode-v2.ts` each implement the same poll/open/resolve/discoverChildren/readMessages state machine with the same `(time_created, id)` cursor, the same table-presence probe, and the same `subagent <id>` labeling, so a fix made to one reader's polling does not reach the other. Severity: 5/10
-
-Existing Risk: 5/10 - A correction to cursor advancement, session resolution, or child discovery made for one opencode schema leaves the other silently dropping turns, so a tab's transcript differs depending on which opencode version the user happens to run.
-
-Proposal Risk: 2/10 - Both readers share one cursor and child-discovery loop and render through the same normalizer, but the two schemas still need their own SQL and part decoding, so a future schema change remains a localized edit rather than a compile error.
-
-Proposal: In `src/harness/transcript/opencode.ts` the public `OpencodeTranscriptSource` opens the database, probes for `session_v2`, and delegates to `OpencodeV2TranscriptSource`, but keeps its own v1 `poll`, `open`, `resolve`, `discoverChildren`, and `readMessages`; `src/harness/transcript/opencode-v2.ts` reimplements all five with the same private `position = { time, id }`, the same `(time_created > ? OR (time_created = ? AND id > ?))` window, and the same child-session label. Extract a small shared owner into a new module beside them, such as `src/harness/transcript/opencode-poll.ts`, that owns the database handle, the schema probes, the session list, the cursor, and the discovery loop, and takes hooks for the schema-specific SQL (`session` versus `session_v2`, `message` versus `session_message`) and the part decoder in `src/harness/transcript/normalize.ts`. Keep `src/harness/transcript/opencode.ts` as the single public `TranscriptSource` and keep its data-column detection for the older flat and JSON-document layouts; make `OpencodeV2TranscriptSource` the v2 configuration rather than a second polling class. `src/harness/transcript/opencode.test.ts` covers both schemas in one suite including the child-session and second-poll cases; keep every expectation unchanged, and add a case that runs the same assertion against both schema fixtures if one does not already exist.
-
-
-* Give the opencode transcript readers a diagnostic path so a query failure is distinguishable from a session with no new output.
-
-Existing Debt: Both readers wrap their whole `poll()` in a bare `catch` that returns an empty array, the public source wraps the delegation the same way, and the polling tailer in `src/harness/transcript/tailer.ts` catches again and simply stops, so a locked database, a missing column, or a malformed row is indistinguishable from a quiet session. Severity: 4/10
-
-Existing Risk: 4/10 - When opencode changes its schema again, harness tabs silently lose their transcripts and wait the full resolution deadline before showing a generic no-transcript line, with nothing naming the reader or query that failed.
-
-Proposal Risk: 2/10 - Failures reach the notifications path with the underlying error text, but a source that reports on every poll would spam the feed, so reporting must stay deduplicated per source instance.
-
-Proposal: In `src/harness/transcript/opencode.ts` and `src/harness/transcript/opencode-v2.ts`, narrow the bare catches to the operations that legitimately fail transiently — opening a database that does not exist yet and `busy` or `locked` query errors — and return a structured outcome carrying an optional error instead of `[]` for every failure. Thread that outcome through `TranscriptSource` in `src/harness/transcript/source.ts` to `HarnessTranscriptTailer` in `src/harness/transcript/tailer.ts`, which already has a one-shot `onUnavailable` notification for the resolution deadline: reuse that path to report the first real query failure immediately with the harness label and the error text from `src/error-text.ts`, and stop polling only for a fatal error. Keep the current behavior of never throwing into a tab and of falling back to screen snapshots. `src/harness/transcript/opencode.test.ts` already asserts that a missing database stays unresolved and emits nothing; keep that case and add a writable database with a deliberately broken `session_message` schema to assert one diagnostic is reported and the source stays unresolved.
-
-
-* Make opencode child-session discovery recursive so nested subagents reach the transcript instead of being dropped after one level.
-
-Existing Debt: Both opencode readers discover child sessions with a single `WHERE parent_id IN (...)` query against the root session only, so a subagent spawned by a subagent is never added to the session list and its turns are never read. Severity: 4/10
-
-Existing Risk: 4/10 - A deeply nested opencode task writes its most interesting work in a grandchild session that never appears in the tab's transcript or persisted transcript file, with no indication that anything was omitted.
-
-Proposal Risk: 2/10 - Discovery walks the parent chain to a bounded depth and every discovered session uses the existing cursor, but a malformed `parent_id` cycle or an unexpectedly deep tree still needs a guard so a poll cannot spin or grow the session list without limit.
-
-Proposal: In `src/harness/transcript/opencode.ts` and `src/harness/transcript/opencode-v2.ts`, replace the one-shot `discoverChildren` query with a loop that keeps expanding the session list from rows whose `parent_id` is any session already discovered, stopping when a poll finds no new id and at a bounded depth or count, and skipping ids already present so a cycle terminates. Both readers then hand the full list to the existing `session_id IN (...)` message query, leaving the `(time_created, id)` cursor and the `subagent <id>` source label unchanged. `src/harness/transcript/opencode.test.ts` has a single child-session case for each schema; extend it with a three-level parent, child, grandchild fixture for both schemas and assert all three turns appear in order, plus a cyclic `parent_id` fixture that terminates. The Claude adapter in `src/harness/transcript/claude.ts` discovers sibling subagent files rather than a parent chain and needs no change.
-
-
 * Give the editor's keyboard-and-composition interaction hook its own test instead of relying on the tab's component suite.
 
 Existing Debt: `web/src/editor/useEditorInteractions.ts` owns the precedence chain between suggestion keys, the find overlay, plugin chords, and the editor's own key actions, plus paste and IME composition flush, but no test imports it directly; its only coverage comes through `web/src/editor/EditorTab.tsx` in `web/src/editor/EditorTab.test.tsx`. Severity: 3/10
@@ -51,6 +18,28 @@ Proposal Risk: 2/10 - A direct suite pins each precedence branch and the composi
 Proposal: Add `web/src/editor/useEditorInteractions.test.ts` following the hook-test style of `web/src/editor/useEditor.test.ts`: build fake refs with a textarea holding a value and fake `api`, `find`, and `suggest` objects, then call the returned handlers with plain key and paste event objects. Cover at least the find overlay swallowing plain Escape before plugin keys, plugin-chord yielding as defined by `yieldsToPlugins` in `web/src/editor/keys.ts`, a paste going to the suggestion query rather than the buffer when that query has focus, `flushTextarea` being a no-op while composing, and `onKeyDown` returning early while `overlayOpen` is set. Leave `web/src/editor/EditorTab.test.tsx` and `web/src/editor/handleSuggestKeyDown.test.ts` unchanged; this suite pins the glue between modules they already cover individually.
 
 ## deferred
+
+* Extract the shared SQLite polling cursor and subagent-discovery scaffold the two opencode transcript readers duplicate into one helper. — deferred: complexity 6/10, introduces a new shared polling module with schema-specific hooks that rewrites both readers' state machines.
+
+Existing Debt: `src/harness/transcript/opencode.ts` and `src/harness/transcript/opencode-v2.ts` each implement the same poll/open/resolve/discoverChildren/readMessages state machine with the same `(time_created, id)` cursor, the same table-presence probe, and the same `subagent <id>` labeling, so a fix made to one reader's polling does not reach the other. Severity: 5/10
+
+Existing Risk: 5/10 - A correction to cursor advancement, session resolution, or child discovery made for one opencode schema leaves the other silently dropping turns, so a tab's transcript differs depending on which opencode version the user happens to run.
+
+Proposal Risk: 2/10 - Both readers share one cursor and child-discovery loop and render through the same normalizer, but the two schemas still need their own SQL and part decoding, so a future schema change remains a localized edit rather than a compile error.
+
+Proposal: In `src/harness/transcript/opencode.ts` the public `OpencodeTranscriptSource` opens the database, probes for `session_v2`, and delegates to `OpencodeV2TranscriptSource`, but keeps its own v1 `poll`, `open`, `resolve`, `discoverChildren`, and `readMessages`; `src/harness/transcript/opencode-v2.ts` reimplements all five with the same private `position = { time, id }`, the same `(time_created > ? OR (time_created = ? AND id > ?))` window, and the same child-session label. Extract a small shared owner into a new module beside them, such as `src/harness/transcript/opencode-poll.ts`, that owns the database handle, the schema probes, the session list, the cursor, and the discovery loop, and takes hooks for the schema-specific SQL (`session` versus `session_v2`, `message` versus `session_message`) and the part decoder in `src/harness/transcript/normalize.ts`. Keep `src/harness/transcript/opencode.ts` as the single public `TranscriptSource` and keep its data-column detection for the older flat and JSON-document layouts; make `OpencodeV2TranscriptSource` the v2 configuration rather than a second polling class. `src/harness/transcript/opencode.test.ts` covers both schemas in one suite including the child-session and second-poll cases; keep every expectation unchanged, and add a case that runs the same assertion against both schema fixtures if one does not already exist.
+
+
+* Give the opencode transcript readers a diagnostic path so a query failure is distinguishable from a session with no new output. — deferred: complexity 6/10, adds a structured-outcome surface threaded through both readers, the source, the tailer, and the notifications path with per-source deduplication.
+
+Existing Debt: Both readers wrap their whole `poll()` in a bare `catch` that returns an empty array, the public source wraps the delegation the same way, and the polling tailer in `src/harness/transcript/tailer.ts` catches again and simply stops, so a locked database, a missing column, or a malformed row is indistinguishable from a quiet session. Severity: 4/10
+
+Existing Risk: 4/10 - When opencode changes its schema again, harness tabs silently lose their transcripts and wait the full resolution deadline before showing a generic no-transcript line, with nothing naming the reader or query that failed.
+
+Proposal Risk: 2/10 - Failures reach the notifications path with the underlying error text, but a source that reports on every poll would spam the feed, so reporting must stay deduplicated per source instance.
+
+Proposal: In `src/harness/transcript/opencode.ts` and `src/harness/transcript/opencode-v2.ts`, narrow the bare catches to the operations that legitimately fail transiently — opening a database that does not exist yet and `busy` or `locked` query errors — and return a structured outcome carrying an optional error instead of `[]` for every failure. Thread that outcome through `TranscriptSource` in `src/harness/transcript/source.ts` to `HarnessTranscriptTailer` in `src/harness/transcript/tailer.ts`, which already has a one-shot `onUnavailable` notification for the resolution deadline: reuse that path to report the first real query failure immediately with the harness label and the error text from `src/error-text.ts`, and stop polling only for a fatal error. Keep the current behavior of never throwing into a tab and of falling back to screen snapshots. `src/harness/transcript/opencode.test.ts` already asserts that a missing database stays unresolved and emits nothing; keep that case and add a writable database with a deliberately broken `session_message` schema to assert one diagnostic is reported and the source stays unresolved.
+
 
 * Retire the ambiguous `promptAcp` capability and make the ACP command gate use `promptAcpResult`. — deferred: complexity 6/10, retires a published v3 capability and needs a deprecation-window and backward-compatibility decision across the contract union and table, two manifests, the ACP gate, and six pinned test suites.
 

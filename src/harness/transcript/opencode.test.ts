@@ -111,6 +111,45 @@ describe('OpencodeTranscriptSource', () => {
     expect(source.poll()).toEqual(['[subagent child] assistant: subagent working']);
   });
 
+  it('includes grandchild turns through a nested subagent chain', () => {
+    const database = openWritable();
+    createSchema(database);
+    addSession(database, 'mine', cwd, spawnedAt, null);
+    addSession(database, 'child', cwd, spawnedAt + 1, 'mine');
+    addSession(database, 'grandchild', cwd, spawnedAt + 2, 'child');
+    addTextMessage(database, 'm0', 'mine', 'user', spawnedAt + 3, 'root turn');
+    addTextMessage(database, 'm1', 'child', 'assistant', spawnedAt + 4, 'child turn');
+    addTextMessage(database, 'm2', 'grandchild', 'assistant', spawnedAt + 5, 'grandchild turn');
+    database.close();
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual([
+      'user: root turn',
+      '[subagent child] assistant: child turn',
+      '[subagent grandchild] assistant: grandchild turn',
+    ]);
+  });
+
+  it('terminates when the session table contains a parent_id cycle', () => {
+    const database = openWritable();
+    createSchema(database);
+    addSession(database, 'mine', cwd, spawnedAt, null);
+    addSession(database, 'child', cwd, spawnedAt + 1, 'mine');
+    addSession(database, 'grandchild', cwd, spawnedAt + 2, 'child');
+    addSession(database, 'loop-a', cwd, spawnedAt + 3, 'grandchild');
+    addSession(database, 'loop-b', cwd, spawnedAt + 4, 'loop-a');
+    addSession(database, 'self', cwd, spawnedAt + 5, 'self');
+    addTextMessage(database, 'm0', 'mine', 'user', spawnedAt + 6, 'root turn');
+    addTextMessage(database, 'm1', 'child', 'assistant', spawnedAt + 7, 'child turn');
+    addTextMessage(database, 'm2', 'grandchild', 'assistant', spawnedAt + 8, 'grandchild turn');
+    database.close();
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual([
+      'user: root turn',
+      '[subagent child] assistant: child turn',
+      '[subagent grandchild] assistant: grandchild turn',
+    ]);
+  });
+
   it('renders a tool part from its JSON state column', () => {
     const database = openWritable();
     createSchema(database);
@@ -193,6 +232,45 @@ describe('OpencodeTranscriptSource with data-column schema', () => {
 
     const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
     expect(source.poll()).toEqual(['[subagent child] assistant: subagent working']);
+  });
+
+  it('includes grandchild turns through a nested subagent chain in the data-column schema', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonSession(database, 'child', cwd, spawnedAt + 1, 'mine');
+    addJsonSession(database, 'grandchild', cwd, spawnedAt + 2, 'child');
+    addJsonMessage(database, 'm0', 'mine', spawnedAt + 3, 'user', [{ type: 'text', text: 'root turn' }]);
+    addJsonMessage(database, 'm1', 'child', spawnedAt + 4, 'assistant', [{ type: 'text', text: 'child turn' }]);
+    addJsonMessage(database, 'm2', 'grandchild', spawnedAt + 5, 'assistant', [{ type: 'text', text: 'grandchild turn' }]);
+    database.close();
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual([
+      'user: root turn',
+      '[subagent child] assistant: child turn',
+      '[subagent grandchild] assistant: grandchild turn',
+    ]);
+  });
+
+  it('terminates when the data-column session table contains a parent_id cycle', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonSession(database, 'child', cwd, spawnedAt + 1, 'mine');
+    addJsonSession(database, 'grandchild', cwd, spawnedAt + 2, 'child');
+    addJsonSession(database, 'loop-a', cwd, spawnedAt + 3, 'grandchild');
+    addJsonSession(database, 'loop-b', cwd, spawnedAt + 4, 'loop-a');
+    addJsonSession(database, 'self', cwd, spawnedAt + 5, 'self');
+    addJsonMessage(database, 'm0', 'mine', spawnedAt + 6, 'user', [{ type: 'text', text: 'root turn' }]);
+    addJsonMessage(database, 'm1', 'child', spawnedAt + 7, 'assistant', [{ type: 'text', text: 'child turn' }]);
+    addJsonMessage(database, 'm2', 'grandchild', spawnedAt + 8, 'assistant', [{ type: 'text', text: 'grandchild turn' }]);
+    database.close();
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual([
+      'user: root turn',
+      '[subagent child] assistant: child turn',
+      '[subagent grandchild] assistant: grandchild turn',
+    ]);
   });
 
   it('returns only newer rows on a second read', () => {
@@ -309,6 +387,45 @@ describe('OpencodeTranscriptSource with opencode v2 schema', () => {
 
     const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
     expect(source.poll()).toEqual(['[subagent ses_child] assistant: subagent working']);
+  });
+
+  it('includes grandchild turns through a nested subagent chain in the v2 schema', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Session(database, 'ses_child', cwd, spawnedAt + 1, 'ses_mine');
+    addV2Session(database, 'ses_grandchild', cwd, spawnedAt + 2, 'ses_child');
+    addV2Message(database, 'msg_0', 'ses_mine', 'user', 0, spawnedAt + 3, { type: 'user', text: 'root turn' });
+    addV2Message(database, 'msg_1', 'ses_child', 'assistant', 0, spawnedAt + 4, { type: 'assistant', content: [{ type: 'text', text: 'child turn' }] });
+    addV2Message(database, 'msg_2', 'ses_grandchild', 'assistant', 0, spawnedAt + 5, { type: 'assistant', content: [{ type: 'text', text: 'grandchild turn' }] });
+    database.close();
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual([
+      'user: root turn',
+      '[subagent ses_child] assistant: child turn',
+      '[subagent ses_grandchild] assistant: grandchild turn',
+    ]);
+  });
+
+  it('terminates when the v2 session table contains a parent_id cycle', () => {
+    const database = openWritable();
+    createV2Schema(database);
+    addV2Session(database, 'ses_mine', cwd, spawnedAt, null);
+    addV2Session(database, 'ses_child', cwd, spawnedAt + 1, 'ses_mine');
+    addV2Session(database, 'ses_grandchild', cwd, spawnedAt + 2, 'ses_child');
+    addV2Session(database, 'ses_loop_a', cwd, spawnedAt + 3, 'ses_grandchild');
+    addV2Session(database, 'ses_loop_b', cwd, spawnedAt + 4, 'ses_loop_a');
+    addV2Session(database, 'ses_self', cwd, spawnedAt + 5, 'ses_self');
+    addV2Message(database, 'msg_0', 'ses_mine', 'user', 0, spawnedAt + 6, { type: 'user', text: 'root turn' });
+    addV2Message(database, 'msg_1', 'ses_child', 'assistant', 0, spawnedAt + 7, { type: 'assistant', content: [{ type: 'text', text: 'child turn' }] });
+    addV2Message(database, 'msg_2', 'ses_grandchild', 'assistant', 0, spawnedAt + 8, { type: 'assistant', content: [{ type: 'text', text: 'grandchild turn' }] });
+    database.close();
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual([
+      'user: root turn',
+      '[subagent ses_child] assistant: child turn',
+      '[subagent ses_grandchild] assistant: grandchild turn',
+    ]);
   });
 
   it('returns only newer turns on a second read', () => {

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { asArray, asNumber, asRecord, asString } from './json.js';
-import { hasColumn, jsonRecord, placeholders, query } from './opencode-db.js';
+import { discoverDescendants, hasColumn, jsonRecord, placeholders, query } from './opencode-db.js';
 import { normalizeOpencodePart } from './normalize.js';
 import { contentText, speech, withSource } from './render.js';
 import type { TranscriptSource } from './source.js';
@@ -70,15 +70,7 @@ export class OpencodeV2TranscriptSource implements TranscriptSource {
   }
 
   private discoverChildren(database: DatabaseSync): void {
-    const rows = query(
-      database,
-      `SELECT id FROM session_v2 WHERE parent_id IN (${placeholders(this.sessions.length)})`,
-      this.sessions,
-    );
-    for (const row of rows) {
-      const id = asString(row.id);
-      if (id && !this.sessions.includes(id)) this.sessions.push(id);
-    }
+    discoverDescendants(database, 'session_v2', this.sessions);
   }
 
   // Turns after the private (time_created, id) position. The role comes from `type`; a child
