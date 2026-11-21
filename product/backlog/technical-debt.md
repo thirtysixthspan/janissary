@@ -8,17 +8,6 @@
 ## development
 
 
-* Move the command bar's quit-versus-close reporting rules into a small pure module so the same blocked line is judged the same way at every call site.
-
-Existing Debt: §5 (components render; they do not decide) — the command-bar provider file defines `blockedCommandWord` and `consumeBlockedCommand`, which strip a leading slash and re-check `isCloseCommand` to decide whether a blocked line is reported as quit or close, while the verdict rules for those same lines live in a colocated submit-classifier module. Severity: 4/10
-
-Existing Risk: 4/10 - The close spelling is matched independently in two places that both import `isCloseCommand`, so tightening one — a leading slash, a spaced `close`, an alias — leaves the report naming the wrong confirmation even though the interception itself is correct.
-
-Proposal Risk: 2/10 - Both decisions then come from one pure module, but the verdict is still consumed by two different bars, so a change reaches both at once and a regression would surface in whichever bar has the weaker suite.
-
-Proposal: `web/src/shared/command-bar/AppCommandBar.tsx` defines `blockedCommandWord(line, closeVerdict)` (strip a leading `/`, then call `isCloseCommand`) and `consumeBlockedCommand(line, verdict, tab, report)`, and calls the latter from its submit path to report a blocked quit or close. Extract both into a new pure module `web/src/shared/command-bar/blocked-command.ts` that imports `isCloseCommand` from `@shared/commands/parse-close` and `CommandBarVerdict` from `./classify-submit`, then import them into `AppCommandBar.tsx` and delete the inline copies; do not edit `web/src/shared/command-bar/classify-submit.ts` itself. Keep the exact report strings and the `tab !== undefined` guard unchanged, including the case where no report callback is supplied — a blocked line is still consumed. `web/src/shared/command-bar/classify-submit.test.ts` pins the verdict shapes and `web/src/shared/command-bar/AppCommandBar.test.tsx` pins the blocked-line behaviour; neither needs an edit and both must keep their assertions byte-for-byte. Only the one existing source file is edited; the new module is a leaf and creates no cycle. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/shared/command-bar/AppCommandBar.tsx`.
-
-
 * Give the launcher's two row lists the same extracted, testable click-confirmation rules that its sibling lists already have.
 
 Existing Debt: §5 (components render; they do not decide) — the launcher's command row and tab row each define a pure `openOnConfirm` / `openOnClick` rule inside their component files and assert it only through a full render, while the sessions, conversations, and hosts features keep the identical rule in `*-keys` modules with colocated tests. Severity: 4/10
