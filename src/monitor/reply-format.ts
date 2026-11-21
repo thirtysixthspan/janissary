@@ -1,6 +1,8 @@
 // Monitoring-AI reply parsing, split out of parsing.ts: a distinct concern from the
 // monitor/unmonitor command parsing that remains there.
 
+import { captureMarker } from '../shared/persona-reply-markers.js';
+
 // Extract a deliverable report from the monitoring AI's reply. The reply may contain
 // anything; only the marker lines count:
 //   [SUMMARY]: <text>                — a recap of activity (harness/page), no command
@@ -8,13 +10,6 @@
 //   [COMMAND]: <optional command>    — a command that accompanies a suggestion
 // An actionable suggestion wins when both markers are present; a summary carries no
 // command. No marker → nothing to deliver (the persona is told silence is fine).
-// Extract the text following a `[MARKER]:` line, up to (but not including) the next
-// bracket-marker line or the end of the reply — so a marker's own text may span multiple lines
-// (e.g. a summary that continues onto bullet points).
-function captureMarker(reply: string, marker: string): string | undefined {
-  const re = new RegExp(String.raw`(?:^|\n)\[${marker}]:\s*([\s\S]*?)(?=\n\[[A-Z]+]:|$)`);
-  return re.exec(reply)?.[1]?.trim();
-}
 
 export function parseSuggestion(reply: string): { text: string; command?: string } | null {
   const suggestion = captureMarker(reply, 'SUGGESTION');
