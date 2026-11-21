@@ -7,16 +7,6 @@
 
 ## development
 
-* Give the editor's keyboard-and-composition interaction hook its own test instead of relying on the tab's component suite.
-
-Existing Debt: `web/src/editor/useEditorInteractions.ts` owns the precedence chain between suggestion keys, the find overlay, plugin chords, and the editor's own key actions, plus paste and IME composition flush, but no test imports it directly; its only coverage comes through `web/src/editor/EditorTab.tsx` in `web/src/editor/EditorTab.test.tsx`. Severity: 3/10
-
-Existing Risk: 4/10 - A change to the precedence order can let a plugin chord steal plain Escape from the find overlay or flush a composition into the buffer instead of the suggestion query, and the mounted-tab suite only exercises the branches a rendered tab happens to hit.
-
-Proposal Risk: 2/10 - A direct suite pins each precedence branch and the composition and paste paths, but the component suite remains the only place proving the hook is wired to the real editor and find providers.
-
-Proposal: Add `web/src/editor/useEditorInteractions.test.ts` following the hook-test style of `web/src/editor/useEditor.test.ts`: build fake refs with a textarea holding a value and fake `api`, `find`, and `suggest` objects, then call the returned handlers with plain key and paste event objects. Cover at least the find overlay swallowing plain Escape before plugin keys, plugin-chord yielding as defined by `yieldsToPlugins` in `web/src/editor/keys.ts`, a paste going to the suggestion query rather than the buffer when that query has focus, `flushTextarea` being a no-op while composing, and `onKeyDown` returning early while `overlayOpen` is set. Leave `web/src/editor/EditorTab.test.tsx` and `web/src/editor/handleSuggestKeyDown.test.ts` unchanged; this suite pins the glue between modules they already cover individually.
-
 ## deferred
 
 * Extract the shared SQLite polling cursor and subagent-discovery scaffold the two opencode transcript readers duplicate into one helper. — deferred: complexity 6/10, introduces a new shared polling module with schema-specific hooks that rewrites both readers' state machines.
