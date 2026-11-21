@@ -42,6 +42,8 @@ type ConnectionsTopicRecordFields = {
   orderingTimestamp: number;
   // The owning tab's label while the tab the record began in is still open, whatever the record's status.
   focusTarget?: string;
+  // The tab-scoped ACP session behind an ACP record, for opening its transcript. Agent runs have none.
+  acpRef?: AcpRef;
   window?: ConnectionsTopicWindow;
 };
 

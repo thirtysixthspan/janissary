@@ -6,6 +6,9 @@ import { ACP_RECORD_WINDOW_SIZE, recordWindow } from '../acp-records/model.js';
 import { messageBus } from '../bus.js';
 import { SHELL_NAME } from '../shell/manager.js';
 import { readConnectionsTopic, runConnectionsTopicAction, subscribeConnectionsTopic } from './connections-topic.js';
+import { openAcpTranscript } from '../controller/transcript.js';
+
+vi.mock('../controller/transcript.js', () => ({ openAcpTranscript: vi.fn() }));
 
 function fixture() {
   const tabs: Tab[] = [
@@ -97,6 +100,25 @@ describe('connections topic delivery', () => {
 });
 
 describe('connections topic actions', () => {
+  it('opens the recorded session transcript by its acpRef', () => {
+    const { managers } = fixture();
+    vi.mocked(openAcpTranscript).mockClear();
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'transcript', id: 'core-id' })).toBeUndefined();
+    expect(openAcpTranscript).toHaveBeenCalledWith(managers, { scope: 'tab', label: 'owner', role: 'ask' });
+  });
+
+  it('refuses a transcript request for a missing record or one without an acpRef', () => {
+    const { managers } = fixture();
+    vi.mocked(openAcpTranscript).mockClear();
+
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'transcript', id: 'missing' }))
+      .toBe('The record has no ACP transcript.');
+    expect(runConnectionsTopicAction(managers, { topic: 'connections', action: 'transcript', id: 'agent-id' }))
+      .toBe('The record has no ACP transcript.');
+    expect(openAcpTranscript).not.toHaveBeenCalled();
+  });
+
   it('loads and pages requested windows, resets on load, and isolates manager state', () => {
     const { managers, windows, totalBlocks } = fixture();
     const row = () => {

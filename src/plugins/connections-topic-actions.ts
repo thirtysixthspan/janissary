@@ -4,6 +4,7 @@ import type { ConnectionsTopicAction } from './api-topics-connections.js';
 import { ACP_RECORD_WINDOW_SIZE } from '../acp-records/model.js';
 import { listLines } from '../connection/list.js';
 import { composeConnectionsTopicData } from './connections-topic-rows.js';
+import { openAcpTranscript } from '../controller/transcript.js';
 
 function consume(pending: Promise<unknown>): void {
   void pending.catch(() => {});
@@ -88,6 +89,15 @@ function focusRecordOwner(managers: Managers, action: FocusAction, requested: Ma
   return undefined;
 }
 
+type TranscriptAction = Extract<ConnectionsTopicAction, { action: 'transcript' }>;
+
+function openRecordTranscript(managers: Managers, action: TranscriptAction, requested: Map<string, number>): string | undefined {
+  const record = rows(managers, requested).find((candidate) => candidate.type === 'record' && candidate.id === action.id);
+  if (record?.type !== 'record' || record.acpRef === undefined) return 'The record has no ACP transcript.';
+  openAcpTranscript(managers, record.acpRef);
+  return undefined;
+}
+
 type TerminateAction = Extract<ConnectionsTopicAction, { action: 'terminate' }>;
 
 function actOnAgentRecord(managers: Managers, action: TerminateAction, requested: Map<string, number>): string | undefined {
@@ -126,6 +136,9 @@ export function connectionsTopicAction(
   }
   if (action.action === 'focus') {
     return focusRecordOwner(managers, action, requested);
+  }
+  if (action.action === 'transcript') {
+    return openRecordTranscript(managers, action, requested);
   }
   return actOnAgentRecord(managers, action, requested);
 }

@@ -381,6 +381,22 @@ describe('ConnectionTab', () => {
       ]);
     });
 
+    it('floats an Open transcript clipboard icon ahead of the other actions for a record with an ACP session', () => {
+      const { intent } = setup({ ...record(), acpRef: { scope: 'tab', label: 'owner', role: 'ask' } });
+      expect(actions()).toEqual([
+        { label: 'Open transcript', icon: 'clipboard', text: '' },
+        { label: 'Cancel', icon: 'circle-stop', text: '' },
+        { label: 'Close session', icon: 'circle-xmark', text: '' },
+      ]);
+      fireEvent.click(screen.getByRole('button', { name: 'Open transcript' }));
+      expect(intent).toHaveBeenCalledWith('open-transcript', { id: 'uuid' });
+    });
+
+    it('offers no transcript icon when the record has no ACP session', () => {
+      setup(record('agent', 'Completed'));
+      expect(screen.queryByRole('button', { name: 'Open transcript' })).toBeNull();
+    });
+
     it('offers only the close icon while an ACP record is idle', () => {
       setup(record('acp', 'Idle'));
       expect(actions()).toEqual([{ label: 'Close session', icon: 'circle-xmark', text: '' }]);

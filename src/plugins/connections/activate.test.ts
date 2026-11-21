@@ -279,6 +279,26 @@ describe('connections plugin activation', () => {
     expect(f.topicAction).toHaveBeenCalledTimes(1);
   });
 
+  it('passes an open-transcript intent through to the transcript topic action and refuses bad requests', () => {
+    const acpRecord = { ...recordRow, acpRef: { scope: 'tab' as const, label: 'owner', role: 'ask' as const } };
+    const f = fixture([acpRecord]);
+    const request = (payload: unknown) => ({
+      tab: 'connections', intent: 'open-transcript', payload, tabPayload: { kind: 'connection', record: acpRecord },
+    });
+
+    expect(f.activation.intent(request({ id: 'uuid' }), f.capabilities)).toBeNull();
+    expect(f.topicAction).toHaveBeenCalledWith({ topic: 'connections', action: 'transcript', id: 'uuid' });
+    expect(() => f.activation.intent(request({ id: 'uuid', extra: true }), f.capabilities))
+      .toThrow('invalid open-transcript payload');
+    expect(() => f.activation.intent(request({ id: 'missing' }), f.capabilities))
+      .toThrow('invalid open-transcript payload');
+    expect(f.topicAction).toHaveBeenCalledTimes(1);
+
+    f.topicAction.mockReturnValue('The record has no ACP transcript.');
+    expect(() => f.activation.intent(request({ id: 'uuid' }), f.capabilities))
+      .toThrow('The record has no ACP transcript.');
+  });
+
   it('leaves load-older without a refusal even when the topic answers', () => {
     const f = fixture([recordRow]);
     f.topicAction.mockReturnValue('ignored');

@@ -33,6 +33,7 @@ export function ConnectionTab({ record, capabilities }: {
         record={record}
         pendingTerminate={controller.pendingTerminate}
         onFocus={() => { controller.focus(record.id); }}
+        onOpenTranscript={() => { controller.openTranscript(record.id); }}
         onCancel={() => { controller.cancel(record.id); }}
         onCloseSession={() => { controller.closeSession(record.id); }}
         onTerminate={() => { controller.terminate(record.id); }}

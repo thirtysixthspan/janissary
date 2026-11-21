@@ -119,6 +119,20 @@ describe('connections topic rows', () => {
     expect(managers.acpRecords.window).toHaveBeenCalledWith('core-record', 20);
   });
 
+  it('gives durable ACP records a tab-scoped acpRef and leaves agent records without one', () => {
+    const { managers, recordRows } = fixture();
+    Object.assign(recordRows[0]!, { role: 'tell' });
+
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    expect(rows.find((row) => row.id === 'core-record'))
+      .toMatchObject({ acpRef: { scope: 'tab', label: 'first', role: 'tell' } });
+    expect(rows.find((row) => row.id === 'agent-record')).not.toHaveProperty('acpRef');
+
+    delete (recordRows[0] as { role?: string }).role;
+    expect(composeConnectionsTopicData(managers, new Map()).rows.find((row) => row.id === 'core-record'))
+      .toMatchObject({ acpRef: { scope: 'tab', label: 'first', role: 'ask' } });
+  });
+
   it('keeps a requested window while its plugin tab is docked or hidden and prunes it after the tab closes', () => {
     const { managers, tabs } = fixture();
     const recordTab = tabs.find((tab) => tab.plugin?.instanceKey === 'core-record')!;
