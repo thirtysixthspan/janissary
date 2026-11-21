@@ -45,7 +45,7 @@ State your pick in one sentence.
 1. Read the entire plan.
 2. For **every** file path, function, type, command, line anchor, and behavioral claim the plan makes, open the real thing and check it. Grep for symbols rather than trusting quoted line numbers — line anchors drift.
 3. Read the project constraints that shape any implementation here: the ESLint rules and file-size limit in [`AGENTS.md`](../../../AGENTS.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
-4. Skim one or two plans in `./product/plans/ready/` to match the house style — they follow a shape like: Goal, Design decisions, "What already exists (reuse, don't rebuild)" table, Implementation steps, Tests, Verification, Out of scope.
+4. Read `ai/guidelines/plan-template.md`; it is the single owner of the plan's section list and each section's format and content, and the plan you improve must follow it. Do not work from a second copy of the section list or treat an older plan in `./product/plans/ready/` as the authority on shape — the template governs.
 
 ---
 
@@ -62,7 +62,7 @@ Judge the plan against each of these. Take notes; you will fix them in Step 4.
 - **Reuse blindness.** Does the plan rebuild something the repo already has? Every mechanism the plan needs that already exists should be named with its location — a "What already exists (reuse, don't rebuild)" table is the house pattern.
 - **Testing gaps.** Behavior the plan changes with no test that would catch a regression, or tests named without their location/convention.
 - **Missing boundaries.** No "Out of scope" section, or a goal that quietly grows mid-document.
-- **Missing verification.** The plan should end with how to verify: `$janissary/scripts/run.mjs check-diff` during development plus a concrete manual end-to-end check.
+- **Missing verification.** The plan should end with how to verify: `$janissary/scripts/run.mjs check-diff` during development plus at least one concrete manual check a reader can perform. For a plan that adds or changes application behavior, that is an end-to-end check against the running app; for a plan that changes no application behavior and adds no code, it is a reading-based check naming the files to read and the consistency claims to confirm. `ai/guidelines/plan-template.md` defines both forms and is the authority here.
 
 ---
 
