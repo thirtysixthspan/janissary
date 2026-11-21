@@ -243,7 +243,7 @@ describe('startRemoteLoop workspace steps', () => {
 
     const { frames, sent } = start([[block('file read a.md')]], coreSnapshot('tell', ['file read']));
 
-    expect(framesOf(frames, 'acp-tool-step')).toHaveLength(8);
+    expect(framesOf(frames, 'acp-tool-step')).toHaveLength(9);
     expect(framesOf(frames, 'acp-run-end')).toEqual([{ type: 'acp-run-end', id: RUN_ID, reason: 'capped' }]);
     expect(sent).toHaveLength(9);
   });
@@ -992,7 +992,7 @@ describe('startRemoteLoop grep loop preservation', () => {
       const { frames, sent } = start([[block(GREP)]], coreSnapshot('tell', ['file grep']));
 
       await vi.waitFor(() => expect(framesOf(frames, 'acp-run-end')).toHaveLength(1));
-      expect(framesOf(frames, 'acp-tool-step')).toHaveLength(8);
+      expect(framesOf(frames, 'acp-tool-step')).toHaveLength(9);
       expect(sent).toHaveLength(9);
       expect(mocks.grepWorkspaceCommand).toHaveBeenCalledTimes(8);
       expect(framesOf(frames, 'acp-run-end')).toEqual([{ type: 'acp-run-end', id: RUN_ID, reason: 'capped' }]);

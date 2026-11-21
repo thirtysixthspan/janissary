@@ -576,6 +576,27 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
   });
 
+  it('reports every over-budget command with a refusal and a ranCommand event on both cap paths', () => {
+    const batch = '```janissary\nnotify one\n```\n\n```janissary\nnotify two\n```';
+    const afterCap = '```janissary\nnotify three\n```';
+    const { session, sent } = makeSession([batch, afterCap, 'All done.']);
+    const { h, events } = makeHandlers();
+    const runCommand = vi.fn(() => 'r');
+
+    runAcpToolLoop(session, 'q', { runCommand, extractCommand: block, maxSteps: 1 }, h);
+
+    expect(runCommand).toHaveBeenCalledExactlyOnceWith('notify one');
+    const refusals = sent.filter((prompt) => prompt.includes('ACP: step limit reached; command not run.'));
+    expect(refusals).toHaveLength(1);
+    expect(refusals[0]).toContain('Output of `notify two`:\nACP: step limit reached; command not run.');
+    expect(events.filter((event) => event[0] === 'ranCommand')).toEqual([
+      ['ranCommand', 'notify one', 'r'],
+      ['ranCommand', 'notify two', 'ACP: step limit reached; command not run.'],
+      ['ranCommand', 'notify three', 'ACP: step limit reached; command not run.'],
+    ]);
+    expect(events.at(-1)).toEqual(['finished', 'capped', 1]);
+  });
+
   it('sends the correction and runs nothing for a malformed reply without spending a step', () => {
     const { session, sent } = makeSession([
       '```janissary\njust prose\n```',

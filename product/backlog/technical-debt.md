@@ -7,16 +7,6 @@
 
 ## development
 
-* Replace the ACP tool loop's flag-based coordination with one explicit state so a capped command is refused the same way at every entry point.
-
-Existing Debt: `runAcpToolLoop` in `src/acp/loop.ts` coordinates one asynchronous flow with five overlapping flags (`done`, `busy`, `launching`, `pendingCap`, `inFlight`) and two queues, and applies the step cap in two different branches — `launchBatch` emits a refusal for each skipped command, while the `onEnd` branch only sets `pendingCap` — so an over-budget command is reported differently depending on when the cap is reached. Severity: 5/10
-
-Existing Risk: 5/10 - A command dropped when the cap is already reached yields no refusal line and no `ranCommand` event in one path but both in the other, so the transcript a person reads and the step tally a caller keeps disagree about what ran, and the parallel-batch flow added to this file makes its ordering assumptions harder to reason about on every change.
-
-Proposal Risk: 2/10 - A single state object and one cap helper give every skipped command the same treatment, but the loop still drives a live model that can end a turn without calling back, so a provider that never invokes `onEnd` remains an external stall the refactor cannot remove.
-
-Proposal: In `src/acp/loop.ts`, replace the five booleans and counters with one discriminated state (for example `idle`, `awaiting`, `capping`, `done`) plus the existing result queue, and give `pump`, `deliver`, and `flushRefusals` transitions through that state instead of independent flag checks. Route both cap sites — the `step >= maxSteps` check in `launchBatch` and the one in `promptOnce`'s `onEnd` — through one `skipOverBudget(commands)` helper that pushes a refusal with the existing `REFUSAL` text for every skipped command and calls `h.ranCommand` for it, so the two paths cannot diverge. In `src/acp/drive-loop.ts`, stop pairing metadata by push/shift order on the shared `completed` array: have `gatedRunner` return the `workspace` and `refused` fields alongside the command result and let the `ranCommand` handler read them from the result itself, which removes the ordering coupling the parallel batch relies on. `src/acp/loop.test.ts` pins the current behavior in its step-cap cases ("stops at the step cap", "runs only the commands that fit and refuses the rest of an over-budget batch", and "delivers every over-budget refusal before finishing capped"), so keep those assertions and add one for a command issued after the cap is already reached that asserts both a refusal line and a `ranCommand` event; `src/acp/drive-loop.test.ts` and `src/acp/plugin-session.test.ts` pin the event payloads that must not change.
-
 
 ## deferred
 
