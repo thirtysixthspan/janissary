@@ -26,6 +26,7 @@ export type AcpRecordEntry = {
 
 export type AcpRecordBlock = {
   prompt: string;
+  preamble?: string;
   startedAt: number;
   entries: AcpRecordEntry[];
   answer?: string;

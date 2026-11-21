@@ -137,6 +137,26 @@ describe('AcpSessionRecords transitions', () => {
     expect(records.rows()[0].title).toBe('ACP: user prompt');
   });
 
+  it('stores an optional preamble on the first block only', () => {
+    const records = create();
+    const id = records.begin(core);
+    expect(records.prompt(id, 'first', 'first', 'tool primer')).toBe(true);
+    records.answer(id, 'one');
+    expect(read(id).blocks[0].preamble).toBe('tool primer');
+    expect(records.prompt(id, 'second', 'second', 'tool primer')).toBe(true);
+    records.answer(id, 'two');
+    expect(read(id).blocks[1].prompt).toBe('second');
+    expect(read(id).blocks[1].preamble).toBeUndefined();
+  });
+
+  it('leaves records without a preamble unchanged', () => {
+    const records = create();
+    const id = records.begin(core);
+    expect(records.prompt(id, 'first')).toBe(true);
+    records.answer(id, 'one');
+    expect(read(id).blocks[0]).not.toHaveProperty('preamble');
+  });
+
   it('keeps an empty first-line title and keeps agents Running after settlement', () => {
     const records = create();
     const id = records.begin(core);

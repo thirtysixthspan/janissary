@@ -57,6 +57,16 @@ describe('ACP record source validation', () => {
     expect(isAcpRecord(record, id)).toBe(true);
   });
 
+  it('accepts a string preamble and rejects a non-string one', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-00000000000a';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id, source: core, title: 'ACP: list',
+      startedAt: 0, updatedAt: 2, blocks: [{ prompt: 'list', startedAt: 0, entries: [], answer: 'done', endedAt: 2 }],
+    };
+    expect(isAcpRecord({ ...record, blocks: [{ ...record.blocks[0], preamble: 'tool primer' }] }, id)).toBe(true);
+    expect(isAcpRecord({ ...record, blocks: [{ ...record.blocks[0], preamble: 3 }] }, id)).toBe(false);
+  });
+
   it.each(['start', 3, null])('rejects an invalid tool phase %j', (toolPhase) => {
     const id = 'a0b1c2d3-0000-4000-8000-000000000003';
     const record: AcpRecord = {

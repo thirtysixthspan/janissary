@@ -21,8 +21,8 @@ export class AgentRecordFeed {
     this.id = records.begin({ ...metadata, kind: 'agent', runId });
   }
 
-  prompt(text: string): void {
-    if (!this.ended) this.records.prompt(this.id, text);
+  prompt(text: string, preamble?: string): void {
+    if (!this.ended) this.records.prompt(this.id, text, text, preamble);
   }
 
   activity(kind: AcpActivityKind, text: string, toolPhase?: 'command' | 'reply', toolCommand?: string): void {

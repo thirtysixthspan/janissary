@@ -199,7 +199,8 @@ describe('subagent integration — local command to human reply', () => {
       const snapshot = mocks.runToolLoop.mock.calls[0]![2] as Extract<AcpRunSnapshot, { kind: 'core' }>;
       const primer = corePrimer(snapshot, createAcpToolTable(snapshot.grants));
       const record = controller.managers.acpRecords.window(receipt!.recordId)!;
-      expect(record.blocks[0]!.prompt).toBe(`${primer}\n\n${loopPrompt(0)}`);
+      expect(record.blocks[0]!.prompt).toBe(loopPrompt(0));
+      expect(record.blocks[0]!.preamble).toBe(primer);
       expect(mocks.resolve).toHaveBeenCalledWith('task.md', [], expect.objectContaining({ workspaceDir: expect.stringContaining('subagent-') }), []);
 
       handshake(0, 'provider-A');

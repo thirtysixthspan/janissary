@@ -20,6 +20,7 @@ export function ConnectionHistory({ window, openLink }: {
       {window.blocks.map((block, index) => (
         <article className="connections-block" key={window.offset + index}>
           <div className="connections-prompt">{block.prompt}</div>
+          {block.preamble !== undefined && <Preamble preamble={block.preamble} />}
           {groupToolEntries(block.entries).map((row) => {
             if (row.kind === 'tool') {
               const parts = row.reply === undefined ? [row.command] : [row.command, row.reply];
@@ -67,6 +68,13 @@ function ActivityText({ text }: { text: string }) {
   return json === undefined
     ? <div className="connections-activity-text">{text}</div>
     : <pre className="connections-activity-text connections-activity-json">{json}</pre>;
+}
+
+function Preamble({ preamble }: { preamble: string }) {
+  const html = renderMarkdown(preamble);
+  return <div className="connections-preamble">
+    {html === undefined ? preamble : <div dangerouslySetInnerHTML={{ __html: html }} />}
+  </div>;
 }
 
 function Answer({ answer }: { answer: string }) {

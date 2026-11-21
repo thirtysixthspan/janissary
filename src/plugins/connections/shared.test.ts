@@ -35,6 +35,23 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'connection', record: live })).toBe(false);
   });
 
+  it('accepts an optional string preamble on a record block and rejects a non-string one', () => {
+    const withPreamble = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], preamble: 'tool primer' }],
+      },
+    };
+    const badPreamble = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], preamble: 3 }],
+      },
+    };
+    expect(isConnectionsPayload({ kind: 'connection', record: withPreamble })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: badPreamble })).toBe(false);
+  });
+
   it('requires a role on live ACP refs while accepting legacy retained records', () => {
     const oldLiveRef = { ...live, acpRef: { scope: 'tab', label: 'Owner' } };
 

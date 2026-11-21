@@ -150,7 +150,7 @@ describe('runSubagentEntry', () => {
       const primer = corePrimer(expected, createAcpToolTable(expected.grants));
       const taskPrompt = subagentTaskPrompt(TASK, CONTEXT);
       const fullPrompt = `${primer}\n\n${taskPrompt}`;
-      expect(record.prompt.mock.calls).toEqual([[fullPrompt]]);
+      expect(record.prompt.mock.calls).toEqual([[taskPrompt, primer]]);
       expect(prompts).toHaveLength(1);
       expect(prompts[0]).toBe(fullPrompt);
       expect(prompts[0].split(primer)).toHaveLength(2);
@@ -169,7 +169,7 @@ describe('runSubagentEntry', () => {
         rows: coreSnapshotRows(settings), withoutTools: false,
       } as Extract<AcpRunSnapshot, { kind: 'core' }>;
       const primer = corePrimer(expected, createAcpToolTable(expected.grants));
-      expect(record.prompt.mock.calls).toEqual([[`${primer}\n\n${subagentTaskPrompt(TASK)}`]]);
+      expect(record.prompt.mock.calls).toEqual([[subagentTaskPrompt(TASK), primer]]);
     });
   });
 

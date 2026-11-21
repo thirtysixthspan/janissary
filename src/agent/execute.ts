@@ -60,7 +60,7 @@ export async function executeAgentRun(
 ): Promise<AgentResult> {
   if (run.outcome || run.abortController.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
   const prompt = taskPrompt(agentPrimer(run.snapshot), parameters);
-  run.record?.prompt(`${MARKDOWN_INSTRUCTION}\n\n${prompt}`);
+  run.record?.prompt(prompt, MARKDOWN_INSTRUCTION);
   const selected = selectedModel(model, managers.models.modelsFor('opencode'));
   const launch = acpLaunchFor({ harness: 'opencode', model: selected, variant: effort ?? 'medium' });
   const env = {

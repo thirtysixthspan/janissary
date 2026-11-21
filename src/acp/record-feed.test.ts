@@ -183,7 +183,7 @@ afterEach(() => {
 });
 
 describe('core record feeds', () => {
-  it('stores the provider preamble and user prompt together while titling from the user prompt', async () => {
+  it('stores the provider preamble apart from the user prompt while titling from the user prompt', async () => {
     const f = setup();
     const pending = f.managers.acp.prompt('owner', 'ask first\nsecond line');
     f.handshake();
@@ -192,9 +192,29 @@ describe('core record feeds', () => {
     f.end();
     await pending;
     const window = f.records.window(id);
-    expect(window?.blocks[0].prompt).toBe(f.sent()[0]);
-    expect(window?.blocks[0].prompt).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.blocks[0].prompt).toBe('first\nsecond line');
+    expect(window?.blocks[0].preamble).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.blocks[0].preamble).not.toContain('first\nsecond line');
+    expect(f.sent()[0]).toBe(`${window?.blocks[0].preamble}\n\n${window?.blocks[0].prompt}`);
     expect(window?.title).toBe('ACP: first');
+  });
+
+  it('records the provider preamble once, on the first block of a multi-prompt session', async () => {
+    const f = setup();
+    const first = f.managers.acp.prompt('owner', 'ask first');
+    f.handshake();
+    f.chunk('first answer');
+    f.end();
+    await first;
+    const second = f.managers.acp.prompt('owner', 'ask second');
+    f.chunk('second answer');
+    f.end();
+    await second;
+    const window = f.records.window(f.records.rows()[0].id);
+    expect(window?.blocks).toHaveLength(2);
+    expect(window?.blocks[0].preamble).toContain('Write your replies in GitHub-flavored Markdown');
+    expect(window?.blocks[1].prompt).toBe('second');
+    expect(window?.blocks[1].preamble).toBeUndefined();
   });
 
   it('isolates concurrent role streams and keeps the tab busy until both settle', async () => {

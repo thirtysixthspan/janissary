@@ -2,9 +2,6 @@
 
 # pull-request
 
-
-* the acp preamble should not be sent with every query, only once when the connection is established as context. The preamble should be rendered in the acp connection as a separate preable section, similar to how the final reply is rendered separately.
-
 * the model may issue a reply before all queries have a response, and then follow up afterward when subsequent information comes in from other queries. the additional replies should also be rendered. by accepting multiple queries and answering async, the model may also make multiple async responses, not a single final response.
 
 

@@ -46,6 +46,21 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
   });
 
+  it('renders the preamble as its own rendered section between the prompt and the activity', () => {
+    const value = record();
+    value.window!.blocks[0]!.prompt = 'user question';
+    value.window!.blocks[0]!.preamble = '**tool primer**';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble');
+    expect(preamble).not.toBeNull();
+    expect(preamble?.querySelector('strong')?.textContent).toBe('tool primer');
+    expect(document.querySelector('.connections-prompt')?.textContent).toBe('user question');
+    expect(document.querySelector('.connections-prompt')?.textContent).not.toContain('tool primer');
+    const order = [...document.querySelector('.connections-block')!.children].map((child) => child.className);
+    expect(order.indexOf('connections-prompt')).toBeLessThan(order.indexOf('connections-preamble'));
+    expect(order.indexOf('connections-preamble')).toBeLessThan(order.indexOf('connections-activity'));
+  });
+
   it('pretty-prints an entry whose text is JSON and leaves plain text as it is', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [

@@ -69,7 +69,7 @@ export function prepareCorePromptRecord(
   records: AcpSessionRecords, runtime: TabRuntime, request: AcpPendingPrompt,
   settings: CommandSettingsSnapshot | undefined,
 ): void {
-  request.recordPrompt = `${corePromptPrimer(runtime, request, settings)}\n\n${request.prompt}`;
+  request.preamble = corePromptPrimer(runtime, request, settings);
   promptCoreRecord(records, runtime, request);
 }
 

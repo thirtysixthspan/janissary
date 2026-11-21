@@ -172,7 +172,7 @@ export async function runSubagentEntry(options: SubagentAttemptOptions): Promise
     const prompt = subagentTaskPrompt(run.snapshot.taskText, context);
     const snapshot = attemptSnapshot(settings, nativeSettings);
     const preamble = corePrimer(snapshot, createAcpToolTable(snapshot.grants));
-    run.record?.prompt(`${preamble}\n\n${prompt}`);
+    run.record?.prompt(prompt, preamble);
     const host = createSubagentAttemptHost({ run, invocation, managers, executionDir, active: () => state.active() });
     await new Promise<void>((resolve) => {
       state.onSettled(resolve);
