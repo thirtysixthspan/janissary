@@ -1,4 +1,5 @@
 import type { SuggestHunk } from '../protocol.js';
+import { captureMarker } from '../shared/persona-reply-markers.js';
 
 // The in-editor suggestion reply format, modeled on monitor/reply-format.ts's marker-capture
 // approach but repeated per hunk: each proposed edit is one `[HUNK]...[/HUNK]` block naming the
@@ -17,23 +18,16 @@ export const HUNK_FORMAT = [
 
 const HUNK_BLOCK_RE = /\[HUNK]\n([\s\S]*?)\n\[\/HUNK]/g;
 
-// Extract the text following a `[FIELD]:` line within one hunk block, up to the next bracket
-// marker or the end of the block. Undefined when the field is missing entirely (a malformed
-// block), distinct from an empty string (a deliberate insertion/deletion contract).
-function captureField(block: string, name: string): string | undefined {
-  const re = new RegExp(String.raw`(?:^|\n)\[${name}]:[ \t]*([\s\S]*?)(?=\n\[[A-Z]+]:|$)`);
-  return re.exec(block)?.[1]?.trim();
-}
-
 // Parse every `[HUNK]...[/HUNK]` block in a persona's reply into an ordered list of hunks. A
 // block missing either its ANCHOR or REPLACEMENT field is malformed and is dropped rather than
-// guessed at; an empty list means the reply proposed nothing.
+// guessed at; an empty list means the reply proposed nothing. A field that is missing entirely is
+// undefined, distinct from an empty string (a deliberate insertion/deletion contract).
 export function parseHunks(reply: string): SuggestHunk[] {
   const hunks: SuggestHunk[] = [];
   for (const match of reply.matchAll(HUNK_BLOCK_RE)) {
     const block = match[1];
-    const anchor = captureField(block, 'ANCHOR');
-    const replacement = captureField(block, 'REPLACEMENT');
+    const anchor = captureMarker(block, 'ANCHOR');
+    const replacement = captureMarker(block, 'REPLACEMENT');
     if (anchor === undefined || replacement === undefined) continue;
     hunks.push({ anchor, replacement });
   }
