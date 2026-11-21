@@ -122,6 +122,33 @@ describe('agent execution record capture', () => {
     ] }] });
     expect(run.view().activity).toEqual([{ id: 1, kind: 'tool', text: 'native tool' }]);
   });
+
+  it('records each non-empty turn reply in one block', async () => {
+    const model = OPENCODE_MODELS[0];
+    const caller = { label: 'janus', incarnation: 'one', cwd: root, context: [] };
+    const run = new AgentRun(caller, {
+      taskPath: 'task.md', taskText: 'Task', skills: [], grants: ['help'],
+    }, undefined, undefined, root);
+    run.record = new AgentRecordFeed(records, { model, ownerLabel: 'janus', ownerName: 'Caller', taskPath: 'task.md' }, run.id);
+    const invocation: CommandInvocationContext = { runId: run.id, invocationId: 'one', caller, signal: run.abortController.signal };
+    connectAcp.mockReturnValue({ prompt: vi.fn(), kill: vi.fn(), shutdown: async () => {}, cancel: async () => {} });
+    let handlers: AcpLoopHandlers | undefined;
+    runAcpToolLoop.mockImplementation((_session, _prompt, _deps, h) => { handlers = h; });
+
+    const execution = executeAgentRun(run, invocation, model, undefined, '', modelManagers() as never);
+    handlers!.endTurn('early reply');
+    handlers!.endTurn('');
+    handlers!.endTurn('final reply');
+    handlers!.finished('answered', Infinity);
+    const result = await execution;
+    run.setStatus('Cleaning up', result.response);
+    await run.finish(result.status);
+
+    expect(records.window(run.recordId!)).toMatchObject({
+      status: 'Completed',
+      blocks: [{ replies: ['early reply', 'final reply'], answer: 'final reply' }],
+    });
+  });
 });
 
 function notificationManagers() {
@@ -188,7 +215,7 @@ describe('agent shared driver host', () => {
   it.each(['file read notes/a.md', '/file read notes/a.md'])('reads the execution workspace through %s', async (command) => {
     const execution = start();
     const activity = vi.fn();
-    run.record = { activity } as unknown as AgentRecordFeed;
+    run.record = { activity, reply: vi.fn() } as unknown as AgentRecordFeed;
     const result = await dependencies.runCommand(command);
     handlers.ranCommand(command, result);
     expect(result).toBe('1\tworkspace');
@@ -202,7 +229,7 @@ describe('agent shared driver host', () => {
     run.setSnapshot({ ...run.snapshot, grants: [] });
     const execution = start();
     const activity = vi.fn();
-    run.record = { activity } as unknown as AgentRecordFeed;
+    run.record = { activity, reply: vi.fn() } as unknown as AgentRecordFeed;
     const command = 'file read notes/a.md';
     const result = await dependencies.runCommand(command);
     handlers.ranCommand(command, result);
@@ -242,7 +269,7 @@ describe('agent shared driver host', () => {
     expect(runAcpToolLoop).not.toHaveBeenCalled();
 
     const activity = vi.fn();
-    run.record = { activity } as unknown as AgentRecordFeed;
+    run.record = { activity, reply: vi.fn() } as unknown as AgentRecordFeed;
     listener!.onToolStep({
       type: 'acp-tool-step', id: 'agent', command: 'file read notes/a.md', result: '1\tworkspace', workspace: true,
     });
@@ -282,7 +309,7 @@ describe('agent shared driver host', () => {
     listener!.onReady(true);
     await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
     const activity = vi.fn();
-    run.record = { activity } as unknown as AgentRecordFeed;
+    run.record = { activity, reply: vi.fn() } as unknown as AgentRecordFeed;
 
     listener!.onToolRequest({ type: 'acp-tool-request', id: 'agent', request: 9, command: 'db sqlite list' });
     await vi.waitFor(() => expect(sent.at(-1)).toMatchObject({
@@ -312,7 +339,7 @@ describe('agent shared driver host', () => {
     listener!.onReady(true);
     await vi.waitFor(() => expect(sent.some((frame) => frame.type === 'acp-run')).toBe(true));
     const activity = vi.fn();
-    run.record = { activity } as unknown as AgentRecordFeed;
+    run.record = { activity, reply: vi.fn() } as unknown as AgentRecordFeed;
     const read = vi.spyOn(fileRead, 'readWorkspaceCommand');
     try {
       const command = '  /FiLe   GrEp   TODO  ';
@@ -338,7 +365,7 @@ describe('agent shared driver host', () => {
   it('drops tool records and workspace work after termination', async () => {
     const execution = start();
     const activity = vi.fn();
-    run.record = { activity } as unknown as AgentRecordFeed;
+    run.record = { activity, reply: vi.fn() } as unknown as AgentRecordFeed;
     run.abortController.abort();
     expect(() => dependencies.runCommand('file read notes/a.md')).toThrow('Agent terminated.');
     handlers.ranCommand('file read notes/a.md', 'late');

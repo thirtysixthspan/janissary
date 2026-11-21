@@ -46,7 +46,8 @@ export function ConnectionHistory({ window, openLink }: {
                   <div className="connections-activity-label">{entry.kind}</div>{content}
                 </div>;
           })}
-          {block.answer !== undefined && <Answer answer={block.answer} />}
+          {(block.replies ?? (block.answer === undefined ? [] : [block.answer])).map((answer, index) =>
+            <Answer answer={answer} key={index} />)}
         </article>
       ))}
     </div>

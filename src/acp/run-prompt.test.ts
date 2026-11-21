@@ -201,7 +201,7 @@ function harness(options: Omit<StartOptions, 'commands' | 'roleName'> = {}) {
       workingDirOf: vi.fn(() => '/project'),
       launchDir: options.launchDir ?? '/launch',
     },
-    acpRecords: { activity: vi.fn(), answer: vi.fn() },
+    acpRecords: { activity: vi.fn(), answer: vi.fn(), reply: vi.fn() },
     command: { dispatchNativeLine },
     ...(options.realCommand && {
       plugins: { declarations: [{ id: 'shell', capabilities: ['promptAcp'] }] },

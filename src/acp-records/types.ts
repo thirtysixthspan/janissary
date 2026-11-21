@@ -30,6 +30,7 @@ export type AcpRecordBlock = {
   startedAt: number;
   entries: AcpRecordEntry[];
   answer?: string;
+  replies?: string[];
   endedAt?: number;
 };
 

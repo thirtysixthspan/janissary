@@ -379,6 +379,48 @@ describe('core record feeds', () => {
     restarted.dispose();
   });
 
+  it('stores one reply for a single-reply prompt', async () => {
+    const f = setup();
+    const pending = f.managers.acp.prompt('owner', 'hello');
+    f.handshake();
+    const id = f.records.rows()[0].id;
+    f.chunk('just one');
+    f.end();
+    await expect(pending).resolves.toBe('just one');
+    expect(f.records.window(id)?.blocks[0]?.replies).toEqual(['just one']);
+  });
+
+  it('records every reply in one block when the model answers before all queries settle', async () => {
+    const f = setup();
+    writeFileSync(path.join(f.root, 'a.txt'), 'first\n');
+    writeFileSync(path.join(f.root, 'b.txt'), 'beta\n');
+    f.managers.tab.tabs[0].workspaceDir = f.root;
+    const pending = f.managers.acp.prompt('owner', 'search both');
+    f.handshake();
+    const id = f.managers.tab.byLabel('owner')!.runtime!.acpRoles!.ask!.recordId!;
+
+    f.chunk(`${block('file grep first')}\n${block('file grep beta')}`);
+    f.end();
+    await vi.waitFor(() => { expect(f.sessions[0].control.current).toBeDefined(); });
+
+    f.chunk('first partial reply');
+    f.end();
+    await vi.waitFor(() => { expect(f.sessions[0].control.current).toBeDefined(); });
+    f.chunk('second reply');
+    f.end();
+    await expect(pending).resolves.toBe('second reply');
+
+    const recorded = f.records.window(id)?.blocks[0];
+    expect(recorded).toMatchObject({
+      prompt: expect.stringContaining('search both'),
+      replies: ['first partial reply', 'second reply'],
+      answer: 'second reply',
+    });
+    expect(recorded?.entries.map((entry) => entry.text)).toEqual(expect.arrayContaining([
+      'file grep first', 'a.txt:1: first', 'file grep beta', 'b.txt:1: beta',
+    ]));
+  });
+
   it('records a local grep step and reopens its block without touching command history', async () => {
     const f = setup();
     writeFileSync(path.join(f.root, 'a.txt'), 'TODO\n');

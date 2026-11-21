@@ -32,6 +32,10 @@ export class AgentRecordFeed {
     else this.records.activity(this.id, kind, text, toolPhase, toolCommand);
   }
 
+  reply(text: string): void {
+    if (!this.ended) this.records.reply(this.id, text);
+  }
+
   finish(outcome: AgentOutcome, response: string | undefined): void {
     if (this.ended) return;
     this.ended = true;

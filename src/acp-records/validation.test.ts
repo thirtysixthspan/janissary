@@ -67,6 +67,28 @@ describe('ACP record source validation', () => {
     expect(isAcpRecord({ ...record, blocks: [{ ...record.blocks[0], preamble: 3 }] }, id)).toBe(false);
   });
 
+  it('accepts an array of reply strings', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-00000000000b';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id, source: core, title: 'ACP: list',
+      startedAt: 0, updatedAt: 2, blocks: [{
+        prompt: 'list', startedAt: 0, entries: [], answer: 'last', endedAt: 2, replies: ['first', 'last'],
+      }],
+    };
+    expect(isAcpRecord(record, id)).toBe(true);
+  });
+
+  it.each(['first', [1], ['ok', 3], null])('rejects malformed replies %j', (replies) => {
+    const id = 'a0b1c2d3-0000-4000-8000-00000000000c';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id, source: core, title: 'ACP: list',
+      startedAt: 0, updatedAt: 1, blocks: [{
+        prompt: 'list', startedAt: 0, answer: 'done', endedAt: 1, entries: [], replies: replies as never,
+      }],
+    };
+    expect(isAcpRecord(record, id)).toBe(false);
+  });
+
   it.each(['start', 3, null])('rejects an invalid tool phase %j', (toolPhase) => {
     const id = 'a0b1c2d3-0000-4000-8000-000000000003';
     const record: AcpRecord = {

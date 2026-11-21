@@ -46,6 +46,15 @@ export function coreActivity(
   else records.activity(id, kind, text, toolPhase, toolCommand);
 }
 
+export function replyCoreRecord(
+  records: AcpSessionRecords, runtime: TabRuntime, text: string, role: AcpRole = DEFAULT_ACP_ROLE,
+): void {
+  const state = acpRoleRuntime(runtime, role);
+  const id = state.prompt?.recordId;
+  if (!id || id !== state.recordId) return;
+  records.reply(id, text);
+}
+
 export function answerCoreRecord(records: AcpSessionRecords, pending: AcpPendingPrompt, result: AcpPromptResult): void {
   if (pending.recordId) records.answer(pending.recordId, result.answered ? result.reply : result.error);
 }

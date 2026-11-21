@@ -17,6 +17,7 @@ export type ConnectionBlock = {
   startedAt: number;
   entries: ConnectionActivity[];
   answer?: string;
+  replies?: string[];
   endedAt?: number;
 };
 export type ConnectionSource =
@@ -106,7 +107,9 @@ function isBlock(value: unknown): value is ConnectionBlock {
   return object(value) && typeof value.prompt === 'string'
     && typeof value.startedAt === 'number' && Number.isFinite(value.startedAt)
     && Array.isArray(value.entries) && value.entries.every(isActivity)
-    && optionalString(value, 'preamble') && optionalString(value, 'answer') && optionalNumber(value, 'endedAt');
+    && optionalString(value, 'preamble') && optionalString(value, 'answer') && optionalNumber(value, 'endedAt')
+    && (!hasOwn(value, 'replies') || (Array.isArray(value.replies)
+      && value.replies.every((reply: unknown) => typeof reply === 'string')));
 }
 
 function isSource(value: unknown): value is ConnectionSource {

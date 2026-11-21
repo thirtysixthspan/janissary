@@ -27,7 +27,7 @@ import { isFileHeadTailCommandLine } from '../file-head-tail/command.js';
 import { headTailInTab } from '../file-head-tail/tab-head-tail.js';
 import { isWebCommandLine } from '../web/command-line.js';
 import { runWebInTab } from '../web/tab-web.js';
-import { coreActivity, promptCoreRecord } from './record-feed.js';
+import { coreActivity, promptCoreRecord, replyCoreRecord } from './record-feed.js';
 import type { AcpSessionRecords } from '../acp-records/manager.js';
 import { acpRoleRuntime } from './role-state.js';
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
@@ -154,7 +154,12 @@ export function runCorePrompt(
       appendAcp(managers, label, entry);
     },
     chunk: (buffer) => updateRunning(buffer, true),
-    endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
+    endTurn: (final) => {
+      updateRunning(final, false);
+      lastAnswer = final;
+      request.replied = true;
+      replyCoreRecord(managers.acpRecords, runtime, final, request.role);
+    },
     startCommand: (command, workspace) => { recordTool(tagged(command, workspace), 'command'); },
     ranCommand: (command, result, workspace, refused) => {
       if (refused === 'disabled') notify(managers, 'command-disabled', label, result);

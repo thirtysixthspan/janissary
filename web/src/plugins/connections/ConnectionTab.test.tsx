@@ -61,6 +61,24 @@ describe('ConnectionTab', () => {
     expect(order.indexOf('connections-preamble')).toBeLessThan(order.indexOf('connections-activity'));
   });
 
+  it('renders every recorded reply as its own Markdown answer in order', () => {
+    const value = record();
+    value.window!.blocks[0]!.answer = 'final **answer**';
+    value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up', 'final **answer**'];
+    setup(value);
+    const answers = [...document.querySelectorAll('.connections-answer')];
+    expect(answers).toHaveLength(3);
+    expect(answers.map((element) => element.textContent?.trim())).toEqual(['first reply', 'follow-up', 'final answer']);
+    expect(answers[0]?.querySelector('strong')?.textContent).toBe('reply');
+  });
+
+  it('falls back to the single answer for a block without replies', () => {
+    setup(record());
+    const answers = [...document.querySelectorAll('.connections-answer')];
+    expect(answers).toHaveLength(1);
+    expect(answers[0]?.textContent?.trim()).toBe('answer');
+  });
+
   it('pretty-prints an entry whose text is JSON and leaves plain text as it is', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [

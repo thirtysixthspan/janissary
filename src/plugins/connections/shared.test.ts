@@ -52,6 +52,23 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'connection', record: badPreamble })).toBe(false);
   });
 
+  it('accepts an array of reply strings on a record block and rejects malformed replies', () => {
+    const withReplies = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], replies: ['first', 'answer'] }],
+      },
+    };
+    const badReplies = {
+      ...record, window: {
+        ...record.window,
+        blocks: [{ ...record.window.blocks[0], replies: ['first', 3] }],
+      },
+    };
+    expect(isConnectionsPayload({ kind: 'connection', record: withReplies })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: badReplies })).toBe(false);
+  });
+
   it('requires a role on live ACP refs while accepting legacy retained records', () => {
     const oldLiveRef = { ...live, acpRef: { scope: 'tab', label: 'Owner' } };
 

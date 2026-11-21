@@ -52,6 +52,8 @@ function isBlock(value: unknown): value is AcpRecordBlock {
   if (!isRecord(value) || !nonempty(value.prompt) || !timestamp(value.startedAt)
     || !Array.isArray(value.entries) || value.entries.some((entry: unknown) => !isEntry(entry))) return false;
   if (value.preamble !== undefined && typeof value.preamble !== 'string') return false;
+  if (value.replies !== undefined && (!Array.isArray(value.replies)
+    || value.replies.some((reply: unknown) => typeof reply !== 'string'))) return false;
   if (value.answer === undefined) return value.endedAt === undefined;
   return typeof value.answer === 'string' && timestamp(value.endedAt) && value.endedAt >= value.startedAt;
 }

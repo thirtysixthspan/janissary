@@ -40,7 +40,7 @@ function setup(
   const tabs = [makeTab('tab1', '#fff')];
   const append = vi.fn();
   const enabledModels = new Set(entries.map(({ harness, model }) => `${harness} ${model}`));
-  const acpRecords = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), answer: vi.fn(), close: vi.fn() };
+  const acpRecords = { begin: vi.fn(() => 'record-id'), prompt: vi.fn(() => true), activity: vi.fn(), reply: vi.fn(), answer: vi.fn(), close: vi.fn() };
   const managers = {
     models: { isKnownModel: (harness: string, model: string) => enabledModels.has(`${harness} ${model}`) },
     acpRecords,

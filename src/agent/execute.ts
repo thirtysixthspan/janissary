@@ -160,7 +160,7 @@ export async function executeAgentRun(
     }, guardAcpHandlers({
       startTurn: () => {},
       chunk: () => {},
-      endTurn: (answer) => { finalAnswer = answer; },
+      endTurn: (answer) => { finalAnswer = answer; run.record?.reply(answer); },
       startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace), 'command'); },
       ranCommand: (command, result, workspace) => {
         run.record?.activity('tool', tagged(result, workspace), 'reply', tagged(command, workspace));

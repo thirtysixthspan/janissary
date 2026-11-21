@@ -89,11 +89,21 @@ export class AcpSessionRecords {
     return true;
   }
 
+  reply(id: string, text: string): boolean {
+    const record = this.open(id);
+    const block = record && unansweredBlock(record);
+    if (!record || !block || typeof text !== 'string' || !text.trim()) return false;
+    (block.replies ??= []).push(text);
+    this.changed();
+    return true;
+  }
+
   answer(id: string, text: string): boolean {
     const record = this.open(id);
     const block = record && unansweredBlock(record);
     if (!record || !block || typeof text !== 'string') return false;
     block.answer = text;
+    if (block.replies === undefined && text.trim()) block.replies = [text];
     block.endedAt = this.touch(record);
     this.save(record);
     this.changed();

@@ -157,6 +157,31 @@ describe('AcpSessionRecords transitions', () => {
     expect(read(id).blocks[0]).not.toHaveProperty('preamble');
   });
 
+  it('appends several replies to one open block without settling it', () => {
+    const records = create();
+    const id = records.begin(core);
+    records.prompt(id, 'question');
+    expect(records.reply(id, 'first reply')).toBe(true);
+    expect(records.activity(id, 'tool', 'still running')).toBe(true);
+    expect(records.reply(id, 'second reply')).toBe(true);
+    expect(records.rows()[0].status).toBe('Running');
+    expect(records.answer(id, 'second reply')).toBe(true);
+    expect(records.rows()[0].status).toBe('Idle');
+    expect(records.window(id)?.blocks[0]?.replies).toEqual(['first reply', 'second reply']);
+    expect(read(id).blocks[0]?.replies).toEqual(['first reply', 'second reply']);
+  });
+
+  it('seeds replies from the final answer and ignores empty or late replies', () => {
+    const records = create();
+    const id = records.begin(core);
+    records.prompt(id, 'question');
+    expect(records.reply(id, ' '.repeat(3))).toBe(false);
+    expect(records.answer(id, 'the answer')).toBe(true);
+    expect(records.window(id)?.blocks[0]?.replies).toEqual(['the answer']);
+    expect(records.reply(id, 'too late')).toBe(false);
+    expect(records.window(id)?.blocks[0]?.replies).toEqual(['the answer']);
+  });
+
   it('keeps an empty first-line title and keeps agents Running after settlement', () => {
     const records = create();
     const id = records.begin(core);
