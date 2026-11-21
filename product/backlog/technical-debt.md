@@ -7,28 +7,6 @@
 
 ## development
 
-* Give the four workspace-command dispatch chains one shared executor so a new file or web subcommand is added once.
-
-Existing Debt: The same `is*CommandLine`-to-runner chain is written out four times — in `src/commands/file.ts`, `src/commands/web.ts`, `src/acp/run-prompt.ts`, and `src/acp/workspace-runner.ts` — each rewiring the same read, glob, grep, list, stat, exists, head/tail, mutation, and web subcommands to a tab- or directory-scoped runner, so there is no single definition of what a workspace command is. Severity: 6/10
-
-Existing Risk: 5/10 - Adding a subcommand updates one chain and leaves the others falling through to their catch-all read branch, while the chains already disagree on behavior: the ACP and subagent forms strip a leading slash and thread an `AbortSignal`, the command-bar forms do neither, so a slash-prefixed tool command or a cancelled prompt behaves differently by entry point.
-
-Proposal Risk: 2/10 - Every entry point calls one executor and the slash and cancellation rules live in it, but each target still supplies its own tab-scoped versus directory-scoped runner, so a new target needs a thin adapter rather than a new chain.
-
-Proposal: Extract one `runWorkspaceCommand` from `fileOutput` in `src/commands/file.ts` and `runWorkspaceCommandIn` in `src/acp/workspace-runner.ts`, parameterized by a target that exposes the read, glob, grep, list, stat, exists, head/tail, and mutation runners plus an optional `AbortSignal`; keep the existing callers in `src/commands/file.ts`, `src/subagent/attempt-host.ts`, and `src/remote/serve-acp-loop.ts` on their current runners and signatures. Then route `runWorkspace` in `src/acp/run-prompt.ts` and the web branch of `src/commands/web.ts` through the same executor, applying the leading-slash normalization once and forwarding `request.abort.signal` consistently — `src/commands/file.ts` and `src/commands/web.ts` currently pass no signal at all. Preserve every output string and refusal wording byte-for-byte: `src/commands/file.test.ts`, `src/commands/web.test.ts`, `src/acp/run-prompt.test.ts`, `src/acp/plugin-session.test.ts`, `src/subagent/attempt-host.test.ts`, and `src/remote/serve-acp-loop.test.ts` pin them. Changing which runner a branch calls can change workspace confinement for remote ACP prompts, so check the remote loop's coverage before switching that call site.
-
-
-* Publish the repeated plugin intent guards from the plugin API instead of redeclaring them in each plugin's shared module.
-
-Existing Debt: `isEmptyIntent` is declared independently in the shared modules of the connections, conversations, launcher, models, and sessions plugins, `isRefreshIntent` in the commands, diff, and hosts plugins, and `isIdIntent` in two plugins with different key-count rules, while `src/plugins/connections/shared.ts` keeps a local `object()` that is the same predicate as `isRecord` in `src/value-guards.ts` even though `src/plugins/api.ts` already re-exports that guard for exactly this purpose. Severity: 5/10
-
-Existing Risk: 4/10 - The guards are what decide whether a plugin accepts an intent payload, so the connections form rejecting an object with extra keys while the conversations form accepts one lets the same malformed payload change meaning by plugin, and a copied predicate that drifts from `isRecord` can accept an array or scalar as an intent.
-
-Proposal Risk: 2/10 - The guards are defined once and the per-plugin tests pin their behavior, but each plugin still declares its own intent type and names the shared guard in its own activation module, so a new plugin has one line to wire rather than a predicate to write.
-
-Proposal: Add `isEmptyIntent` (a JSON-object guard that also requires zero own keys) and, if the refresh intent stays a separate name, `isRefreshIntent` as aliases of one implementation beside the existing `isRecord` re-export in `src/plugins/api.ts`, then replace the copies in `src/plugins/connections/shared.ts`, `src/plugins/conversations/shared.ts`, `src/plugins/launcher/shared.ts`, `src/plugins/models/shared.ts`, `src/plugins/sessions/shared.ts`, `src/plugins/commands/shared.ts`, `src/plugins/diff/shared.ts`, and `src/plugins/hosts/shared.ts`, deleting the local `object()` in `src/plugins/connections/shared.ts` in favor of the published guard. Decide one rule for `isIdIntent` — exact key set or just a string `id` — and make `src/plugins/conversations/shared.ts` and `src/plugins/connections/shared.ts` agree; the latter currently rejects `{ id, extra }` and the former accepts it, so this is a deliberate behavior change for one of them, not a mechanical move. `src/plugins/connections/shared.test.ts`, `src/plugins/conversations/shared.test.ts`, `src/plugins/launcher/shared.test.ts`, `src/plugins/models/shared.test.ts`, `src/plugins/hosts/shared.test.ts`, and `src/plugins/commands/shared.test.ts` pin the current guards and must keep passing apart from the one settled semantic change.
-
-
 * Retire the ambiguous `promptAcp` capability and make the ACP command gate use `promptAcpResult`.
 
 Existing Debt: `promptAcp` and `promptAcpResult` both live in `src/plugins/api.ts`, `src/plugins/api-capabilities.ts`, and the launcher and shell manifests, but no production plugin calls `promptAcp` — the launcher summarizer uses `promptAcpResult` — while `src/acp/availability.ts` still decides whether `ask`, `tell`, and `subagent` are available by looking for the old capability name. Severity: 5/10
@@ -74,6 +52,17 @@ Proposal: Keep the version history beside `REMOTE_PROTOCOL_VERSION` in `src/remo
 
 
 ## deferred
+
+* Give the four workspace-command dispatch chains one shared executor so a new file or web subcommand is added once. — deferred: complexity 7/10, needs a new parameterized executor threaded through four independent chains while preserving byte-for-byte output and remote-ACP confinement across six pinned test suites.
+
+Existing Debt: The same `is*CommandLine`-to-runner chain is written out four times — in `src/commands/file.ts`, `src/commands/web.ts`, `src/acp/run-prompt.ts`, and `src/acp/workspace-runner.ts` — each rewiring the same read, glob, grep, list, stat, exists, head/tail, mutation, and web subcommands to a tab- or directory-scoped runner, so there is no single definition of what a workspace command is. Severity: 6/10
+
+Existing Risk: 5/10 - Adding a subcommand updates one chain and leaves the others falling through to their catch-all read branch, while the chains already disagree on behavior: the ACP and subagent forms strip a leading slash and thread an `AbortSignal`, the command-bar forms do neither, so a slash-prefixed tool command or a cancelled prompt behaves differently by entry point.
+
+Proposal Risk: 2/10 - Every entry point calls one executor and the slash and cancellation rules live in it, but each target still supplies its own tab-scoped versus directory-scoped runner, so a new target needs a thin adapter rather than a new chain.
+
+Proposal: Extract one `runWorkspaceCommand` from `fileOutput` in `src/commands/file.ts` and `runWorkspaceCommandIn` in `src/acp/workspace-runner.ts`, parameterized by a target that exposes the read, glob, grep, list, stat, exists, head/tail, and mutation runners plus an optional `AbortSignal`; keep the existing callers in `src/commands/file.ts`, `src/subagent/attempt-host.ts`, and `src/remote/serve-acp-loop.ts` on their current runners and signatures. Then route `runWorkspace` in `src/acp/run-prompt.ts` and the web branch of `src/commands/web.ts` through the same executor, applying the leading-slash normalization once and forwarding `request.abort.signal` consistently — `src/commands/file.ts` and `src/commands/web.ts` currently pass no signal at all. Preserve every output string and refusal wording byte-for-byte: `src/commands/file.test.ts`, `src/commands/web.test.ts`, `src/acp/run-prompt.test.ts`, `src/acp/plugin-session.test.ts`, `src/subagent/attempt-host.test.ts`, and `src/remote/serve-acp-loop.test.ts` pin them. Changing which runner a branch calls can change workspace confinement for remote ACP prompts, so check the remote loop's coverage before switching that call site.
+
 
 * Replace the inert import-cycle lint rule with a tested import-graph check that fails on real runtime cycles. — deferred: complexity 8/10, requires a new static-analysis tool with a parser, resolver and graph traversal plus breaking four real runtime cycles across the command, agent and remote registries.
 

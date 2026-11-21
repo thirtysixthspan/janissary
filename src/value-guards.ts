@@ -23,3 +23,16 @@ export function isModelPair(value: unknown): value is ConversationModelPair {
 export function isShellMarkerNonce(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
 }
+
+// The intent-payload gates the bundled plugins share. A plugin cannot import this module across the
+// plugin boundary, so `../plugins/api.ts` re-exports these for the server side, where they replace
+// the copy each plugin's activation module used to keep in its own `shared.ts`.
+export function isEmptyIntent(value: unknown): value is Record<string, never> {
+  return isRecord(value) && Object.keys(value).length === 0;
+}
+
+export const isRefreshIntent = isEmptyIntent;
+
+export function isIdIntent(value: unknown): value is { id: string } {
+  return isRecord(value) && Object.keys(value).length === 1 && typeof value.id === 'string';
+}

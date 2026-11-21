@@ -165,14 +165,6 @@ export function isConnectionsPayload(value: unknown): value is ConnectionsPayloa
   return value.kind === 'connection' && isConnectionRow(value.record) && value.record.type === 'record';
 }
 
-export function isEmptyIntent(value: unknown): value is Record<string, never> {
-  return object(value) && Object.keys(value).length === 0;
-}
-
-export function isIdIntent(value: unknown): value is { id: string } {
-  return object(value) && Object.keys(value).length === 1 && typeof value.id === 'string';
-}
-
 export function isKindIdOwnerIntent(value: unknown): value is { kind: ConnectionKind; id: string; ownerLabel: string } {
   return object(value) && Object.keys(value).length === 3
     && kinds.includes(value.kind as typeof kinds[number]) && typeof value.id === 'string'

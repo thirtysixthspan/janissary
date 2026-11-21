@@ -2,6 +2,7 @@ import path from 'node:path';
 import { statSync } from 'node:fs';
 import {
   defineIntents,
+  isRefreshIntent,
   noFileOpener,
   type TabPluginActivation,
   type TabPluginServerCapabilities,
@@ -12,7 +13,6 @@ import {
   isLayoutIntent,
   isOpenIntent,
   isOpenMediaIntent,
-  isRefreshIntent,
   isContextIntent,
   isSourceIntent,
   type LayoutIntent,

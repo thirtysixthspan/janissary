@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { isEmptyIntent } from '../api.js';
 import {
   CONFIGURE_INTENT_ID,
   LAUNCHER_INSTANCE_KEY,
@@ -7,7 +8,6 @@ import {
   LAUNCHER_PAYLOAD_SCHEMA_VERSION,
   SUMMARIZER_FLUSH_MS,
   isDispatchIntent,
-  isEmptyIntent,
   isFocusTabIntent,
   isLauncherOwn,
   isLauncherPayload,

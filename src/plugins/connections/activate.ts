@@ -1,6 +1,6 @@
-import { noFileOpener, type TabPluginActivation, type TabPluginServerCapabilities } from '../api.js';
+import { isEmptyIntent, isIdIntent, noFileOpener, type TabPluginActivation, type TabPluginServerCapabilities } from '../api.js';
 import {
-  isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent, type ConnectionKind, type ConnectionRow,
+  isConnectionsPayload, isKindIdOwnerIntent, type ConnectionKind, type ConnectionRow,
   type ConnectionsPayload,
 } from './shared.js';
 import { runConnectionsCommand } from './command.js';

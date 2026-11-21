@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { isEmptyIntent, isIdIntent } from '../api.js';
 import { connectionsManifest } from './manifest.js';
 import {
-  CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload, isEmptyIntent, isIdIntent, isKindIdOwnerIntent,
+  CONNECTIONS_PAYLOAD_SCHEMA_VERSION, isConnectionsPayload, isKindIdOwnerIntent,
   recordConnectionName,
 } from './shared.js';
 

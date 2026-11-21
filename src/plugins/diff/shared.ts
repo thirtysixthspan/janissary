@@ -155,10 +155,6 @@ function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string';
 }
 
-export function isRefreshIntent(value: unknown): value is RefreshIntent {
-  return isRecord(value) && Object.keys(value).length === 0;
-}
-
 export function isLayoutIntent(value: unknown): value is LayoutIntent {
   return isRecord(value) && typeof value.split === 'boolean';
 }

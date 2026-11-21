@@ -1,13 +1,13 @@
 import {
   defineDockableList,
   defineIntents,
+  isEmptyIntent,
   noFileOpener,
   type TabPluginActivation,
 } from '../api.js';
 import type { ModelsTopicNotification } from '../api.js';
 import {
   isDeleteIntent,
-  isEmptyIntent,
   isModelsPayload,
   type DeleteIntent,
   type ModelsPayload,

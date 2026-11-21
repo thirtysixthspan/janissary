@@ -93,7 +93,3 @@ export function isSessionsPayload(value: unknown): value is SessionsPayload {
 export function isSessionIntent(value: unknown): value is SessionIntent {
   return isRecord(value) && typeof value.id === 'string' && value.id.length > 0;
 }
-
-export function isEmptyIntent(value: unknown): value is Record<string, never> {
-  return isRecord(value) && Object.keys(value).length === 0;
-}

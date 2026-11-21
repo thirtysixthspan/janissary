@@ -1,6 +1,7 @@
 import { homedir } from 'node:os';
 import {
   defineIntents,
+  isRefreshIntent,
   noFileOpener,
   type TabPluginActivation,
   type TabPluginServerCapabilities,
@@ -10,7 +11,7 @@ import { deleteHostEdit, saveHostEdit } from './host-edits.js';
 import { readHostsFile, type HostsRead } from './hosts-file.js';
 import { formatDestination, sameHostName, type SavedHost } from './hosts-values.js';
 import {
-  isDeleteHostIntent, isHostsPayload, isOpenIntent, isRefreshIntent, isSaveHostIntent,
+  isDeleteHostIntent, isHostsPayload, isOpenIntent, isSaveHostIntent,
   type DeleteHostIntent, type HostRow, type HostsPayload, type OpenIntent,
   type SaveHostIntent, type SaveHostResult,
 } from './shared.js';
