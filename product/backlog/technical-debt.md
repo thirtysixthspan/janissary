@@ -8,17 +8,6 @@
 ## development
 
 
-* Delete the unused transcript search-mode bar and hook from the shared layer so the area has one live search seam instead of a dead one.
-
-Existing Debt: §2 (colocate; promote to shared only on the second consumer) — the command bar's transcript search-mode replacement and its hook live in shared with no importer anywhere in the app; the only files referencing them are their own two tests, so a feature-specific search UI sits in the layer meant for code at least two features need. Severity: 3/10
-
-Existing Risk: 4/10 - A contributor adding transcript search will find this ready-made seam in shared and wire in a stale input whose pattern rules duplicate the live search plugin, with no test tying the two together.
-
-Proposal Risk: 2/10 - Removing the dead files also removes the false seam and the tests that kept it compiling, but if a search-mode feature was intended and only left unwired, deleting the work loses its design; the risk is resolved only after confirming no command-bar search entry point exists.
-
-Proposal: Delete `web/src/shared/search-bar/` as one change: remove `web/src/shared/search-bar/SearchBar.tsx`, `web/src/shared/search-bar/useTranscriptSearch.ts`, `web/src/shared/search-bar/SearchBar.test.tsx`, and `web/src/shared/search-bar/useTranscriptSearch.test.ts`. Re-check before deleting that `useTranscriptSearch` and imports of `shared/search-bar` still have no consumers outside that directory; neither symbol is re-exported by `web/src/plugins/api.ts` or `web/src/overlay-plugins/api.ts`. The `SearchStatus` type is defined and used inside the directory, and `compilePattern`/`findMatches` from `@shared/search-matches` are reached from other code, so no shared helper needs changing. No production file imports either module, so nothing outside the directory changes and no test outside it is affected. The live search surface is `web/src/plugins/search/SearchBar.tsx` with `web/src/plugins/search/useSearchController.ts`, pinned by `web/src/plugins/search/SearchTab.test.tsx`; leave all three untouched.
-
-
 ## deferred
 
 * Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site. — deferred: complexity 6/10, a context-object refactor of an already-long projection module plus 63 test call sites across three suites with a compatibility wrapper.
