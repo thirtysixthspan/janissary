@@ -60,7 +60,7 @@ Write a complete draft plan for every subplan to `./product/plans/draft/<source-
 
 ## Step 4 — Rate every subplan
 
-Rate every draft subplan by opening `ai/tasks/planning/rate-plan-complexity-quantitative.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`, once per subplan with that subplan as the target. The `**Complexity: N/10** — <rationale>` line it records under the subplan's `#` title is the subplan's rating; do not assign one by judgment. Record each initial rating for the report before improvement updates it.
+Rate every draft subplan by opening `ai/tasks/planning/rate-plan-complexity.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`, once per subplan with that subplan as the target. The `**Complexity: N/10** — <rationale>` line it records under the subplan's `#` title is the subplan's rating; do not assign one by judgment. Record each initial rating for the report before improvement updates it.
 
 ---
 
