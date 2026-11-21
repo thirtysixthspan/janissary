@@ -1,23 +1,12 @@
 import React from 'react';
 import type { ConnectionWindow } from '@shared/plugins/connections/shared';
-import { renderMarkdown } from '../api';
 import { groupToolEntries, parseToolCalls, prettyJson } from './activity-text';
-import { preserveJanissaryFences } from './janissary-fences';
 import { ToolCallBlock } from './ToolCallBlock';
 
-export function ConnectionHistory({ window, openLink }: {
-  window: ConnectionWindow | undefined;
-  openLink?: (href: string) => void;
-}) {
+export function ConnectionHistory({ window }: { window: ConnectionWindow | undefined }) {
   if (!window) return <div className="connections-history-loading">Loading connection history…</div>;
-  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
-    if (!anchor || !event.currentTarget.contains(anchor)) return;
-    event.preventDefault();
-    openLink?.(anchor.getAttribute('href') ?? '');
-  };
   return (
-    <div className="connections-history-content" onClick={handleClick}>
+    <div className="connections-history-content">
       {window.blocks.map((block, index) => (
         <article className="connections-block" key={window.offset + index}>
           {block.preamble !== undefined && <Preamble preamble={block.preamble} />}
@@ -74,12 +63,9 @@ function ActivityText({ text }: { text: string }) {
 }
 
 function Preamble({ preamble }: { preamble: string }) {
-  const html = renderMarkdown(preserveJanissaryFences(preamble));
   return <details className="connections-activity">
     <summary>preamble</summary>
-    <div className="connections-preamble">
-      {html === undefined ? preamble : <div dangerouslySetInnerHTML={{ __html: html }} />}
-    </div>
+    <div className="connections-preamble">{preamble}</div>
   </details>;
 }
 

@@ -51,7 +51,8 @@ describe('ConnectionTab', () => {
     value.window!.blocks[0]!.preamble = '**tool primer**';
     setup(value);
     const preamble = document.querySelector('.connections-preamble');
-    expect(preamble?.querySelector('strong')?.textContent).toBe('tool primer');
+    expect(preamble?.textContent).toBe('**tool primer**');
+    expect(preamble?.querySelector('strong')).toBeNull();
     const preambleSummary = screen.getByText('preamble', { selector: 'summary' });
     const preambleDetails = preambleSummary.closest('details');
     expect(preambleDetails).not.toHaveAttribute('open');
@@ -66,35 +67,32 @@ describe('ConnectionTab', () => {
     expect(order.indexOf('query')).toBeLessThan(order.indexOf('connections-activity'));
   });
 
-  it('shows janissary fences literally in the rendered preamble', () => {
+  it('shows a preamble janissary fence verbatim', () => {
     const value = record();
     value.window!.blocks[0]!.preamble = 'How commands work:\n```janissary\nfile list config\n```\nDone.';
     setup(value);
     const preamble = document.querySelector('.connections-preamble')!;
-    expect(preamble.textContent).toContain('```janissary');
-    expect(preamble.textContent).toContain('file list config');
-    expect(preamble.textContent).toContain('Done.');
+    expect(preamble.textContent).toBe('How commands work:\n```janissary\nfile list config\n```\nDone.');
     expect(preamble.querySelector('pre')).toBeNull();
   });
 
-  it('shows tilde janissary fences literally in the rendered preamble', () => {
+  it('shows a tilde janissary fence verbatim in the preamble', () => {
     const value = record();
     value.window!.blocks[0]!.preamble = '~~~janissary\nfile grep janissary\n~~~';
     setup(value);
     const preamble = document.querySelector('.connections-preamble')!;
-    expect(preamble.textContent).toContain('~~~janissary');
-    expect(preamble.textContent).toContain('file grep janissary');
+    expect(preamble.textContent).toBe('~~~janissary\nfile grep janissary\n~~~');
     expect(preamble.querySelector('pre')).toBeNull();
   });
 
-  it('keeps surrounding Markdown formatted while a preamble janissary fence stays literal', () => {
+  it('renders all preamble formatting verbatim', () => {
     const value = record();
     value.window!.blocks[0]!.preamble = '**Rules**\n\n```janissary\nfile list config\n```\n\n- one\n- two';
     setup(value);
     const preamble = document.querySelector('.connections-preamble')!;
-    expect(preamble.querySelector('strong')?.textContent).toBe('Rules');
-    expect([...preamble.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['one', 'two']);
-    expect(preamble.textContent).toContain('```janissary');
+    expect(preamble.textContent).toBe('**Rules**\n\n```janissary\nfile list config\n```\n\n- one\n- two');
+    expect(preamble.querySelector('strong')).toBeNull();
+    expect(preamble.querySelector('li')).toBeNull();
     expect(preamble.querySelector('pre')).toBeNull();
   });
 
@@ -163,16 +161,17 @@ describe('ConnectionTab', () => {
     expect(message.querySelector('pre')).toBeNull();
   });
 
-  it('renders no link in a message section but still routes a preamble link through openLink', () => {
+  it('renders no link in a message section or the preamble and does not call openLink', () => {
     const value = record();
     value.window!.blocks[0]!.entries = [{ kind: 'message', text: 'See [the docs](https://example.com/docs).', timestamp: 1 }];
     value.window!.blocks[0]!.preamble = 'See [the primer](https://example.com/primer).';
     const { openLink } = setup(value);
     expect(document.querySelector('.connections-activity-text a')).toBeNull();
+    expect(document.querySelector('.connections-preamble a')).toBeNull();
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
-    document.querySelector('.connections-preamble a')!.dispatchEvent(click);
-    expect(click.defaultPrevented).toBe(true);
-    expect(openLink).toHaveBeenCalledWith('https://example.com/primer');
+    document.querySelector('.connections-preamble')!.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
   });
 
   it('keeps a message that is a whole JSON object as indented JSON', () => {
@@ -365,19 +364,17 @@ describe('ConnectionTab', () => {
     expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
   });
 
-  it('routes preamble links through openLink without navigating and leaves activity text alone', () => {
+  it('does not route a clicked preamble link through openLink', () => {
     const value = record();
     value.window!.blocks[0]!.preamble = 'See [the docs](https://example.com/docs).';
     const { openLink } = setup(value);
-    const linkClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-    document.querySelector('.connections-preamble a')!.dispatchEvent(linkClick);
-    expect(linkClick.defaultPrevented).toBe(true);
-    expect(openLink).toHaveBeenCalledOnce();
-    expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
-    const activityClick = new MouseEvent('click', { bubbles: true, cancelable: true });
-    document.querySelector('.connections-activity-text')!.dispatchEvent(activityClick);
-    expect(activityClick.defaultPrevented).toBe(false);
-    expect(openLink).toHaveBeenCalledOnce();
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toBe('See [the docs](https://example.com/docs).');
+    expect(preamble.querySelector('a')).toBeNull();
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    preamble.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
   });
 
   describe('metadata bar', () => {
