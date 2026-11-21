@@ -17,6 +17,8 @@ import type { SqlPayload } from './shared.js';
 const USAGE = 'Usage: sql [file <path>|database <name>]';
 
 let tempDir = '';
+let projectDir = '';
+let projectShopFile = '';
 let shopFile = '';
 let spacedFile = '';
 let firstShopFile = '';
@@ -26,13 +28,17 @@ let upperLeftFile = '';
 
 beforeAll(() => {
   tempDir = mkdtempSync(path.join(tmpdir(), 'janus-sql-command-'));
+  projectDir = path.join(tempDir, 'project');
+  projectShopFile = path.join(projectDir, 'fixtures', 'shop.sqlite');
   shopFile = path.join(tempDir, 'shop.sqlite');
   spacedFile = path.join(tempDir, 'my  spaced.sqlite');
   firstShopFile = path.join(tempDir, 'one', 'shop.sqlite');
   secondShopFile = path.join(tempDir, 'two', 'shop.sqlite');
   leftFile = path.join(tempDir, 'dock left');
   upperLeftFile = path.join(tempDir, 'dock LEFT');
-  for (const file of [shopFile, spacedFile, firstShopFile, secondShopFile, leftFile, upperLeftFile]) {
+  for (const file of [
+    projectShopFile, shopFile, spacedFile, firstShopFile, secondShopFile, leftFile, upperLeftFile,
+  ]) {
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, '');
   }
@@ -94,6 +100,7 @@ function fakeCapabilities(initial: DatabasesView = emptyView(), respond?: Respon
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory(resources) }); shown.push(updated.at(-1)!.value.payload); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
     openClaimedFiles: vi.fn(),
+    projectFileList: async () => ({ root: projectDir, paths: [] }),
     topicData: () => state.view,
     topicAction: (action: TabPluginTopicAction) => { actions.push(action); respondFrom(action); },
     configuredViewer: () => '',
@@ -191,11 +198,11 @@ function schemaAnswer(requestId: string, objects = ORDERS): DatabaseResultView {
 }
 
 describe('sql command grammar', () => {
-  function outcome(argument: string) {
+  async function outcome(argument: string) {
     const fixture = fakeCapabilities();
     let reason: string | undefined;
     try {
-      fixture.activation.command?.(argument, fixture.capabilities);
+      await fixture.activation.command?.(argument, fixture.capabilities);
     } catch (error) {
       reason = error instanceof TabPluginRejection ? error.message : String(error);
     }
@@ -208,68 +215,71 @@ describe('sql command grammar', () => {
     };
   }
 
-  it('reads the two keywords and routes their values to the right opener', () => {
-    const file = outcome(`file ${shopFile}`);
+  it('reads the two keywords and routes their values to the right opener', async () => {
+    const file = await outcome(`file ${shopFile}`);
     expect(file).toMatchObject({ reason: undefined, key: `sqlite:${shopFile}`, title: 'shop', opened: 1 });
     expect(file.action).toMatchObject({ database: shopFile });
 
-    const database = outcome('database shop');
+    const database = await outcome('database shop');
     expect(database).toMatchObject({ reason: undefined, key: 'sqlite:shop', title: 'shop', opened: 1 });
     expect(database.action).toMatchObject({ database: 'shop' });
   });
 
-  it('keeps interior and repeated spaces in the path value', () => {
-    const result = outcome(`file   ${spacedFile}  `);
+  it('keeps interior and repeated spaces in the path value', async () => {
+    const result = await outcome(`file   ${spacedFile}  `);
     expect(result.reason).toBeUndefined();
     expect(result.key).toBe(`sqlite:${spacedFile}`);
     expect(result.title).toBe('my  spaced');
     expect(result.action).toMatchObject({ database: spacedFile });
   });
 
-  it('refuses upper-case keywords and an upper-case dock word with usage', () => {
-    expect(outcome(`FILE ${shopFile}`).reason).toBe(USAGE);
-    expect(outcome('DATABASE shop').reason).toBe(USAGE);
-    expect(outcome('shop LEFT').reason).toBe(USAGE);
-    expect(outcome('LEFT').reason).toBe(USAGE);
+  it('refuses upper-case keywords and an upper-case dock word with usage', async () => {
+    for (const argument of [`FILE ${shopFile}`, 'DATABASE shop', 'shop LEFT', 'LEFT']) {
+      const result = await outcome(argument);
+      expect(result.reason).toBe(USAGE);
+    }
   });
 
-  it('does not read a keyword without separating whitespace', () => {
-    expect(outcome('file/path').reason).toBe(USAGE);
-    expect(outcome('database/shop').reason).toBe(USAGE);
+  it('does not read a keyword without separating whitespace', async () => {
+    for (const argument of ['file/path', 'database/shop']) {
+      const result = await outcome(argument);
+      expect(result.reason).toBe(USAGE);
+    }
   });
 
-  it('refuses the old bare name and removed dock words, but keeps a trailing dock word in the path', () => {
+  it('refuses the old bare name and removed dock words, but keeps a trailing dock word in the path', async () => {
     for (const argument of ['shop', 'left', 'right', 'shop left']) {
-      expect(outcome(argument)).toMatchObject({ reason: USAGE, opened: 0 });
+      expect(await outcome(argument)).toMatchObject({ reason: USAGE, opened: 0 });
     }
     const withDockWord = `${shopFile} left`;
-    expect(outcome(`file ${withDockWord}`)).toMatchObject({
+    expect(await outcome(`file ${withDockWord}`)).toMatchObject({
       reason: `No database file at "${path.resolve(process.cwd(), withDockWord)}".`,
       opened: 0,
     });
   });
 
-  it('opens a real file whose path ends in a space-separated left or LEFT', () => {
+  it('opens a real file whose path ends in a space-separated left or LEFT', async () => {
     for (const file of [leftFile, upperLeftFile]) {
-      const result = outcome(`file ${file}`);
+      const result = await outcome(`file ${file}`);
       expect(result.reason).toBeUndefined();
       expect(result.key).toBe(`sqlite:${file}`);
       expect(result.action).toMatchObject({ database: file });
     }
   });
 
-  it('refuses a keyword with no value or only whitespace', () => {
+  it('refuses a keyword with no value or only whitespace', async () => {
     for (const argument of ['file', 'database', 'file   ', 'database \t ']) {
-      expect(outcome(argument)).toMatchObject({ reason: USAGE, opened: 0 });
+      expect(await outcome(argument)).toMatchObject({ reason: USAGE, opened: 0 });
     }
   });
 
-  it('resolves a relative path against the project directory before checking it', () => {
+  it('resolves a relative path against the project directory before checking it', async () => {
     const relative = 'no-such-relative-dir/shop.sqlite';
-    expect(outcome(`file ${relative}`)).toMatchObject({
-      reason: `No database file at "${path.resolve(process.cwd(), relative)}".`,
+    expect(await outcome(`file ${relative}`)).toMatchObject({
+      reason: `No database file at "${path.resolve(projectDir, relative)}".`,
       opened: 0,
     });
+    expect(path.resolve(projectDir, relative)).not.toBe(path.resolve(process.cwd(), relative));
   });
 });
 
@@ -374,11 +384,11 @@ describe('sql plugin command', () => {
     expect(fixture.opened).toEqual([]);
   });
 
-  it('refuses a missing path with the resolved absolute path, and opens no tab', () => {
+  it('refuses a missing path with the resolved absolute path, and opens no tab', async () => {
     const fixture = fakeCapabilities();
     const relative = 'no-such-relative-dir/shop.sqlite';
-    expect(() => fixture.activation.command?.(`file ${relative}`, fixture.capabilities))
-      .toThrow(new TabPluginRejection(`No database file at "${path.resolve(process.cwd(), relative)}".`));
+    await expect(fixture.activation.command?.(`file ${relative}`, fixture.capabilities))
+      .rejects.toThrow(new TabPluginRejection(`No database file at "${path.resolve(projectDir, relative)}".`));
     expect(fixture.opened).toEqual([]);
   });
 
@@ -405,6 +415,40 @@ describe('sql plugin command', () => {
     expect(fixture.opened.map((entry) => entry.key))
       .toEqual([`sqlite:${firstShopFile}`, `sqlite:${secondShopFile}`]);
     expect(fixture.opened.map((entry) => entry.value.title)).toEqual(['shop', 'shop']);
+  });
+});
+
+describe('sql file relative paths', () => {
+  it('opens a relative file under the project directory in one centre tab', async () => {
+    const fixture = fakeCapabilities();
+    await fixture.activation.command?.('file fixtures/shop.sqlite', fixture.capabilities);
+    expect(fixture.opened).toHaveLength(1);
+    expect(fixture.opened[0]?.key).toBe(`sqlite:${projectShopFile}`);
+    expect(fixture.opened[0]?.value.title).toBe('shop');
+    expect((fixture.opened[0]?.value.payload as SqlPayload).databasePath).toBe(projectShopFile);
+    expect(fixture.actions[0]).toMatchObject({
+      topic: 'databases', action: 'schema', database: projectShopFile,
+    });
+    expect(fixture.docks).toEqual([]);
+    expect(path.resolve(process.cwd(), 'fixtures/shop.sqlite')).not.toBe(projectShopFile);
+  });
+
+  it('resolves a relative path containing .. to the same file and focuses the existing tab', async () => {
+    const fixture = fakeCapabilities();
+    await fixture.activation.command?.('file fixtures/shop.sqlite', fixture.capabilities);
+    await fixture.activation.command?.('file fixtures/../fixtures/shop.sqlite', fixture.capabilities);
+    expect(fixture.opened.map((entry) => entry.key)).toEqual([
+      `sqlite:${projectShopFile}`, `sqlite:${projectShopFile}`,
+    ]);
+    expect(fixture.actions).toHaveLength(1);
+    expect(fixture.actions[0]).toMatchObject({ action: 'schema', database: projectShopFile });
+  });
+
+  it('leaves an absolute file path unchanged', async () => {
+    const fixture = fakeCapabilities();
+    await fixture.activation.command?.(`file ${shopFile}`, fixture.capabilities);
+    expect(fixture.opened[0]?.key).toBe(`sqlite:${shopFile}`);
+    expect(fixture.actions[0]).toMatchObject({ database: shopFile });
   });
 });
 

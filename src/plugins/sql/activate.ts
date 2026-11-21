@@ -25,7 +25,7 @@ export function activate(): TabPluginActivation {
   return {
     isPayload: isSqlPayload,
     command: (argument, capabilities) => {
-      runCommand(argument, capabilities, tabs);
+      return runCommand(argument, capabilities, tabs);
     },
     notify: (event, capabilities) => {
       if (event.topic !== 'databases') return;
@@ -48,7 +48,9 @@ const USAGE = 'Usage: sql [file <path>|database <name>]';
 // value is the remainder after it, trimmed at the ends and taken verbatim so a path with spaces
 // survives — including one ending in a space-separated `left` or `right`. Both keywords are lower
 // case only. Anything else is a usage error; no form docks.
-function runCommand(argument: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): void {
+function runCommand(
+  argument: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs,
+): void | Promise<void> {
   const data = databasesFrom(capabilities);
   const text = argument.trim();
   const split = text.search(/\s/);
@@ -60,10 +62,8 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
       return;
     }
     if (keyword === 'file') {
-      const database = path.resolve(process.cwd(), value);
-      if (!existsSync(database)) return capabilities.rejectRequest(`No database file at "${database}".`);
-      openDatabase(database, capabilities, tabs);
-      return;
+      if (path.isAbsolute(value)) return openExistingFile(value, capabilities, tabs);
+      return openRelativeFile(value, capabilities, tabs);
     }
     if (!isValidDatabaseName(value)) return capabilities.rejectRequest(`Invalid database name "${value}".`);
     // A command is typed, and a typo in a typed command is the ordinary case — so a name the
@@ -81,6 +81,20 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
     return;
   }
   capabilities.rejectRequest(USAGE);
+}
+
+function openExistingFile(
+  database: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs,
+): void {
+  if (!existsSync(database)) return capabilities.rejectRequest(`No database file at "${database}".`);
+  openDatabase(database, capabilities, tabs);
+}
+
+async function openRelativeFile(
+  value: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs,
+): Promise<void> {
+  const { root } = await capabilities.projectFileList();
+  openExistingFile(path.resolve(root, value), capabilities, tabs);
 }
 
 /**

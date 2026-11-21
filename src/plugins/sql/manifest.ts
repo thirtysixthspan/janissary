@@ -19,6 +19,7 @@ export const sqlManifest = {
     'openOrFocusTab',
     'updateTab',
     'ownTabKeys',
+    'projectFileList',
     'topicData',
     'topicAction',
     'notifyUser',

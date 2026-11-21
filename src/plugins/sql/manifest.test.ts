@@ -7,4 +7,8 @@ describe('sql tab plugin manifest', () => {
     expect(sqlManifest.fileExtensions).toEqual({});
     expect(sqlManifest.capabilities).not.toContain('dockTab');
   });
+
+  it('asks for the project file list capability to resolve relative file paths', () => {
+    expect(sqlManifest.capabilities).toContain('projectFileList');
+  });
 });

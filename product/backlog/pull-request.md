@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make `sql file <relative path>` open the database under the app's project directory when the app is launched from another directory
-
-Existing Issue: Typing `sql file fixtures/shop.sqlite` reports `No database file at "<checkout>/fixtures/shop.sqlite".` and opens no tab even though `<project-dir>/fixtures/shop.sqlite` exists. Severity: 6/10
-
-Existing Risk: 6/10 - Every relative `sql file` value fails whenever the launcher's working directory differs from the project directory, which is the documented scratch launch and any `janus <project-dir>` invocation from another folder.
-
-Proposal Risk: 2/10 - Changing the resolution base could mis-resolve absolute paths; that would surface at once as a missing-file error on every absolute-path tab, which the existing path tests cover.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2162 "Resolve relative sql file paths against the project directory". Steps D5 (description) and G4 (generated) failed consistently 2 of 2. D5 verbatim: "Type `sql file <project-dir>/fixtures/shop.sqlite` and press Enter" adapted to "Type `sql file fixtures/shop.sqlite` and press Enter", expecting one centre tab titled shop with a read-only label whose tooltip is the resolved absolute `<project-dir>/fixtures/shop.sqlite`. G4 verbatim: "A relative path containing `..` resolves to the same absolute path and focuses the existing shop tab", typing `sql file fixtures/../fixtures/shop.sqlite`. Fixture: `<project-dir>/fixtures/shop.sqlite` with `items (id INTEGER PRIMARY KEY, name TEXT)` and rows alpha, beta, gamma; the app launched as `HOME=<scratch home> node bin/janus.mjs --no-open <project-dir>` from the checkout, exactly as the verification setup states. Expected: a centre tab titled shop with the full `<project-dir>/fixtures/shop.sqlite` tooltip. Observed: the terminal printed `No database file at "/Users/anonymouscoward/dev/janissary/.janissary/workspace/opencode-3/fixtures/shop.sqlite".` and no tab opened — the path shown is the launcher's checkout, not the scratch project directory. Root cause: `src/plugins/sql/activate.ts` `runCommand` resolves the file value with `path.resolve(process.cwd(), value)`; `bin/janus.mjs` spawns the server with the launcher's cwd, `src/main.ts` `boot()` keeps the project directory in its local `cwd` without changing the process cwd, and `src/connections.ts` `initDbDir` bases `.janissary/db/sqlite/` on that project-dir argument. Absolute values pass through unchanged, so only relative values are anchored to the wrong directory. Likely fix: pass the project directory into the sql plugin activation — the same value `initDbDir` receives — and resolve relative `file` values against it instead of `process.cwd()`. A regression test should assert that `sql file fixtures/shop.sqlite` opens one tab whose `databasePath` equals `<project-dir>/fixtures/shop.sqlite` while the process cwd differs from the project dir.
-
-
 * Correct the verification step that expects a usage line for `sql file <path> left`
 
 Existing Issue: The base-branch Verification in `product/plans/ready/sql-path.md` says `sql file <path> left` reports the usage line, but the command reports a missing-file error for the verbatim path. Severity: 3/10
