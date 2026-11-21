@@ -7,39 +7,6 @@
 
 ## development
 
-* Retire the ambiguous `promptAcp` capability and make the ACP command gate use `promptAcpResult`.
-
-Existing Debt: `promptAcp` and `promptAcpResult` both live in `src/plugins/api.ts`, `src/plugins/api-capabilities.ts`, and the launcher and shell manifests, but no production plugin calls `promptAcp` — the launcher summarizer uses `promptAcpResult` — while `src/acp/availability.ts` still decides whether `ask`, `tell`, and `subagent` are available by looking for the old capability name. Severity: 5/10
-
-Existing Risk: 5/10 - A plugin that declares only the newer result-returning capability has a working ACP session yet its tab is reported as unable to run `ask` or `tell`, and a plugin that follows the older capability cannot distinguish a refusal line from a real answer because `promptAcp` returns them both as one string.
-
-Proposal Risk: 2/10 - A single capability gates availability and a single method returns refusals distinctly, but the capability list is part of the versioned plugin contract, so old manifests naming `promptAcp` still need a deliberate acceptance or refusal path rather than vanishing silently.
-
-Proposal: Make `promptAcpResult` the capability that `src/acp/availability.ts` checks, update the declarations in `src/plugins/launcher/manifest.ts` and `src/plugins/shell/manifest.ts` so every plugin that runs ACP prompts declares it, and remove `promptAcp` from the `TabPluginServerCapabilities` type and implementation in `src/plugins/api.ts` and `src/plugins/acp-capabilities.ts`, from the union and table in `src/plugins/api-capabilities.ts`, and from the manifests — following the deprecation-window guidance in `ai/guidelines/plugins.md` if the capability is treated as published rather than internal. Keep the exact refusal text in `src/acp/plugin-session.test.ts` and the `available` checks exercised by `src/commands/ask.test.ts`, `src/commands/tell.test.ts`, and `src/commands/subagent.test.ts`; `src/plugins/declaration-validation.test.ts` pins which capability names a declaration may claim and is the place to assert the old name is rejected or tolerated. Note that the shell plugin declares `promptAcp` without calling it, so dropping the name from its manifest changes what `acpAvailable` reports unless `promptAcpResult` is added in the same change.
-
-
-* Hold the server snapshot in one client state object instead of fanning it into a dozen setters and a thirty-field props list.
-
-Existing Debt: `src/protocol/events.ts` defines `StateEvent` as one named record, but `web/src/useServerState.ts` unpacks it into twelve setters, `web/src/App.tsx` backs them with separate `useState` calls, and `web/src/AppMain.tsx` forwards most of them through an `AppMainProps` of over thirty fields, so a new wire field needs coordinated edits in four places with nothing tying them together. Severity: 5/10
-
-Existing Risk: 4/10 - A field added to `StateEvent` can be omitted from the destructure, the setter call, or the effect's dependency array without a compile error, leaving the UI permanently showing a stale value for that field while every existing test of the older fields still passes.
-
-Proposal Risk: 2/10 - A new snapshot field arrives with the whole record and needs no new setter, but derived view state such as the project title and the per-tab dirty handles still have their own hooks, so the boundary between server state and local UI state must stay explicit or it will drift back.
-
-Proposal: In `web/src/useServerState.ts`, replace the `Setters` bag with one `onSnapshot: (snapshot: StateEvent) => void` and have the subscriber pass the whole snapshot through; keep `useAppSettings` and `useProjectTitle` as they are, but let `App` own a single `serverState` object and derive the title from its `projectDir` and `version` fields. In `web/src/App.tsx`, collapse the separate `useState` calls for tabs, active/secondary tab, launch dialogs, global history, themes, tasks, profiles, and disabled commands into that one object while leaving genuinely local state (dirty plugin tabs, picker source, key-handle refs, layout) alone; then replace the corresponding `AppMainProps` fields in `web/src/AppMain.tsx` with one `serverState` prop and update the children that only forward them. `web/src/useServerState.test.ts` currently asserts each setter individually, so add a case there that builds a `StateEvent` fixture, derives its keys, and fails if any key is not represented in the snapshot stored by `App`; keep `web/src/App.test.tsx` green through the prop change. This is the first increment — the wire event still carries the whole world, which is a separate concern.
-
-
-* Fold the empty-relative-path-means-root rule into the shared containment helper.
-
-Existing Debt: `containedPath` in `src/path-containment.ts` deliberately refuses an empty path, so callers in `src/file-navigator/filesystem-port.ts`, `src/file-navigator/batch-paths.ts`, and `src/file-navigator/navigation.ts` each restate an `empty ? root : containedPath(root, rel)` branch before resolving a client-supplied path. Severity: 4/10
-
-Existing Risk: 4/10 - A new caller that passes an empty relative path straight to `containedPath` gets `undefined` and silently refuses a valid operation on the tree root, and the scattered branches make it easy for one of them to treat `'.'` or `'..'` differently from the others.
-
-Proposal Risk: 2/10 - One helper owns the root exception and its tests pin the escape cases, but callers that genuinely must reject the root still have to choose the stricter helper deliberately rather than getting it by accident.
-
-Proposal: Add a companion such as `containedPathOrRoot` next to `containedPath` in `src/path-containment.ts` that resolves `''` and `'.'` to the root and otherwise delegates to `containedPath`, without changing `containedPath`'s current contract; replace the inline branches in `absoluteDirectory` in `src/file-navigator/filesystem-port.ts`, `realDirectory` in `src/file-navigator/batch-paths.ts`, and the three guard clauses in `src/file-navigator/navigation.ts`, and check `src/file-navigator/manager/item-operations.ts` for the same shape before finishing. Extend `src/path-containment.test.ts` with cases for `''`, `'.'`, `'..'`, and an absolute path against both helpers, and keep `src/file-navigator/manager.test.ts` and `src/remote/serve-file-navigator.test.ts` green; root-level operations are the behavior at stake, so verify those suites cover a command addressed at the tree root.
-
-
 * Keep one canonical remote protocol changelog instead of two that already disagree.
 
 Existing Debt: `src/remote/protocol.ts` carries a version-history comment that skips version 34 and describes version 47 twice, while `src/remote/protocol.test.ts` repeats the same history in a test comment that assigns the `identity` field to version 9 and `git-pull` to version 8, contradicting the module that owns the exact-version handshake. Severity: 4/10
@@ -52,6 +19,28 @@ Proposal: Keep the version history beside `REMOTE_PROTOCOL_VERSION` in `src/remo
 
 
 ## deferred
+
+* Retire the ambiguous `promptAcp` capability and make the ACP command gate use `promptAcpResult`. — deferred: complexity 6/10, retires a published v3 capability and needs a deprecation-window and backward-compatibility decision across the contract union and table, two manifests, the ACP gate, and six pinned test suites.
+
+Existing Debt: `promptAcp` and `promptAcpResult` both live in `src/plugins/api.ts`, `src/plugins/api-capabilities.ts`, and the launcher and shell manifests, but no production plugin calls `promptAcp` — the launcher summarizer uses `promptAcpResult` — while `src/acp/availability.ts` still decides whether `ask`, `tell`, and `subagent` are available by looking for the old capability name. Severity: 5/10
+
+Existing Risk: 5/10 - A plugin that declares only the newer result-returning capability has a working ACP session yet its tab is reported as unable to run `ask` or `tell`, and a plugin that follows the older capability cannot distinguish a refusal line from a real answer because `promptAcp` returns them both as one string.
+
+Proposal Risk: 2/10 - A single capability gates availability and a single method returns refusals distinctly, but the capability list is part of the versioned plugin contract, so old manifests naming `promptAcp` still need a deliberate acceptance or refusal path rather than vanishing silently.
+
+Proposal: Make `promptAcpResult` the capability that `src/acp/availability.ts` checks, update the declarations in `src/plugins/launcher/manifest.ts` and `src/plugins/shell/manifest.ts` so every plugin that runs ACP prompts declares it, and remove `promptAcp` from the `TabPluginServerCapabilities` type and implementation in `src/plugins/api.ts` and `src/plugins/acp-capabilities.ts`, from the union and table in `src/plugins/api-capabilities.ts`, and from the manifests — following the deprecation-window guidance in `ai/guidelines/plugins.md` if the capability is treated as published rather than internal. Keep the exact refusal text in `src/acp/plugin-session.test.ts` and the `available` checks exercised by `src/commands/ask.test.ts`, `src/commands/tell.test.ts`, and `src/commands/subagent.test.ts`; `src/plugins/declaration-validation.test.ts` pins which capability names a declaration may claim and is the place to assert the old name is rejected or tolerated. Note that the shell plugin declares `promptAcp` without calling it, so dropping the name from its manifest changes what `acpAvailable` reports unless `promptAcpResult` is added in the same change.
+
+
+* Hold the server snapshot in one client state object instead of fanning it into a dozen setters and a thirty-field props list. — deferred: complexity 7/10, collapses a dozen setters and a thirty-field props list into one snapshot object across the app, its main view, and children, with a stale-state risk.
+
+Existing Debt: `src/protocol/events.ts` defines `StateEvent` as one named record, but `web/src/useServerState.ts` unpacks it into twelve setters, `web/src/App.tsx` backs them with separate `useState` calls, and `web/src/AppMain.tsx` forwards most of them through an `AppMainProps` of over thirty fields, so a new wire field needs coordinated edits in four places with nothing tying them together. Severity: 5/10
+
+Existing Risk: 4/10 - A field added to `StateEvent` can be omitted from the destructure, the setter call, or the effect's dependency array without a compile error, leaving the UI permanently showing a stale value for that field while every existing test of the older fields still passes.
+
+Proposal Risk: 2/10 - A new snapshot field arrives with the whole record and needs no new setter, but derived view state such as the project title and the per-tab dirty handles still have their own hooks, so the boundary between server state and local UI state must stay explicit or it will drift back.
+
+Proposal: In `web/src/useServerState.ts`, replace the `Setters` bag with one `onSnapshot: (snapshot: StateEvent) => void` and have the subscriber pass the whole snapshot through; keep `useAppSettings` and `useProjectTitle` as they are, but let `App` own a single `serverState` object and derive the title from its `projectDir` and `version` fields. In `web/src/App.tsx`, collapse the separate `useState` calls for tabs, active/secondary tab, launch dialogs, global history, themes, tasks, profiles, and disabled commands into that one object while leaving genuinely local state (dirty plugin tabs, picker source, key-handle refs, layout) alone; then replace the corresponding `AppMainProps` fields in `web/src/AppMain.tsx` with one `serverState` prop and update the children that only forward them. `web/src/useServerState.test.ts` currently asserts each setter individually, so add a case there that builds a `StateEvent` fixture, derives its keys, and fails if any key is not represented in the snapshot stored by `App`; keep `web/src/App.test.tsx` green through the prop change. This is the first increment — the wire event still carries the whole world, which is a separate concern.
+
 
 * Give the four workspace-command dispatch chains one shared executor so a new file or web subcommand is added once. — deferred: complexity 7/10, needs a new parameterized executor threaded through four independent chains while preserving byte-for-byte output and remote-ACP confinement across six pinned test suites.
 

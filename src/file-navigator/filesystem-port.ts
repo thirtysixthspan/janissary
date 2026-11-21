@@ -9,7 +9,7 @@ import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import { readDirSortedStrict, type FileNavigatorEntry } from './index.js';
 import { realDirectory } from './batch-paths.js';
-import { containedPath } from '../path-containment.js';
+import { containedPath, containedPathOrRoot } from '../path-containment.js';
 import { deleteBatch, moveBatch, type DeleteManyResult, type MoveManyResult } from './batch.js';
 import { deleteItem, moveItem, renameItem, type MoveOneResult, type RenameItemResult } from './filesystem.js';
 import { listProjectFiles } from './search.js';
@@ -122,7 +122,7 @@ export interface FileSystemPort {
 }
 
 function absoluteDirectory(root: string, relPath: string): string | undefined {
-  return relPath === '' ? path.resolve(root) : containedPath(root, relPath);
+  return containedPathOrRoot(root, relPath);
 }
 
 export class LocalFileSystemPort implements FileSystemPort {

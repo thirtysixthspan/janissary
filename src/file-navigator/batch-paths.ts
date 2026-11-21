@@ -1,13 +1,13 @@
 import { lstatSync } from 'node:fs';
 import path from 'node:path';
-import { containedPath } from '../path-containment.js';
+import { containedPathOrRoot } from '../path-containment.js';
 
 // Path helpers shared by `batch.ts` (move/delete) and `paste.ts` (copy/cut-paste) — extracted so
 // neither module has to duplicate them, and to keep `batch.ts` under the file-size limit. The
 // containment rule they build on lives in `../path-containment.ts`.
 
 export function realDirectory(root: string, relPath: string): string | undefined {
-  const absolute = relPath === '' ? path.resolve(root) : containedPath(root, relPath);
+  const absolute = containedPathOrRoot(root, relPath);
   if (!absolute) return;
   try {
     const stat = lstatSync(absolute);
