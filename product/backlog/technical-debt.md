@@ -13,17 +13,6 @@
 
 
 
-* Move the harness tab's key-routing rule into a pure module so which chords reach the terminal and which bubble to the window can be tested without mounting an xterm.
-
-Existing Debt: §5 (components render; they do not decide) — `web/src/harness/HarnessTab.tsx` defines a private `harnessKeyFilter` that decides whether each keydown is sent to the PTY or bubbles, combining a `keydown` gate, two picker-open flags, and the negation of four chord predicates, so the decision is reachable only through a rendered terminal's `keyFilter` callback. Severity: 4/10
-
-Existing Risk: 4/10 - A dropped chord in that negation sends Ctrl+A or Ctrl+G into the shell instead of opening its picker, and because each chord predicate is tested only in isolation, the composition has no direct test to catch the omission.
-
-Proposal Risk: 2/10 - The rule becomes a plain function of a key event and two booleans that a test can call directly, but it still composes the same four shared chord predicates, so a chord added to the window layer without being added here keeps a silent gap.
-
-Proposal: `web/src/harness/HarnessTab.tsx` defines `harnessKeyFilter(e, taskPickerOpen, navOpen)` in the component file and passes it as `keyFilter` to `useXterm`; the four predicates it calls (`isTabSwitchChord`, `isPickerChord`, `isClipboardChord`, `isNewShellChord`) come from `web/src/shared/terminal/window-chords.ts`. Add `web/src/harness/harness-key-filter.ts` exporting that function with the same signature, move the four chord imports into it, and have the component import the single function back; the `useXterm` call and all rendered markup stay unchanged. Only that component file changes, no other file's imports move, and the four predicates keep their existing direct suite in `web/src/shared/terminal/window-chords.test.ts`, which needs no edit. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/harness/HarnessTab.tsx`.
-
-
 * Pull the shell submit hook's local-command routing decision into a pure module so history and transcript-search routing can be tested without rendering the submit hook.
 
 Existing Debt: §6 (hooks are the seam between logic and view) — `web/src/plugins/shell/useShellSubmit.ts` holds a private `localRoute` that decides whether a line opens shell history or the transcript search, combining the disabled-application-command check with the `opensShellHistory` and `transcriptSearchQuery` rules, and it is reachable only by invoking the hook's returned submit callback inside a render. Severity: 4/10

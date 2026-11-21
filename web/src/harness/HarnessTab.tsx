@@ -3,9 +3,9 @@ import type { JanusClient } from '../shared/ws/ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
-import { isClipboardChord, isPickerChord, isTabSwitchChord, isNewShellChord } from '../shared/terminal/window-chords';
 import { HarnessTabMeta } from './HarnessTabMeta';
 import { harnessTabIntents } from './harness-tab-intents';
+import { harnessKeyFilter } from './harness-key-filter';
 import { remoteSessionControl } from '../shared/remote-session-control';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { HarnessTabHandle } from '../shared/tab/handles';
@@ -18,14 +18,6 @@ type Properties = {
   active?: boolean;
   onSplit?: () => void;
 };
-
-// Returns true to send to PTY, false to bubble (switch tabs, open task/nav picker, drive whichever
-// picker overlay is open over this tab).
-function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: boolean): boolean {
-  if (e.type !== 'keydown') return true;
-  if (taskPickerOpen || navOpen) return false;
-  return !(isTabSwitchChord(e) || isPickerChord(e) || isClipboardChord(e) || isNewShellChord(e));
-}
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
 // the harness except the tab-switch chords (Shift+←/→, Cmd+Shift+[/]), the task-picker chord
