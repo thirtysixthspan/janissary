@@ -413,7 +413,11 @@ describe('core record feeds', () => {
     const recorded = f.records.window(id)?.blocks[0];
     expect(recorded).toMatchObject({
       prompt: expect.stringContaining('search both'),
-      replies: ['first partial reply', 'second reply'],
+      replies: [
+        `${block('file grep first')}\n${block('file grep beta')}`,
+        'first partial reply',
+        'second reply',
+      ],
       answer: 'second reply',
     });
     expect(recorded?.entries.map((entry) => entry.text)).toEqual(expect.arrayContaining([

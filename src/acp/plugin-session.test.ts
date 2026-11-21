@@ -540,11 +540,11 @@ describe('core ACP for plugin tabs', () => {
       expect(replies).toHaveLength(1);
       expect(replies[0]).toMatchObject({
         input: 'ask hello',
-        output: 'Partial answer\n\n(stopped after 8 tool steps)',
+        output: `Partial answer\n${block('browser goto https://example.com')}\n\n(stopped after 8 tool steps)`,
       });
     });
     expect(managers.acpRecords.window(managers.acpRecords.rows()[0].id)?.blocks)
-      .toMatchObject([{ answer: 'Partial answer\n\n(stopped after 8 tool steps)' }]);
+      .toMatchObject([{ answer: `Partial answer\n${block('browser goto https://example.com')}\n\n(stopped after 8 tool steps)` }]);
     managers.acp.closeAll();
   });
 
@@ -572,7 +572,8 @@ describe('core ACP for plugin tabs', () => {
     await vi.waitFor(() => {
       expect(tab.log.filter((entry) => entry.input === command && entry.output === refusal)).toHaveLength(8);
       expect(tab.log.find((entry) => entry.background)).toMatchObject({
-        input: 'ask restricted', output: 'Partial answer\n\n(stopped after 8 tool steps)',
+        input: 'ask restricted',
+        output: `Partial answer\n${block(command)}\n\n(stopped after 8 tool steps)`,
       });
     });
     const record = managers.acpRecords.window(managers.acpRecords.rows()[0].id)!;

@@ -1439,7 +1439,7 @@ describe('runCorePrompt file grep loop preservation', () => {
         expect(mocks.grepFilesInTab).toHaveBeenCalledTimes(8);
         expect(providerPrompt).toHaveBeenCalledTimes(9);
         expect(request.finish).toHaveBeenCalledWith(expect.objectContaining({
-          answered: true, reply: '(stopped after 8 tool steps)',
+          answered: true, reply: `${block(GREP)}\n\n(stopped after 8 tool steps)`,
         }));
       });
     } finally {

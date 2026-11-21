@@ -2,7 +2,5 @@
 
 # pull-request
 
-* dont strip ```jannisary   ``` fenced blocks from rendering in message fields in the connection tab 
-
 * for each command in the preamble, provide a usage example of the command with a fenced block.
 

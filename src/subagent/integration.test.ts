@@ -280,7 +280,9 @@ describe('subagent integration — local command to human reply', () => {
       for (let step = 0; step < 8; step += 1) answer(0, block('file read x.md'));
       answer(0, `${block('file read x.md')}\neight commands done`);
       await drain();
-      expect(humanReplies().at(-1)!.output).toBe('Subagent research partial.\n\neight commands done');
+      expect(humanReplies().at(-1)!.output).toBe(
+        `Subagent research partial.\n\n${block('file read x.md')}\neight commands done`,
+      );
     });
   });
 

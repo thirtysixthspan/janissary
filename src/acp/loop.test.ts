@@ -107,10 +107,11 @@ describe('runAcpToolLoop', () => {
     ]);
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
 
-    // The extracted command line is stripped from the agent reply shown to the user.
-    // First endTurn: command removed, only prose remains.
+    // The agent's whole reply is shown, including the command line it issued.
     const firstEnd = events.find((event) => event[0] === 'endTurn');
-    expect(firstEnd).toEqual(['endTurn', 'Looking it up.']);
+    expect(firstEnd).toEqual([
+      'endTurn', 'Looking it up.\ndb sqlite query movies SELECT name FROM actors',
+    ]);
     // ranCommand appears after the first endTurn.
     const firstEndIndex = events.indexOf(firstEnd!);
     expect(events[firstEndIndex + 1]).toEqual([
@@ -141,7 +142,7 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('strips the extracted command line from the agent reply before endTurn', () => {
+  it('keeps the extracted command line in the agent reply at endTurn', () => {
     const { session } = makeSession([
       'First line.\nSecond line.\ndb sqlite query movies SELECT 1',
       'Final answer.',
@@ -150,10 +151,10 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
-    // The command line is removed; trailing blank lines after removal are trimmed.
+    // The reply is emitted unchanged, with the command line the agent wrote.
     const endTurns = events.filter((event) => event[0] === 'endTurn');
-    expect(endTurns[0]).toEqual(['endTurn', 'First line.\nSecond line.']);
-    // Second turn has no command, full text preserved.
+    expect(endTurns[0]).toEqual(['endTurn', 'First line.\nSecond line.\ndb sqlite query movies SELECT 1']);
+    // Second turn has no command, so its text is emitted as written too.
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);
   });
 
@@ -170,7 +171,7 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('strips command-only replies to empty endTurn', () => {
+  it('keeps a command-only reply in endTurn', () => {
     const { session } = makeSession([
       'db sqlite query movies SELECT 1',
       'Done.',
@@ -180,8 +181,8 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
     const endTurns = events.filter((event) => event[0] === 'endTurn');
-    // Only the command line exists, stripping leaves empty string.
-    expect(endTurns[0]).toEqual(['endTurn', '']);
+    // A reply that is only a command is still shown in full.
+    expect(endTurns[0]).toEqual(['endTurn', 'db sqlite query movies SELECT 1']);
     expect(endTurns[1]).toEqual(['endTurn', 'Done.']);
   });
 
@@ -245,7 +246,7 @@ describe('runAcpToolLoop', () => {
     expect(events.at(-1)).toEqual(['finished', 'answered', 8]);
   });
 
-  it('strips code fences around the extracted command from endTurn', () => {
+  it('keeps the code fences around the extracted command in endTurn', () => {
     const { session } = makeSession([
       'Looking up.\n```\ndb sqlite query movies SELECT 1\n```\nDone.',
       'Final answer.',
@@ -255,8 +256,10 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
     const endTurns = events.filter((event) => event[0] === 'endTurn');
-    // Fence lines removed along with the command.
-    expect(endTurns[0]).toEqual(['endTurn', 'Looking up.\nDone.']);
+    // The fenced block is preserved, fences and command together.
+    expect(endTurns[0]).toEqual([
+      'endTurn', 'Looking up.\n```\ndb sqlite query movies SELECT 1\n```\nDone.',
+    ]);
     expect(endTurns[1]).toEqual(['endTurn', 'Final answer.']);
   });
 
@@ -281,7 +284,7 @@ describe('runAcpToolLoop', () => {
     expect(events).toContainEqual(['endTurn', 'The page is about widgets.']);
   });
 
-  it('removes the command line that ran, not an earlier copy of it, from endTurn', () => {
+  it('keeps both the command line that ran and an earlier copy of it in endTurn', () => {
     const { session } = makeSession([
       'db sqlite list\nThat was the old list; refreshing.\ndb sqlite list',
       'Final answer.',
@@ -291,7 +294,9 @@ describe('runAcpToolLoop', () => {
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: database }, h);
 
     const firstEndTurn = events.find((event) => event[0] === 'endTurn');
-    expect(firstEndTurn).toEqual(['endTurn', 'db sqlite list\nThat was the old list; refreshing.']);
+    expect(firstEndTurn).toEqual([
+      'endTurn', 'db sqlite list\nThat was the old list; refreshing.\ndb sqlite list',
+    ]);
   });
 
   it('surfaces session errors without running a command', () => {
@@ -336,14 +341,14 @@ describe('runAcpToolLoop', () => {
     expect(events.some((event) => event[0] === 'finished' && event[1] === 'failed')).toBe(false);
   });
 
-  it('removes every matched block when a command is echoed twice', () => {
+  it('keeps every matched block when a command is echoed twice', () => {
     const text = '```janissary\nnotify hello\n```\n\n```janissary\nnotify hello\n```';
     const { session } = makeSession([text, 'Final answer.']);
     const { h, events } = makeHandlers();
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
 
-    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', '']);
+    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', text]);
     expect(events.filter((event) => event[0] === 'ranCommand')).toHaveLength(2);
   });
 
@@ -356,7 +361,9 @@ describe('runAcpToolLoop', () => {
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
 
-    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', 'Looking up.\nDone.']);
+    expect(events.find((event) => event[0] === 'endTurn')).toEqual([
+      'endTurn', 'Looking up.\n```janissary\nnotify hello\n```\nDone.',
+    ]);
   });
 
   it('feeds back the shared correction sentence for a block with zero commands', () => {
@@ -484,15 +491,14 @@ describe('runAcpToolLoop', () => {
     );
   });
 
-  it('removes all matched blocks while keeping the prose between and after them', () => {
+  it('keeps all matched blocks and the prose between and after them', () => {
     const text = 'Intro.\n```janissary\nnotify a\n```\nBetween.\n```janissary\nnotify b\n```\nAfter.';
     const { session } = makeSession([text, 'Done.']);
     const { h, events } = makeHandlers();
 
     runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: block }, h);
 
-    expect(events.find((event) => event[0] === 'endTurn'))
-      .toEqual(['endTurn', 'Intro.\nBetween.\nAfter.']);
+    expect(events.find((event) => event[0] === 'endTurn')).toEqual(['endTurn', text]);
   });
 
   it('finishes as answered when the agent replies with no command after a batch', () => {

@@ -3,7 +3,6 @@
 // or a step cap is hit. The control flow is pure — all side effects (rendering the transcript,
 // executing commands) are injected, which keeps it testable independently of the live agent.
 
-import type { CommandBlockSpan } from './command-block.js';
 import { errorText } from '../error-text.js';
 import type { AcpLoopSession, AcpLoopDeps as AcpLoopDependencies, AcpLoopHandlers } from './types.js';
 
@@ -132,10 +131,7 @@ export function runAcpToolLoop(
           return;
         }
         const result = dependencies.extractCommand(buffer);
-        const display = result.kind === 'batch'
-          ? filterCommandFromDisplay(buffer, result.commands.map((entry) => entry.span))
-          : buffer;
-        h.endTurn(display);
+        h.endTurn(buffer);
         busy = false;
         if (result.kind === 'mistake') {
           turn(CORRECTION_PROMPT, false);
@@ -152,37 +148,4 @@ export function runAcpToolLoop(
   }
 
   turn(userPrompt, true);
-}
-
-function filterCommandFromDisplay(display: string, spans: readonly CommandBlockSpan[]): string {
-  if (spans.length === 0) return display;
-  const lines = display.split('\n');
-  const starts: number[] = [];
-  let offset = 0;
-  for (const line of lines) {
-    starts.push(offset);
-    offset += line.length + 1;
-  }
-  for (let index = spans.length - 1; index >= 0; index--) {
-    const span = spans[index];
-    const first = lineAt(starts, span.start);
-    const last = lineAt(starts, span.end - 1);
-    lines.splice(first, last - first + 1);
-    // A bare command line inside a fence leaves its markers behind once removed.
-    if (first > 0 && first < lines.length && isFence(lines[first - 1]) && isFence(lines[first])) {
-      lines.splice(first - 1, 2);
-    }
-  }
-  while (lines.length > 0 && lines.at(-1)!.trim() === '') lines.pop();
-  return lines.join('\n');
-}
-
-function lineAt(starts: number[], offset: number): number {
-  let index = starts.length - 1;
-  while (index > 0 && starts[index] > offset) index--;
-  return index;
-}
-
-function isFence(line: string): boolean {
-  return /^ {0,3}(`{3,}|~{3,})[ \t]*$/.test(line);
 }

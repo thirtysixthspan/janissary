@@ -184,7 +184,7 @@ describe('startRemoteLoop workspace steps', () => {
     expect(frames).toEqual([
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: true },
       { type: 'acp-chunk', id: RUN_ID, text: block('file read a.md') },
-      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: '' },
+      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: block('file read a.md') },
       { type: 'acp-tool-step', id: RUN_ID, command: 'file read a.md', result: '1\tone\n2\ttwo', workspace: true },
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: false },
       { type: 'acp-chunk', id: RUN_ID, text: 'Done.' },
@@ -501,7 +501,7 @@ describe('startRemoteLoop frame order', () => {
       { type: 'acp-turn', id: RUN_ID, phase: 'start', first: true },
       { type: 'acp-chunk', id: RUN_ID, text: 'Looking at the data.\n' },
       { type: 'acp-chunk', id: RUN_ID, text: block(QUERY) },
-      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: 'Looking at the data.' },
+      { type: 'acp-turn', id: RUN_ID, phase: 'end', display: `Looking at the data.\n${block(QUERY)}` },
       { type: 'acp-tool-request', id: RUN_ID, request: 1, command: QUERY },
     ]);
 

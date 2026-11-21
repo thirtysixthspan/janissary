@@ -190,7 +190,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const PENDING_EVENTS = [
   ['startTurn', true],
   ['chunk', block(QUERY)],
-  ['endTurn', ''],
+  ['endTurn', block(QUERY)],
   ['startCommand', QUERY, false],
 ];
 
@@ -251,7 +251,7 @@ describe('driveToolLoop', () => {
     expect(events).toEqual([
       ['startTurn', true],
       ['chunk', block(QUERY)],
-      ['endTurn', ''],
+      ['endTurn', block(QUERY)],
       ['startCommand', QUERY, false],
       ['ranCommand', QUERY, 'caller output', false, undefined],
       ['startTurn', false],
