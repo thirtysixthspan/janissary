@@ -54,6 +54,7 @@ State your pick in one sentence.
 Judge the plan against each of these. Take notes; you will fix them in Step 4.
 
 - **Wrong or stale references.** Paths, symbols, or line anchors that don't match the repo. These silently derail an implementation.
+- **Unanchored assumptions.** Every `Assumptions` bullet must state one factual claim about the code and carry a `path:line` anchor plus the quoted identifier or code fragment it rests on, per `ai/guidelines/plan-template.md`. Open the file at that line: confirm the identifier is actually there and that the quoted fragment and the claim match what the code does. Add a missing anchor or identifier, split a bullet that packs several claims, and correct any claim, pointer, or identifier that disagrees with the code.
 - **Missed call sites and paths.** The plan changes behavior at one site, but the behavior has other entry points the plan never mentions. Grep for every caller/consumer of what the plan touches and check the plan accounts for each.
 - **Ambiguity.** Any step a reasonable implementer could read two ways; vague verbs ("handle errors", "update the UI") with no stated behavior; names left unchosen.
 - **Undecided decisions.** Choices the implementer would be forced to make mid-flight — file placement, naming, edge-case behavior, error handling, what happens on the empty/duplicate/oversized input. Plans decide; implementers execute. Make the decision (grounded in how the codebase already does it) and write it into the plan as prose.

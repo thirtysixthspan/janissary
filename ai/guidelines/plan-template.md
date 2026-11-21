@@ -22,7 +22,7 @@ Required. The decisions that shape the implementation, one per bullet, establish
 
 ### Assumptions
 
-Required. Facts taken as true that an implementer should not re-decide — what the code, the specs, or the user's answers have already settled. Each bullet names the fact and its source (a file, a spec, or an answer), so an implementer can verify it rather than guess. An assumption is not an open decision: if a point is still undecided, the planning task resolves it with the user before the plan is finished, it does not get parked here.
+Required. Facts about the code taken as true that an implementer should not re-decide — what the code, the specs, or the user's answers have already settled. Each bullet states **one** assumption and anchors it as `path:line` plus the quoted identifier or code fragment it rests on, so the reference survives line drift and the claim can be checked against the real code. Naming only a file, a spec, or an answer is not enough: a bullet without an anchor and a quoted identifier gives an implementer nothing to verify. An assumption is not an open decision: if a point is still undecided, the planning task resolves it with the user before the plan is finished, it does not get parked here.
 
 ### Requirements
 
