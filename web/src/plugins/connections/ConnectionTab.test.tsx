@@ -304,7 +304,9 @@ describe('ConnectionTab', () => {
     value.window = undefined;
     setup(value);
     expect(screen.getByText('Loading connection history…')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Close session' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Terminate' })).toBeNull();
   });
 
   it('disables Terminate while pending and clears it with the rejection message', async () => {
@@ -376,42 +378,50 @@ describe('ConnectionTab', () => {
       setup(record());
       expect(bar().lastElementChild).toHaveClass('plugin-actions');
       expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
         { label: 'Cancel', icon: 'circle-stop', text: '' },
         { label: 'Close session', icon: 'circle-xmark', text: '' },
       ]);
     });
 
-    it('floats an Open transcript clipboard icon ahead of the other actions for a record with an ACP session', () => {
-      const { intent } = setup({ ...record(), acpRef: { scope: 'tab', label: 'owner', role: 'ask' } });
+    it('floats an Open record JSON clipboard icon ahead of the other actions and sends its intent', () => {
+      const { intent } = setup(record());
       expect(actions()).toEqual([
-        { label: 'Open transcript', icon: 'clipboard', text: '' },
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
         { label: 'Cancel', icon: 'circle-stop', text: '' },
         { label: 'Close session', icon: 'circle-xmark', text: '' },
       ]);
-      fireEvent.click(screen.getByRole('button', { name: 'Open transcript' }));
-      expect(intent).toHaveBeenCalledWith('open-transcript', { id: 'uuid' });
+      fireEvent.click(screen.getByRole('button', { name: 'Open record JSON' }));
+      expect(intent).toHaveBeenCalledWith('open-record-json', { id: 'uuid' });
     });
 
-    it('offers no transcript icon when the record has no ACP session', () => {
-      setup(record('agent', 'Completed'));
-      expect(screen.queryByRole('button', { name: 'Open transcript' })).toBeNull();
+    it('offers the record JSON icon even when the record has no ACP session', () => {
+      const { intent } = setup(record('agent', 'Completed'));
+      fireEvent.click(screen.getByRole('button', { name: 'Open record JSON' }));
+      expect(intent).toHaveBeenCalledWith('open-record-json', { id: 'uuid' });
     });
 
-    it('offers only the close icon while an ACP record is idle', () => {
+    it('offers the record JSON and close icons while an ACP record is idle', () => {
       setup(record('acp', 'Idle'));
-      expect(actions()).toEqual([{ label: 'Close session', icon: 'circle-xmark', text: '' }]);
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Close session', icon: 'circle-xmark', text: '' },
+      ]);
     });
 
     it('leads the icons with Focus tab while the owning tab is open and sends its intent', () => {
       const { intent } = setup({ ...record('acp', 'Closed'), focusTarget: 'other-label' });
-      expect(actions()).toEqual([{ label: 'Focus tab', icon: 'location-crosshairs', text: '' }]);
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Focus tab', icon: 'location-crosshairs', text: '' },
+      ]);
       fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));
       expect(intent).toHaveBeenCalledWith('focus', { id: 'uuid' });
     });
 
     it('puts Focus tab before a running record\'s stop and close icons', () => {
       setup({ ...record(), focusTarget: 'other-label' });
-      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Cancel', 'Close session']);
+      expect(actions().map((action) => action.label)).toEqual(['Open record JSON', 'Focus tab', 'Cancel', 'Close session']);
     });
 
     it('offers no Focus tab without a focus target', () => {
@@ -429,7 +439,10 @@ describe('ConnectionTab', () => {
 
     it('offers a running agent run only the stop icon, as Terminate', () => {
       const { intent } = setup(record('agent'));
-      expect(actions()).toEqual([{ label: 'Terminate', icon: 'circle-stop', text: '' }]);
+      expect(actions()).toEqual([
+        { label: 'Open record JSON', icon: 'clipboard', text: '' },
+        { label: 'Terminate', icon: 'circle-stop', text: '' },
+      ]);
       fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
       expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
     });
@@ -445,7 +458,7 @@ describe('ConnectionTab', () => {
 
     it('offers the usual Terminate and Focus tab actions for a subagent run', () => {
       const { intent } = setup({ ...record('agent', 'Running', 'research'), focusTarget: 'caller-label' });
-      expect(actions().map((action) => action.label)).toEqual(['Focus tab', 'Terminate']);
+      expect(actions().map((action) => action.label)).toEqual(['Open record JSON', 'Focus tab', 'Terminate']);
       fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
       expect(intent).toHaveBeenCalledWith('terminate', { id: 'uuid' });
       fireEvent.click(screen.getByRole('button', { name: 'Focus tab' }));

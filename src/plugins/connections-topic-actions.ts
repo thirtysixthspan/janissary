@@ -4,7 +4,7 @@ import type { ConnectionsTopicAction } from './api-topics-connections.js';
 import { ACP_RECORD_WINDOW_SIZE } from '../acp-records/model.js';
 import { listLines } from '../connection/list.js';
 import { composeConnectionsTopicData } from './connections-topic-rows.js';
-import { openAcpTranscript } from '../controller/transcript.js';
+import { openRecordJson } from '../controller/connection-records.js';
 
 function consume(pending: Promise<unknown>): void {
   void pending.catch(() => {});
@@ -89,12 +89,11 @@ function focusRecordOwner(managers: Managers, action: FocusAction, requested: Ma
   return undefined;
 }
 
-type TranscriptAction = Extract<ConnectionsTopicAction, { action: 'transcript' }>;
+type RecordJsonAction = Extract<ConnectionsTopicAction, { action: 'recordJson' }>;
 
-function openRecordTranscript(managers: Managers, action: TranscriptAction, requested: Map<string, number>): string | undefined {
-  const record = rows(managers, requested).find((candidate) => candidate.type === 'record' && candidate.id === action.id);
-  if (record?.type !== 'record' || record.acpRef === undefined) return 'The record has no ACP transcript.';
-  openAcpTranscript(managers, record.acpRef);
+function openRecordJsonFile(managers: Managers, action: RecordJsonAction): string | undefined {
+  if (managers.acpRecords.rows().every((row) => row.id !== action.id)) return 'The record no longer exists.';
+  if (!openRecordJson(managers, action.id)) return 'The record file could not be opened.';
   return undefined;
 }
 
@@ -137,8 +136,8 @@ export function connectionsTopicAction(
   if (action.action === 'focus') {
     return focusRecordOwner(managers, action, requested);
   }
-  if (action.action === 'transcript') {
-    return openRecordTranscript(managers, action, requested);
+  if (action.action === 'recordJson') {
+    return openRecordJsonFile(managers, action);
   }
   return actOnAgentRecord(managers, action, requested);
 }

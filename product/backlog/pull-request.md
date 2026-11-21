@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the clipboard icon in the connections tab should open the related json file in the the .jannisary/connections/ directory.
-
 * dont strip ```jannisary   ``` fenced blocks from rendering in message fields in the connection tab 
 
 * for each command in the preamble, provide a usage example of the command with a fenced block.

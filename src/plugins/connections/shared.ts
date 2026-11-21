@@ -68,7 +68,7 @@ export type ConnectionsIntent =
   | { intent: 'open' | 'close'; payload: { kind: ConnectionKind; id: string; ownerLabel: string } }
   | { intent: 'open-record'; payload: { id: string } }
   | { intent: 'refresh'; payload: Record<string, never> }
-  | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older'; payload: { id: string } };
+  | { intent: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older' | 'open-record-json'; payload: { id: string } };
 
 const kinds = ['sqlite', 'shell', 'acp', 'browser', 'ssh', 'terminal'] as const;
 const statuses = ['Idle', 'Running', 'Closed', 'Completed', 'Failed', 'Partial', 'Terminated'] as const;

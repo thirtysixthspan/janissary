@@ -41,6 +41,12 @@ describe('AcpRecordStore', () => {
     expect(existsSync(root)).toBe(false);
   });
 
+  it('resolves a record id to its flat JSON file under the connections directory', () => {
+    const store = new AcpRecordStore({ projectDir });
+    const id = randomUUID();
+    expect(store.path(id)).toBe(path.join(root, `${id}.json`));
+  });
+
   it('round-trips versioned metadata and settled and terminal-unanswered history in flat UUID files', () => {
     const store = new AcpRecordStore({ projectDir });
     const value = fixture();
@@ -92,6 +98,7 @@ describe('AcpRecordStore', () => {
     const remove = vi.fn();
     const store = new AcpRecordStore({ projectDir, write, remove });
     expect(() => store.read(id)).toThrow('Invalid ACP record id.');
+    expect(() => store.path(id)).toThrow('Invalid ACP record id.');
     expect(() => store.delete(id)).toThrow('Invalid ACP record id.');
     expect(() => store.write({ ...fixture(), id })).toThrow('Invalid ACP record id.');
     expect(write).not.toHaveBeenCalled();

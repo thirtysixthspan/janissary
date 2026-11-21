@@ -31,7 +31,7 @@ export function useConnectionsController(capabilities: TabPluginClientCapabiliti
     void guarded(() => capabilities.intent('refresh', {}));
   }, [capabilities, guarded]);
 
-  const act = useCallback(async (name: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older' | 'open-transcript', id: string) => {
+  const act = useCallback(async (name: 'cancel' | 'close-session' | 'terminate' | 'delete' | 'focus' | 'load-older' | 'open-record-json', id: string) => {
     if (name === 'terminate') setPendingTerminate(true);
     const failure = await guarded(() => capabilities.intent(name, { id }));
     if (failure === null) return;
@@ -50,7 +50,7 @@ export function useConnectionsController(capabilities: TabPluginClientCapabiliti
     terminate: (id: string) => { void act('terminate', id); },
     delete: (id: string) => { void act('delete', id); },
     focus: (id: string) => { void act('focus', id); },
-    openTranscript: (id: string) => { void act('open-transcript', id); },
+    openRecordJson: (id: string) => { void act('open-record-json', id); },
     loadOlder: (id: string) => act('load-older', id),
     pendingTerminate, error, recordUpdated,
   };

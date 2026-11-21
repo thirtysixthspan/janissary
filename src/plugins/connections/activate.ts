@@ -76,11 +76,11 @@ function intent(
     tabs.openRecord(row, capabilities);
     return null;
   }
-  if (request.intent === 'open-transcript') {
-    if (!isIdIntent(request.payload)) return capabilities.rejectRequest('invalid open-transcript payload');
+  if (request.intent === 'open-record-json') {
+    if (!isIdIntent(request.payload)) return capabilities.rejectRequest('invalid open-record-json payload');
     const row = rowForId(connectionsData(capabilities).rows, request.payload.id);
-    if (!row || row.type !== 'record' || row.acpRef === undefined) return capabilities.rejectRequest('invalid open-transcript payload');
-    const refusal = capabilities.topicAction({ topic: 'connections', action: 'transcript', id: request.payload.id });
+    if (!row || row.type !== 'record') return capabilities.rejectRequest('invalid open-record-json payload');
+    const refusal = capabilities.topicAction({ topic: 'connections', action: 'recordJson', id: request.payload.id });
     return refusal === undefined ? null : capabilities.rejectRequest(refusal);
   }
   if (request.intent === 'open' || request.intent === 'close') {

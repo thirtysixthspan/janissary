@@ -137,6 +137,10 @@ export class AcpSessionRecords {
 
   rows() { return recordRows(this.records.values()); }
 
+  filePath(id: string): string | undefined {
+    return isRecordId(id) ? this.store.path(id) : undefined;
+  }
+
   window(id: string, count = ACP_RECORD_WINDOW_SIZE) {
     validateWindowCount(count);
     const record = this.get(id);

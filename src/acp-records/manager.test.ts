@@ -56,6 +56,13 @@ describe('AcpSessionRecords transitions', () => {
     expect(next.rows().find((row) => row.id === nextId)?.status).toBe('Idle');
   });
 
+  it('hands out the persisted file path for a valid id and nothing for a malformed one', () => {
+    const records = create();
+    const id = records.begin(core);
+    expect(records.filePath(id)).toBe(file(id));
+    expect(records.filePath('../outside')).toBeUndefined();
+  });
+
   it('projects role tags on core record rows while keeping legacy rows untagged', () => {
     const records = create();
     const tellId = records.begin({ ...core, role: 'tell' });
