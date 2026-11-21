@@ -65,7 +65,14 @@ describe('parseToolCalls', () => {
   });
 });
 
-const activity = (kind: ConnectionActivity['kind'], text: string, timestamp: number): ConnectionActivity => ({ kind, text, timestamp });
+const activity = (
+  kind: ConnectionActivity['kind'], text: string, timestamp: number,
+  toolPhase?: ConnectionActivity['toolPhase'], toolCommand?: string,
+): ConnectionActivity => ({
+  kind, text, timestamp,
+  ...(toolPhase !== undefined && { toolPhase }),
+  ...(toolCommand !== undefined && { toolCommand }),
+});
 
 describe('groupToolEntries', () => {
   it('passes non-tool entries through unchanged with their source index', () => {
@@ -106,5 +113,72 @@ describe('groupToolEntries', () => {
       activity('tool', 'c', 12), activity('permission', 'd', 13),
     ];
     expect(groupToolEntries(entries).map((row) => row.index)).toEqual([0, 1, 3]);
+  });
+
+  it('pairs each batched command with its own reply', () => {
+    const first = activity('tool', 'file list .', 1, 'command');
+    const second = activity('tool', 'file glob *', 2, 'command');
+    const firstReply = activity('tool', 'dir a', 3, 'reply', 'file list .');
+    const secondReply = activity('tool', 'a.md', 4, 'reply', 'file glob *');
+    expect(groupToolEntries([first, second, firstReply, secondReply])).toEqual([
+      { kind: 'tool', command: first, reply: firstReply, index: 0 },
+      { kind: 'tool', command: second, reply: secondReply, index: 1 },
+    ]);
+  });
+
+  it('attaches a reply to the command it names even when results arrive out of order', () => {
+    const first = activity('tool', 'file grep a', 1, 'command');
+    const second = activity('tool', 'file grep b', 2, 'command');
+    const secondReply = activity('tool', 'b matches', 3, 'reply', 'file grep b');
+    const firstReply = activity('tool', 'a matches', 4, 'reply', 'file grep a');
+    expect(groupToolEntries([first, second, secondReply, firstReply])).toEqual([
+      { kind: 'tool', command: first, reply: firstReply, index: 0 },
+      { kind: 'tool', command: second, reply: secondReply, index: 1 },
+    ]);
+  });
+
+  it('keeps separate batches paired within one block', () => {
+    const entries = [
+      activity('tool', 'cmd 1', 1, 'command'),
+      activity('tool', 'cmd 2', 2, 'command'),
+      activity('tool', 'out 1', 3, 'reply', 'cmd 1'),
+      activity('tool', 'out 2', 4, 'reply', 'cmd 2'),
+      activity('tool', 'cmd 3', 5, 'command'),
+      activity('tool', 'out 3', 6, 'reply', 'cmd 3'),
+    ];
+    expect(groupToolEntries(entries)).toEqual([
+      { kind: 'tool', command: entries[0], reply: entries[2], index: 0 },
+      { kind: 'tool', command: entries[1], reply: entries[3], index: 1 },
+      { kind: 'tool', command: entries[4], reply: entries[5], index: 4 },
+    ]);
+  });
+
+  it('renders a reply with no matching command rather than dropping it', () => {
+    const reply = activity('tool', 'orphan output', 7, 'reply', 'missing command');
+    expect(groupToolEntries([reply])).toEqual([{ kind: 'tool', command: reply, index: 0 }]);
+  });
+
+  it('keeps adjacent pairing for tool entries without a phase', () => {
+    const command = activity('tool', 'grep foo', 1);
+    const reply = activity('tool', '3 matches', 2);
+    const phased = activity('tool', 'new command', 3, 'command');
+    expect(groupToolEntries([command, reply, phased])).toEqual([
+      { kind: 'tool', command, reply, index: 0 },
+      { kind: 'tool', command: phased, index: 2 },
+    ]);
+  });
+
+  it('keeps each phased row anchored to its command source index', () => {
+    const entries = [
+      activity('message', 'a', 10),
+      activity('tool', 'cmd', 11, 'command'),
+      activity('tool', 'out', 12, 'reply', 'cmd'),
+      activity('permission', 'b', 13),
+    ];
+    expect(groupToolEntries(entries)).toEqual([
+      { kind: 'activity', entry: entries[0], index: 0 },
+      { kind: 'tool', command: entries[1], reply: entries[2], index: 1 },
+      { kind: 'activity', entry: entries[3], index: 3 },
+    ]);
   });
 });

@@ -260,7 +260,10 @@ describe('runSubagentEntry', () => {
     events.startCommand?.('file read x.md', true);
     events.ranCommand('file read x.md', 'tool output', true);
     answer(events, 'final');
-    expect(record.activity.mock.calls).toEqual([['tool', 'file read x.md'], ['tool', 'tool output']]);
+    expect(record.activity.mock.calls).toEqual([
+      ['tool', 'file read x.md', 'command'],
+      ['tool', 'tool output', 'reply', 'file read x.md'],
+    ]);
     expect(mocks.runToolLoop).toHaveBeenCalledTimes(1);
   });
 
@@ -271,11 +274,14 @@ describe('runSubagentEntry', () => {
     scriptedSession([[block('file read a.md')], ['done']]);
     await withRealLoop(async () => {
       const execution = runSubagentEntry(options);
-      await vi.waitFor(() => expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md']]));
+      await vi.waitFor(() => expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md', 'command']]));
       expect(mocks.runWorkspaceCommandIn).toHaveBeenCalledWith('/clone', 'file read a.md', expect.any(AbortSignal));
       gate.resolve('1\tone');
       expect(await execution).toMatchObject({ status: 'completed', response: 'done', reason: 'answered' });
-      expect(record.activity.mock.calls).toEqual([['tool', 'file read a.md'], ['tool', '1\tone']]);
+      expect(record.activity.mock.calls).toEqual([
+        ['tool', 'file read a.md', 'command'],
+        ['tool', '1\tone', 'reply', 'file read a.md'],
+      ]);
     });
   });
 
@@ -286,7 +292,7 @@ describe('runSubagentEntry', () => {
     await withRealLoop(async () => {
       const result = await runSubagentEntry(options);
       expect(result).toMatchObject({ status: 'partial', reason: 'capped' });
-      expect(record.activity.mock.calls[0]).toEqual(['tool', 'file read a.md']);
+      expect(record.activity.mock.calls[0]).toEqual(['tool', 'file read a.md', 'command']);
       expect(record.activity.mock.calls.some(([kind, text]) =>
         kind === 'tool' && String(text).includes('ACP error: command boom'))).toBe(true);
     });

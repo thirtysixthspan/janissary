@@ -112,6 +112,19 @@ describe('AcpSessionRecords transitions', () => {
     expect(changes).toHaveBeenCalledTimes(10);
   });
 
+  it('stores a tool phase and correlation on the record entry', () => {
+    const records = create();
+    const id = records.begin(core);
+    records.prompt(id, 'list files');
+    expect(records.activity(id, 'tool', 'file list .', 'command')).toBe(true);
+    expect(records.activity(id, 'tool', 'a.md', 'reply', 'file list .')).toBe(true);
+    records.answer(id, 'a.md');
+    expect(read(id).blocks[0].entries).toEqual([
+      { kind: 'tool', text: 'file list .', timestamp: 100, toolPhase: 'command' },
+      { kind: 'tool', text: 'a.md', timestamp: 100, toolPhase: 'reply', toolCommand: 'file list .' },
+    ]);
+  });
+
   it('titles from an explicit text while storing the full prompt, and keeps that title later', () => {
     const records = create();
     const id = records.begin(core);

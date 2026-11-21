@@ -191,7 +191,7 @@ describe('agent shared driver host', () => {
     const result = await dependencies.runCommand(command);
     handlers.ranCommand(command, result);
     expect(result).toBe('1\tworkspace');
-    expect(activity.mock.calls).toEqual([['tool', command], ['tool', result]]);
+    expect(activity.mock.calls).toEqual([['tool', command, 'command'], ['tool', result, 'reply', command]]);
     finish();
     await execution;
     run.record = undefined;
@@ -206,7 +206,7 @@ describe('agent shared driver host', () => {
     const result = await dependencies.runCommand(command);
     handlers.ranCommand(command, result);
     expect(result).toBe('Agent: command not permitted: file read notes/a.md.');
-    expect(activity.mock.calls).toEqual([['tool', command], ['tool', result]]);
+    expect(activity.mock.calls).toEqual([['tool', command, 'command'], ['tool', result, 'reply', command]]);
     finish();
     await execution;
     run.record = undefined;
@@ -245,7 +245,10 @@ describe('agent shared driver host', () => {
     listener!.onToolStep({
       type: 'acp-tool-step', id: 'agent', command: 'file read notes/a.md', result: '1\tworkspace', workspace: true,
     });
-    expect(activity.mock.calls).toEqual([['tool', '[build-box] file read notes/a.md'], ['tool', '[build-box] 1\tworkspace']]);
+    expect(activity.mock.calls).toEqual([
+      ['tool', '[build-box] file read notes/a.md', 'command'],
+      ['tool', '[build-box] 1\tworkspace', 'reply', '[build-box] file read notes/a.md'],
+    ]);
 
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
@@ -285,7 +288,10 @@ describe('agent shared driver host', () => {
       type: 'acp-tool-result', id: 'agent', request: 9, output: 'db result',
     }));
 
-    expect(activity.mock.calls).toEqual([['tool', 'db sqlite list'], ['tool', 'db result']]);
+    expect(activity.mock.calls).toEqual([
+      ['tool', 'db sqlite list', 'command'],
+      ['tool', 'db result', 'reply', 'db sqlite list'],
+    ]);
 
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
     listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });
@@ -316,7 +322,7 @@ describe('agent shared driver host', () => {
       }));
       expect(dispatch).not.toHaveBeenCalled();
       expect(read).not.toHaveBeenCalled();
-      expect(activity.mock.calls).toEqual([['tool', command], ['tool', refusal]]);
+      expect(activity.mock.calls).toEqual([['tool', command, 'command'], ['tool', refusal, 'reply', command]]);
 
       listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'start', first: true });
       listener!.onTurn({ type: 'acp-turn', id: 'agent', phase: 'end', display: 'Done' });

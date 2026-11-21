@@ -474,9 +474,9 @@ describe('runCorePrompt tool runner', () => {
     const command = 'db sqlite query shop SELECT 1';
     const result = await deps.runCommand(command);
     expect(managers.acpRecords.activity).toHaveBeenCalledTimes(1);
-    expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', command);
+    expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', command, 'command');
     handlers.ranCommand(command, result);
-    expect(managers.acpRecords.activity).toHaveBeenLastCalledWith('record-1', 'tool', 'dispatched output');
+    expect(managers.acpRecords.activity).toHaveBeenLastCalledWith('record-1', 'tool', 'dispatched output', 'reply', command);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: 'dispatched output', acp: true });
   });
 
@@ -615,8 +615,8 @@ describe('runCorePrompt tool runner', () => {
       events.startCommand?.('file read a.txt', true);
       events.ranCommand('file read a.txt', '1\talpha', true);
 
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] file read a.txt');
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] 1\talpha');
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] file read a.txt', 'command');
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] 1\talpha', 'reply', '[far] file read a.txt');
       expect(managers.tab.append).toHaveBeenCalledWith('shell', {
         input: '[far] file read a.txt', output: '1\talpha', acp: true,
       });
@@ -629,8 +629,8 @@ describe('runCorePrompt tool runner', () => {
       const result = await deps.runCommand(command);
       handlers.ranCommand(command, result);
 
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command, 'command');
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result, 'reply', command);
       expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: result, acp: true });
     });
 
@@ -641,8 +641,8 @@ describe('runCorePrompt tool runner', () => {
       const result = await deps.runCommand(command);
       handlers.ranCommand(command, result);
 
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command, 'command');
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result, 'reply', command);
       expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: result, acp: true });
     });
 
@@ -782,8 +782,8 @@ describe('runCorePrompt remote session', () => {
     events.startCommand?.(command, false);
     events.ranCommand(command, 'dispatched output', false);
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', 'dispatched output');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', 'dispatched output', 'reply', command);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', {
       input: command, output: 'dispatched output', acp: true,
     });
@@ -799,8 +799,8 @@ describe('runCorePrompt remote session', () => {
     events.startCommand?.(command, false);
     events.ranCommand(command, refusal, false, 'disabled');
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal, 'reply', command);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: command, output: refusal, acp: true });
   });
 
@@ -844,8 +844,8 @@ describe('runCorePrompt grep recording', () => {
     const result = await deps.runCommand(GREP);
     handlers.ranCommand(GREP, result);
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result, 'reply', GREP);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: result, acp: true });
     expect(tab.cmdHistory).toEqual(['git status']);
   });
@@ -860,8 +860,8 @@ describe('runCorePrompt grep recording', () => {
     events.startCommand?.(GREP, true);
     events.ranCommand(GREP, RESULT, true);
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', `[far] ${GREP}`);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', `[far] ${RESULT}`);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', `[far] ${GREP}`, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', `[far] ${RESULT}`, 'reply', `[far] ${GREP}`);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', {
       input: `[far] ${GREP}`, output: RESULT, acp: true,
     });
@@ -877,8 +877,8 @@ describe('runCorePrompt grep recording', () => {
 
     expect(result).toBe('Remote connection unavailable.');
     expect(result).not.toContain('a.txt');
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', result, 'reply', GREP);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: result, acp: true });
   });
 
@@ -891,8 +891,8 @@ describe('runCorePrompt grep recording', () => {
     events.startCommand?.(command, false);
     events.ranCommand(command, 'dispatched output', false);
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', 'dispatched output');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', 'dispatched output', 'reply', command);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', {
       input: command, output: 'dispatched output', acp: true,
     });
@@ -907,8 +907,8 @@ describe('runCorePrompt grep recording', () => {
     events.startCommand?.(GREP, false);
     events.ranCommand(GREP, refusal, false, 'disabled');
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal, 'reply', GREP);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: refusal, acp: true });
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'command-disabled', 'shell', refusal);
   });
@@ -921,8 +921,8 @@ describe('runCorePrompt grep recording', () => {
     expect(refusal).toBe('Command not allowed for role "Writer": file grep.');
     handlers.ranCommand(GREP, refusal as string);
     expect(mocks.grepFilesInTab).not.toHaveBeenCalled();
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP);
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal);
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', GREP, 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', refusal, 'reply', GREP);
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: GREP, output: refusal, acp: true });
     expect(mocks.notify).not.toHaveBeenCalledWith(expect.anything(), 'command-disabled', expect.anything(), expect.anything());
   });
@@ -1014,7 +1014,7 @@ describe('runCorePrompt file mutations', () => {
     const { deps, handlers } = start('tell', GRANTS, 'tell', 'record-1');
     const result = await deps.runCommand(WRITE);
     handlers.ranCommand(WRITE, result);
-    expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', WRITE);
+    expect(managers.acpRecords.activity).toHaveBeenCalledWith('record-1', 'tool', WRITE, 'command');
     expect(managers.tab.append).toHaveBeenCalledWith('shell', { input: WRITE, output: result, acp: true });
   });
 
@@ -1125,8 +1125,8 @@ describe('runCorePrompt file glob routing', () => {
     events.startCommand?.('file glob *.md', true);
     events.ranCommand('file glob *.md', 'a.md', true);
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] file glob *.md');
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] a.md');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] file glob *.md', 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] a.md', 'reply', '[far] file glob *.md');
     expect(managers.tab.append).toHaveBeenCalledWith('shell', {
       input: '[far] file glob *.md', output: 'a.md', acp: true,
     });
@@ -1194,7 +1194,7 @@ describe('runCorePrompt file grep routing', () => {
 
       expect(mocks.grepFilesInTab).toHaveBeenCalledWith(expect.anything(), 'shell', command);
       expect(mocks.grepFilesInTab.mock.calls[0]).toHaveLength(3);
-      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command);
+      expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', command, 'command');
       expect(providerPrompt.mock.calls[1]?.[0]).toContain(`Output of \`${command}\`:\nspaces.txt:1: hello   world`);
 
       reply(providerPrompt, 'Done.');
@@ -1364,10 +1364,10 @@ describe('runCorePrompt file grep routing', () => {
         { input: read, output: readResult, acp: true },
       ]);
       expect(vi.mocked(managers.acpRecords.activity).mock.calls).toEqual([
-        ['record-1', 'tool', grep],
-        ['record-1', 'tool', grepResult],
-        ['record-1', 'tool', read],
-        ['record-1', 'tool', readResult],
+        ['record-1', 'tool', grep, 'command'],
+        ['record-1', 'tool', grepResult, 'reply', grep],
+        ['record-1', 'tool', read, 'command'],
+        ['record-1', 'tool', readResult, 'reply', read],
       ]);
     });
   });
@@ -1454,7 +1454,7 @@ describe('runCorePrompt file grep loop preservation', () => {
 
       expect(providerPrompt).toHaveBeenCalledTimes(1);
       expect(managers.tab.append).not.toHaveBeenCalledWith('shell', expect.objectContaining({ acp: true }));
-      expect(managers.acpRecords.activity).not.toHaveBeenCalledWith('record-1', 'tool', RESULT);
+      expect(managers.acpRecords.activity).not.toHaveBeenCalledWith('record-1', 'tool', RESULT, 'reply', GREP);
       expect(request.finish).not.toHaveBeenCalled();
     });
   });
@@ -1538,8 +1538,8 @@ describe('runCorePrompt web routing', () => {
     events.startCommand?.('web search x', true);
     events.ranCommand('web search x', 'result', true);
 
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] web search x');
-    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] result');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(1, 'record-1', 'tool', '[far] web search x', 'command');
+    expect(managers.acpRecords.activity).toHaveBeenNthCalledWith(2, 'record-1', 'tool', '[far] result', 'reply', '[far] web search x');
     expect(managers.tab.append).toHaveBeenCalledWith('shell', {
       input: '[far] web search x', output: 'result', acp: true,
     });

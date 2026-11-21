@@ -36,11 +36,14 @@ export function promptCoreRecord(records: AcpSessionRecords, runtime: TabRuntime
 
 export function coreActivity(
   records: AcpSessionRecords, runtime: TabRuntime, kind: AcpActivityKind, text: string,
-  role: AcpRole = DEFAULT_ACP_ROLE,
+  role: AcpRole = DEFAULT_ACP_ROLE, toolPhase?: 'command' | 'reply', toolCommand?: string,
 ): void {
   const state = acpRoleRuntime(runtime, role);
   const id = state.prompt?.recordId;
-  if (id && id === state.recordId) records.activity(id, kind, text);
+  if (!id || id !== state.recordId) return;
+  if (toolPhase === undefined) records.activity(id, kind, text);
+  else if (toolCommand === undefined) records.activity(id, kind, text, toolPhase);
+  else records.activity(id, kind, text, toolPhase, toolCommand);
 }
 
 export function answerCoreRecord(records: AcpSessionRecords, pending: AcpPendingPrompt, result: AcpPromptResult): void {

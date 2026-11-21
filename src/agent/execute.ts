@@ -161,8 +161,10 @@ export async function executeAgentRun(
       startTurn: () => {},
       chunk: () => {},
       endTurn: (answer) => { finalAnswer = answer; },
-      startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace)); },
-      ranCommand: (_command, result, workspace) => { run.record?.activity('tool', tagged(result, workspace)); },
+      startCommand: (command, workspace) => { run.record?.activity('tool', tagged(command, workspace), 'command'); },
+      ranCommand: (command, result, workspace) => {
+        run.record?.activity('tool', tagged(result, workspace), 'reply', tagged(command, workspace));
+      },
       finished: () => {
         if (finalAnswer.trim()) finish(finalAnswer);
         else fail(new Error('Agent: task returned an empty response.'));

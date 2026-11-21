@@ -48,7 +48,7 @@ type AttemptState = {
   terminate: () => void;
   provider: (id: string) => void;
   activity: (kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission', text: string) => void;
-  toolActivity: (text: string, workspace: boolean | undefined) => void;
+  toolActivity: (text: string, workspace: boolean | undefined, toolPhase?: 'command' | 'reply', toolCommand?: string) => void;
   warn: (error: unknown) => void;
   result: () => SubagentAttemptResult;
   onSettled: (fn: () => void) => void;
@@ -97,10 +97,13 @@ function createAttemptState(
       if (chosen) return;
       run.reportActivity(kind, text);
     },
-    toolActivity: (text, workspace) => {
+    toolActivity: (text, workspace, toolPhase, toolCommand) => {
       if (chosen) return;
-      const tagged = remote !== undefined && workspace === true ? `[${remote.host}] ${text}` : text;
-      run.record?.activity('tool', tagged);
+      const tag = (value: string) => remote !== undefined && workspace === true ? `[${remote.host}] ${value}` : value;
+      const tagged = tag(text);
+      if (toolPhase === undefined) run.record?.activity('tool', tagged);
+      else if (toolCommand === undefined) run.record?.activity('tool', tagged, toolPhase);
+      else run.record?.activity('tool', tagged, toolPhase, tag(toolCommand));
     },
     warn: (error) => { cleanupWarnings.push(errorText(error)); },
     result: () => ({ status, response, replied, reason, sessionId: providerId, cleanupWarnings }),
@@ -179,10 +182,10 @@ export async function runSubagentEntry(options: SubagentAttemptOptions): Promise
         chunk: () => {},
         endTurn: (text) => state.reply(extractFinalResult(text)),
         startCommand: (command, workspace) => {
-          state.toolActivity(command, workspace);
+          state.toolActivity(command, workspace, 'command');
         },
-        ranCommand: (_command, result, workspace) => {
-          state.toolActivity(result, workspace);
+        ranCommand: (command, result, workspace) => {
+          state.toolActivity(result, workspace, 'reply', command);
         },
         // A command failure is reported through `error` (which marks the attempt failed)
         // before the loop emits `finished('failed')`; only success reasons finish the attempt.

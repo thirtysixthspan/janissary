@@ -25,8 +25,11 @@ export class AgentRecordFeed {
     if (!this.ended) this.records.prompt(this.id, text);
   }
 
-  activity(kind: AcpActivityKind, text: string): void {
-    if (!this.ended) this.records.activity(this.id, kind, text);
+  activity(kind: AcpActivityKind, text: string, toolPhase?: 'command' | 'reply', toolCommand?: string): void {
+    if (this.ended) return;
+    if (toolPhase === undefined) this.records.activity(this.id, kind, text);
+    else if (toolCommand === undefined) this.records.activity(this.id, kind, text, toolPhase);
+    else this.records.activity(this.id, kind, text, toolPhase, toolCommand);
   }
 
   finish(outcome: AgentOutcome, response: string | undefined): void {

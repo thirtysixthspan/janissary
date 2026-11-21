@@ -28,7 +28,7 @@ Status is derived. An open core record is `Idle` before its first prompt and bet
 
 A non-whitespace prompt starts one chronological block only while the record is open and has no unanswered block. Overlapping prompts are rejected without queuing or altering the active block. Each block retains its prompt, start time, ordered activity entries, and an optional final answer and end time.
 
-Activity is accepted only on an open unanswered block, with a recognized kind (`message`, `thought`, `tool`, `plan`, or `permission`) and nonempty text. Whitespace-only chunks are accepted. Adjacent `message` chunks fold together verbatim, as do adjacent `thought` chunks, retaining the first chunk's timestamp. Kind changes and prompt boundaries break a fold. Tool, plan, and permission entries remain distinct.
+Activity is accepted only on an open unanswered block, with a recognized kind (`message`, `thought`, `tool`, `plan`, or `permission`) and nonempty text. Whitespace-only chunks are accepted. Adjacent `message` chunks fold together verbatim, as do adjacent `thought` chunks, retaining the first chunk's timestamp. Kind changes and prompt boundaries break a fold. Tool, plan, and permission entries remain distinct. A tool entry from a command loop carries an optional phase, `command` or `reply`, and a reply also carries the originating command text, so a reader can pair each command with its own result when a batch runs several commands at once. Entries without a phase stay valid.
 
 An answer settles only the current unanswered block. An empty string is a valid answer. Settlement assigns the answer and end time together and does not close the session or give an agent a terminal outcome. Duplicate answers and activity after settlement are rejected. Another prompt may then begin.
 
@@ -66,7 +66,7 @@ Construction scans, recovers, and prunes synchronously before reads are served. 
 
 Only closed records whose closure time is strictly more than 30 days before startup expire. Exactly 30 days old, recently closed long-running sessions, and future-dated closures remain. Retention uses closure time, not start time, last activity, or file modification time. There is no periodic expiry timer or retention setting.
 
-Only regular UUID-named JSON files are scanned. Directories, symlinks, temporary files, and unrelated names are ignored. Malformed JSON, unsupported versions, mismatched identities, invalid source/outcome combinations, activity kinds, timestamps, chronology, or settlement pairs are excluded from history and left untouched. Each rejected or unreadable file reports once for that service's storage scan. A root scan failure reports once and yields empty loaded history.
+Only regular UUID-named JSON files are scanned. Directories, symlinks, temporary files, and unrelated names are ignored. Malformed JSON, unsupported versions, mismatched identities, invalid source/outcome combinations, activity kinds, tool phases, timestamps, chronology, or settlement pairs are excluded from history and left untouched. Each rejected or unreadable file reports once for that service's storage scan. A root scan failure reports once and yields empty loaded history.
 
 ### Storage errors and change events
 

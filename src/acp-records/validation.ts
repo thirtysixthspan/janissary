@@ -42,8 +42,10 @@ function inRange(value: unknown, start: number, end: number): value is number {
 }
 
 function isEntry(value: unknown): value is AcpRecordEntry {
-  return isRecord(value) && isAcpActivityKind(value.kind)
-    && typeof value.text === 'string' && value.text.length > 0 && timestamp(value.timestamp);
+  if (!isRecord(value) || !isAcpActivityKind(value.kind)
+    || typeof value.text !== 'string' || value.text.length === 0 || !timestamp(value.timestamp)) return false;
+  if (Object.hasOwn(value, 'toolPhase') && value.toolPhase !== 'command' && value.toolPhase !== 'reply') return false;
+  return !Object.hasOwn(value, 'toolCommand') || typeof value.toolCommand === 'string';
 }
 
 function isBlock(value: unknown): value is AcpRecordBlock {

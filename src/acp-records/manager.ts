@@ -70,11 +70,15 @@ export class AcpSessionRecords {
     return true;
   }
 
-  activity(id: string, kind: AcpActivityKind, text: string): boolean {
+  activity(id: string, kind: AcpActivityKind, text: string, toolPhase?: 'command' | 'reply', toolCommand?: string): boolean {
     const record = this.open(id);
     const block = record && unansweredBlock(record);
     if (!record || !block || !isAcpActivityKind(kind) || typeof text !== 'string' || !text) return false;
-    appendActivity(block, { kind, text, timestamp: this.touch(record) });
+    appendActivity(block, {
+      kind, text, timestamp: this.touch(record),
+      ...(toolPhase !== undefined && { toolPhase }),
+      ...(toolCommand !== undefined && { toolCommand }),
+    });
     this.changed();
     return true;
   }

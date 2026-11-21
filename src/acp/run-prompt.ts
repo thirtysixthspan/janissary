@@ -118,7 +118,8 @@ export function runCorePrompt(
     managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
   const snapshot = coreSnapshot(runtime, request, nativeSettings);
-  const recordTool = (text: string) => coreActivity(managers.acpRecords, runtime, 'tool', text, request.role);
+  const recordTool = (text: string, toolPhase?: 'command' | 'reply', toolCommand?: string) =>
+    coreActivity(managers.acpRecords, runtime, 'tool', text, request.role, toolPhase, toolCommand);
   const host: AcpToolHost = {
     runCaller: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
@@ -154,10 +155,10 @@ export function runCorePrompt(
     },
     chunk: (buffer) => updateRunning(buffer, true),
     endTurn: (final) => { updateRunning(final, false); lastAnswer = final; request.replied = true; },
-    startCommand: (command, workspace) => { recordTool(tagged(command, workspace)); },
+    startCommand: (command, workspace) => { recordTool(tagged(command, workspace), 'command'); },
     ranCommand: (command, result, workspace, refused) => {
       if (refused === 'disabled') notify(managers, 'command-disabled', label, result);
-      recordTool(tagged(result, workspace));
+      recordTool(tagged(result, workspace), 'reply', tagged(command, workspace));
       appendAcp(managers, label, { input: tagged(command, workspace), output: result, acp: true });
     },
     finished: (reason, maxSteps) => {
