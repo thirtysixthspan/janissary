@@ -66,6 +66,38 @@ describe('ConnectionTab', () => {
     expect(order.indexOf('query')).toBeLessThan(order.indexOf('connections-activity'));
   });
 
+  it('shows janissary fences literally in the rendered preamble', () => {
+    const value = record();
+    value.window!.blocks[0]!.preamble = 'How commands work:\n```janissary\nfile list config\n```\nDone.';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toContain('```janissary');
+    expect(preamble.textContent).toContain('file list config');
+    expect(preamble.textContent).toContain('Done.');
+    expect(preamble.querySelector('pre')).toBeNull();
+  });
+
+  it('shows tilde janissary fences literally in the rendered preamble', () => {
+    const value = record();
+    value.window!.blocks[0]!.preamble = '~~~janissary\nfile grep janissary\n~~~';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.textContent).toContain('~~~janissary');
+    expect(preamble.textContent).toContain('file grep janissary');
+    expect(preamble.querySelector('pre')).toBeNull();
+  });
+
+  it('keeps surrounding Markdown formatted while a preamble janissary fence stays literal', () => {
+    const value = record();
+    value.window!.blocks[0]!.preamble = '**Rules**\n\n```janissary\nfile list config\n```\n\n- one\n- two';
+    setup(value);
+    const preamble = document.querySelector('.connections-preamble')!;
+    expect(preamble.querySelector('strong')?.textContent).toBe('Rules');
+    expect([...preamble.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['one', 'two']);
+    expect(preamble.textContent).toContain('```janissary');
+    expect(preamble.querySelector('pre')).toBeNull();
+  });
+
   it('does not render captured replies or the final answer as response sections', () => {
     const value = record();
     value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up'];

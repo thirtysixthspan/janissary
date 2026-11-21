@@ -86,7 +86,7 @@ function MessageText({ text }: { text: string }) {
 }
 
 function Preamble({ preamble }: { preamble: string }) {
-  const html = renderMarkdown(preamble);
+  const html = renderMarkdown(preserveJanissaryFences(preamble));
   return <details className="connections-activity">
     <summary>preamble</summary>
     <div className="connections-preamble">
