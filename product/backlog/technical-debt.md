@@ -8,6 +8,61 @@
 ## development
 
 
+* Give the shared clipboard writer one plain contract and let the SQL grid own its own copy-failure fallback.
+
+Existing Debt: §2 (colocate; promote to shared only on the second consumer) — the shared clipboard writer takes an optional `onFailure` callback that only the SQL grid passes, while roughly ten other call sites omit it, so a shared primitive carries one feature's error UI. Severity: 5/10
+
+Existing Risk: 4/10 - A second caller needing different failure behaviour either gets no answer from the write and silently loses the copy, or adds another branch to a helper every feature uses, while the SQL grid's fallback wording stays hostage to a shared module.
+
+Proposal Risk: 2/10 - Callers keep the same one-argument call and a denied write stays silent everywhere else, but the capture side effect and the success result must both still fire exactly once or the clipboard history and the grid's message drift apart.
+
+Proposal: `web/src/shared/system-clipboard.ts` exports `copyText(text, onFailure?)`, and its own comment already names the SQL grid as the one caller of `onFailure`; `web/src/plugins/sql/selection.tsx` is the only file that passes it, to show a message through `onError` when a copy is refused. Change the shared module to keep `copyText(text)` as a one-argument fire-and-forget writer and add a promise-returning `tryCopyText(text): Promise<boolean>` that performs the same `navigator.clipboard.writeText` attempt and calls `captureCopiedText(text)` exactly once; remove the feature-specific callback from the shared signature. In `web/src/plugins/sql/selection.tsx`, call that promise-returning function from the copy handler and invoke `onError` with the existing "Copy is unavailable here. Select and copy this text: …" wording only when it resolves false. The other call sites — `web/src/plugins/shell/command-bar-keys.ts`, `web/src/file-navigator/file/navigator-copy.ts`, `web/src/context-menu/DefaultContextMenu.tsx`, `web/src/editor/applyKeyAction.ts`, `web/src/shared/terminal/app-terminal.ts`, `web/src/shared/terminal/useXterm.ts`, and `web/src/plugins/api.ts`, which re-exports `copyText` to plugins — keep their one-argument calls and need no edit. `web/src/shared/system-clipboard.test.ts` pins the capture and no-throw behaviour and `web/src/plugins/sql/Selection.test.tsx` pins the grid's error text; both must keep their assertions byte-for-byte.
+
+
+* Move the harness launch dialog's flag-compatibility and field-reconciliation rules into a pure module beside its command builder, so a harness switch can be checked without rendering.
+
+Existing Debt: §5 (components render; they do not decide) — the launch dialog computes its defaults, clears or re-enables auto-approve and auto-resume when the harness changes, and drops a model absent from the new harness's catalog inside its `setFields` updater and render body, while the sibling schedule dialog keeps the same kind of rule in a pure selection module. Severity: 5/10
+
+Existing Risk: 5/10 - The same flag-validity rules are written at default time, on update, and at render time, so a change to which harness supports `-y` or `--auto-resume` applied in one place leaves a checkbox enabled for a command the parser rejects, and the only guard is a render test.
+
+Proposal Risk: 2/10 - The rules become plain functions over the delivered catalog and field values, but the dialog's remembered-selection state stays in the component, so the extraction is behaviour-preserving by eye and a transcription slip would only show up in the rendered form.
+
+Proposal: `web/src/harness/HarnessLaunchDialog.tsx` holds `initialFields`, `autoApproveSupported`, `autoResumeSupported`, the body of `update` (the name-change branch that clears an invalid model and flips the two flags when support changes), and `modelValid` in the render body. Add a pure module `web/src/harness/harness-launch-selection.ts` beside the existing `web/src/harness/harness-launch-command.ts` that owns `initialFields(view)`, `autoApproveSupported`, `autoResumeSupported`, `modelValid`, and a `nextFields(previous, patch, view)` reducer carrying the name-change and flag-compatibility rules, and call those from the component's initializer, `update` callback, and render check. Keep `remembered` and `resetHarnessLaunchDialogMemory` in the component: they are the dialog's session memory, not field rules, and that export is what its tests call. `HarnessLaunchView` comes from `@shared/protocol` and `HarnessLaunchFields` from `web/src/harness/harness-launch-command.ts`, so no wire type moves. Only `web/src/harness/HarnessLaunchDialog.tsx` and `web/src/harness/HarnessLaunchDialog.test.tsx` import the component; the test imports just the reset helper, needs no edit, and must keep its assertions byte-for-byte. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/harness/HarnessLaunchDialog.tsx`.
+
+
+* Move the SQL console's history-update and in-flight-submit rules into a pure module beside it, so statement recall and draft preservation can be checked without rendering.
+
+Existing Debt: §5 (components render; they do not decide) — the console computes its history update (drop a repeat, append, cap at fifty), its duplicate-submit guard, and the decision not to clear a newer draft inside its async `send` function, while the shell feature keeps the same kind of recall rule in a pure history module. Severity: 5/10
+
+Existing Risk: 5/10 - A correction to recall order, the fifty-statement cap, or the typed-while-in-flight rule has to be made inside a component and proven through a render, so a wrong recall or a clobbered statement reaches the user before a test can catch it.
+
+Proposal Risk: 2/10 - The rules become plain functions anyone can call, but the submit guard still depends on refs held by the component, so in-flight behaviour remains verified only through the render suite and a transcription slip would survive a pure-function test.
+
+Proposal: `web/src/plugins/sql/SqlConsole.tsx` owns `HISTORY_LIMIT` and three rules in `send`: the `submittingRef` guard, the `draftRevision` comparison that skips clearing a newer draft, and `setHistory((previous) => [...previous.filter((entry) => entry !== sql), sql].slice(-HISTORY_LIMIT))`. Add `web/src/plugins/sql/console-history.ts` with a pure `appendHistory(previous, sql, limit)` that dedupes, appends, and caps, and a pure `shouldClearDraft(submittedRevision, currentRevision)` for the in-flight rule, then call both from `send` in place of the inline expressions and move `HISTORY_LIMIT` into the new module. `useCommandBarKeys` in `web/src/shared/command-bar/useCommandBarKeys.ts` consumes the history as a prop, so no shared code changes and no import path outside this file moves. `web/src/plugins/sql/SqlConsole.test.tsx` already renders submit, duplicate-submit, rejection, and recall cases; it needs no edit and must keep its assertions byte-for-byte. The sibling rule lives in `web/src/plugins/shell/shell-history.ts` (`appendShellHistory`) behind `web/src/plugins/shell/useTerminalCommandHistory.ts`; leave it alone, since unifying the two features' histories is larger than one sitting. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/SqlConsole.tsx`.
+
+
+* Move the command bar's quit-versus-close reporting rules into a small pure module so the same blocked line is judged the same way at every call site.
+
+Existing Debt: §5 (components render; they do not decide) — the command-bar provider file defines `blockedCommandWord` and `consumeBlockedCommand`, which strip a leading slash and re-check `isCloseCommand` to decide whether a blocked line is reported as quit or close, while the verdict rules for those same lines live in a colocated submit-classifier module. Severity: 4/10
+
+Existing Risk: 4/10 - The close spelling is matched independently in two places that both import `isCloseCommand`, so tightening one — a leading slash, a spaced `close`, an alias — leaves the report naming the wrong confirmation even though the interception itself is correct.
+
+Proposal Risk: 2/10 - Both decisions then come from one pure module, but the verdict is still consumed by two different bars, so a change reaches both at once and a regression would surface in whichever bar has the weaker suite.
+
+Proposal: `web/src/shared/command-bar/AppCommandBar.tsx` defines `blockedCommandWord(line, closeVerdict)` (strip a leading `/`, then call `isCloseCommand`) and `consumeBlockedCommand(line, verdict, tab, report)`, and calls the latter from its submit path to report a blocked quit or close. Extract both into a new pure module `web/src/shared/command-bar/blocked-command.ts` that imports `isCloseCommand` from `@shared/commands/parse-close` and `CommandBarVerdict` from `./classify-submit`, then import them into `AppCommandBar.tsx` and delete the inline copies; do not edit `web/src/shared/command-bar/classify-submit.ts` itself. Keep the exact report strings and the `tab !== undefined` guard unchanged, including the case where no report callback is supplied — a blocked line is still consumed. `web/src/shared/command-bar/classify-submit.test.ts` pins the verdict shapes and `web/src/shared/command-bar/AppCommandBar.test.tsx` pins the blocked-line behaviour; neither needs an edit and both must keep their assertions byte-for-byte. Only the one existing source file is edited; the new module is a leaf and creates no cycle. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/shared/command-bar/AppCommandBar.tsx`.
+
+
+* Give the launcher's two row lists the same extracted, testable click-confirmation rules that its sibling lists already have.
+
+Existing Debt: §5 (components render; they do not decide) — the launcher's command row and tab row each define a pure `openOnConfirm` / `openOnClick` rule inside their component files and assert it only through a full render, while the sessions, conversations, and hosts features keep the identical rule in `*-keys` modules with colocated tests. Severity: 4/10
+
+Existing Risk: 4/10 - A change to "click once selects, click again opens" has to be made and verified in two component bodies with no pure seam, so the two lists drift on which click opens a row and neither gets the fast rule-level tests the sibling lists have.
+
+Proposal Risk: 2/10 - Both rules become plain functions with their own tests, but they stay two separate copies rather than one shared helper, so a future change still has to be applied twice; folding the features' click rules together is a separate cross-feature change.
+
+Proposal: `web/src/plugins/launcher/CommandRail.tsx` defines `openOnConfirm(index, confirmed)` returning `{ selected, opens: confirmed === index }`, and `web/src/plugins/launcher/LauncherTabRowView.tsx` defines `openOnClick(index, active)` returning `{ selected, opens: !active }`; both pass the result to `selection.rowClicked` from `web/src/shared/list-selection.ts`. Add a pure module `web/src/plugins/launcher/launcher-click.ts` exporting `commandClickSelection` and `tabClickSelection` with those same signatures and results, plus a colocated `web/src/plugins/launcher/launcher-click.test.ts` covering a repeat click on the same row, a click on a different row, and an active versus inactive tab row; import the two functions in the component files and delete the inline copies. Leave the shared `ListRowClick` type and `useListSelection` alone, and leave `web/src/plugins/sessions/sessions-keys.ts`, `web/src/plugins/conversations/conversation-list-keys.ts`, and `web/src/plugins/hosts/hosts-keys.ts` alone — unifying several features' click rules is larger than one sitting. `web/src/plugins/launcher/LauncherTab.test.tsx` renders both lists and pins the interaction; it needs no edit and must keep its assertions byte-for-byte.
+
+
 ## deferred
 
 * Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site. — deferred: complexity 6/10, a context-object refactor of an already-long projection module plus 63 test call sites across three suites with a compatibility wrapper.
