@@ -7,7 +7,10 @@
 
 ## development
 
-* Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site.
+
+## deferred
+
+* Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site. — deferred: complexity 6/10, a context-object refactor of an already-long projection module plus 63 test call sites across three suites with a compatibility wrapper.
 
 Existing Debt: The server's tab-view projection takes eight required and five optional positional parameters and builds a view with dozens of fields, so each new view field is a coordinated change to the signature, its three production callers, and roughly seventy test calls. Severity: 5/10
 
@@ -17,19 +20,6 @@ Proposal Risk: 2/10 - A named context makes each caller state which view input i
 
 Proposal: In `src/tab/view.ts`, `buildTabView` takes `tab`, `busy`, `cwd`, `acp`, `connections`, `schedule`, `commandQueue`, `shorten` and then optional `pendingQuestion`, `workspaceOf`, `reconnectingOf`, `workspaceProvisioning`, `declarationOf`; `buildManagedTabView` and `buildTabViews` in the same file and `src/tab/view-operations.ts` forward that list unchanged. Introduce a named `BuildTabViewContext` for the derived inputs (the collections, the shorten function, and the lookup callbacks), change `buildTabView` to take the tab plus that object, and keep the current positional signature as a thin temporary wrapper so the tests can migrate incrementally; update the three production callers first, then the calls in `src/tab/view.test.ts`, `src/command-queue/support.test.ts`, and `src/plugins/snapshot-tab.test.ts`. Do not change any value the builder computes: the recording and transcript mirroring, the workspace `cwdDisplay`, and the fields deliberately withheld from the base view (`editorDraft`, `pageSnapshot`, and the server-only `sessionTerminated` copy) all carry comments explaining why they are as they are. `src/tab/view.test.ts` pins the produced views field by field; keep every assertion unchanged.
 
-
-* Make command-name normalization one shared rule used by the command bar, the application inventory, and the ACP native-command gate.
-
-Existing Debt: The same trim, whitespace-collapse, and lowercase rule for a command name is expressed once in a shared helper and then re-implemented inline by the native-command matcher and several command predicates, so there is no single answer to what spelling a command accepts. Severity: 4/10
-
-Existing Risk: 4/10 - A change to accepted spelling, such as Unicode case folding, whitespace handling, or a leading slash, made in the shared helper or the command bar does not reach the ACP gate or vice versa, so the same typed line runs in one entry point and is refused in the other.
-
-Proposal Risk: 2/10 - Every gate and resolver normalizes through one helper, but the native-command matcher still owns the `file ls` alias and its word-boundary rule, so that grammar remains a separate definition.
-
-Proposal: `src/shared/command-matching.ts` `normalizeCommandName` is the shared rule; `src/acp/native-commands.ts` `matchesNativeCommand` independently trims, splits on whitespace, and lowercases before comparing words, and `src/commands.ts`, `src/commands/harness.ts`, `src/commands/quit.ts`, and `src/commands/schedule.ts` all compare `command.trim().toLowerCase()` inline. Replace those inline comparisons with `normalizeCommandName(command) === '<name>'` and have `matchesNativeCommand` normalize once through the shared helper, keeping its word-boundary comparison and the `FILE_LS_ALIAS` rewrite in `nativeCommandName`. Do not change `atFormBoundary` or the ranking in `src/shared/command-matching.ts`, since `src/application-commands.ts` relies on them for `search transcript` precedence. `src/shared/command-matching.test.ts`, `src/acp/native-commands.test.ts`, and `src/commands.test.ts` pin the accepted spellings and command ordering; keep them green and add a case asserting the command bar and the ACP gate agree on one mixed-case, multi-space line.
-
-
-## deferred
 
 * Give claude's prompt and permission-gate screen predicates one owner so a harness screen change is made once instead of twice. — deferred: complexity 6/10, consolidating the predicates spans busy classification, auto-approve, and the handler/observe data flow across a new leaf module and three byte-for-byte pinned screen-fixture suites.
 

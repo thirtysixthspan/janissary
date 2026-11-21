@@ -1,10 +1,11 @@
 import { NATIVE_ACP_COMMANDS } from '../plugins/roles/shared.js';
 import type { ApplicationCommandNativeTool } from '../shared/application-commands.js';
+import { normalizeCommandName } from '../shared/command-matching.js';
 
 export type NativeCommandTool = ApplicationCommandNativeTool;
 
 export function matchesNativeCommand(command: string, name: string): boolean {
-  const words = command.trim().split(/\s+/u).map((word) => word.toLowerCase());
+  const words = normalizeCommandName(command).split(' ');
   return name.split(' ').every((part, index) => words[index] === part);
 }
 
