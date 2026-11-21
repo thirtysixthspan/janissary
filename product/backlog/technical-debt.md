@@ -7,6 +7,60 @@
 
 ## development
 
+* Give claude's prompt and permission-gate screen predicates one owner so a harness screen change is made once instead of twice.
+
+Existing Debt: The live-input-caret and permission-gate line predicates that decide whether claude is sitting at its prompt or held at a permission menu are implemented twice — once for busy classification and once for auto-approve — and each harness screen feature keeps a separate per-harness table, with auto-approve adding a second switch for the gate's repeat key. Severity: 5/10
+
+Existing Risk: 5/10 - A correction to claude's caret or gate-line rule applied in only one of the two copies flips one subsystem's answer while the other stays stale: a tab shown busy when it is blocked on a prompt, or auto-approve standing down on a gate the busy tracker no longer recognizes.
+
+Proposal Risk: 2/10 - One predicate owner and one gate detection per capture make the two subsystems read the same screen, but each harness still supplies its own detector and repeat-key rule, so adding a harness remains a multi-module edit rather than one table row.
+
+Proposal: `src/harness/busy-classify.ts` and `src/harness/auto-approve.ts` each define a private `isInputCaretLine` with the same rule — a trimmed line starting with `❯` whose remainder does not start with `1.` — and `auto-approve.ts` adds `isYesDefaultLine`, `isNoOptionLine`, and a `gateLinePredicate` switch over `claude`/`codex`/`opencode`, while the harness's detector and keystroke live in a separate `GATE_TABLE` in that file, its busy rule in `BUSY_TABLE` in `src/harness/busy-classify.ts`, and its limit rule in `RESUME_TABLE` in `src/harness/auto-resume.ts`. Extract the shared screen predicates into a new leaf module such as `src/harness/screen-semantics.ts` and import them from both, then fold each harness's repeat-key predicate into its `GateEntry` in `GATE_TABLE` so the `gateLinePredicate` switch is replaced by data and the per-harness detector modules `src/harness/codex-permission-gate.ts` and `src/harness/opencode-permission-gate.ts` are reached from one entry rather than a second switch. In `src/harness/busy-status.ts`, `busyStatusHandler` calls `detectPermissionGate` and then `BusyTracker.observe` calls it again on the same capture, and both recompute `!approver || approver.isStuck`; compute the gate and stuck answers once in the handler and pass them into `observe` so one capture is classified once. Leave `BUSY_TABLE` and `RESUME_TABLE` alone — merging every per-harness registry is larger than one sitting. `src/harness/busy-status.test.ts` covers `classifyBusy`, `endsWithRecap`, and gate/parked precedence; `src/harness/auto-approve.test.ts` and `src/harness/auto-approve-repeat.test.ts` cover gate detection and the repeat/stuck guard. Keep every screen fixture and expectation byte-for-byte.
+
+
+* Publish one untrusted-content framing primitive so the monitor and the launcher summarizer share a prompt-injection defence instead of keeping private copies.
+
+Existing Debt: The per-session delimiter and the paragraph telling a persona to treat framed text as data rather than instructions exist as two hand-written copies — one for the monitor, one for the launcher's tab-summary persona — because the bundled plugin cannot import the host module that owns the first. Severity: 5/10
+
+Existing Risk: 6/10 - The two defences drift: a tightening of the framing instructions or of the delimiter's unguessability lands in one persona and not the other, leaving the launcher summarizer trusting transcript text that the monitor already treats as untrusted.
+
+Proposal Risk: 3/10 - Both personas build from one published primitive, but each still chooses its own marker shape and appends its own reply-format instructions, so a future consumer that skips the published surface remains possible.
+
+Proposal: `src/monitor/framing.ts` exports `generateSessionDelimiter`, `TRUST_FRAMING_INSTRUCTIONS`, `frameEntry`, and `frameUpdatePrompt`; `src/plugins/launcher/summarizer.ts` has a private `generateDelimiter` and `trustFraming` that are the same spotlighting defence with different wording, and its own comment names `src/monitor/framing.ts` as the copy source. Add a neutral leaf such as `src/shared/untrusted-framing.ts` exposing a factory that takes a delimiter prefix and returns `generateDelimiter()` and `trustInstructions(delimiter)`, preserving each caller's current wording, and re-export it from `src/plugins/api.ts` as an additive surface so a bundled or published plugin can import it without reaching into a host module, following `ai/guidelines/plugins.md` and leaving `TAB_PLUGIN_API_VERSION` unchanged. Build `src/monitor/framing.ts` from the same leaf and have `src/plugins/launcher/summarizer.ts` import it through the published contract, leaving the launcher's `[[tab:<label>]]` marker and `REPLY_FORMAT` untouched. `src/monitor/framing.test.ts` pins the delimiter shape and instruction paragraph, and `src/plugins/launcher/summarizer.test.ts` and `src/plugins/launcher/persona.test.ts` pin the launcher prompt; all three must keep their assertions byte-for-byte.
+
+
+* Share the bracket-marker field extractor used to parse persona replies so the monitor and the in-editor suggestion parser stop carrying the same regex.
+
+Existing Debt: Reading the text after a `[FIELD]:` marker in a persona reply is implemented twice with the same regular expression — a `captureMarker` for the monitor's summary/suggestion format and a `captureField` for the editor's hunk format — with only the leading-whitespace class differing. Severity: 4/10
+
+Existing Risk: 4/10 - A fix to the marker boundary, such as a multi-line value, a marker-looking line inside a quoted transcript, or the whitespace class, applied to one parser leaves the other silently dropping or swallowing reply content, and only one of the two personas shows the failure.
+
+Proposal Risk: 2/10 - One shared extractor with pinned behaviour makes both parsers agree, but each still owns its own marker vocabulary and block grammar, so a third format could still be added without reusing it.
+
+Proposal: `src/monitor/reply-format.ts` `captureMarker` and `src/editor-suggest/reply-format.ts` `captureField` both build a regular expression of the form `(?:^|\n)\[NAME]:…(?=\n\[A-Z]+:|$)` to read a named field up to the next bracket marker; the first allows `\s*` after the colon and the second `[ \t]*`. Extract a single `captureMarker(reply, name)` into a shared leaf such as `src/shared/persona-reply-markers.ts`, choose one whitespace rule deliberately and record why in the module, and have both reply parsers call it; if the two behaviours genuinely must differ, expose two named functions rather than two inline regexes. Leave each parser's marker names, format instructions (`SUGGESTION_FORMAT`, `HUNK_FORMAT`), and malformed-block policy where they are. `src/monitor/parsing.test.ts` covers `parseSuggestion` including multi-line summaries and the no-marker case, and `src/editor-suggest/reply-format.test.ts` covers hunk extraction; keep their expectations unchanged and add one cross-format case that fails if either parser stops recognizing a multi-line field.
+
+
+* Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site.
+
+Existing Debt: The server's tab-view projection takes eight required and five optional positional parameters and builds a view with dozens of fields, so each new view field is a coordinated change to the signature, its three production callers, and roughly seventy test calls. Severity: 5/10
+
+Existing Risk: 4/10 - Two adjacent optional parameters of the same type can be swapped, or a new one omitted from a caller, and the result still typechecks while a tab ships a wrong or missing field that tests of the older fields never notice.
+
+Proposal Risk: 2/10 - A named context makes each caller state which view input it supplies and a new field a single addition, but the projection still has to know every consumer's field, so adding a field to the view remains a two-sided change with the client.
+
+Proposal: In `src/tab/view.ts`, `buildTabView` takes `tab`, `busy`, `cwd`, `acp`, `connections`, `schedule`, `commandQueue`, `shorten` and then optional `pendingQuestion`, `workspaceOf`, `reconnectingOf`, `workspaceProvisioning`, `declarationOf`; `buildManagedTabView` and `buildTabViews` in the same file and `src/tab/view-operations.ts` forward that list unchanged. Introduce a named `BuildTabViewContext` for the derived inputs (the collections, the shorten function, and the lookup callbacks), change `buildTabView` to take the tab plus that object, and keep the current positional signature as a thin temporary wrapper so the tests can migrate incrementally; update the three production callers first, then the calls in `src/tab/view.test.ts`, `src/command-queue/support.test.ts`, and `src/plugins/snapshot-tab.test.ts`. Do not change any value the builder computes: the recording and transcript mirroring, the workspace `cwdDisplay`, and the fields deliberately withheld from the base view (`editorDraft`, `pageSnapshot`, and the server-only `sessionTerminated` copy) all carry comments explaining why they are as they are. `src/tab/view.test.ts` pins the produced views field by field; keep every assertion unchanged.
+
+
+* Make command-name normalization one shared rule used by the command bar, the application inventory, and the ACP native-command gate.
+
+Existing Debt: The same trim, whitespace-collapse, and lowercase rule for a command name is expressed once in a shared helper and then re-implemented inline by the native-command matcher and several command predicates, so there is no single answer to what spelling a command accepts. Severity: 4/10
+
+Existing Risk: 4/10 - A change to accepted spelling, such as Unicode case folding, whitespace handling, or a leading slash, made in the shared helper or the command bar does not reach the ACP gate or vice versa, so the same typed line runs in one entry point and is refused in the other.
+
+Proposal Risk: 2/10 - Every gate and resolver normalizes through one helper, but the native-command matcher still owns the `file ls` alias and its word-boundary rule, so that grammar remains a separate definition.
+
+Proposal: `src/shared/command-matching.ts` `normalizeCommandName` is the shared rule; `src/acp/native-commands.ts` `matchesNativeCommand` independently trims, splits on whitespace, and lowercases before comparing words, and `src/commands.ts`, `src/commands/harness.ts`, `src/commands/quit.ts`, and `src/commands/schedule.ts` all compare `command.trim().toLowerCase()` inline. Replace those inline comparisons with `normalizeCommandName(command) === '<name>'` and have `matchesNativeCommand` normalize once through the shared helper, keeping its word-boundary comparison and the `FILE_LS_ALIAS` rewrite in `nativeCommandName`. Do not change `atFormBoundary` or the ranking in `src/shared/command-matching.ts`, since `src/application-commands.ts` relies on them for `search transcript` precedence. `src/shared/command-matching.test.ts`, `src/acp/native-commands.test.ts`, and `src/commands.test.ts` pin the accepted spellings and command ordering; keep them green and add a case asserting the command bar and the ACP gate agree on one mixed-case, multi-space line.
+
 
 ## deferred
 
