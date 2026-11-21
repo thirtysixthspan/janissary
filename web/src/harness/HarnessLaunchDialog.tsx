@@ -6,29 +6,10 @@ import type { ModelSearchListState } from '../shared/model-search/useModelSearch
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
 import type { HarnessLaunchFields } from './harness-launch-command';
+import { autoApproveSupported, autoResumeSupported, initialFields, modelValid, nextFields } from './harness-launch-selection';
 import { useHarnessLaunchActions } from './useHarnessLaunchActions';
 
 type Properties = { view: HarnessLaunchView; client: JanusClient };
-
-function initialFields(view: HarnessLaunchView): HarnessLaunchFields {
-  const name = view.names[0] ?? 'claude';
-  return {
-    name, label: '', workspace: true, offline: false, browser: true,
-    autoApprove: autoApproveSupported(view, name), autoResume: autoResumeSupported(view, name),
-    model: '', effort: '',
-  };
-}
-
-// Whether `name` accepts auto-approve (`-y`), read from the catalog the server delivers so the
-// dialog only ever builds a command the command parser will accept.
-function autoApproveSupported(view: HarnessLaunchView, name: string): boolean {
-  return view.autoApprove.includes(name);
-}
-
-// Whether `name` accepts auto-resume (`--auto-resume`), read from the same delivered catalog.
-function autoResumeSupported(view: HarnessLaunchView, name: string): boolean {
-  return view.autoResume.includes(name);
-}
 
 // Remembered across reopen within a single app run (module-level, never persisted to disk).
 let remembered: HarnessLaunchFields | null = null;
@@ -44,10 +25,7 @@ export function resetHarnessLaunchDialogMemory(): void {
 export function HarnessLaunchDialog({ view, client }: Properties) {
   const [fields, setFields] = useState<HarnessLaunchFields>(() => {
     const initial = remembered ?? initialFields(view);
-    const model = initial.model.trim();
-    return model === '' || (view.models[initial.name] ?? []).includes(model)
-      ? initial
-      : { ...initial, model: '' };
+    return modelValid(view, initial.name, initial.model) ? initial : { ...initial, model: '' };
   });
   const [hadRemembered] = useState(() => remembered !== null);
 
@@ -66,28 +44,17 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
 
   const update = useCallback((patch: Partial<HarnessLaunchFields>) => {
     setFields((prev) => {
-      const next = { ...prev, ...patch };
-      if (patch.name !== undefined) {
-        const model = next.model.trim();
-        if (model !== '' && !(view.models[next.name] ?? []).includes(model)) next.model = '';
-      }
-      if (!autoApproveSupported(view, next.name)) next.autoApprove = false;
-      else if (patch.name !== undefined && !autoApproveSupported(view, prev.name)) next.autoApprove = true;
-      if (!autoResumeSupported(view, next.name)) next.autoResume = false;
-      else if (patch.name !== undefined && !autoResumeSupported(view, prev.name)) next.autoResume = true;
-      const rememberedModel = next.model.trim();
-      remembered = rememberedModel === '' || (view.models[next.name] ?? []).includes(rememberedModel)
-        ? next
-        : { ...next, model: '' };
+      const next = nextFields(prev, patch, view);
+      remembered = modelValid(view, next.name, next.model) ? next : { ...next, model: '' };
       return next;
     });
   }, [view]);
 
   const modelText = fields.model.trim();
-  const modelValid = modelText === '' || models.includes(modelText);
+  const canCreate = modelValid(view, fields.name, modelText);
 
   const { cancel, create } = useHarnessLaunchActions(client, { ...fields, model: modelText });
-  const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, modelValid, hadRemembered, yieldsKey);
+  const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, canCreate, hadRemembered, yieldsKey);
 
   return (
     <div className="modal-backdrop">
@@ -153,7 +120,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
           </label>
         </div>
         <div className="modal-actions">
-          <button ref={submitButtonRef} className="modal-button" disabled={!modelValid} onClick={create}>Create</button>
+          <button ref={submitButtonRef} className="modal-button" disabled={!canCreate} onClick={create}>Create</button>
           <button className="modal-button" onClick={cancel}>Cancel</button>
         </div>
       </div>
