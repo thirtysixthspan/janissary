@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initDbDir, closeAllConnections, dbPath } from '../connections.js';
@@ -134,5 +135,43 @@ describe('a statement that will not run', () => {
     const result = browser.view().results.find((entry) => entry.requestId === good);
     expect(result).toMatchObject({ kind: 'query', database: 'shop' });
     expect(result).not.toHaveProperty('error');
+  });
+});
+
+describe('a database named by an absolute path', () => {
+  it('records the SQLite error for a directory path rather than throwing', () => {
+    const browser = new DatabaseBrowser();
+    const dir = path.join(project, 'taken-by-a-directory');
+    mkdirSync(dir);
+
+    expect(() => { browser.schema(dir, nextId()); }).not.toThrow();
+
+    expect(lastResult(browser)).toMatchObject({ kind: 'schema', database: dir, error: expect.stringMatching(/./u) });
+  });
+
+  it('records the SQLite error for a path holding non-SQLite bytes rather than throwing', () => {
+    const browser = new DatabaseBrowser();
+    const file = path.join(project, 'not-sqlite.sqlite');
+    writeFileSync(file, 'this is not an SQLite database, only text long enough to be read as a header');
+
+    expect(() => { browser.schema(file, nextId()); }).not.toThrow();
+
+    expect(lastResult(browser)).toMatchObject({ kind: 'schema', error: expect.stringMatching(/not a database/iu) });
+  });
+
+  it('reports a path that vanished after opening as missing, even with a handle cached', () => {
+    const browser = new DatabaseBrowser();
+    const file = path.join(project, 'vanished.sqlite');
+    const database = new DatabaseSync(file);
+    try { database.exec(SHOP); } finally { database.close(); }
+
+    browser.schema(file, nextId());
+    expect(lastResult(browser)).not.toMatchObject({ error: expect.anything() });
+
+    rmSync(file);
+    browser.schema(file, nextId());
+
+    expect(lastResult(browser)).toMatchObject({ error: `Database "${file}" does not exist. Create it to start.` });
+    browser.dispose();
   });
 });

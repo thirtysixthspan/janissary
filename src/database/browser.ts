@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import path from 'node:path';
 import type {
   DatabaseColumnView,
   DatabaseGridQuery,
@@ -14,6 +15,7 @@ import { readStatement } from './console-read.js';
 import { exportRows, openResultFile } from './export.js';
 import { runGrid, totals, unfilteredTotal } from './grid.js';
 import { RowKeyStore } from './row-keys.js';
+import { PathHandles } from './path-handles.js';
 import { objectColumns, hasObject, schemaObjects } from './schema.js';
 import { deleteRow, insertRow, updateCell, type WriteOutcome } from './write.js';
 
@@ -36,6 +38,7 @@ export class DatabaseBrowser {
   // be showing, which is the cross-database write the opaque key exists to prevent.
   private readonly keys = new Map<string, RowKeyStore>();
   private readonly unfiltered = new Map<string, number>();
+  private readonly paths = new PathHandles();
 
   private keyStore(database: string): RowKeyStore {
     const existing = this.keys.get(database);
@@ -79,6 +82,7 @@ export class DatabaseBrowser {
    * read with a side effect.
    */
   private open(database: string, allowCreate = false): { handle: DatabaseSync } | { error: string } {
+    if (path.isAbsolute(database)) return this.paths.open(database);
     if (!allowCreate && !databaseFileExists(database) && !isConnectionOpen(database)) {
       return { error: `Database "${database}" does not exist. Create it to start.` };
     }
@@ -192,7 +196,7 @@ export class DatabaseBrowser {
         // A read is reported as well as drawn: the grid is one page of the result, and the report is
         // a line saying how many rows came back with the whole result in a file it links to.
         const { grid, report } = readStatement(
-          opened.handle, sql, () => openResultFile(database, Date.now()),
+          opened.handle, sql, () => openResultFile(path.basename(database), Date.now()),
         );
         this.record({ kind: 'query', requestId, database, grid, report });
         return;
@@ -250,7 +254,7 @@ export class DatabaseBrowser {
     const fail = (error: string) => this.record({ kind: 'export', requestId, database, path: '', name: '', size: '', rows: 0, error });
     if ('error' in opened) { fail(opened.error); return; }
     try {
-      const outcome = exportRows(opened.handle, database, query, opened.columns, format, totals(opened.handle, query, opened.columns).total);
+      const outcome = exportRows(opened.handle, path.basename(database), query, opened.columns, format, totals(opened.handle, query, opened.columns).total);
       if (!outcome.ok) { fail(outcome.error); return; }
       this.record({
         kind: 'export', requestId, database,
@@ -265,5 +269,6 @@ export class DatabaseBrowser {
     this.state.clear();
     this.unfiltered.clear();
     this.keys.clear();
+    this.paths.close();
   }
 }
