@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { isRefreshIntent } from '../api.js';
 import {
   HOSTS_PAYLOAD_SCHEMA_VERSION,
   isDeleteHostIntent,
   isHostsPayload,
   isOpenIntent,
-  isRefreshIntent,
   isSaveHostIntent,
   isSaveHostResult,
   type HostRow,

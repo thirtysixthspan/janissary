@@ -1,12 +1,11 @@
 import { homedir } from 'node:os';
 import { errorText } from '../../error-text.js';
-import { defineIntents, noFileOpener, parseDockArgument } from '../api.js';
+import { defineIntents, isEmptyIntent, noFileOpener, parseDockArgument } from '../api.js';
 import type { TabActivityEntry, TabPluginActivation, TabPluginNotification, TabPluginServerCapabilities } from '../api.js';
 import {
   LAUNCHER_INSTANCE_KEY,
   LAUNCHER_LABEL,
   isDispatchIntent,
-  isEmptyIntent,
   isFocusTabIntent,
   isLauncherOwn,
   isLauncherPayload,

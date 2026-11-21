@@ -94,14 +94,6 @@ export function isConversationsPayload(value: unknown): value is ConversationsPa
     && value.models.every((pair) => isModelPair(pair));
 }
 
-export function isEmptyIntent(value: unknown): value is Record<string, never> {
-  return isRecord(value) && Object.keys(value).length === 0;
-}
-
-export function isIdIntent(value: unknown): value is { id: string } {
-  return isRecord(value) && typeof value.id === 'string';
-}
-
 export function isSendIntent(value: unknown): value is { query: string } {
   return isRecord(value) && typeof value.query === 'string';
 }

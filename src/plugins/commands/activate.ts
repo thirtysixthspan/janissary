@@ -1,10 +1,11 @@
 import {
   defineIntents,
+  isRefreshIntent,
   noFileOpener,
   type TabPluginActivation,
   type TabPluginServerCapabilities,
 } from '../api.js';
-import { isCommandsPayload, isRefreshIntent, isSetIntent, type SetIntent } from './shared.js';
+import { isCommandsPayload, isSetIntent, type SetIntent } from './shared.js';
 import { isCommandsData, toPayload } from './payload.js';
 import { parseCommand, type CommandParse } from './parse-command.js';
 

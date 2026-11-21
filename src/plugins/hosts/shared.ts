@@ -51,10 +51,6 @@ export function isHostsPayload(value: unknown): value is HostsPayload {
     && value.rows.every((row) => isHostRow(row));
 }
 
-export function isRefreshIntent(value: unknown): value is RefreshIntent {
-  return isRecord(value) && Object.keys(value).length === 0;
-}
-
 export function isOpenIntent(value: unknown): value is OpenIntent {
   return isRecord(value) && typeof value.name === 'string' && value.name.length > 0;
 }

@@ -192,7 +192,3 @@ export function isReportIconIntent(value: unknown): value is LauncherReportIconI
 export function isFocusTabIntent(value: unknown): value is LauncherFocusTabIntent {
   return isRecord(value) && typeof value.label === 'string' && value.label.length > 0;
 }
-
-export function isEmptyIntent(value: unknown): value is Record<string, never> {
-  return isRecord(value) && Object.keys(value).length === 0;
-}

@@ -1,6 +1,7 @@
 import {
   defineDockableList,
   defineIntents,
+  isEmptyIntent,
   noFileOpener,
   type RemoteSessionView,
   type TabPluginActivation,
@@ -9,7 +10,6 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import {
-  isEmptyIntent,
   isSessionIntent,
   isSessionsPayload,
   type SessionIntent,

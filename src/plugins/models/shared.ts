@@ -31,10 +31,6 @@ export function isModelsPayload(value: unknown): value is ModelsPayload {
     && typeof value.refreshing === 'boolean';
 }
 
-export function isEmptyIntent(value: unknown): value is Record<string, never> {
-  return isRecord(value) && Object.keys(value).length === 0;
-}
-
 export function isDeleteIntent(value: unknown): value is DeleteIntent {
   return isRecord(value)
     && typeof value.harness === 'string' && value.harness.trim().length > 0

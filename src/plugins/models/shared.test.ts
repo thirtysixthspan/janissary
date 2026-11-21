@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { isEmptyIntent } from '../api.js';
 import { modelsManifest } from './manifest.js';
 import {
   MODELS_PAYLOAD_SCHEMA_VERSION,
   isDeleteIntent,
-  isEmptyIntent,
   isModelsPayload,
   type ModelGroup,
 } from './shared.js';

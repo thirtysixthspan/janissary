@@ -1,5 +1,7 @@
 import {
   defineIntents,
+  isEmptyIntent,
+  isIdIntent,
   noFileOpener,
   parseDockArgument,
   type ConversationsView,
@@ -9,8 +11,6 @@ import {
 import {
   isConversationsPayload,
   isConversationsData,
-  isEmptyIntent,
-  isIdIntent,
   isRenameIntent,
   isSelectModelIntent,
   isSendIntent,
