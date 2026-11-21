@@ -13,17 +13,6 @@
 
 
 
-* Pull the shell submit hook's local-command routing decision into a pure module so history and transcript-search routing can be tested without rendering the submit hook.
-
-Existing Debt: §6 (hooks are the seam between logic and view) — `web/src/plugins/shell/useShellSubmit.ts` holds a private `localRoute` that decides whether a line opens shell history or the transcript search, combining the disabled-application-command check with the `opensShellHistory` and `transcriptSearchQuery` rules, and it is reachable only by invoking the hook's returned submit callback inside a render. Severity: 4/10
-
-Existing Risk: 4/10 - A change to either composed rule or to the disabled-command check can silently send a `hist` or search line to zsh instead of opening its UI, and the only coverage is a render of the submit path that exercises one line at a time.
-
-Proposal Risk: 2/10 - The decision becomes a plain function a test can call with a line and a fake disabled-command callback, but it still reads the application-bar policy from its caller, so a policy that changes shape upstream leaves this rule answering against a stale assumption.
-
-Proposal: `web/src/plugins/shell/useShellSubmit.ts` defines a private `localRoute(text, appBar)` that returns `'history'` or `{ find: string }` when the line is not disabled, composing `opensShellHistory` and `transcriptSearchQuery` from `web/src/plugins/shell/command-line-rules.ts`; the hook calls it between its `routeFor` shell branch and the `appBar.intercept` fallback. Add `web/src/plugins/shell/local-route.ts` exporting that function, have the hook import it, and delete the local copy; the submit callback's behavior, its return value, and its dependency list stay unchanged. Only that one hook file changes and no import path outside it moves; `web/src/plugins/shell/ShellTab.test.tsx` drives submission through the rendered tab and needs no edit, as do the direct rule assertions in `web/src/plugins/shell/command-line-rules.test.ts`. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/shell/useShellSubmit.ts`.
-
-
 ## deferred
 
 * Turn the tab-view builder's long positional argument list into one context object so a new per-tab view field does not require editing every call site. — deferred: complexity 6/10, a context-object refactor of an already-long projection module plus 63 test call sites across three suites with a compatibility wrapper.
