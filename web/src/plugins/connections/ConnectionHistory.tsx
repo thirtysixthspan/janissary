@@ -19,8 +19,11 @@ export function ConnectionHistory({ window, openLink }: {
     <div className="connections-history-content" onClick={handleClick}>
       {window.blocks.map((block, index) => (
         <article className="connections-block" key={window.offset + index}>
-          <div className="connections-prompt">{block.prompt}</div>
           {block.preamble !== undefined && <Preamble preamble={block.preamble} />}
+          <details className="connections-activity" open>
+            <summary>query</summary>
+            <div className="connections-prompt">{block.prompt}</div>
+          </details>
           {groupToolEntries(block.entries).map((row) => {
             if (row.kind === 'tool') {
               const parts = row.reply === undefined ? [row.command] : [row.command, row.reply];
@@ -73,14 +76,20 @@ function ActivityText({ text }: { text: string }) {
 
 function Preamble({ preamble }: { preamble: string }) {
   const html = renderMarkdown(preamble);
-  return <div className="connections-preamble">
-    {html === undefined ? preamble : <div dangerouslySetInnerHTML={{ __html: html }} />}
-  </div>;
+  return <details className="connections-activity">
+    <summary>preamble</summary>
+    <div className="connections-preamble">
+      {html === undefined ? preamble : <div dangerouslySetInnerHTML={{ __html: html }} />}
+    </div>
+  </details>;
 }
 
 function Answer({ answer }: { answer: string }) {
   const html = renderMarkdown(answer);
-  return <div className="connections-answer">
-    {html === undefined ? answer : <div dangerouslySetInnerHTML={{ __html: html }} />}
-  </div>;
+  return <details className="connections-activity" open>
+    <summary>response</summary>
+    <div className="connections-answer">
+      {html === undefined ? answer : <div dangerouslySetInnerHTML={{ __html: html }} />}
+    </div>
+  </details>;
 }

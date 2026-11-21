@@ -46,30 +46,58 @@ describe('ConnectionTab', () => {
     expect(screen.getByText('tool', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
   });
 
-  it('renders the preamble as its own rendered section between the prompt and the activity', () => {
+  it('renders the preamble first in a collapsed section and the query in an expanded section', () => {
     const value = record();
     value.window!.blocks[0]!.prompt = 'user question';
     value.window!.blocks[0]!.preamble = '**tool primer**';
     setup(value);
     const preamble = document.querySelector('.connections-preamble');
-    expect(preamble).not.toBeNull();
     expect(preamble?.querySelector('strong')?.textContent).toBe('tool primer');
+    const preambleSummary = screen.getByText('preamble', { selector: 'summary' });
+    const preambleDetails = preambleSummary.closest('details');
+    expect(preambleDetails).not.toHaveAttribute('open');
+    expect(document.querySelector('.connections-block')?.firstElementChild).toBe(preambleDetails);
+    const querySummary = screen.getByText('query', { selector: 'summary' });
+    expect(querySummary.closest('details')).toHaveAttribute('open');
     expect(document.querySelector('.connections-prompt')?.textContent).toBe('user question');
     expect(document.querySelector('.connections-prompt')?.textContent).not.toContain('tool primer');
-    const order = [...document.querySelector('.connections-block')!.children].map((child) => child.className);
-    expect(order.indexOf('connections-prompt')).toBeLessThan(order.indexOf('connections-preamble'));
-    expect(order.indexOf('connections-preamble')).toBeLessThan(order.indexOf('connections-activity'));
+    const order = [...document.querySelector('.connections-block')!.children]
+      .map((child) => child.querySelector('summary')?.textContent ?? child.className);
+    expect(order.indexOf('preamble')).toBeLessThan(order.indexOf('query'));
+    expect(order.indexOf('query')).toBeLessThan(order.indexOf('connections-activity'));
   });
 
-  it('renders every recorded reply as its own Markdown answer in order', () => {
+  it('renders every recorded reply as its own expanded Markdown response section in order', () => {
     const value = record();
     value.window!.blocks[0]!.answer = 'final **answer**';
     value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up', 'final **answer**'];
     setup(value);
+    const responses = screen.getAllByText('response', { selector: 'summary' });
+    expect(responses).toHaveLength(3);
+    for (const summary of responses) {
+      expect(summary.closest('details')).toHaveAttribute('open');
+    }
     const answers = [...document.querySelectorAll('.connections-answer')];
     expect(answers).toHaveLength(3);
     expect(answers.map((element) => element.textContent?.trim())).toEqual(['first reply', 'follow-up', 'final answer']);
     expect(answers[0]?.querySelector('strong')?.textContent).toBe('reply');
+  });
+
+  it('keeps a query or response the reader collapsed closed through a streamed update', () => {
+    const value = record();
+    value.window!.blocks[0]!.answer = 'first answer';
+    const { view, capabilities } = setup(value);
+    const query = screen.getByText('query', { selector: 'summary' }).closest('details')!;
+    const response = screen.getByText('response', { selector: 'summary' }).closest('details')!;
+    query.open = false;
+    response.open = false;
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!, answer: 'updated answer' }] } }} capabilities={capabilities} />);
+    expect(screen.getByText('query', { selector: 'summary' }).closest('details')).toBe(query);
+    expect(query).not.toHaveAttribute('open');
+    expect(screen.getByText('response', { selector: 'summary' }).closest('details')).toBe(response);
+    expect(response).not.toHaveAttribute('open');
+    expect(screen.getByText('updated answer')).toBeInTheDocument();
   });
 
   it('falls back to the single answer for a block without replies', () => {
@@ -77,6 +105,7 @@ describe('ConnectionTab', () => {
     const answers = [...document.querySelectorAll('.connections-answer')];
     expect(answers).toHaveLength(1);
     expect(answers[0]?.textContent?.trim()).toBe('answer');
+    expect(screen.getByText('response', { selector: 'summary' }).closest('details')).toHaveAttribute('open');
   });
 
   it('pretty-prints an entry whose text is JSON and leaves plain text as it is', () => {
