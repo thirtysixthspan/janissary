@@ -62,14 +62,14 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
     if (keyword === 'file') {
       const database = path.resolve(process.cwd(), value);
       if (!existsSync(database)) return capabilities.rejectRequest(`No database file at "${database}".`);
-      openDatabase(database, undefined, capabilities, tabs);
+      openDatabase(database, capabilities, tabs);
       return;
     }
     if (!isValidDatabaseName(value)) return capabilities.rejectRequest(`Invalid database name "${value}".`);
     // A command is typed, and a typo in a typed command is the ordinary case — so a name the
     // registry has never heard of is refused rather than created. `db sqlite create` is how a
     // database gets made, and the tab's own switcher refuses one for the same reason.
-    openDatabase(value, undefined, capabilities, tabs);
+    openDatabase(value, capabilities, tabs);
     return;
   }
   if (!keyword) {
@@ -77,7 +77,7 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
     // With none open the first by name is the only answer there is.
     const current = data.lastOpened ?? data.databases[0]?.name;
     if (!current) return capabilities.rejectRequest(NO_DATABASES);
-    openDatabase(current, undefined, capabilities, tabs);
+    openDatabase(current, capabilities, tabs);
     return;
   }
   capabilities.rejectRequest(USAGE);

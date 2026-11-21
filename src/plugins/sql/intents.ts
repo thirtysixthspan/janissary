@@ -64,7 +64,7 @@ export function intentsFor(tabs: SqlTabs) {
     open: {
       payload: isOpenIntent,
       run: (_payload, value: { name: string }, capabilities): null => {
-        openDatabase(value.name, undefined, capabilities, tabs);
+        openDatabase(value.name, capabilities, tabs);
         return null;
       },
     },

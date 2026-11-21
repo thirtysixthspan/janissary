@@ -12,12 +12,11 @@ import { SqlTabs } from './tabs.js';
 const REFS: DatabasesView['databases'] = [{ name: 'shop', exists: true, open: true }];
 type Opened = { key: string; title: string; payload: SqlPayload };
 
-/** A host that records opened tabs and docks, and whose topic data holds only registry names. */
+/** A host that records opened tabs, and whose topic data holds only registry names. */
 function fake(databases: DatabasesView['databases'] = REFS) {
   const tabs = new SqlTabs();
   const view: DatabasesView = { databases, results: [], lastOpened: null };
   const opened: Opened[] = [];
-  const docks: { key: string; dock: 'left' | 'right' | null }[] = [];
   const capabilities = {
     topicData: () => view,
     // Nothing answers the schema read; these cases assert the tab, not the fold.
@@ -28,17 +27,16 @@ function fake(databases: DatabasesView['databases'] = REFS) {
       const value = factory();
       opened.push({ key, title: value.title, payload: value.payload as SqlPayload });
     },
-    dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { capabilities, docks, opened, tabs };
+  return { capabilities, opened, tabs };
 }
 
 describe('openDatabase with a path', () => {
   it('opens under sqlite:<path> with the basename as the title and the path as the payload database', () => {
     const fixture = fake();
-    openDatabase('/data/shop.sqlite', undefined, fixture.capabilities, fixture.tabs);
+    openDatabase('/data/shop.sqlite', fixture.capabilities, fixture.tabs);
 
     expect(fixture.opened).toHaveLength(1);
     expect(fixture.opened[0]?.key).toBe('sqlite:/data/shop.sqlite');
@@ -50,27 +48,27 @@ describe('openDatabase with a path', () => {
 
   it('strips one trailing .sqlite case-insensitively and leaves other extensions alone', () => {
     const upper = fake();
-    openDatabase('/data/SHOP.SQLITE', undefined, upper.capabilities, upper.tabs);
+    openDatabase('/data/SHOP.SQLITE', upper.capabilities, upper.tabs);
     expect(upper.opened[0]?.title).toBe('SHOP');
 
     const db = fake();
-    openDatabase('/data/shop.db', undefined, db.capabilities, db.tabs);
+    openDatabase('/data/shop.db', db.capabilities, db.tabs);
     expect(db.opened[0]?.title).toBe('shop.db');
 
     const twice = fake();
-    openDatabase('/data/shop.sqlite.sqlite', undefined, twice.capabilities, twice.tabs);
+    openDatabase('/data/shop.sqlite.sqlite', twice.capabilities, twice.tabs);
     expect(twice.opened[0]?.title).toBe('shop.sqlite');
   });
 
   it('focuses one tab for the same path twice and keeps the payload it had', () => {
     const fixture = fake();
     const key = 'sqlite:/data/shop.sqlite';
-    openDatabase('/data/shop.sqlite', undefined, fixture.capabilities, fixture.tabs);
+    openDatabase('/data/shop.sqlite', fixture.capabilities, fixture.tabs);
     expect(fixture.opened).toHaveLength(1);
 
     const kept = { ...(fixture.opened[0]!.payload), object: 'kept' };
     fixture.tabs.write(key, kept);
-    openDatabase('/data/shop.sqlite', undefined, fixture.capabilities, fixture.tabs);
+    openDatabase('/data/shop.sqlite', fixture.capabilities, fixture.tabs);
 
     expect(fixture.opened[1]?.key).toBe(key);
     expect(fixture.opened[1]?.payload).toBe(kept);
@@ -79,34 +77,27 @@ describe('openDatabase with a path', () => {
 
   it('opens two tabs for different paths whose files share a basename', () => {
     const fixture = fake();
-    openDatabase('/a/shop.sqlite', undefined, fixture.capabilities, fixture.tabs);
-    openDatabase('/b/shop.sqlite', undefined, fixture.capabilities, fixture.tabs);
+    openDatabase('/a/shop.sqlite', fixture.capabilities, fixture.tabs);
+    openDatabase('/b/shop.sqlite', fixture.capabilities, fixture.tabs);
 
     expect(fixture.opened.map((entry) => entry.key)).toEqual([
       'sqlite:/a/shop.sqlite', 'sqlite:/b/shop.sqlite',
     ]);
     expect(fixture.opened.map((entry) => entry.title)).toEqual(['shop', 'shop']);
   });
-
-  it('docks a path tab when a side is passed', () => {
-    const fixture = fake();
-    openDatabase('/data/shop.sqlite', 'left', fixture.capabilities, fixture.tabs);
-
-    expect(fixture.docks).toEqual([{ key: 'sqlite:/data/shop.sqlite', dock: 'left' }]);
-  });
 });
 
 describe('openDatabase with a name', () => {
   it('refuses a name the registry lacks and opens no tab', () => {
     const fixture = fake([]);
-    expect(() => openDatabase('fresh', undefined, fixture.capabilities, fixture.tabs))
+    expect(() => openDatabase('fresh', fixture.capabilities, fixture.tabs))
       .toThrow(new TabPluginRejection(UNKNOWN_DATABASE('fresh')));
     expect(fixture.opened).toEqual([]);
   });
 
   it('keeps the name as the title for a database in the registry', () => {
     const fixture = fake();
-    openDatabase('shop', undefined, fixture.capabilities, fixture.tabs);
+    openDatabase('shop', fixture.capabilities, fixture.tabs);
 
     expect(fixture.opened[0]?.key).toBe('sqlite:shop');
     expect(fixture.opened[0]?.title).toBe('shop');
