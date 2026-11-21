@@ -13,17 +13,6 @@
 
 
 
-* Move the SQL grid's word-versus-row-run copy decision into a pure module so the rule that keeps a run copy intact can be tested directly.
-
-Existing Debt: §6 (hooks are the seam between logic and view) — `web/src/plugins/sql/selection.tsx` keeps `cellOf` and `selectedWithinOneCell` as private helpers in the hook file, and the latter decides whether the browser's word selection sits inside one cell so the grid's run copy can stand aside or proceed; that decision is only exercised by rendering the grid and firing a copy key. Severity: 4/10
-
-Existing Risk: 5/10 - The rule was written because a shift-click left a browser selection spanning the run and the grid lost its first value, so a regression in the anchor/focus comparison silently truncates a pasted statement and only the one render case covers it.
-
-Proposal Risk: 2/10 - The helpers become plain functions a test can call with a stubbed selection, but they still read the global `getSelection()`, so a test has to fake that global and the hook's gating on `active` and focus remains verified only through the render suite.
-
-Proposal: In `web/src/plugins/sql/selection.tsx`, `cellOf(node)` resolves a DOM node to its `td.sql-cell` and `selectedWithinOneCell()` compares the anchor and focus cells of the page selection; the copy effect calls the latter to decide its early return. Move both into a new `web/src/plugins/sql/selection-cell.ts` exporting them unchanged and import them back into `selection.tsx`; the new module is a leaf that needs no imports beyond the DOM types. The hook's signature, return shape, and window-listener wiring do not change, so `web/src/plugins/sql/DataGrid.tsx` (its only production importer) needs no edit and no import path moves. `web/src/plugins/sql/Selection.test.tsx` pins the copy of a run, the word-inside-one-cell case, and the shift-click case where a browser selection spans the run; it needs no edit and must keep its assertions byte-for-byte. Only the one hook file is edited. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/selection.tsx`.
-
-
 * Move the crop overlay's pointer-to-image coordinate mapping into a pure module so its scaling and zero-width guard can be tested without a pointer gesture.
 
 Existing Debt: §5 (components render; they do not decide) — `web/src/plugins/image/CropOverlay.tsx` computes `toImagePoint` from `getBoundingClientRect` and image size, including a guard for an unlaid-out surface, and `percent` for the rect style inside the component, so the coordinate math behind every crop drag is verified only through pointer events in a render. Severity: 4/10

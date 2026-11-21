@@ -5,6 +5,7 @@ import { GRID_NAVIGATION_KEYS, nextRowSelection } from './sql-keys';
 import { rowRange, selectionToTsv, type RowRange } from './grid-view';
 import { revealRow } from './reveal-row';
 import { tryCopyText } from '../api';
+import { selectedWithinOneCell } from './selection-cell';
 
 // The highlighted run of rows, the keys that move it, and its copy.
 //
@@ -20,29 +21,6 @@ import { tryCopyText } from '../api';
 //
 // A cell is not rendered inside a button, so a click on the text inside it is an ordinary selection
 // and the browser's own copy still works: a user who selects a word and presses Copy gets the word.
-
-/** The `td` a node sits in, or null for anything outside the grid's cells. */
-function cellOf(node: Node | null): Element | null {
-  const element = node instanceof Element ? node : node?.parentElement;
-  return element?.closest('td.sql-cell') ?? null;
-}
-
-/**
- * Whether the browser's own selection was made inside one cell, which is a word the user selected
- * and not a run of rows.
- *
- * A shift-click extending a run leaves a browser selection too — from wherever the caret landed in
- * the first cell to the end of the last — and standing aside for *any* non-empty selection is what
- * stopped the grid's own copy of a run from ever running, so a pasted run lost its first value. The
- * two ends of the selection are the whole of the difference: a word's are in one cell, a run's are
- * not, however much text either of them covers.
- */
-function selectedWithinOneCell(): boolean {
-  const selection = getSelection();
-  if (!selection || selection.isCollapsed) return false;
-  const cell = cellOf(selection.anchorNode);
-  return cell !== null && cell === cellOf(selection.focusNode);
-}
 
 /**
  * Whether a press starts or extends a run, claiming it from the browser when it extends.
