@@ -7,6 +7,72 @@
 
 ## development
 
+* Give the four workspace-command dispatch chains one shared executor so a new file or web subcommand is added once.
+
+Existing Debt: The same `is*CommandLine`-to-runner chain is written out four times — in `src/commands/file.ts`, `src/commands/web.ts`, `src/acp/run-prompt.ts`, and `src/acp/workspace-runner.ts` — each rewiring the same read, glob, grep, list, stat, exists, head/tail, mutation, and web subcommands to a tab- or directory-scoped runner, so there is no single definition of what a workspace command is. Severity: 6/10
+
+Existing Risk: 5/10 - Adding a subcommand updates one chain and leaves the others falling through to their catch-all read branch, while the chains already disagree on behavior: the ACP and subagent forms strip a leading slash and thread an `AbortSignal`, the command-bar forms do neither, so a slash-prefixed tool command or a cancelled prompt behaves differently by entry point.
+
+Proposal Risk: 2/10 - Every entry point calls one executor and the slash and cancellation rules live in it, but each target still supplies its own tab-scoped versus directory-scoped runner, so a new target needs a thin adapter rather than a new chain.
+
+Proposal: Extract one `runWorkspaceCommand` from `fileOutput` in `src/commands/file.ts` and `runWorkspaceCommandIn` in `src/acp/workspace-runner.ts`, parameterized by a target that exposes the read, glob, grep, list, stat, exists, head/tail, and mutation runners plus an optional `AbortSignal`; keep the existing callers in `src/commands/file.ts`, `src/subagent/attempt-host.ts`, and `src/remote/serve-acp-loop.ts` on their current runners and signatures. Then route `runWorkspace` in `src/acp/run-prompt.ts` and the web branch of `src/commands/web.ts` through the same executor, applying the leading-slash normalization once and forwarding `request.abort.signal` consistently — `src/commands/file.ts` and `src/commands/web.ts` currently pass no signal at all. Preserve every output string and refusal wording byte-for-byte: `src/commands/file.test.ts`, `src/commands/web.test.ts`, `src/acp/run-prompt.test.ts`, `src/acp/plugin-session.test.ts`, `src/subagent/attempt-host.test.ts`, and `src/remote/serve-acp-loop.test.ts` pin them. Changing which runner a branch calls can change workspace confinement for remote ACP prompts, so check the remote loop's coverage before switching that call site.
+
+
+* Publish the repeated plugin intent guards from the plugin API instead of redeclaring them in each plugin's shared module.
+
+Existing Debt: `isEmptyIntent` is declared independently in the shared modules of the connections, conversations, launcher, models, and sessions plugins, `isRefreshIntent` in the commands, diff, and hosts plugins, and `isIdIntent` in two plugins with different key-count rules, while `src/plugins/connections/shared.ts` keeps a local `object()` that is the same predicate as `isRecord` in `src/value-guards.ts` even though `src/plugins/api.ts` already re-exports that guard for exactly this purpose. Severity: 5/10
+
+Existing Risk: 4/10 - The guards are what decide whether a plugin accepts an intent payload, so the connections form rejecting an object with extra keys while the conversations form accepts one lets the same malformed payload change meaning by plugin, and a copied predicate that drifts from `isRecord` can accept an array or scalar as an intent.
+
+Proposal Risk: 2/10 - The guards are defined once and the per-plugin tests pin their behavior, but each plugin still declares its own intent type and names the shared guard in its own activation module, so a new plugin has one line to wire rather than a predicate to write.
+
+Proposal: Add `isEmptyIntent` (a JSON-object guard that also requires zero own keys) and, if the refresh intent stays a separate name, `isRefreshIntent` as aliases of one implementation beside the existing `isRecord` re-export in `src/plugins/api.ts`, then replace the copies in `src/plugins/connections/shared.ts`, `src/plugins/conversations/shared.ts`, `src/plugins/launcher/shared.ts`, `src/plugins/models/shared.ts`, `src/plugins/sessions/shared.ts`, `src/plugins/commands/shared.ts`, `src/plugins/diff/shared.ts`, and `src/plugins/hosts/shared.ts`, deleting the local `object()` in `src/plugins/connections/shared.ts` in favor of the published guard. Decide one rule for `isIdIntent` — exact key set or just a string `id` — and make `src/plugins/conversations/shared.ts` and `src/plugins/connections/shared.ts` agree; the latter currently rejects `{ id, extra }` and the former accepts it, so this is a deliberate behavior change for one of them, not a mechanical move. `src/plugins/connections/shared.test.ts`, `src/plugins/conversations/shared.test.ts`, `src/plugins/launcher/shared.test.ts`, `src/plugins/models/shared.test.ts`, `src/plugins/hosts/shared.test.ts`, and `src/plugins/commands/shared.test.ts` pin the current guards and must keep passing apart from the one settled semantic change.
+
+
+* Retire the ambiguous `promptAcp` capability and make the ACP command gate use `promptAcpResult`.
+
+Existing Debt: `promptAcp` and `promptAcpResult` both live in `src/plugins/api.ts`, `src/plugins/api-capabilities.ts`, and the launcher and shell manifests, but no production plugin calls `promptAcp` — the launcher summarizer uses `promptAcpResult` — while `src/acp/availability.ts` still decides whether `ask`, `tell`, and `subagent` are available by looking for the old capability name. Severity: 5/10
+
+Existing Risk: 5/10 - A plugin that declares only the newer result-returning capability has a working ACP session yet its tab is reported as unable to run `ask` or `tell`, and a plugin that follows the older capability cannot distinguish a refusal line from a real answer because `promptAcp` returns them both as one string.
+
+Proposal Risk: 2/10 - A single capability gates availability and a single method returns refusals distinctly, but the capability list is part of the versioned plugin contract, so old manifests naming `promptAcp` still need a deliberate acceptance or refusal path rather than vanishing silently.
+
+Proposal: Make `promptAcpResult` the capability that `src/acp/availability.ts` checks, update the declarations in `src/plugins/launcher/manifest.ts` and `src/plugins/shell/manifest.ts` so every plugin that runs ACP prompts declares it, and remove `promptAcp` from the `TabPluginServerCapabilities` type and implementation in `src/plugins/api.ts` and `src/plugins/acp-capabilities.ts`, from the union and table in `src/plugins/api-capabilities.ts`, and from the manifests — following the deprecation-window guidance in `ai/guidelines/plugins.md` if the capability is treated as published rather than internal. Keep the exact refusal text in `src/acp/plugin-session.test.ts` and the `available` checks exercised by `src/commands/ask.test.ts`, `src/commands/tell.test.ts`, and `src/commands/subagent.test.ts`; `src/plugins/declaration-validation.test.ts` pins which capability names a declaration may claim and is the place to assert the old name is rejected or tolerated. Note that the shell plugin declares `promptAcp` without calling it, so dropping the name from its manifest changes what `acpAvailable` reports unless `promptAcpResult` is added in the same change.
+
+
+* Hold the server snapshot in one client state object instead of fanning it into a dozen setters and a thirty-field props list.
+
+Existing Debt: `src/protocol/events.ts` defines `StateEvent` as one named record, but `web/src/useServerState.ts` unpacks it into twelve setters, `web/src/App.tsx` backs them with separate `useState` calls, and `web/src/AppMain.tsx` forwards most of them through an `AppMainProps` of over thirty fields, so a new wire field needs coordinated edits in four places with nothing tying them together. Severity: 5/10
+
+Existing Risk: 4/10 - A field added to `StateEvent` can be omitted from the destructure, the setter call, or the effect's dependency array without a compile error, leaving the UI permanently showing a stale value for that field while every existing test of the older fields still passes.
+
+Proposal Risk: 2/10 - A new snapshot field arrives with the whole record and needs no new setter, but derived view state such as the project title and the per-tab dirty handles still have their own hooks, so the boundary between server state and local UI state must stay explicit or it will drift back.
+
+Proposal: In `web/src/useServerState.ts`, replace the `Setters` bag with one `onSnapshot: (snapshot: StateEvent) => void` and have the subscriber pass the whole snapshot through; keep `useAppSettings` and `useProjectTitle` as they are, but let `App` own a single `serverState` object and derive the title from its `projectDir` and `version` fields. In `web/src/App.tsx`, collapse the separate `useState` calls for tabs, active/secondary tab, launch dialogs, global history, themes, tasks, profiles, and disabled commands into that one object while leaving genuinely local state (dirty plugin tabs, picker source, key-handle refs, layout) alone; then replace the corresponding `AppMainProps` fields in `web/src/AppMain.tsx` with one `serverState` prop and update the children that only forward them. `web/src/useServerState.test.ts` currently asserts each setter individually, so add a case there that builds a `StateEvent` fixture, derives its keys, and fails if any key is not represented in the snapshot stored by `App`; keep `web/src/App.test.tsx` green through the prop change. This is the first increment — the wire event still carries the whole world, which is a separate concern.
+
+
+* Fold the empty-relative-path-means-root rule into the shared containment helper.
+
+Existing Debt: `containedPath` in `src/path-containment.ts` deliberately refuses an empty path, so callers in `src/file-navigator/filesystem-port.ts`, `src/file-navigator/batch-paths.ts`, and `src/file-navigator/navigation.ts` each restate an `empty ? root : containedPath(root, rel)` branch before resolving a client-supplied path. Severity: 4/10
+
+Existing Risk: 4/10 - A new caller that passes an empty relative path straight to `containedPath` gets `undefined` and silently refuses a valid operation on the tree root, and the scattered branches make it easy for one of them to treat `'.'` or `'..'` differently from the others.
+
+Proposal Risk: 2/10 - One helper owns the root exception and its tests pin the escape cases, but callers that genuinely must reject the root still have to choose the stricter helper deliberately rather than getting it by accident.
+
+Proposal: Add a companion such as `containedPathOrRoot` next to `containedPath` in `src/path-containment.ts` that resolves `''` and `'.'` to the root and otherwise delegates to `containedPath`, without changing `containedPath`'s current contract; replace the inline branches in `absoluteDirectory` in `src/file-navigator/filesystem-port.ts`, `realDirectory` in `src/file-navigator/batch-paths.ts`, and the three guard clauses in `src/file-navigator/navigation.ts`, and check `src/file-navigator/manager/item-operations.ts` for the same shape before finishing. Extend `src/path-containment.test.ts` with cases for `''`, `'.'`, `'..'`, and an absolute path against both helpers, and keep `src/file-navigator/manager.test.ts` and `src/remote/serve-file-navigator.test.ts` green; root-level operations are the behavior at stake, so verify those suites cover a command addressed at the tree root.
+
+
+* Keep one canonical remote protocol changelog instead of two that already disagree.
+
+Existing Debt: `src/remote/protocol.ts` carries a version-history comment that skips version 34 and describes version 47 twice, while `src/remote/protocol.test.ts` repeats the same history in a test comment that assigns the `identity` field to version 9 and `git-pull` to version 8, contradicting the module that owns the exact-version handshake. Severity: 4/10
+
+Existing Risk: 4/10 - The exact-version gate is the only thing stopping a peer that silently ignores a new field or frame from looking healthy, and an engineer bumping the version while reading two conflicting narratives can misjudge which mismatch the gate is protecting against and which peers the bump will lock out.
+
+Proposal Risk: 2/10 - One history sits beside the constant and the test keeps only a short pointer, so a bump updates a single place; the residual risk is that the prose still drifts from the constant itself, which the existing pinned-version assertion in `src/remote/protocol.test.ts` does not check.
+
+Proposal: Keep the version history beside `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts` as the single source, repair the two concrete errors there (the missing version-34 entry and the duplicated version-47 block, including the note that 47 is no longer unreleased), and replace the narrative comment above the older-version test in `src/remote/protocol.test.ts` with a short pointer to that history. Add an assertion beside the existing pinned-version test that the history mentions the current version number, so a bump that forgets the prose fails; leave `src/remote/serve-detach.ts` and the relay tests alone because they read the constant, not the comment.
+
+
 ## deferred
 
 * Replace the inert import-cycle lint rule with a tested import-graph check that fails on real runtime cycles. — deferred: complexity 8/10, requires a new static-analysis tool with a parser, resolver and graph traversal plus breaking four real runtime cycles across the command, agent and remote registries.
