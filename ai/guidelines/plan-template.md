@@ -12,7 +12,7 @@ A finished plan carries a `**Complexity: N/10** — <one-line rationale naming w
 
 ## Sections
 
-The sections appear in this order: `Goal`, `Requirements`, `Design decisions`, `Preserved behavior`, `Assumptions`, `Existing functionality`, `Implementation steps`, `UI design`, `Tests`, `Out of scope`, `Verification`. Each is a level-two (`##`) heading. Every section is required in every plan. Each section below states its heading and the format and content a reader can check.
+The sections appear in this order: `Goal`, `Requirements`, `Design decisions`, `Preserved behavior`, `Assumptions`, `Existing functionality`, `Implementation steps`, `UI design`, `Tests`, `Out of scope`, `Verification`. Each is a level-two (`##`) heading. Every section is required in every plan; the `Preserved behavior` section is required only in plans authored after its introduction, and existing plans in `ready/`, `complete/`, or `deferred/` are not backfilled or edited. Each section below states its heading and the format and content a reader can check.
 
 ### Goal
 
