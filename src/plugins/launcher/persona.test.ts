@@ -23,7 +23,7 @@ describe('reading the summarizer persona', () => {
       // `janus init` creates ai/personas/ and writes nothing into it, so this is every ordinary
       // project — the one case that used to throw before a single prompt was ever sent.
       expect(readPersonaBody(root)).toContain('status line the launcher');
-      // The directive is not sent: it names a subprocess this session never spawns.
+      // The role is parsed but not sent: this session opens no connection of its own.
       expect(readPersonaBody(root)).not.toContain('[//]: # ');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -31,7 +31,7 @@ describe('reading the summarizer persona', () => {
   });
 
   it('answers the project\'s own persona when it has written one', () => {
-    const root = scratch('[//]: # opencode:some/model:default\n\nA project of its own.\n');
+    const root = scratch('[//]: # role:ask\n\nA project of its own.\n');
     try {
       expect(readPersonaBody(root)).toBe('A project of its own.');
     } finally {
@@ -39,10 +39,21 @@ describe('reading the summarizer persona', () => {
     }
   });
 
-  it('refuses a project persona whose first line is not a directive', () => {
+  it('refuses a project persona whose first line is not a role directive', () => {
     const root = scratch('No directive here.\n');
     try {
-      expect(() => readPersonaBody(root)).toThrow('has no harness directive');
+      expect(() => readPersonaBody(root))
+        .toThrow('ai/personas/launcher/summarizer.md has no role directive. First line must be: [//]: # role:<name>.');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a project persona with an empty role name', () => {
+    const root = scratch('[//]: # role:\n\nA project of its own.\n');
+    try {
+      expect(() => readPersonaBody(root))
+        .toThrow('ai/personas/launcher/summarizer.md has no role directive. First line must be: [//]: # role:<name>.');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

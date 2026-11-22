@@ -1,140 +1,102 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AcpSession } from '../acp/types.js';
+import type { RoleEntry } from '../plugins/roles/shared.js';
 
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
+  readRoleSettings: vi.fn(),
+  noRoleModels: vi.fn(),
+  acpLaunchForEntry: vi.fn(),
 }));
 
-vi.mock('../acp/index.js', () => ({
-  connectAcp: mocks.connectAcp,
+vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
+vi.mock('../acp/ask-role.js', () => ({
+  readRoleSettings: mocks.readRoleSettings,
+  noRoleModels: mocks.noRoleModels,
 }));
+vi.mock('../acp/launch.js', () => ({ acpLaunchForEntry: mocks.acpLaunchForEntry }));
 
 import { spawnMonitorSession } from './acp.js';
 import type { Persona } from '../personas.js';
 
-function makePersona(harness: 'opencode' | 'claude', tools: string[] = []): Persona {
-  return {
-    name: 'test',
-    harness: { harness, model: 'test-model', variant: 'default' },
-    body: 'test body',
-    tools,
-  };
+const ENTRY: RoleEntry = { harness: 'opencode', model: 'ask-model', effort: 'medium' };
+const LAUNCH = { command: 'opencode', args: ['acp'], env: { OPENCODE_CONFIG_CONTENT: '{}' } };
+const NO_MODELS = 'ACP: the ask role lists no models.';
+
+function makePersona(role: string = 'ask'): Persona {
+  return { name: 'test', role, body: 'test body' };
 }
 
 function makeSession(): AcpSession {
   return { prompt: vi.fn(), kill: vi.fn(), cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) };
 }
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.readRoleSettings.mockReturnValue({ name: 'ask', entries: [ENTRY], commands: [] });
+  mocks.acpLaunchForEntry.mockReturnValue(LAUNCH);
+  mocks.noRoleModels.mockImplementation((role: string) => `ACP: the ${role} role lists no models.`);
+  mocks.connectAcp.mockReturnValue(makeSession());
+});
+
 describe('spawnMonitorSession', () => {
-  it('connects with opencode command when harness is opencode', () => {
+  it('launches from the persona role\'s first entry', () => {
     const session = makeSession();
     mocks.connectAcp.mockReturnValue(session);
-    const persona = makePersona('opencode');
     const hooks = { onError: vi.fn() };
 
-    const result = spawnMonitorSession(persona, '/tmp', hooks);
+    const result = spawnMonitorSession(makePersona(), '/tmp', hooks);
 
-    expect(mocks.connectAcp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        command: 'opencode',
-        args: ['acp'],
-        cwd: '/tmp',
-        onError: hooks.onError,
-      }),
-    );
+    expect(mocks.readRoleSettings).toHaveBeenCalledWith('/tmp', 'ask');
+    expect(mocks.acpLaunchForEntry).toHaveBeenCalledWith(ENTRY);
+    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({
+      command: 'opencode',
+      args: ['acp'],
+      cwd: '/tmp',
+      onError: hooks.onError,
+    }));
     expect(result).toBe(session);
   });
 
-  it('connects with npx claude command when harness is claude', () => {
-    const session = makeSession();
-    mocks.connectAcp.mockReturnValue(session);
-    const persona = makePersona('claude');
-    const hooks = { onError: vi.fn() };
-
-    const result = spawnMonitorSession(persona, '/tmp', hooks);
-
-    expect(mocks.connectAcp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        command: 'npx',
-        args: ['@zed-industries/claude-code-acp'],
-        cwd: '/tmp',
-        onError: hooks.onError,
-      }),
-    );
-    expect(result).toBe(session);
+  it('forwards no allowedTools from the persona', () => {
+    spawnMonitorSession(makePersona(), '/tmp', { onError: vi.fn() });
+    const options = mocks.connectAcp.mock.calls[0][0];
+    expect(options).not.toHaveProperty('allowedTools');
   });
 
   it('passes onConnect hook when provided', () => {
-    mocks.connectAcp.mockReturnValue(makeSession());
-    const persona = makePersona('opencode');
     const onConnect = vi.fn();
-    const hooks = { onError: vi.fn(), onConnect };
-
-    spawnMonitorSession(persona, '/tmp', hooks);
-
-    expect(mocks.connectAcp).toHaveBeenCalledWith(
-      expect.objectContaining({ onConnect }),
-    );
+    spawnMonitorSession(makePersona(), '/tmp', { onError: vi.fn(), onConnect });
+    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ onConnect }));
   });
 
-  it('sets OPENCODE_CONFIG_CONTENT env for opencode harness', () => {
-    mocks.connectAcp.mockReturnValue(makeSession());
-    const persona = makePersona('opencode');
-    persona.harness.model = 'gpt-4';
+  it('reports and throws noRoleModels when the role has no entries', () => {
+    mocks.readRoleSettings.mockReturnValue({ name: 'ask', entries: [], commands: [] });
+    const onError = vi.fn();
 
-    spawnMonitorSession(persona, '/tmp', { onError: vi.fn() });
-
-    expect(mocks.connectAcp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: 'gpt-4' }) },
-      }),
-    );
+    expect(() => spawnMonitorSession(makePersona(), '/tmp', { onError })).toThrow(NO_MODELS);
+    expect(onError).toHaveBeenCalledWith(NO_MODELS);
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
   });
 
-  it('sets ANTHROPIC_MODEL and CLAUDE_THINKING_EFFORT for claude harness', () => {
-    mocks.connectAcp.mockReturnValue(makeSession());
-    const persona = makePersona('claude');
-    persona.harness.model = 'claude-sonnet-4-20250514';
-    persona.harness.variant = 'high';
+  it('reports and throws a harness error when the entry has no adapter', () => {
+    mocks.acpLaunchForEntry.mockReturnValue(undefined);
+    const onError = vi.fn();
 
-    spawnMonitorSession(persona, '/tmp', { onError: vi.fn() });
-
-    expect(mocks.connectAcp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        env: { ANTHROPIC_MODEL: 'claude-sonnet-4-20250514', CLAUDE_THINKING_EFFORT: 'high' },
-      }),
-    );
+    expect(() => spawnMonitorSession(makePersona(), '/tmp', { onError }))
+      .toThrow('no ACP adapter for harness "opencode".');
+    expect(onError).toHaveBeenCalledWith('no ACP adapter for harness "opencode".');
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
   });
 
-  it('forwards persona.tools as allowedTools for the opencode branch', () => {
-    mocks.connectAcp.mockReturnValue(makeSession());
-    spawnMonitorSession(makePersona('opencode', ['web_search']), '/tmp', { onError: vi.fn() });
-    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: ['web_search'] }));
-  });
-
-  it('forwards persona.tools as allowedTools for the claude branch', () => {
-    mocks.connectAcp.mockReturnValue(makeSession());
-    spawnMonitorSession(makePersona('claude', ['web_search', 'web_fetch']), '/tmp', { onError: vi.fn() });
-    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: ['web_search', 'web_fetch'] }));
-  });
-
-  it('forwards an empty allowedTools for a tool-less persona', () => {
-    mocks.connectAcp.mockReturnValue(makeSession());
-    spawnMonitorSession(makePersona('claude'), '/tmp', { onError: vi.fn() });
-    expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ allowedTools: [] }));
-  });
-
-  // `connectAcp` now reports a dead agent process through its connection-level `onError`. A monitor
-  // hands its own hook straight through, so a monitor agent that exits surfaces there rather than
-  // going quiet — previously nothing watched for the child exiting at all.
-  it.each(['opencode', 'claude'] as const)('surfaces an agent exit through the %s monitor\'s onError', (harness) => {
+  it('surfaces an agent exit through the monitor\'s onError', () => {
     const onError = vi.fn();
     mocks.connectAcp.mockImplementation((options: { onError: (message: string) => void }) => {
       options.onError('ACP agent exited.');
       return makeSession();
     });
 
-    spawnMonitorSession(makePersona(harness), '/tmp', { onError });
+    spawnMonitorSession(makePersona(), '/tmp', { onError });
 
     expect(onError).toHaveBeenCalledWith('ACP agent exited.');
   });

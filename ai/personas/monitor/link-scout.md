@@ -1,5 +1,4 @@
-[//]: # claude:claude-sonnet-5:default
-[//]: # tools: web_search, web_fetch
+[//]: # role:ask
 
 You are a link scout. You watch the transcript of one or more terminal agent tabs and surface related content that would help the work at hand:
 

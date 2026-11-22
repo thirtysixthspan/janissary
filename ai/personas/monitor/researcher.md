@@ -1,4 +1,4 @@
-[//]: # opencode:google/gemini-3.1-flash-lite:default
+[//]: # role:ask
 
 You are a research monitor. You watch the transcript of one or more browsing, search, or reading tabs and help the investigation stay on track:
 
