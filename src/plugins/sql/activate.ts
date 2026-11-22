@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { existsSync } from 'node:fs';
 import {
   noFileOpener,
   type DatabaseResultView,
@@ -8,13 +10,12 @@ import { isSqlPayload, type SqlPayload, type SqlPending } from './shared.js';
 import { databasesFrom, NO_DATABASES, resultFor, SqlTabs } from './tabs.js';
 import { dispatch, planRequest } from './request.js';
 import { openDatabase } from './open-tab.js';
-import { isValidDatabaseName, parseSqlArgument } from './shared-intents.js';
+import { isValidDatabaseName } from './shared-intents.js';
 import { fold, registerExports } from './fold.js';
 import { intentsFor } from './intents.js';
 
-// `sql` opens or focuses a database's tab; `sql <name>` names which; `sql left`/`sql right` dock it,
-// and bare `sql` on a docked tab undocks it — the `schedules [left|right]` grammar, read through the
-// one published parser so the two cannot drift.
+// `sql file <path>` and `sql database <name>` open one database's tab; bare `sql` reopens the last
+// one. Every tab lands in the centre — no form docks — and an unrecognized argument is a usage error.
 //
 // The tab's state is its payload and nothing else. Answers arrive on the `databases` topic, so this
 // module only has to match one against the request id a tab is waiting for and fold it in — and the
@@ -24,7 +25,7 @@ export function activate(): TabPluginActivation {
   return {
     isPayload: isSqlPayload,
     command: (argument, capabilities) => {
-      runCommand(argument, capabilities, tabs);
+      return runCommand(argument, capabilities, tabs);
     },
     notify: (event, capabilities) => {
       if (event.topic !== 'databases') return;
@@ -41,26 +42,59 @@ export function activate(): TabPluginActivation {
   };
 }
 
-// `sql [name] [left|right]`. The dock side is the last token when it is one, and the name is what is
-// left — so `sql shop left` docks the `shop` tab and `sql left` docks whichever database is current.
-// A database actually named `left` or `right` is therefore unreachable by name, which is the same
-// trade the conversations plugin makes for a conversation titled `left`.
-function runCommand(argument: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): void {
+const USAGE = 'Usage: sql [file <path>|database <name>]';
+
+// `sql [file <path>|database <name>]`. The keyword is the text up to the first whitespace run; the
+// value is the remainder after it, trimmed at the ends and taken verbatim so a path with spaces
+// survives — including one ending in a space-separated `left` or `right`. Both keywords are lower
+// case only. Anything else is a usage error; no form docks.
+function runCommand(
+  argument: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs,
+): void | Promise<void> {
   const data = databasesFrom(capabilities);
-  const { name, dock } = parseSqlArgument(argument);
-  if (name) {
-    if (!isValidDatabaseName(name)) return capabilities.rejectRequest(`Invalid database name "${name}".`);
+  const text = argument.trim();
+  const split = text.search(/\s/);
+  const keyword = split === -1 ? text : text.slice(0, split);
+  const value = split === -1 ? '' : text.slice(split).trim();
+  if (keyword === 'file' || keyword === 'database') {
+    if (!value) {
+      capabilities.rejectRequest(USAGE);
+      return;
+    }
+    if (keyword === 'file') {
+      if (path.isAbsolute(value)) return openExistingFile(value, capabilities, tabs);
+      return openRelativeFile(value, capabilities, tabs);
+    }
+    if (!isValidDatabaseName(value)) return capabilities.rejectRequest(`Invalid database name "${value}".`);
     // A command is typed, and a typo in a typed command is the ordinary case — so a name the
     // registry has never heard of is refused rather than created. `db sqlite create` is how a
     // database gets made, and the tab's own switcher refuses one for the same reason.
-    openDatabase(name, dock, capabilities, tabs);
+    openDatabase(value, capabilities, tabs);
     return;
   }
-  // The most recently reached open database, which is what a bare `sql` means by "the one I was in".
-  // With none open the first by name is the only answer there is.
-  const current = data.lastOpened ?? data.databases[0]?.name;
-  if (!current) return capabilities.rejectRequest(NO_DATABASES);
-  openDatabase(current, dock, capabilities, tabs);
+  if (!keyword) {
+    // The most recently reached open database, which is what a bare `sql` means by "the one I was in".
+    // With none open the first by name is the only answer there is.
+    const current = data.lastOpened ?? data.databases[0]?.name;
+    if (!current) return capabilities.rejectRequest(NO_DATABASES);
+    openDatabase(current, capabilities, tabs);
+    return;
+  }
+  capabilities.rejectRequest(USAGE);
+}
+
+function openExistingFile(
+  database: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs,
+): void {
+  if (!existsSync(database)) return capabilities.rejectRequest(`No database file at "${database}".`);
+  openDatabase(database, capabilities, tabs);
+}
+
+async function openRelativeFile(
+  value: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs,
+): Promise<void> {
+  const { root } = await capabilities.projectFileList();
+  openExistingFile(path.resolve(root, value), capabilities, tabs);
 }
 
 /**

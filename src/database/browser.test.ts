@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { initDbDir, closeAllConnections, removeDatabaseFile, dbPath } from '../connections.js';
+import { initDbDir, closeAllConnections, removeDatabaseFile, dbPath, listOpenConnections } from '../connections.js';
 import { runDatabaseCommand } from './index.js';
 import { CONSOLE_ROW_LIMIT } from './console-read.js';
 import { DatabaseBrowser } from './browser.js';
@@ -29,6 +29,7 @@ function nextId(): string {
 afterEach(() => {
   closeAllConnections();
   rmSync(project, { recursive: true, force: true });
+  vi.restoreAllMocks();
 });
 
 const SHOP = `
@@ -42,6 +43,15 @@ const SHOP = `
 function seeded(browser: DatabaseBrowser, sql = SHOP): void {
   browser.create('shop', nextId());
   browser.run('shop', nextId(), sql, false);
+}
+
+// A path-backed database is seeded directly, the way a file that already exists on disk arrives:
+// outside the name registry the browser's name branch uses.
+function seededPath(name: string, sql = SHOP): string {
+  const file = path.join(project, name);
+  const database = new DatabaseSync(file);
+  try { database.exec(sql); } finally { database.close(); }
+  return file;
 }
 
 describe('DatabaseBrowserState', () => {
@@ -532,5 +542,77 @@ describe('DatabaseBrowser', () => {
     if (answer?.kind !== 'write') throw new Error('expected a write answer');
     expect(answer.changed).toBe(0);
     browser.dispose();
+  });
+
+  describe('a database named by an absolute path', () => {
+    it('reads the same objects and grid as the name-backed case', () => {
+      const browser = new DatabaseBrowser();
+      const file = seededPath('warehouse.sqlite');
+      seeded(browser);
+
+      const namedSchemaId = nextId();
+      browser.schema('shop', namedSchemaId);
+      const namedQueryId = nextId();
+      browser.query('shop', namedQueryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+
+      const pathSchemaId = nextId();
+      browser.schema(file, pathSchemaId);
+      const pathQueryId = nextId();
+      browser.query(file, pathQueryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+
+      const namedSchema = browser.view().results.find((result) => result.requestId === namedSchemaId);
+      if (namedSchema?.kind !== 'schema') throw new Error('expected a named schema answer');
+      const pathSchema = browser.view().results.find((result) => result.requestId === pathSchemaId);
+      if (pathSchema?.kind !== 'schema') throw new Error('expected a path schema answer');
+      const namedQuery = browser.view().results.find((result) => result.requestId === namedQueryId);
+      if (namedQuery?.kind !== 'query') throw new Error('expected a named query answer');
+      const pathQuery = browser.view().results.find((result) => result.requestId === pathQueryId);
+      if (pathQuery?.kind !== 'query') throw new Error('expected a path query answer');
+      expect(pathSchema.objects).toEqual(namedSchema.objects);
+      expect(pathQuery.grid.columns).toEqual(namedQuery.grid.columns);
+      expect(pathQuery.grid.total).toBe(namedQuery.grid.total);
+      expect(pathQuery.grid.rows.map((row) => row.cells[1].text)).toEqual(['paid', 'open']);
+      browser.dispose();
+    });
+
+    it('reuses the same handle for a second read of the path', () => {
+      const browser = new DatabaseBrowser();
+      const file = seededPath('warehouse.sqlite');
+      const prepare = vi.spyOn(DatabaseSync.prototype, 'prepare');
+
+      browser.schema(file, nextId());
+      const first = prepare.mock.contexts.at(-1);
+      browser.schema(file, nextId());
+      const second = prepare.mock.contexts.at(-1);
+
+      expect(first).toBeDefined();
+      expect(second).toBe(first);
+      browser.dispose();
+    });
+
+    it('closes the path handle on dispose', () => {
+      const browser = new DatabaseBrowser();
+      const file = seededPath('warehouse.sqlite');
+      const prepare = vi.spyOn(DatabaseSync.prototype, 'prepare');
+
+      browser.schema(file, nextId());
+      const handle = prepare.mock.contexts.at(-1) as DatabaseSync;
+      const close = vi.spyOn(handle, 'close');
+
+      browser.dispose();
+
+      expect(close).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the path out of the registry-backed database lists', () => {
+      const browser = new DatabaseBrowser();
+      const file = seededPath('warehouse.sqlite');
+      browser.schema(file, nextId());
+
+      expect(browser.view().databases).toEqual([]);
+      expect(browser.view().lastOpened).toBeNull();
+      expect(listOpenConnections()).toEqual([]);
+      browser.dispose();
+    });
   });
 });

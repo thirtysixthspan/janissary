@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { initDbDir } from '../connections.js';
+import { DatabaseBrowser } from './browser.js';
 import { csvField, exportDir, exportRows, safeFileName, EXPORT_ROW_LIMIT } from './export.js';
 import { objectColumns } from './schema.js';
 import type { DatabaseGridQuery } from '../protocol.js';
@@ -161,5 +162,45 @@ describe('an object whose name is not a filename', () => {
     } finally {
       odd.close();
     }
+  });
+});
+
+describe('a database named by an absolute path', () => {
+  function seededPath(): string {
+    const file = path.join(project, 'warehouse.sqlite');
+    const database = new DatabaseSync(file);
+    try { database.exec(SHOP); } finally { database.close(); }
+    return file;
+  }
+
+  it('names an object export from the basename, not the path', () => {
+    const file = seededPath();
+    const browser = new DatabaseBrowser();
+
+    browser.exportObject(file, 'csv-1', query(), 'csv');
+    browser.exportObject(file, 'json-1', query(), 'json');
+
+    const csv = browser.view().results.find((result) => result.requestId === 'csv-1');
+    const json = browser.view().results.find((result) => result.requestId === 'json-1');
+    expect(csv).toMatchObject({ kind: 'export', name: 'warehouse.sqlite-orders-1.csv', rows: 4 });
+    expect(json).toMatchObject({ kind: 'export', name: 'warehouse.sqlite-orders-1.json', rows: 4 });
+    expect(existsSync(path.join(exportDir(), 'warehouse.sqlite-orders-1.csv'))).toBe(true);
+    expect(existsSync(path.join(exportDir(), 'warehouse.sqlite-orders-1.json'))).toBe(true);
+    browser.dispose();
+  });
+
+  it('names a console result file from the basename, not the path', () => {
+    const file = seededPath();
+    const browser = new DatabaseBrowser();
+
+    browser.run(file, 'read-1', 'SELECT customer FROM orders', true);
+
+    const answer = browser.view().results.find((result) => result.requestId === 'read-1');
+    expect(answer?.kind).toBe('query');
+    if (answer?.kind !== 'query') return;
+    expect(path.dirname(answer.report?.file ?? '')).toBe(exportDir());
+    expect(path.basename(answer.report?.file ?? '')).toMatch(/^warehouse\.sqlite-result-.*\.txt$/u);
+    expect(existsSync(answer.report?.file ?? '')).toBe(true);
+    browser.dispose();
   });
 });

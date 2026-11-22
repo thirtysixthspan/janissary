@@ -119,7 +119,7 @@
 | `sessions left` | Dock the sessions list in the left sidebar |
 | `sessions right` | Dock the sessions list in the right sidebar |
 | `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `on <address>` opens a remote shell |
-| `sql` | Open a SQL browser. Bare `sql` opens the most recently connected database; use `sql <name>` to choose one or add `left` or `right` to dock it |
+| `sql` | `sql file <path>` opens a database by path, `sql database <name>` by name; bare `sql` reopens the last one; no form docks |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal; a bare saved host name uses its stored destination, port and path |
 | `subagent` | `subagent --role <role> [--task <file.md>] [--context <text>]` runs a background agent; omit task when context carries the assignment; an ACP caller uses `subagent <json>` with no immediate output |
 | `syntax` | Manage the syntax-highlighting theme used by editors and diff tabs |

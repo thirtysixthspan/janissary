@@ -13,7 +13,6 @@ import {
   isSetPageSizeIntent,
   isUpdateCellIntent,
   PAGE_SIZES,
-  parseSqlArgument,
 } from './shared-intents.js';
 
 function payload(over: Partial<SqlPayload> = {}): SqlPayload {
@@ -40,6 +39,25 @@ function payload(over: Partial<SqlPayload> = {}): SqlPayload {
 describe('isSqlPayload', () => {
   it('accepts a well-formed payload', () => {
     expect(isSqlPayload(payload())).toBe(true);
+  });
+
+  it('accepts a path payload whose databasePath is a string', () => {
+    expect(isSqlPayload(payload({ databasePath: '/data/shop.sqlite' }))).toBe(true);
+  });
+
+  it('accepts a named payload with no databasePath at all', () => {
+    const named: Record<string, unknown> = { ...payload() };
+    delete named.databasePath;
+    expect(isSqlPayload(named)).toBe(true);
+  });
+
+  it('accepts a payload whose databasePath is null', () => {
+    expect(isSqlPayload(payload({ databasePath: null }))).toBe(true);
+  });
+
+  it('rejects a databasePath that is a number or an object', () => {
+    expect(isSqlPayload(payload({ databasePath: 7 as never }))).toBe(false);
+    expect(isSqlPayload(payload({ databasePath: { path: '/data/shop.sqlite' } as never }))).toBe(false);
   });
 
   it('rejects an array and null', () => {
@@ -267,29 +285,5 @@ describe('intent payload guards', () => {
     expect(isExportIntent({ format: 'csv' })).toBe(true);
     expect(isExportIntent({ format: 'json' })).toBe(true);
     expect(isExportIntent({ format: 'xlsx' })).toBe(false);
-  });
-});
-
-describe('parseSqlArgument', () => {
-  it('reads a bare argument as the current database with no dock side', () => {
-    expect(parseSqlArgument('')).toEqual({ name: '', dock: null });
-    expect(parseSqlArgument(' '.repeat(3))).toEqual({ name: '', dock: null });  });
-
-  it('reads the trailing token as a dock side through the published parser, in any case', () => {
-    expect(parseSqlArgument('left')).toEqual({ name: '', dock: 'left' });
-    expect(parseSqlArgument('LEFT')).toEqual({ name: '', dock: 'left' });
-    expect(parseSqlArgument('  Right  ')).toEqual({ name: '', dock: 'right' });
-    expect(parseSqlArgument('shop left')).toEqual({ name: 'shop', dock: 'left' });
-    expect(parseSqlArgument('shop LEFT')).toEqual({ name: 'shop', dock: 'left' });
-    expect(parseSqlArgument('shop right')).toEqual({ name: 'shop', dock: 'right' });
-  });
-
-  it('keeps a non-side trailing token in the name, leaving the dock undefined', () => {
-    expect(parseSqlArgument('shop')).toEqual({ name: 'shop', dock: undefined });
-    expect(parseSqlArgument('shop extra')).toEqual({ name: 'shop extra', dock: undefined });
-  });
-
-  it('peels only the trailing side, so a multi-word name the guard refuses keeps its shape', () => {
-    expect(parseSqlArgument('shop left right')).toEqual({ name: 'shop left', dock: 'right' });
   });
 });

@@ -10,17 +10,16 @@ export const sqlManifest = {
   apiVersion: TAB_PLUGIN_API_VERSION,
   payloadSchemaVersion: SQL_PAYLOAD_SCHEMA_VERSION,
   tabLabelPrefix: 'sql',
-  // No extensions, deliberately. A database is reachable only by the name the registry holds it
-  // under, and `dbPath` derives the path from that name — so claiming `.sqlite` would promise an
-  // `open` route the registry cannot serve.
+  // No extensions, deliberately. The `open` route is still unclaimed — the `sql` command now serves
+  // a path as well as a registry name, but no file extension claim routes one here.
   fileExtensions: {},
   command: 'sql',
   notifications: ['databases'],
   capabilities: [
     'openOrFocusTab',
     'updateTab',
-    'dockTab',
     'ownTabKeys',
+    'projectFileList',
     'topicData',
     'topicAction',
     'notifyUser',

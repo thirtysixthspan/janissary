@@ -1,10 +1,9 @@
+import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
 import type { SqlPayload } from './shared.js';
 import type { SqlTabs } from './tabs.js';
 import { databasesFrom, emptyPayload, instanceKeyFor, refs } from './tabs.js';
 import { dispatch, planRequest } from './request.js';
-
-export type Dock = 'left' | 'right' | null | undefined;
 
 /** What `db sqlite query` already says for a database that is not there, reused word for word. */
 export const UNKNOWN_DATABASE = (name: string): string =>
@@ -14,9 +13,7 @@ export const UNKNOWN_DATABASE = (name: string): string =>
  * Open or focus one database's tab, and read its schema the first time.
  *
  * A tab already open keeps the payload it has — its filters, its page, its exports — so `sql notes`
- * twice focuses the tab that is already there rather than resetting it. `dock` is passed straight
- * through, including `undefined` for "no dock argument", which is what leaves an already-docked tab
- * where it is instead of undocking it as a side effect of being reopened.
+ * twice focuses the tab that is already there rather than resetting it.
  *
  * A name the registry has never heard of is refused rather than created, because reading a schema
  * opens a connection and opening a connection creates the file: a name that is a typo would leave an
@@ -25,28 +22,30 @@ export const UNKNOWN_DATABASE = (name: string): string =>
  */
 export function openDatabase(
   database: string,
-  dock: Dock,
   capabilities: TabPluginServerCapabilities,
   tabs: SqlTabs,
 ): void {
-  const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
-  if (!known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
+  const isPath = path.isAbsolute(database);
+  if (!isPath) {
+    const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
+    if (!known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
+  }
+  const title = isPath ? path.basename(database).replace(/\.sqlite$/i, '') : database;
   const key = instanceKeyFor(database);
   // A tab closed since its payload was kept would otherwise come back with that payload — and any
   // request it was still waiting on — instead of reading its schema afresh.
   tabs.prune(capabilities.ownTabKeys());
   const existing = tabs.read(key);
   if (existing) {
-    capabilities.openOrFocusTab(key, () => ({ title: database, payload: existing }));
-    if (dock !== undefined) capabilities.dockTab(key, dock);
+    capabilities.openOrFocusTab(key, () => ({ title, payload: existing }));
     return;
   }
-  const seed: SqlPayload = emptyPayload(database, refs(databasesFrom(capabilities).databases));
+  const empty = emptyPayload(database, refs(databasesFrom(capabilities).databases));
+  const seed: SqlPayload = isPath ? { ...empty, databasePath: database } : empty;
   // The tab is opened and recorded before the schema is asked for: the host delivers the answer
   // synchronously, and a notification for a plugin with no open tab is dropped rather than queued,
   // so asking first loses the answer outright and leaves the tab on `Loading…` forever.
   dispatch(key, seed, planRequest('schema', seed), capabilities, tabs, (payload) => {
-    capabilities.openOrFocusTab(key, () => ({ title: database, payload }));
-    if (dock !== undefined) capabilities.dockTab(key, dock);
+    capabilities.openOrFocusTab(key, () => ({ title, payload }));
   });
 }
