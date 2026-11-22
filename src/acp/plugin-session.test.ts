@@ -989,6 +989,40 @@ describe('core ACP for plugin tabs', () => {
     managers.acp.closeAll();
   });
 
+  // Reset forgets a role chosen for an earlier start, so a role-less restart falls back to the
+  // documented `ask` default for both the connection and the prompt under it.
+  it('forgets the remembered role on reset so a role-less restart prompts under ask', async () => {
+    const { managers, handlers, session } = setup(() => ({
+      name: 'tell',
+      entries: [{ harness: 'opencode', model: 'tell/model' }],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+    const start = vi.spyOn(managers.acp, 'start');
+    const promptResult = vi.spyOn(managers.acp, 'promptResult');
+
+    capabilities.startAcp({ role: 'tell' });
+    expect(start).toHaveBeenLastCalledWith('consumer', { role: 'tell' }, 'tell');
+
+    capabilities.resetAcp();
+
+    capabilities.startAcp();
+    expect(start).toHaveBeenLastCalledWith('consumer', undefined, 'ask');
+
+    const pending = capabilities.promptAcpResult('summarize the tabs');
+    expect(promptResult).toHaveBeenLastCalledWith('consumer', 'summarize the tabs', 'ask');
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalled(); });
+    expect(session.prompt.mock.calls[0][0]).not.toMatch(/^(ask|tell)\b/u);
+
+    handlers().onChunk('done');
+    handlers().onEnd('end_turn');
+    await expect(pending).resolves.toMatchObject({ answered: true });
+    managers.acp.closeAll();
+  });
+
   // A role that does not resolve produces only the core's exact notification, not a reply line.
   it('reports an unknown declared role as a notification with no answer', () => {
     const { managers } = setup((_root, role) => ({

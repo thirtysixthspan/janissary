@@ -54,6 +54,10 @@ export function acpCapabilities(input: {
       const run = () => managers.acp.promptResult(label, prompt, role);
       return deadline ? deadline.exempt(run) : run();
     },
-    resetAcp: () => managers.acp.close(ownLabel()),
+    resetAcp: () => {
+      const closed = managers.acp.close(ownLabel());
+      role = DEFAULT_ACP_ROLE;
+      return closed;
+    },
   };
 }
