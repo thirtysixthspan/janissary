@@ -125,6 +125,13 @@ function emitEntry(tab: Tab, input: string, output: string): void {
 
 const FLUSH_MS = 1000;
 
+class ReceiverAwareModels {
+  known = true;
+  isKnownModel(_harness: string, _model: string): boolean {
+    return this.known;
+  }
+}
+
 let janus: Tab;
 let agent2: Tab;
 
@@ -416,6 +423,16 @@ describe('MonitorManager', () => {
     expect(manager.start('janus', 'security', [])).toBe('ACP: the ask role lists no models.');
     expect(sessions).toHaveLength(0);
     expect(manager.list()).toEqual([]);
+  });
+
+  it('keeps the model manager as the receiver when filtering role entries', () => {
+    const { managers } = makeFakeManagers([janus]);
+    managers.models = new ReceiverAwareModels() as unknown as Managers['models'];
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    expect(manager.start('janus', 'security', [])).toBeNull();
+    expect(sessions).toHaveLength(1);
   });
 
   it('stop kills the dedicated session and stops feeding', () => {

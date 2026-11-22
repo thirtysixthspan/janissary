@@ -42,6 +42,13 @@ function makeManagers(
 
 const baseParams = { url: '/open/1', persona: 'reviewer', content: 'hello world', prompt: 'rewrite this' };
 
+class ReceiverAwareModels {
+  known = true;
+  isKnownModel(_harness: string, _model: string): boolean {
+    return this.known;
+  }
+}
+
 describe('editorSuggest', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -95,6 +102,21 @@ describe('editorSuggest', () => {
       'notes', expect.objectContaining({ name: 'reviewer', role: 'tell' }), '/repo',
       expect.objectContaining({ onError: expect.any(Function) }),
     );
+  });
+
+  it('keeps the model manager as the receiver when filtering role entries', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
+    const { session, prompt } = makeSession();
+    const sessionFn = vi.fn(() => session);
+    const managers = makeManagers(sessionFn);
+    managers.models = new ReceiverAwareModels() as unknown as Managers['models'];
+
+    editorSuggest(managers, baseParams, vi.fn());
+
+    expect(sessionFn).toHaveBeenCalledTimes(1);
+    expect(prompt).toHaveBeenCalledTimes(1);
+    expect(mocks.notify).not.toHaveBeenCalled();
   });
 
   it('notifies the exact unknown-role error and opens no connection', () => {

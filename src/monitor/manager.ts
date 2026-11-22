@@ -52,7 +52,8 @@ export class MonitorManager extends LiveMonitors {
     try {
       persona = loadPersona(personaName, 'monitor');
       resolvePersonaRole(
-        this.managers.tab.launchDir, persona.role, persona.name, this.managers.models.isKnownModel,
+        this.managers.tab.launchDir, persona.role, persona.name,
+        (harness, model) => this.managers.models.isKnownModel(harness, model),
       );
     } catch (error) {
       return errorText(error);

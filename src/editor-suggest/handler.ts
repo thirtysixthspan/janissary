@@ -48,7 +48,10 @@ export function editorSuggest(
   let persona: Persona;
   try {
     persona = loadPersona(match, 'editor');
-    resolvePersonaRole(cwd, persona.role, persona.name, managers.models.isKnownModel);
+    resolvePersonaRole(
+      cwd, persona.role, persona.name,
+      (harness, model) => managers.models.isKnownModel(harness, model),
+    );
   } catch (error) {
     notify(managers, NOTIFY_CHANNEL, label, `${params.persona}: ${errorText(error)}`);
     callback({ hunks: [] });
