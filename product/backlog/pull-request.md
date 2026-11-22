@@ -1,3 +1,24 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Correct the pull request description's "How to verify" claim that the branch changes only five documents and the plan's move.
+
+Existing Issue: Step 9 of "How to verify" tells a reader to expect that the only changes are the five `ai/` documents and the promoted plan's move, while the branch also adds three fix plans under `product/plans/complete/`. Severity: 4/10
+
+Existing Risk: 4/10 - A reader auditing the changed-file list against the description finds files the description denies exist, so the description stops being a reliable scope statement and a reviewer cannot tell whether the extra plans are intentional or stray.
+
+Proposal Risk: 1/10 - The correction touches one sentence of prose, leaves every rule, document, and test untouched, and the true invariant that no source, test, config, or spec file changed remains checkable from the same step.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2183 "correct the description's claim that only five documents and the plan move changed". In the pull request body's "How to verify" section, step 9 ("No spec or application file changed"), remove the false "The only changes are the five `ai/` documents and the promoted plan's move" clause from the Expect line and keep the true rest of the expectation, that no source, test, config, or `product/specs/` file is modified, so the step stays checkable against `git diff origin/master...HEAD --name-status`. If the "What" paragraph's statement that the change touches the plan template and the four stages that consume plans is read as an exhaustive change list, reword it to say those are the rule changes and that the branch also carries the fix plans added by the three repairs. Change only the pull request description, leave the title and every other paragraph word-for-word as the author wrote them, and do not edit any file to make the description match. Verify by re-reading the body and checking that the revised Expect line agrees with the branch's actual changed-file list while the no-source, no-test, no-config, no-spec guarantee still holds.
+
+
+* Deliver the fix plan's promise that every anchor in the promoted plan resolves to its quoted fragment.
+
+Existing Issue: The refresh fix plan states that after its repair every `path:line` anchor in the promoted plan lands on the line carrying its quoted fragment, yet the plan still cites `product/backlog/features.md:7` and `product/backlog/features.md:12` for feature text removed from that backlog when the ready plan was promoted, and its `ai/guidelines/plan-template.md:15` anchor quotes "Every section is required in every plan." on a line that now reads "Every section is required in every plan;" after the section-rule repair. Severity: 5/10
+
+Existing Risk: 4/10 - The promoted plan is the source of truth the description tells readers to keep open, so a reader following those anchors lands on unrelated lines, and the "Wrong or stale references" check in `ai/tasks/planning/improve-plan.md` still flags the very plan the repair was meant to make trustworthy.
+
+Proposal Risk: 1/10 - Only anchor text inside a completed plan changes; no rule, section, source document, or test is touched, and every other anchor in the plan already resolves.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2183 "fix the anchors left stale in the promoted preserved-behavior plan after the repair". In `product/plans/complete/preserved-behavior.md`, re-audit every `path:line` anchor against the fragment it quotes and repair the three that no longer match: in the `## Assumptions` item claiming every edit named by the feature text is under `ai/`, replace the two `product/backlog/features.md` anchors with references that resolve, since the feature text now lives in this plan's own `## Goal` and `## Requirements`, by pointing the claim at those sections or rewording it as a self-contained statement without a stale backlog line; and update the `ai/guidelines/plan-template.md:15` anchor's quoted fragment to match the qualified sentence now on that line rather than the pre-repair wording with a trailing period. Keep every other anchor, every quoted identifier whose target still resolves, and all rule text unchanged; do not touch any of the five `ai/` documents or any other plan. Verify by opening each named line in `ai/guidelines/plan-template.md`, `ai/tasks/feature/plan-a-new-feature.md`, `ai/tasks/planning/improve-plan.md`, `ai/tasks/planning/decompose-plan.md`, and `ai/tasks/feature/review-pull-request.md` and confirming the quoted fragment is present, exactly as `ai/tasks/planning/improve-plan.md` Step 3 requires, and confirm no other file in the working tree changed.
