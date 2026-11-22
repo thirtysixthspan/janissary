@@ -22,7 +22,10 @@ function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>;
   return { session: { prompt, kill, cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) }, prompt, kill };
 }
 
-function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<typeof vi.fn> = vi.fn()): Managers {
+function makeManagers(
+  session: ReturnType<typeof vi.fn>, record: ReturnType<typeof vi.fn> = vi.fn(),
+  isKnownModel: (harness: string, model: string) => boolean = () => true,
+): Managers {
   const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
   return {
     tab: {
@@ -33,6 +36,7 @@ function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<type
       cwdOf: () => '/repo', workingDirOf: () => '/repo',
     },
     editorAcp: { session, record, hasSession: vi.fn(() => false) },
+    models: { isKnownModel },
   } as unknown as Managers;
 }
 
@@ -78,6 +82,57 @@ describe('editorSuggest', () => {
     expect(mocks.notify).not.toHaveBeenCalled();
   });
 
+  it('passes the persona\'s role through to the connection path', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'tell', body: 'Watch for bugs.' });
+    const { session } = makeSession();
+    const sessionFn = vi.fn(() => session);
+    const managers = makeManagers(sessionFn);
+
+    editorSuggest(managers, baseParams, vi.fn());
+
+    expect(sessionFn).toHaveBeenCalledWith(
+      'notes', expect.objectContaining({ name: 'reviewer', role: 'tell' }), '/repo',
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
+  });
+
+  it('notifies the exact unknown-role error and opens no connection', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ghost-role', body: 'Watch for bugs.' });
+    const { session } = makeSession();
+    mocks.spawnMonitorSession.mockReturnValue(session);
+    const editorAcp = new EditorAcpManager({} as unknown as Managers);
+    const managers = { ...makeManagers(vi.fn()), editorAcp } as unknown as Managers;
+    const callback = vi.fn();
+
+    editorSuggest(managers, baseParams, callback);
+
+    expect(mocks.notify).toHaveBeenCalledWith(
+      managers, 'editor-suggest', 'notes', 'reviewer: Unknown role "ghost-role" in persona "reviewer".',
+    );
+    expect(callback).toHaveBeenCalledWith({ hunks: [] });
+    expect(mocks.spawnMonitorSession).not.toHaveBeenCalled();
+  });
+
+  it('notifies the no-models error before a session is opened', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
+    const { session } = makeSession();
+    mocks.spawnMonitorSession.mockReturnValue(session);
+    const editorAcp = new EditorAcpManager({} as unknown as Managers);
+    const managers = { ...makeManagers(vi.fn(), vi.fn(), () => false), editorAcp } as unknown as Managers;
+    const callback = vi.fn();
+
+    editorSuggest(managers, baseParams, callback);
+
+    expect(mocks.notify).toHaveBeenCalledWith(
+      managers, 'editor-suggest', 'notes', 'reviewer: ACP: the ask role lists no models.',
+    );
+    expect(callback).toHaveBeenCalledWith({ hunks: [] });
+    expect(mocks.spawnMonitorSession).not.toHaveBeenCalled();
+  });
+
   it('records the exchange into the real EditorAcpManager so its transcript is non-empty afterward', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
     mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
@@ -94,6 +149,7 @@ describe('editorSuggest', () => {
         cwdOf: () => '/repo', workingDirOf: () => '/repo',
       },
       editorAcp,
+      models: { isKnownModel: () => true },
     } as unknown as Managers;
 
     expect(editorAcp.transcript('notes', 'reviewer')).toBe('');
@@ -141,6 +197,7 @@ describe('editorSuggest', () => {
         cwdOf: () => '/repo', workingDirOf: () => '/repo',
       },
       editorAcp: { session: sessionFn, record, hasSession },
+      models: { isKnownModel: () => true },
     } as unknown as Managers;
 
     editorSuggest(managers, baseParams, vi.fn());

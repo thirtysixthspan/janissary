@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   askRoleEntries, attemptOrder, defaultAskEntries, exhaustedError, fallbackNotice, finalAttemptResult,
-  knownRoleSettings, readRoleSettings, type AttemptFailure,
+  knownRoleSettings, readRoleSettings, resolvePersonaRole, type AttemptFailure,
 } from './ask-role.js';
 import type { AcpPromptResult } from './types.js';
 
@@ -345,6 +345,49 @@ describe('knownRoleSettings', () => {
     expect(knownRoleSettings(root, 'ask', home)).toEqual({
       name: 'ask', entries: [OPENCODE, CLAUDE, CODEX], commands: ASK_COMMANDS,
     });
+  });
+});
+
+describe('resolvePersonaRole', () => {
+  it('throws the persona-worded error for a role that is not known', () => {
+    const { home, root } = directories();
+    writeRoles(home, { planning: { description: 'Plans.', entries: [CLAUDE], commands: [] } });
+
+    expect(() => resolvePersonaRole(root, 'ghost', 'reviewer', () => true, home))
+      .toThrow('Unknown role "ghost" in persona "reviewer".');
+  });
+
+  it('throws the no-models error when the role lists no entries', () => {
+    const { home, root } = directories();
+    writeRoles(home, { empty: { description: 'None.', entries: [], commands: [] } });
+
+    expect(() => resolvePersonaRole(root, 'empty', 'reviewer', () => true, home))
+      .toThrow('ACP: the empty role lists no models.');
+  });
+
+  it('throws the no-models error when every entry is disabled', () => {
+    const { home, root } = directories();
+    writeRoles(home, { review: { description: 'Reviews.', entries: [CLAUDE, CODEX], commands: [] } });
+
+    expect(() => resolvePersonaRole(root, 'review', 'reviewer', () => false, home))
+      .toThrow('ACP: the review role lists no models.');
+  });
+
+  it('resolves with the settings, original entries and only the enabled entries', () => {
+    const { home, root } = directories();
+    writeRoles(home, {
+      review: { description: 'Reviews.', entries: [CLAUDE, CODEX], commands: ['file read'] },
+    });
+
+    const resolved = resolvePersonaRole(
+      root, 'review', 'reviewer', (harness, model) => model === CLAUDE.model, home,
+    );
+
+    expect(resolved.settings).toEqual({
+      name: 'review', entries: [CLAUDE, CODEX], commands: ['file read'],
+    });
+    expect(resolved.entries).toEqual([CLAUDE, CODEX]);
+    expect(resolved.enabled).toEqual([CLAUDE]);
   });
 });
 

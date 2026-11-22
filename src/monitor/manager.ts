@@ -1,4 +1,5 @@
 import type { MonitorTarget } from '../tab/types.js';
+import { resolvePersonaRole } from '../acp/ask-role.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { openMonitorTab, updateMonitorMeta } from './window.js';
 import { rateSuggestion } from './suggestions.js';
@@ -50,6 +51,9 @@ export class MonitorManager extends LiveMonitors {
     let persona: Persona;
     try {
       persona = loadPersona(personaName, 'monitor');
+      resolvePersonaRole(
+        this.managers.tab.launchDir, persona.role, persona.name, this.managers.models.isKnownModel,
+      );
     } catch (error) {
       return errorText(error);
     }

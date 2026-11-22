@@ -71,6 +71,24 @@ export function knownRoleSettings(
   return known ? settings : undefined;
 }
 
+export type PersonaRoleResolution = {
+  settings: AcpRoleSettings;
+  entries: RoleEntry[];
+  enabled: RoleEntry[];
+};
+
+export function resolvePersonaRole(
+  root: string, role: string, personaName: string,
+  isKnownModel: (harness: string, model: string) => boolean, home: string = homedir(),
+): PersonaRoleResolution {
+  const settings = knownRoleSettings(root, role, home);
+  if (!settings) throw new Error(`Unknown role "${role}" in persona "${personaName}".`);
+  const entries = settings.entries;
+  const enabled = entries.filter((entry) => isKnownModel(entry.harness, entry.model));
+  if (enabled.length === 0) throw new Error(noRoleModels(role as AcpRole));
+  return { settings, entries, enabled };
+}
+
 export function askRoleSettings(root: string, home: string = homedir()): AcpRoleSettings {
   return readRoleSettings(root, ASK_ROLE, home);
 }

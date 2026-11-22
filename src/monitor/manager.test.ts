@@ -10,14 +10,27 @@ import { messageBus } from '../bus.js';
 import { MonitorManager } from './manager.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
 import type * as monitorAcp from './acp.js';
+import type * as Personas from '../personas.js';
 
 const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
+  loadPersona: vi.fn(),
+  realLoadPersona: undefined as unknown as typeof Personas.loadPersona,
 }));
 
 vi.mock('../notifications/index.js', () => ({
   notify: mocks.notify,
 }));
+
+vi.mock('../personas.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof Personas>();
+  mocks.realLoadPersona = actual.loadPersona;
+  return {
+    ...actual,
+    loadPersona: (name: string, kind: Personas.PersonaKind, root?: string) =>
+      mocks.loadPersona(name, kind, root),
+  };
+});
 
 vi.mock('../harness/capture/file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/assistant-now.txt'),
@@ -35,7 +48,9 @@ type FakeSession = {
   kill: ReturnType<typeof vi.fn>;
 };
 
-function makeFakeManagers(tabs: Tab[]) {
+function makeFakeManagers(
+  tabs: Tab[], isKnownModel: (harness: string, model: string) => boolean = () => true,
+) {
   const appended: { label: string; entry: LogEntry }[] = [];
   const finished: { label: string; output: string }[] = [];
   const screens: Record<string, { text: string; capturedAt: number } | undefined> = {};
@@ -44,6 +59,7 @@ function makeFakeManagers(tabs: Tab[]) {
   const openFiles = new Map<string, string>();
   const fakeTab = {
     tabs,
+    launchDir: '/project',
     cwdOf: () => '/tmp',
     cur: () => tabs[0],
     append: (label: string, entry: LogEntry) => { appended.push({ label, entry }); },
@@ -68,6 +84,7 @@ function makeFakeManagers(tabs: Tab[]) {
       },
     },
     openFile: { edit },
+    models: { isKnownModel },
   } as unknown as Managers;
   return { managers, appended, finished, screens, transcripts, edit, openFiles };
 }
@@ -113,6 +130,9 @@ let agent2: Tab;
 
 beforeEach(() => {
   vi.useFakeTimers();
+  mocks.loadPersona.mockReset();
+  mocks.loadPersona.mockImplementation((name: string, kind: Personas.PersonaKind, root?: string) =>
+    mocks.realLoadPersona(name, kind, root));
   janus = makeTab('janus', '#aaa');
   agent2 = { ...makeTab('agent2', '#bbb'), group: 2, groupColor: '#bbb' };
 });
@@ -375,6 +395,27 @@ describe('MonitorManager', () => {
     expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'janus' }])).toMatch(/already exists/);
     expect(manager.start('janus', 'security', [])).toBeNull();
     expect(manager.start('janus', 'security', [])).toMatch(/Already monitoring/);
+  });
+
+  it('returns the unknown-role error and spawns no session', () => {
+    const { managers } = makeFakeManagers([janus]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    mocks.loadPersona.mockReturnValue({ name: 'security', role: 'ghost-role', body: 'Watch the shell.' });
+
+    expect(manager.start('janus', 'security', [])).toBe('Unknown role "ghost-role" in persona "security".');
+    expect(sessions).toHaveLength(0);
+    expect(manager.list()).toEqual([]);
+  });
+
+  it('returns the no-models error and spawns no session', () => {
+    const { managers } = makeFakeManagers([janus], () => false);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    expect(manager.start('janus', 'security', [])).toBe('ACP: the ask role lists no models.');
+    expect(sessions).toHaveLength(0);
+    expect(manager.list()).toEqual([]);
   });
 
   it('stop kills the dedicated session and stops feeding', () => {

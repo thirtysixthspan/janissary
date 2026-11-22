@@ -1,12 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
 import type { SuggestHunk } from '../protocol.js';
-import { loadPersona, listPersonas } from '../personas.js';
+import { resolvePersonaRole } from '../acp/ask-role.js';
+import { errorText } from '../error-text.js';
+import { loadPersona, listPersonas, type Persona } from '../personas.js';
 import { notify } from '../notifications/index.js';
 import { HUNK_FORMAT, parseHunks } from './reply-format.js';
 
 export type EditorSuggestParams = { url: string; persona: string; content: string; prompt: string };
 export type EditorSuggestResult = { hunks: SuggestHunk[] };
+
+const NOTIFY_CHANNEL = 'editor-suggest';
 
 // The owning editor tab's label, for cwd resolution and notification attribution — resolved from
 // `url` the same way saveFile/syncEditorBuffer match their tab, falling back to the active tab
@@ -35,13 +39,21 @@ export function editorSuggest(
   const label = ownerLabel(managers, params.url);
   const match = listPersonas('editor').find((name) => name.toLowerCase() === params.persona.toLowerCase());
   if (!match) {
-    notify(managers, 'editor-suggest', label, `${params.persona}: unknown persona`);
+    notify(managers, NOTIFY_CHANNEL, label, `${params.persona}: unknown persona`);
     callback({ hunks: [] });
     return;
   }
 
-  const persona = loadPersona(match, 'editor');
   const cwd = managers.tab.workingDirOf(label);
+  let persona: Persona;
+  try {
+    persona = loadPersona(match, 'editor');
+    resolvePersonaRole(cwd, persona.role, persona.name, managers.models.isKnownModel);
+  } catch (error) {
+    notify(managers, NOTIFY_CHANNEL, label, `${params.persona}: ${errorText(error)}`);
+    callback({ hunks: [] });
+    return;
+  }
   const isFirstTurn = !managers.editorAcp.hasSession(label, persona.name);
   let settled = false;
   let failed = false;
@@ -49,8 +61,8 @@ export function editorSuggest(
     if (settled) return;
     settled = true;
     failed = failureMessage !== undefined;
-    if (failureMessage) notify(managers, 'editor-suggest', label, `${persona.name}: ${failureMessage}`);
-    else if (hunks.length === 0) notify(managers, 'editor-suggest', label, `${persona.name}: no suggestion`);
+    if (failureMessage) notify(managers, NOTIFY_CHANNEL, label, `${persona.name}: ${failureMessage}`);
+    else if (hunks.length === 0) notify(managers, NOTIFY_CHANNEL, label, `${persona.name}: no suggestion`);
     callback({ hunks });
   };
   // The session's agent died. A pending request fails with the message; after a successful reply the
@@ -59,7 +71,7 @@ export function editorSuggest(
   // error, in either order.
   const connectionLost = (message: string) => {
     if (!settled) finish([], message);
-    else if (!failed) notify(managers, 'editor-suggest', label, `${persona.name}: ${message}`);
+    else if (!failed) notify(managers, NOTIFY_CHANNEL, label, `${persona.name}: ${message}`);
   };
 
   const session = managers.editorAcp.session(label, persona, cwd, { onError: connectionLost });
