@@ -69,6 +69,15 @@ describe('the assistant persona', () => {
   });
 });
 
+describe('the editor assistant persona', () => {
+  it('loads from the project with the ask role and a nonempty body', () => {
+    // Loads the real ai/personas/editor/assistant.md (default root = project cwd), not a synthetic one.
+    const persona = loadPersona('assistant', 'editor');
+    expect(persona.role).toBe('ask');
+    expect(persona.body.length).toBeGreaterThan(0);
+  });
+});
+
 describe('the activity persona', () => {
   it('loads from the project with the ask role and is summarize-only', () => {
     // Loads the real ai/personas/monitor/activity.md (default root = project cwd), not a synthetic one.
