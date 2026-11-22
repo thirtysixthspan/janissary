@@ -13,10 +13,20 @@ function literalUsage(text: string): string {
   return `${leading}${prefix}${usage}${trailing}`;
 }
 
+// A persona load error names the missing directive placeholder as `<role>` (related errors name
+// `<persona>` and `<role>` too). Like a usage reply it is a single line of plain text: a bare
+// `<role>` reaches marked as an unknown element the sanitizer drops with its text. Escape only
+// persona error lines so the literal placeholder prints, leaving other markdown and raw HTML alone.
+function literalPersonaError(text: string): string {
+  if (!/^\s*Persona\s+"/.test(text)) return text;
+  return text.replaceAll(/(?<!\\)[<>]/g, (bracket) => `\\${bracket}`);
+}
+
 // Render Markdown text to a sanitized HTML string. Returns undefined on parse failure.
 export function renderMarkdown(text: string): string | undefined {
   try {
-    return DOMPurify.sanitize(marked.parse(literalUsage(text), { gfm: true, breaks: true, async: false }));
+    const literal = literalPersonaError(literalUsage(text));
+    return DOMPurify.sanitize(marked.parse(literal, { gfm: true, breaks: true, async: false }));
   } catch {
     return undefined;
   }

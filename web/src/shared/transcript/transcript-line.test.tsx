@@ -106,6 +106,12 @@ describe('renderLine — markdown link click', () => {
     expect(intents.onOpenFile).not.toHaveBeenCalled();
     expect(intents.onEditFile).not.toHaveBeenCalled();
   });
+
+  it('keeps the persona load-error directive placeholder literal', () => {
+    const line = makeMarkdownLine('Persona "researcher": expected first line [//]: # role: <role>.');
+    const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
+    expect(container.querySelector('.line.markdown')?.textContent).toContain('expected first line [//]: # role: <role>.');
+  });
 });
 
 describe('renderLine — ansi output', () => {

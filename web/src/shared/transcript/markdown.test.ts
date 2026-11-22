@@ -119,6 +119,32 @@ describe('renderMarkdown', () => {
     expect(host.textContent).toBe(`${text}\n`);
   });
 
+  it('renders a persona load error with its <role> placeholder literal', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const text = 'Persona "researcher": expected first line [//]: # role: <role>.';
+    const html = renderMarkdown(text) ?? '';
+    const host = document.createElement('div');
+    host.innerHTML = html;
+    expect(host.textContent).toBe(`${text}\n`);
+    expect(html).toContain('&lt;role&gt;');
+  });
+
+  it('renders related persona errors with their placeholders literal', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const messages = [
+      'Persona "researcher" requests unknown role "<role>".',
+      'Persona "researcher" finds no enabled models in role "<role>".',
+    ];
+    const visibleText = messages.map((message) => {
+      const host = document.createElement('div');
+      host.innerHTML = renderMarkdown(message) ?? '';
+      return host.textContent;
+    });
+    expect(visibleText).toEqual(messages.map((message) => `${message}\n`));
+  });
+
   it('leaves a single-line Markdown reply on the Markdown path', async () => {
     await withRealParse();
     const { renderMarkdown } = await import('./markdown');
