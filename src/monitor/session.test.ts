@@ -166,7 +166,7 @@ describe('respawnMonitorSession', () => {
     reg.contextBytes = 5000;
     reg.contextText = [{ role: 'input', text: 'old' }];
 
-    respawnMonitorSession(reg, managers);
+    respawnMonitorSession(reg, managers, new Map([[`${reg.owner}:${reg.persona.name}`, reg]]));
 
     expect(kill).toHaveBeenCalledTimes(1);
     expect(reg.contextBytes).toBeLessThan(5000);

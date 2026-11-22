@@ -4,7 +4,7 @@ import type { RoleEntry } from '../plugins/roles/shared.js';
 import type { MonitorSub } from './live-monitors.js';
 import { knownRoleSettings } from '../acp/ask-role.js';
 import { promptPersonaRole } from '../acp/persona-role.js';
-import { personaRoleRuntime } from '../acp/persona-role-state.js';
+import { existingPersonaRoleRuntime, personaRoleRuntime } from '../acp/persona-role-state.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { messageBus } from '../bus.js';
 import { SUGGESTION_FORMAT } from './reply-format.js';
@@ -57,10 +57,25 @@ export function openMonitorSession(reg: MonitorSub, managers: Managers): void {
   primeMonitorSession(reg, managers);
 }
 
-export function respawnMonitorSession(reg: MonitorSub, managers: Managers): void {
-  // A fresh session starts a fresh context.
+export function respawnMonitorSession(
+  reg: MonitorSub,
+  managers: Managers,
+  monitors: Map<string, MonitorSub>,
+): void {
+  // Each monitor resets its own context, independently of the others sharing the role slot.
   reg.contextBytes = 0;
   reg.contextText = [];
-  if (!managers.personaRoleSessions.close(reg.owner, reg.persona.role)) reg.session.kill();
+  const siblings = [...monitors.values()].filter(
+    (other) => other !== reg && other.owner === reg.owner && other.persona.role === reg.persona.role,
+  );
+  const tab = managers.tab.byLabel(reg.owner);
+  const state = tab ? existingPersonaRoleRuntime(tabRuntime(tab), reg.persona.role) : undefined;
+  const keepShared = siblings.length > 0 && state?.session !== undefined;
+  // Another monitor still using this role keeps a live shared session; otherwise close it once
+  // before priming a replacement. Priming re-binds this monitor to whichever session is current.
+  if (!keepShared && !managers.personaRoleSessions.close(reg.owner, reg.persona.role)) reg.session.kill();
   openMonitorSession(reg, managers);
+  // A fresh session adopted here must be adopted by every sibling still using the role, so none
+  // keeps a dead session and tries to respawn it again.
+  if (!keepShared) for (const sibling of siblings) sibling.session = reg.session;
 }

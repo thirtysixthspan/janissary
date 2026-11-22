@@ -84,7 +84,7 @@ export class LiveMonitors {
   // stopped monitor or a session already replaced, so no untracked subprocess is spawned.
   protected respawn(reg: MonitorSub, session: AcpSession = reg.session): void {
     if (!this.isCurrent(reg, session)) return;
-    respawnMonitorSession(reg, this.managers);
+    respawnMonitorSession(reg, this.managers, this.monitors);
     if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
   }
 

@@ -169,7 +169,7 @@ describe('promptPersonaRole core pipeline', () => {
 });
 
 describe('PersonaRoleSessionManager', () => {
-  it('forgets a dead session, reports to the latest hook, and spawns afresh', () => {
+  it('forgets a dead session, reports to every consumer hook, and spawns afresh', () => {
     const { managers, tabs } = harness();
     const first = makeSession().session;
     const next = makeSession().session;
@@ -185,7 +185,7 @@ describe('PersonaRoleSessionManager', () => {
 
     expect(service.hasSession('tab', 'custom')).toBe(false);
     expect(tabs[0].runtime?.personaRoles?.custom).toBeUndefined();
-    expect(earlier).not.toHaveBeenCalled();
+    expect(earlier).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
     expect(latest).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
     expect(service.session('tab', 'custom', ENTRY, '/repo', { onError: vi.fn() })).toBe(next);
   });

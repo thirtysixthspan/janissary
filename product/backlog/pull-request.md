@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle the shared role-session respawn path so one monitor's failure does not wedge a sibling on the same owner tab.
-
-Existing Issue: `respawnMonitorSession` closes the owner's role slot unconditionally, so when two monitors on one owner declare the same role the sibling keeps `reg.session` bound to the killed session; its next flush reports "ACP session closed." and respawns again, killing the fresh session the first monitor just opened. Severity: 6/10
-
-Existing Risk: 6/10 - Every bundled persona declares `ask`, so two monitors on one tab commonly share a slot; one rate limit or agent error makes them repeatedly close each other's sessions, both stop producing suggestions, and the transcript fills with restart lines.
-
-Proposal Risk: 3/10 - A coordination fix must preserve the stop-path survivor behavior in `stopMonitor` and each monitor's independent context reset, or it trades the wedge for a leaked or prematurely closed session.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2170 "coordinate shared role-session respawn across monitors on one owner". In `src/monitor/session.ts`, change `respawnMonitorSession` so it does not close the owner's `personaRoles` slot when another live monitor on that owner still uses the same role — use the same sibling check `stopMonitor` applies in `src/monitor/stop.ts` — and instead re-bind this registration to the current shared session; when the session really died, close it once and re-point every sibling registration's `reg.session` to the fresh session `openMonitorSession` primes. In `src/acp/persona-role-session.ts`, give each consumer its own death hook rather than overwriting the single `state.hooks` in `session`, so a connection-level death reaches all monitors sharing the slot. Add a colocated test in `src/monitor/manager.test.ts` that starts two monitors with the same role on one owner, fails one session, and asserts the sibling tracks the new session, both keep flushing, and no session is killed twice; the existing stop, restart, and respawn tests must keep passing.
-
-
 * Remove the obsolete harness and tools fields from monitor test persona fixtures after the persona type change.
 
 Existing Issue: Three monitor test files still build `Persona` fixtures with the removed `harness`/`tools` shape and no `role`, so the fixtures describe a persona format the loader no longer accepts. Severity: 2/10

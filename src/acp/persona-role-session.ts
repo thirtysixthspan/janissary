@@ -13,6 +13,7 @@ import {
 
 export class PersonaRoleSessionManager {
   private counter = 0;
+  private readonly deathHooks = new Map<string, PersonaRoleHooks[]>();
 
   constructor(private readonly managers: Managers) {}
 
@@ -25,7 +26,15 @@ export class PersonaRoleSessionManager {
     if (!tab) throw new Error('Tab not found');
     const runtime = tabRuntime(tab);
     const state = personaRoleRuntime(runtime, role);
-    state.hooks = hooks;
+    // Each consumer of a shared role slot owns a death hook. One composite invokes them all so a
+    // connection-level death reaches every monitor registered on the slot, not just the last one.
+    const key = `${label}:${role}`;
+    const registered = this.deathHooks.get(key) ?? [];
+    registered.push(hooks);
+    this.deathHooks.set(key, registered);
+    state.hooks = {
+      onError: (message) => { for (const hook of registered) hook.onError(message); },
+    };
     if (state.session) return state.session;
     const launch = acpLaunchForEntry(entry);
     if (!launch) throw new Error(`no ACP adapter for harness "${entry.harness}".`);
@@ -56,6 +65,7 @@ export class PersonaRoleSessionManager {
   }
 
   private forget(label: string, role: string): void {
+    this.deathHooks.delete(`${label}:${role}`);
     const runtime = this.managers.tab.byLabel(label)?.runtime;
     if (runtime) forgetPersonaRole(runtime, role);
   }

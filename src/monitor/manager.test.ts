@@ -714,6 +714,58 @@ describe('MonitorManager', () => {
     expect(sessions[1].prompts).toHaveLength(2); // fresh session keeps flushing
   });
 
+  it('a failed shared role session respawns once and re-points the sibling to the fresh session', () => {
+    const agent3 = makeTab('agent3', '#ccc');
+    const { managers } = makeFakeManagers([janus, agent2, agent3]);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }], 'watch-a');
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent3' }], 'watch-b');
+
+    emitEntry(agent2, 'one', 'first');
+    vi.advanceTimersByTime(FLUSH_MS);
+    const oldSession = sessions[0];
+    // The connection dies first, forgetting the shared slot; then this monitor's prompt fails.
+    const connectOptions = mocks.connectAcp.mock.calls[0][0] as { onError: (message: string) => void };
+    connectOptions.onError('ACP agent exited.');
+    oldSession.fail('ACP connection closed');
+
+    expect(oldSession.kill).toHaveBeenCalledTimes(1);
+    expect(sessions).toHaveLength(2);
+    expect(sessions[1].kill).not.toHaveBeenCalled();
+
+    emitEntry(agent3, 'two', 'sibling');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[1].prompts.at(-1)).toContain('sibling');
+    emitEntry(agent2, 'three', 'failed');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[1].prompts.at(-1)).toContain('failed');
+    expect(oldSession.prompts).toHaveLength(3); // nothing further lands on the dead session
+  });
+
+  it('a prompt error keeps a live shared session and re-binds without killing it', () => {
+    const agent3 = makeTab('agent3', '#ccc');
+    const { managers } = makeFakeManagers([janus, agent2, agent3]);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }], 'watch-a');
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent3' }], 'watch-b');
+
+    emitEntry(agent2, 'one', 'first');
+    vi.advanceTimersByTime(FLUSH_MS);
+    sessions[0].fail('too many requests');
+
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].kill).not.toHaveBeenCalled();
+
+    emitEntry(agent2, 'two', 'again');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts.at(-1)).toContain('again');
+    emitEntry(agent3, 'three', 'sibling');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[0].prompts.at(-1)).toContain('sibling');
+  });
+
   it('a flush error with a rate-limit-shaped message fires a rate-limited notification', () => {
     const { managers } = makeFakeManagers([janus]);
     const { sessions } = fakeSpawnFactory();
