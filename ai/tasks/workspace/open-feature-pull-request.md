@@ -1,6 +1,6 @@
 # Open a Feature Pull Request
 
-Your job: take the uncommitted work in this repository, package it into a well-described pull request against `master` on GitHub, and open it. **Do not merge the PR** — just open it with a thorough description so reviewers understand exactly what changed and why.
+Your job: take the uncommitted work in this repository, package it into a well-described pull request against `master` on GitHub, and open it. **Do not merge the PR** — just open it; in the default full-body mode, write a thorough description so reviewers understand exactly what changed and why.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
@@ -8,7 +8,7 @@ Your job: take the uncommitted work in this repository, package it into a well-d
 
 ## The PR description
 
-The PR body is the deliverable. It must be **thorough and self-contained** — a reviewer should understand the feature without reading the code. Write it to `./temp/pr-body.md`, then pass that file to the create-PR script.
+The PR body is the deliverable. In the default full-body mode it must be **thorough and self-contained** — a reviewer should understand the feature without reading the code. In plan-first summary mode the body is intentionally a short plan summary whose full form is authored later by [`update-pull-request.md`](../feature/update-pull-request.md). Write it to `./temp/pr-body.md`, then pass that file to the create-PR script.
 
 ### Two body modes
 
