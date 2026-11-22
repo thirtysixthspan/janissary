@@ -22,6 +22,7 @@ Edit the **one plan file** you picked: correct it, disambiguate it, restructure 
 2. **Editing any file other than the chosen plan.** No source, no tests, no config, no other plans.
 3. **Moving the plan out of `./product/plans/draft/`.** Promotion to `ready/` is the human's status decision (see the plan-storage section in [`AGENTS.md`](../../../AGENTS.md)).
 4. **Deciding product scope.** If the plan's *goal* seems wrong or not worth doing, say so in your report — do not rewrite the goal.
+5. **Naming a user or developer documentation page as a plan requirement.** User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A plan names only the specs and help pages it touches and never a page under `documentation/user-documentation/` or `documentation/developer-documentation/`. Carry a user-documentation gap into the report's `Open` items as a follow-up feature candidate instead of writing it into the plan.
 
 ---
 

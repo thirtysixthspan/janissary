@@ -104,6 +104,7 @@ Work the product-decision tree using the mechanism described above. Ask the user
 - **Primary flow** — what exactly does the user do, and what do they see happen, step by step.
 - **Edge cases** — what happens on the empty state, a conflict, a cancel, an error, or an unexpected input.
 - **Scope boundary** — what is explicitly *not* included in this version.
+- **Scope boundary for user-visible changes** — when the feature changes something the user sees or operates, ask how to record its documentation work. State in the question that the plan records the documentation work as a follow-up feature candidate: "User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan." Offer at least three concrete answers: record a follow-up feature candidate for the prose documentation page only; record candidates for both the prose documentation page and any in-app help page or key-binding row; or record the work in the report's `Open` items for a human to file, naming no page in the plan. Mark the recommended and lowest-cost answer per the question format, and never write a documentation page into this feature's plan.
 - **Naming/wording** — any user-visible text (labels, commands, messages) the plan needs to fix precisely.
 
 Skip a category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
@@ -163,6 +164,7 @@ If either gate is unchecked, finish that task before continuing. If a task canno
 - [ ] You know what is out of scope.
 - [ ] You know the exact user-visible wording, if any.
 - [ ] If the feature has a UI, you know its placement, interaction, every state, and its key bindings.
+- [ ] Any user-visible change has its documentation boundary recorded: the plan records the documentation work as a follow-up feature candidate under "User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan.", and no page under either documentation tree appears in the plan.
 
 If every box is checked and both improvement passes surfaced nothing new, the plan is complete. Otherwise, work one more decision-tree phase over: the unchecked items, plus any new questions the improvement passes raised — new and remaining decisions alike join the same tree. Unchecked items with no dependency are askable now; items whose answers hang on another open question wait until that question is answered, with no limit on questions. Ask them one at a time in the question format above. Target only the open items, and apply every answer to the draft, then re-read it and repeat this step. Continue until every box is checked and nothing surfaced remains unresolved; do not leave unresolved product or implementation decisions in the plan.
 
