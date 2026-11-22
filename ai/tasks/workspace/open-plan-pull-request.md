@@ -93,7 +93,7 @@ $janissary/scripts/run.mjs pr-push-branch origin my-branch-name
 
 ## Step 5 — Write the PR body
 
-Write the short plan summary described under "The PR description" to `./temp/pr-body.md`. It carries `### What`, a `Plan:` line and an optional `Subplans:` line, and nothing else. Do not write Behavior examples, Screenshots or How to verify.
+Write the short plan summary described under "The PR body" to `./temp/pr-body.md`. It carries `### What`, a `Plan:` line and an optional `Subplans:` line, and nothing else. Do not write Behavior examples, Screenshots or How to verify.
 
 ---
 
