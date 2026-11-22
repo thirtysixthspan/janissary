@@ -17,7 +17,7 @@ In `ai/tasks/planning/decompose-plan.md`, treat each preserved-behavior entry as
 In `ai/tasks/feature/build-a-feature.md`, require the implementer to run the pinning test for every preserved-behavior entry before calling a subplan complete.
 In `ai/tasks/feature/review-pull-request.md`, make the plan-fidelity pass walk the preserved-behavior list explicitly: check the negative assertions against the diff, and record a finding when a test pins behavior that the plan's own requirements forbid. 
 
-
+* AI personas should specify a role instead of a model and tools. When the persona is used, the role must be used in the acp connection. Migrate editor agent support to the same acp pipeline that the ask and tell commands use.
 
 ## development
 
