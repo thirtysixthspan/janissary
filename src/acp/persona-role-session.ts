@@ -43,6 +43,7 @@ export class PersonaRoleSessionManager {
       ...launch, cwd, workspaceDir: tab.workspaceDir, offline: tab.offline,
       onError: (message) => this.died(label, role, session, message),
       onConnect: () => messageBus.emit('state', { type: 'dirty' }),
+      onSessionStarted: (providerId) => { state.providerId = providerId; },
     });
     state.session = session;
     state.identity = identity;

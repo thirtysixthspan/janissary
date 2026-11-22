@@ -13,6 +13,7 @@ export type PersonaRoleRuntime = {
   context?: { role: 'input' | 'response'; text: string }[];
   identity?: string;
   model?: string;
+  providerId?: string;
 };
 
 export function personaRoleRuntime(runtime: TabRuntime, role: string): PersonaRoleRuntime {

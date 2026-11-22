@@ -11,6 +11,7 @@ import type { TabRuntime } from '../tab/types.js';
 import { acpActivity, type AcpActivityKind } from './activity.js';
 import { beginCoreRecord, closeCoreRecord, coreActivity } from './record-feed.js';
 import { ACP_ROLES, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
+import { existingPersonaRoleRuntime } from './persona-role-state.js';
 
 type ConnectHooks = { onError: (message: string) => void; onConnect: () => void };
 type Handshake = 'connecting' | 'idle' | 'published' | 'failed';
@@ -36,14 +37,17 @@ export class AcpSessionManager {
 
   sessionIdentity(label: string, role: AcpRole = DEFAULT_ACP_ROLE): string | undefined {
     const holder = this.sessions.get(label)?.get(role);
-    return holder?.closing ? undefined : holder?.identity;
+    const identity = holder?.closing ? undefined : holder?.identity;
+    return identity ?? this.personaCaller(label, role)?.identity;
   }
 
   providerSessionId(label: string, role: AcpRole = DEFAULT_ACP_ROLE): string | undefined {
     const holder = this.sessions.get(label)?.get(role);
-    if (holder?.providerId === undefined) return undefined;
-    const runtime = this.managers.tab.byLabel(label)?.runtime;
-    return holder.runtime === runtime && !holder.runtime.closing ? holder.providerId : undefined;
+    if (holder?.providerId !== undefined) {
+      const runtime = this.managers.tab.byLabel(label)?.runtime;
+      return holder.runtime === runtime && !holder.runtime.closing ? holder.providerId : undefined;
+    }
+    return this.personaCaller(label, role)?.providerId;
   }
 
   session(
@@ -179,6 +183,14 @@ export class AcpSessionManager {
     const holder = this.sessions.get(label)?.get(role);
     return holder?.session === session && !holder.closing
       && holder.runtime === this.managers.tab.byLabel(label)?.runtime;
+  }
+
+  private personaCaller(label: string, role: AcpRole) {
+    const runtime = this.managers.tab.byLabel(label)?.runtime;
+    if (!runtime || runtime.closing) return;
+    const persona = existingPersonaRoleRuntime(runtime, role);
+    if (!persona?.session) return;
+    return persona;
   }
 
   private sessionsFor(label: string, create = false): RoleSessions | undefined {

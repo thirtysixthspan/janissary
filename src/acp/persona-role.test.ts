@@ -31,6 +31,7 @@ vi.mock('./index.js', async (importOriginal) => ({
 
 import { promptPersonaRole } from './persona-role.js';
 import { PersonaRoleSessionManager } from './persona-role-session.js';
+import { AcpSessionManager } from './session-manager.js';
 import { runAcpCommand } from './response.js';
 
 const ENTRY = { harness: 'opencode', model: 'model-x' };
@@ -140,6 +141,33 @@ describe('promptPersonaRole core pipeline', () => {
       prompt: 'hello', role: 'custom', roleName: 'Custom Role', commands: ['file read'],
     });
     expect(request.state).toBe(managers.tab.byLabel('tab')?.runtime?.personaRoles?.custom);
+  });
+
+  it('resolves the caller identity of a subagent granted to a persona role', async () => {
+    mocks.knownRoleSettings.mockReturnValue({ name: 'Custom', entries: [ENTRY], commands: ['subagent'] });
+    mocks.connectAcp.mockImplementation((options: { onSessionStarted?: (id: string) => void }) => {
+      options.onSessionStarted?.('provider-session-1');
+      return makeSession().session;
+    });
+    const { managers } = harness();
+    const acp = new AcpSessionManager(managers);
+    Object.assign(managers.acp, {
+      sessionIdentity: acp.sessionIdentity.bind(acp),
+      providerSessionId: acp.providerSessionId.bind(acp),
+    });
+    let caller: { identity?: string; callerId?: string } | undefined;
+    mocks.runCorePrompt.mockImplementationOnce((_managers, label, _runtime, request, _settings, _session, identity) => {
+      caller = {
+        identity: _managers.acp.sessionIdentity(label, request.role),
+        callerId: _managers.acp.providerSessionId(label, request.role),
+      };
+      request.finish({ answered: true, reply: 'done', session: identity });
+    });
+
+    await promptPersonaRole(managers, 'tab', 'hello', 'custom', 'reviewer');
+
+    expect(mocks.runCorePrompt).toHaveBeenCalledTimes(1);
+    expect(caller).toEqual({ identity: 'persona-acp-1', callerId: 'provider-session-1' });
   });
 
   it('keeps two role names on one tab in separate slots with their own sessions', async () => {
