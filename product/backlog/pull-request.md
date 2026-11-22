@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's "After" behavior example so its pinning test is a real existing test.
-
-Existing Issue: The "After" example offers a preserved-behavior entry pinned by `src/tab/__tests__/navigation.test.ts` "cycles tabs without reordering", a path and test that do not exist, while the new template rule says an entry must name an existing test that pins the behavior. Severity: 5/10
-
-Existing Risk: 5/10 - A reader copies the example into a plan and names a test that does not exist, which the plan's own rules say must instead become a normal requirement, leaving the change's showcase unverifiable against the code.
-
-Proposal Risk: 2/10 - The example points at a real test that pins tab ordering, so it can be checked against the repo, while no workflow rule or edited document changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2183 "correct the behavior example's non-existent pinning test". In the pull request body's Behavior examples section, replace the "After" entry's `src/tab/__tests__/navigation.test.ts` "cycles tabs without reordering" reference with an existing test in `src/tab/` that pins tab ordering (for example a test in `src/tab/reorder.test.ts`), quoting that test's real name so the entry satisfies the new rule that an entry names an existing test; if no single existing test pins that behavior, relabel the transcript explicitly as hypothetical. Leave the Before/After contrast and the rest of the description unchanged. Verify by opening the named test file and confirming the quoted test exists, and by reading the rewritten example against the `### Preserved behavior` rules in `ai/guidelines/plan-template.md`.
-
-
 * Deliver the plan's no-backfill decision without leaving the template's own section rule contradictory.
 
 Existing Issue: The template's section overview states "Every section is required in every plan" while the newly added Preserved behavior subsection says the section is required only in plans authored after its introduction and that existing plans in `ready/`, `complete/`, or `deferred/` are not backfilled. Severity: 5/10
