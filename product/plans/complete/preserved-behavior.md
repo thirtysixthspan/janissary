@@ -53,13 +53,13 @@ Make preservation claims in plans concrete and verifiable instead of vague assur
 
 ## Assumptions
 
-1. The plan template is the single owner of plan structure, and every section is required in every plan — `ai/guidelines/plan-template.md:3` ("This is the single owner of the plan's structure.") and `ai/guidelines/plan-template.md:15` ("Every section is required in every plan.").
+1. The plan template is the single owner of plan structure, and every section is required in every plan — `ai/guidelines/plan-template.md:3` ("This is the single owner of the plan's structure.") and `ai/guidelines/plan-template.md:15` ("Every section is required in every plan;").
 2. The template already defines a section whose "None found" fallback is the model for a section that may have no entries — `ai/guidelines/plan-template.md:37` ("### Existing functionality") and `ai/guidelines/plan-template.md:39` ("When reconnaissance found no precedent, a single \"None found\" is acceptable.").
 3. The plan-authoring task has a Phase 1 product-question stage and a Step 2h final checklist to extend — `ai/tasks/feature/plan-a-new-feature.md:100` ("### 2d. Phase 1 — resolve product decisions") and `ai/tasks/feature/plan-a-new-feature.md:172` ("Before moving on, check the completed plan against this list:").
 4. The improvement task has a Step 3 that lists ways an implementer could go wrong — `ai/tasks/planning/improve-plan.md:53` ("## Step 3 — Find the ways an implementer could go wrong").
 5. The decomposition task has a Step 2 that inventories every requirement and edge case and a Step 6 coverage map — `ai/tasks/planning/decompose-plan.md:45` ("## Step 2 — Read the plan and the code it touches") and `ai/tasks/planning/decompose-plan.md:77` ("## Step 6 — Verify and move the source plan").
 6. The review task has a plan-fidelity pass that checks whether the diff delivers each plan promise — `ai/tasks/feature/review-pull-request.md:132` ("- **Plan fidelity.**").
-7. Every edit the feature text names is a document under `ai/` — `product/backlog/features.md:7` ("In `ai/guidelines/plan-template.md`, add a required `## Preserved behavior` section") and `product/backlog/features.md:12` ("In `ai/tasks/feature/review-pull-request.md`, make the plan-fidelity pass walk the preserved-behavior list explicitly"); no file under `product/specs/` is named.
+7. Every edit the feature text names is a document under `ai/` — this plan's `## Goal` and `## Requirements` name edits only to `ai/guidelines/plan-template.md`, `ai/tasks/feature/plan-a-new-feature.md`, `ai/tasks/planning/improve-plan.md`, `ai/tasks/planning/decompose-plan.md`, and `ai/tasks/feature/review-pull-request.md`; no file under `product/specs/` is named.
 
 ## Existing functionality
 
