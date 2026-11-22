@@ -10,9 +10,30 @@ Your job: take the uncommitted work in this repository, package it into a well-d
 
 The PR body is the deliverable. It must be **thorough and self-contained** — a reviewer should understand the feature without reading the code. Write it to `./temp/pr-body.md`, then pass that file to the create-PR script.
 
+### Two body modes
+
+There are two body modes. The caller selects one when it delegates this task; do not infer the mode from the branch. When no mode is named, use the default full body below. A hygiene or documentation pull request is never opened from a plan commit and keeps that default.
+
+- **Full body (default).** The ordinary four-section body described in this document: **What**, **Behavior examples**, **Screenshots**, and **How to verify**.
+- **Plan-first summary.** For a pull request opened after a plan commit, when no code exists yet. The caller — a build task — selects this mode because its plan (and any subplans) is committed before the PR opens. Write only the short summary below; the full description is authored later by [`update-pull-request.md`](../feature/update-pull-request.md).
+
+In plan-first summary mode the body is only this short summary, with no Behavior examples, Screenshots, or How to verify section:
+
+```
+### What
+
+<the plan's own `#` title, followed by the text of its `## Goal` section>
+
+Plan: <repo-relative path of the source plan under product/plans/complete/>
+
+Subplans: <repo-relative path> — <title>, <repo-relative path> — <title>, …
+```
+
+`Plan:` names the repo-relative path of the source plan under `product/plans/complete/`. `Subplans:`, when present, lists in order each subplan added from `product/plans/ready/` as `<repo-relative path> — <title>`. Omit the `Subplans:` line entirely when there are no subplans. A plan-first summary writes none of Behavior examples, Screenshots or How to verify.
+
 **Leave change-set statistics out of the description.** This is a guideline, not a hard rule. Don't state how many commits, files, or lines the pull request changes, don't cite commit SHAs, and don't list the changed files or restate anything else a reader can read straight off the change set. GitHub already shows all of it beside the description, and a copy in the prose goes stale with the next push. Say what changed and why instead. The screenshot links in Step 7 pin a commit SHA so the images still resolve after the branch is deleted; those are links, not claims, and they stay.
 
-The body must include **every section below**, in this order:
+For the default full body, the body must include **every section below**, in this order:
 
 ### What
 
@@ -139,7 +160,9 @@ $janissary/scripts/run.mjs pr-push-branch origin my-branch-name
 
 ## Step 5 — Write the PR body
 
-Write the full PR body to `./temp/pr-body.md` following the structure at the top of this document:
+When the caller selected plan-first summary mode, write only the short summary described under "The PR description" — `### What`, a `Plan:` line and the optional `Subplans:` line — and skip the full body below.
+
+Otherwise write the full PR body to `./temp/pr-body.md` following the structure at the top of this document:
 
 1. **Summary** - 1-2 sentences
 2. **What** — 3-5 paragraphs
@@ -164,6 +187,8 @@ Record the PR number and URL that the command prints; Step 7 needs the number.
 ---
 
 ## Step 7 — Capture screenshots and add them to the PR
+
+Skip this step entirely in plan-first summary mode: the pull request opened with no code and no UI to capture, and its Screenshots section is authored later by [`update-pull-request.md`](../feature/update-pull-request.md) as the one-line reason no capture was possible. Go to Step 8. In the default full-body mode, continue below.
 
 Screenshots come from the e2e browser Janissary attaches to a tab launched with `-b`. Read [`ai/guidelines/sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) first; it explains the connection and lifecycle rules this step depends on.
 

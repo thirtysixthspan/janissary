@@ -101,7 +101,7 @@ git mv ./product/plans/ready/<plan-file> ./product/plans/complete/<plan-file>
 
 ## Step 7 — Open the pull request
 
-Execute `ai/tasks/workspace/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
+Execute `ai/tasks/workspace/open-feature-pull-request.md`, selecting its plan-first summary mode because the plan is already promoted and there is no code or UI to describe yet. That document owns the PR workflow — follow its steps without deviation.
 
 Record the PR number, URL, and head branch it reports. Steps 8 and 9 work on that PR and no other.
 

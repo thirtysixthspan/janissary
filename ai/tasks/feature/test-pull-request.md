@@ -98,7 +98,9 @@ Do not overstate what this buys. The gate keeps lifecycle scripts and known-bad 
 
 ## Step 4 — Collect the testing steps
 
-1. Run `gh pr view <number> --json title,body`. Take every step in the body's **How to verify** section, which [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md) writes, including a **Replication steps** account inside it, which [`fix-a-bug.md`](../fix-a-bug.md) writes there.
+The description you collect steps from was already rewritten from the final code, tests and specs by [`update-pull-request.md`](update-pull-request.md), so its **How to verify** steps describe the delivered work rather than the plan written before code existed.
+
+1. Run `gh pr view <number> --json title,body`. Take every step in the body's **How to verify** section. For a plan-first pull request this section is named as written by [`update-pull-request.md`](update-pull-request.md), not by [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md), which wrote only the short plan summary at creation; it may include a **Replication steps** account inside it, which [`fix-a-bug.md`](../fix-a-bug.md) writes there.
 2. Run `gh pr diff <number> --name-only` and read each `./product/plans/**/*.md` file it lists. Take the manual checks in each plan's **Verification** section.
 3. A step that appears in both sources is run once, under its description id.
 4. Give each step an id by source: `D1`, `D2`, … for the description, `P1`, `P2`, … for the plan. Keep its verbatim text and its expected result exactly as the source states it.
@@ -164,7 +166,7 @@ Then run a second driver, `--out rerun`, holding only the steps that failed, eac
 
 Follow the observed behavior into the code, and name the file, the function, the mechanism, and a likely fix. Checking a hypothesis starts another batch the way Step 8 does. Do not change code or run its test suite.
 
-Decide here whether the code or the step is wrong. When the app does what the plan or a spec says and the step expects something else, or the step names a command, control, or message that does not exist, the failure is a **step correction**. A wrong step from a plan's Verification section is also corrected in the description's **How to verify**: `work-pull-request-issue.md` can edit the description but not another plan's text, and a completed plan is a historical record.
+Decide here whether the code or the step is wrong. When the app does what the plan or a spec says and the step expects something else, or the step names a command, control, or message that does not exist, the failure is a **step correction**. A wrong step from a plan's Verification section is also corrected in the description's **How to verify**: `work-pull-request-issue.md` can edit the description but not another plan's text, and a completed plan is a historical record. Name, in the correction's `Proposal`, the source line or test assertion that supplies the true value, so the corrected step can be anchored to the code that proves it.
 
 A failure whose root cause you cannot locate is still filed. Say plainly that the cause was not found, name what was checked and ruled out, and describe the fix only as far as the evidence supports it. Failures that share one root cause become one entry that lists every failing step, so the cause is fixed once.
 

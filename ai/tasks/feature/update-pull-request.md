@@ -161,11 +161,15 @@ If the push is rejected because the remote branch advanced, run `git pull --reba
 
 This comes after the push, never before. The description is live on GitHub the moment it is edited, so an earlier edit could describe work that never reached the branch.
 
+This task is the single author of the full description. A plan-first pull request opens with only a short plan summary — no Behavior examples, Screenshots or How to verify — and this step writes the complete body from the final code, tests and specs on the branch. "Single author" means you write the whole sections; it is not exclusive editing: `work-pull-request-issue.md` keeps its surgical description-correction path and `test-pull-request.md` keeps its own **Additional test cases** section.
+
 1. Run `gh pr view <number> --json body` and take the current body.
-2. Correct and complete it against the code on the branch, in the author's structure:
-   - Fix every claim the code no longer supports, and add behavior the code has that the description never mentions.
-   - Keep the author's section headings and their order. A description written by [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md) carries **What**, **Behavior examples**, **Screenshots**, and **How to verify**, and may carry a **Replication steps** account inside **How to verify** from `fix-a-bug.md`. Correct each section that exists; do not add missing sections or regenerate the body.
-   - Rewrite a **Behavior examples** transcript or a **How to verify** expected result that no longer matches from the code, its tests, and the specs. The app is never started to produce one.
+2. Author the full description against the code on the branch, in the author's structure:
+   - Write all four sections — **What**, **Behavior examples**, **Screenshots**, and **How to verify** — with the headings and order a description from [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md) carries; it may also carry a **Replication steps** account inside **How to verify** from `fix-a-bug.md`. Keep the author's section headings and their order, and leave accurate prose exactly as the author wrote it. Do not merely correct sections that exist: add any section the plan-first summary lacked and write a full body that describes the delivered work.
+   - Derive every claim from the final code, its tests, and the specs. The app is never started to produce one.
+   - Anchor every verifiable statement. Each **Behavior examples** transcript, **Screenshots** claim, and **Do**/**Expect** line in **How to verify** must name the code path and line or the test assertion that proves it. Delete any such statement that has no anchor — never keep an unanchored example, screenshot claim, or verification step.
+   - Where two claims carry the same fact, keep the one with the most specific anchor and delete the other. A named test assertion outranks a named code path and line, which outranks general prose.
+   - Write the **Screenshots** section as the one-line reason no screenshot could be captured, not an image: a plan-first pull request skips screenshot work at creation and this task never starts the app. Do not leave a placeholder or invent a capture step.
    - Leave change-set statistics out of what you write. This is a guideline, not a hard rule. Don't state how many commits, files, or lines the pull request changes, and don't cite commit SHAs. GitHub already shows them, and a copy in the prose goes stale with the next push. When the body already states one, remove the claim rather than updating the number.
    - Leave the **Additional test cases** section byte-for-byte, from its heading up to the next heading of the same or a higher level or the end of the body. Leave everything that is already accurate exactly as the author wrote it.
 3. **When the body already matches the code,** skip the rest of this step.
