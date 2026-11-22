@@ -1,9 +1,3 @@
-export type PersonaHarness = {
-  harness: 'opencode' | 'claude';
-  model: string;
-  variant: string;
-};
-
 const ROLE_PREFIX = '[//]: # role:';
 
 export function parseRoleDirective(name: string, line: string): string {
