@@ -143,7 +143,7 @@ If the user stops the run here, or chooses to stop the removal over a deep tie, 
 
 Name the plan `remove-<feature-slug>.md`, where the slug is the kebab-case name of the feature as settled with the user, for example `remove-audio-player-tab.md`. Use the same name in every folder.
 
-Write it to `./product/plans/draft/remove-<feature-slug>.md` in the house shape of `product/plans/complete/remove-gruvbox-dark-theme.md`: a complexity line, the goal, the approach, implementation steps in the order they will be done, tests, spec updates, verification, and out of scope. Record every scope decision from Step 5 in it. The Verification section carries the complete Step 2 dead-code baseline, so the comparison survives the run and ships with the PR, and it names each live check Step 9 will make.
+Write it to `./product/plans/draft/remove-<feature-slug>.md`. Follow `ai/guidelines/plan-template.md` for the plan's sections and each section's format and content; that template is the single owner of plan shape, so do not work from a section list copied out of an older plan. Record every scope decision from Step 5 in it. The template's Verification section carries the complete Step 2 dead-code baseline, so the comparison survives the run and ships with the PR, and it names each live check Step 9 will make.
 
 Then judge the plan's complexity by opening `ai/tasks/planning/rate-plan-complexity.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the plan you just wrote, and the task records the `**Complexity: N/10** — <rationale>` line directly under its `#` title. Use that rating as the plan's complexity line and in the final report; do not assign one by judgment.
 
