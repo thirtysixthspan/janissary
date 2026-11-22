@@ -93,7 +93,7 @@ A hygiene-triggered run produces **no plan file** — the playbook is the plan. 
 
 1. Read the project constraints in [`AGENTS.md`](../../AGENTS.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.tsx`).
 2. Read every file relevant to the item to understand the code involved.
-3. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, goal, approach, implementation steps, tests, and out-of-scope items. Write it to `./product/plans/draft/<item-name>.md`.
+3. Write a plan file to `./product/plans/draft/<item-name>.md`. Follow `ai/guidelines/plan-template.md` for the plan's sections and each section's format and content; that template is the single owner of plan shape, so do not work from a section list copied out of an older plan.
 4. Judge the plan's complexity by opening `ai/tasks/planning/rate-plan-complexity.md` and executing every step in order, except `Step 0 — Prepare the workspace` and `Step 1 — Pick the plan`. Your target is the plan you just wrote, and the task records the `**Complexity: N/10** — <rationale>` line directly under its `#` title. Use that rating as the plan's complexity rating and in the final report; do not assign one by judgment.
 5. After the plan is rated, move from `./product/plans/draft/` to `./product/plans/ready/`. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
    ```bash
