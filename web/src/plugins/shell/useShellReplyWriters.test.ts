@@ -71,7 +71,7 @@ function setup(overrides: Partial<Props> = {}) {
   return { fake, placement, placementRef, markersRef, replyIds, terminalRef, props, openLink, openConnection, ...view };
 }
 
-type RoleReceipt = Extract<ShellAcpReceipt, { role: 'ask' | 'tell' }>;
+type RoleReceipt = Extract<ShellAcpReceipt, { role: string }>;
 
 function receipt(replyId: string, role: RoleReceipt['role'] = 'ask', name = 'ask-model'): ShellAcpReceipt {
   return { replyId, role, name };

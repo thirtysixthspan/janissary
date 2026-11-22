@@ -21,6 +21,22 @@ describe('ACP record source validation', () => {
     expect(isRecordSource(core)).toBe(true);
   });
 
+  it('accepts a roles-file role name on a core source and rejects an empty one', () => {
+    expect(isRecordSource({ ...core, role: 'review-bot' })).toBe(true);
+    expect(isRecordSource({ ...core, role: '  ' })).toBe(false);
+  });
+
+  it('round-trips a stored record carrying a roles-file role name', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-00000000000d';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id,
+      source: { ...core, role: 'review-bot' }, title: 'ACP: review',
+      startedAt: 0, updatedAt: 1, blocks: [{ prompt: 'review', startedAt: 0, entries: [], answer: 'done', endedAt: 1 }],
+    };
+
+    expect(isAcpRecord(record, id)).toBe(true);
+  });
+
   it('loads a stored subagent record without migration', () => {
     const id = 'a0b1c2d3-0000-4000-8000-000000000000';
     const record: AcpRecord = {

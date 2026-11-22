@@ -17,7 +17,7 @@ import {
 } from './ask-role.js';
 import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
 import { cancelAcpPrompt } from './cancel-prompt.js';
-import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
+import { afterRolePrefix, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 
@@ -58,8 +58,7 @@ export class AcpManager extends AcpSessionManager {
   }
 
   async prompt(label: string, command: string, role: AcpRole = DEFAULT_ACP_ROLE): Promise<string> {
-    const prefix = role === 'ask' ? /^ask\b/i : /^tell\b/i;
-    const input = prefix.test(command.trim()) ? command : `${role} ${command}`;
+    const input = afterRolePrefix(command, role) === undefined ? `${role} ${command}` : command;
     const result = await this.promptResult(label, input, role);
     return result.answered ? result.reply : result.error;
   }
@@ -86,8 +85,7 @@ export class AcpManager extends AcpSessionManager {
       const tab = this.managers.tab.byLabel(label);
       if (!tab) { onDone({ answered: false, error: 'Tab not found' }); return; }
       const runtime = tabRuntime(tab);
-      const prefix = role === 'ask' ? /^ask\b\s*/i : /^tell\b\s*/i;
-      const prompt = command.replace(prefix, '').trim();
+      const prompt = afterRolePrefix(command, role) ?? command.trim();
       const refusal = existingAcpRoleRuntime(runtime, role)?.prompt ? 'ACP: a prompt is already running.'
         : prompt ? this.stillConnecting(label) ? STILL_CONNECTING : undefined
           : `Usage: ${role} <prompt>.`;

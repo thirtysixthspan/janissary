@@ -1,6 +1,6 @@
 export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 2;
 
-export type AcpRole = 'ask' | 'tell';
+export type AcpRole = string;
 
 export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
 export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
@@ -79,7 +79,7 @@ function object(value: unknown): value is Record<string, unknown> {
 }
 
 function isAcpRole(value: unknown): value is AcpRole {
-  return value === 'ask' || value === 'tell';
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function optionalString(row: Record<string, unknown>, key: string): boolean {

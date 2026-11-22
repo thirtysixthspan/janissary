@@ -77,7 +77,15 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'list', rows: [record] })).toBe(true);
   });
 
-  it('accepts ask and tell roles while preserving legacy role-less rows and sources', () => {
+  it('accepts a non-empty custom role on a live ACP ref and refuses an empty one', () => {
+    const custom = { ...live, kind: 'acp', acpRef: { scope: 'tab', label: 'Owner', role: 'review-bot' } };
+    const empty = { ...live, kind: 'acp', acpRef: { scope: 'tab', label: 'Owner', role: '' } };
+
+    expect(isConnectionsPayload({ kind: 'list', rows: [custom] })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'list', rows: [empty] })).toBe(false);
+  });
+
+  it('accepts ask, tell and custom roles while preserving legacy role-less rows and sources', () => {
     const ask = {
       ...record, role: 'ask',
       window: { ...record.window, source: { ...record.window.source, role: 'ask' } },
@@ -86,13 +94,19 @@ describe('connections shared contract', () => {
       ...record, role: 'tell',
       window: { ...record.window, source: { ...record.window.source, role: 'tell' } },
     };
+    const custom = {
+      ...record, role: 'review-bot',
+      window: { ...record.window, source: { ...record.window.source, role: 'review-bot' } },
+    };
 
-    expect(isConnectionsPayload({ kind: 'list', rows: [record, ask, tell] })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'list', rows: [record, ask, tell, custom] })).toBe(true);
     expect(recordConnectionName({ kind: 'acp', ownerName: 'build', role: 'ask' })).toBe('acp:ask:build');
     expect(recordConnectionName({ kind: 'acp', ownerName: 'build', role: 'tell' })).toBe('acp:tell:build');
+    expect(recordConnectionName({ kind: 'acp', ownerName: 'build', role: 'review-bot' })).toBe('acp:review-bot:build');
     expect(recordConnectionName({ kind: 'acp', ownerName: 'build' })).toBe('acp:build');
     expect(recordConnectionName({ kind: 'agent', ownerName: 'release notes' })).toBe('agent:release notes');
   });
+
 
   it('accepts a live row marked permanent', () => {
     expect(isConnectionsPayload({ kind: 'list', rows: [{ ...live, permanent: true }] })).toBe(true);
@@ -130,9 +144,7 @@ describe('connections shared contract', () => {
     { kind: 'list', rows: [{ ...live, permanent: false }] },
     { kind: 'list', rows: [{ ...live, permanent: 'yes' }] },
     { kind: 'list', rows: [{ ...record, host: 7 }] },
-    { kind: 'list', rows: [{ ...record, role: 'review' }] },
     { kind: 'list', rows: [{ ...record, kind: 'agent', runId: 'run-1', role: 'ask' }] },
-    { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { ...record.window.source, role: 'review' } } }] },
     { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { kind: 'agent', model: 'model', ownerLabel: 'owner', ownerName: 'Owner', runId: 'run-1', taskPath: 'task.md', role: 'tell' } } }] },
     { kind: 'list', rows: [{ ...subagent, subagentRole: '' }] },
     { kind: 'list', rows: [{ ...subagent, subagentRole: ' '.repeat(3) }] },

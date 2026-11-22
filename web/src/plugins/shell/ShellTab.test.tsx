@@ -1418,7 +1418,7 @@ describe('ShellTab', () => {
 
   it.each([
     { label: 'missing', result: undefined },
-    { label: 'malformed', result: { replyId: 'bad', role: 'unknown', name: 'acp:ask:shell1' } },
+    { label: 'malformed', result: { replyId: 'bad', role: '', name: 'acp:ask:shell1' } },
     { label: 'malformed record', result: { replyId: 'bad', kind: 'record', name: 'subagent:research' } },
   ])('does not mark a core response with a $label receipt', async ({ result }) => {
     const { releaseDispatch } = renderTab({ dispatched: true, coreResponse: true, result });

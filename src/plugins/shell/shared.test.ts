@@ -65,6 +65,7 @@ describe('shell shared contract', () => {
       { text: 'main.db', kind: 'sqlite' },
       { text: 'acp:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'ask' } },
       { text: 'acp:tell:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'tell' } },
+      { text: 'acp:review-bot:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'review-bot' } },
       { text: 'monitor:activity (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'activity' } },
       {
         text: 'reviewer (acp)',
@@ -83,6 +84,7 @@ describe('shell shared contract', () => {
     const refs: AcpRef[] = [
       { scope: 'tab', label: 'janus', role: 'ask' },
       { scope: 'tab', label: 'janus', role: 'tell' },
+      { scope: 'tab', label: 'janus', role: 'review-bot' },
       { scope: 'monitor', name: 'activity' },
       { scope: 'editor', label: 'notes', persona: 'reviewer' },
     ];
@@ -102,7 +104,11 @@ describe('shell shared contract', () => {
     })).toBe(false);
     expect(isShellPayload({
       ...PAYLOAD,
-      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'other' } }],
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'review-bot' } }],
+    })).toBe(true);
+    expect(isShellPayload({
+      ...PAYLOAD,
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: '' } }],
     })).toBe(false);
     // A monitor is addressed by its runtime name alone, so a monitor reference without one names nothing.
     expect(isShellPayload({
@@ -267,12 +273,15 @@ describe('shell shared contract', () => {
     expect(isShellAcpReceipt({ replyId: 'reply-1', name: 'acp:ask:janus' })).toBe(false);
   });
 
-  it('rejects a receipt whose role is neither ask nor tell', () => {
-    const receipt = { replyId: 'reply-1', name: 'acp:monitor:janus' };
+  it('accepts any non-empty role name and refuses an empty one', () => {
+    const receipt = { replyId: 'reply-1', name: 'acp:review-bot:janus' };
 
-    expect(isShellAcpReceipt({ ...receipt, role: 'monitor' })).toBe(false);
-    expect(isShellAcpReceipt({ ...receipt, role: 'ASK' })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, role: 'review-bot' })).toBe(true);
+    expect(isShellAcpReceipt({ ...receipt, role: 'ASK' })).toBe(true);
+    expect(isShellAcpReceipt({ ...receipt, role: '' })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, role: '  ' })).toBe(false);
     expect(isShellAcpReceipt({ ...receipt, role: undefined })).toBe(false);
+    expect(isShellAcpReceipt({ ...receipt, role: 7 })).toBe(false);
   });
 
   it.each(['ask', 'tell'] as const)('keeps its %s receipt assignable to and from the server receipt', (role) => {
