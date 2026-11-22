@@ -36,7 +36,7 @@ This section provides a numbered list identifying existing functionality to be u
 
 ### Implementation steps
 
-Prose describing the changes in the order they should land, so each checkpoint typechecks and no contract is left mismatched across the server and client. Name the modules, functions, types, and contracts involved; say where new code goes and which existing mechanism it extends or replaces. Never include implementation code — no function bodies, no JSX, no CSS, no type the implementer would paste. Illustrative observable output (a CLI transcript, an error message, an ASCII sketch of UI) is fine.
+Prose describing the changes in the order they should land, so each checkpoint leaves the tree green and no contract is left mismatched across the server and client. A subplan's file list must be enough for a green `$janissary/scripts/run.mjs check-diff` at that subplan's own commit, not after the whole feature lands, and every implementation step names that command as its build command. Name the modules, functions, types, and contracts involved; say where new code goes and which existing mechanism it extends or replaces. Never include implementation code — no function bodies, no JSX, no CSS, no type the implementer would paste. Illustrative observable output (a CLI transcript, an error message, an ASCII sketch of UI) is fine.
 
 ### User interface
 

@@ -57,6 +57,8 @@ For decomposed subplans, confirm the plans are in ready. Process the recorded re
 
 For each promoted subplan, delegate `ai/tasks/feature/build-a-feature.md` to a fresh subagent with the exact ready-plan path. It must implement only that subplan, run its required diff-scoped checks after each implementation change, write/update the functional specs, and promote that plan to `complete/`.
 
+Implementation is not complete until that subplan's diff-scoped checks (`$janissary/scripts/run.mjs check-diff`) are green. A step that fails to compile until a later subplan lands is not acceptable: each subplan must build on its own at its own commit. If a subplan cannot be made green without editing files outside its plan, that is a scope mismatch rather than a tolerance to record; preserve the work and report the blocker instead of proceeding.
+
 Apply these overrides to `build-a-feature.md`:
 
 1. Select the supplied plan even if the original feature plan is rated 6 or higher. 
@@ -71,6 +73,8 @@ The subagent reports the completed plan path, implementation summary, checks, te
 ## Step 5 — Commit and push each implementation
 
 After each subplan passes implementation verification, commit only that subplan's implementation and plan promotion with a Conventional Commit subject, then push to the existing PR head. This must be a separate commit from the plan-publication commit. Never amend or force-push. If the remote advanced, use the repository's bounded rebase-and-retry policy, preserve both sides of conflicts, and rerun the required diff-scoped checks before retrying. Confirm the PR remains open on the recorded branch before reviewing it.
+
+Before publishing a subplan, confirm its diff-scoped checks are green. Do not commit or publish a red subplan; if its checks are red, keep the work on the branch, report the blocker, and do not advance to review.
 
 ## Step 6 — Review and resolve each subplan
 
