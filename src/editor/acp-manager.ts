@@ -2,10 +2,7 @@ import type { AcpSession } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 import type { ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
-import { messageBus } from '../bus.js';
-import {
-  existingPersonaRoleRuntime, forgetPersonaRole, personaRoleRuntime,
-} from '../acp/persona-role-state.js';
+import { forgetPersonaRole, personaRoleRuntime } from '../acp/persona-role-state.js';
 
 type SessionHooks = { onError: (message: string) => void };
 
@@ -21,6 +18,7 @@ export class EditorAcpManager {
   private personas = new Map<string, string>();
   private roles = new Map<string, string>();
   private hooks = new Map<string, SessionHooks>();
+  private sessions = new Map<string, AcpSession>();
 
   constructor(private managers: Managers) {}
 
@@ -43,6 +41,7 @@ export class EditorAcpManager {
     if (!state.session) return undefined;
     const previous = state.hooks;
     const session = state.session;
+    this.sessions.set(k, session);
     state.hooks = {
       onError: (message) => {
         this.died(label, role, session, message);
@@ -52,15 +51,14 @@ export class EditorAcpManager {
     return session;
   }
 
-  // A connection-level error means the agent is gone. Forget the slot so the next request opens and
-  // re-primes a fresh session, report it once to the current editor request, and mark the UI dirty.
+  // A connection-level error means the agent is gone. The core owner has already forgotten its slot
+  // by the time this runs, so consult the editor's own binding to reach the current request's hook.
+  // Forget that binding and report once; the core owner emits the dirty state on every death path.
   private died(label: string, role: string, session: AcpSession, message: string): void {
-    const runtime = this.runtime(label);
-    const state = runtime ? existingPersonaRoleRuntime(runtime, role) : undefined;
-    if (!state || state.session !== session) return;
-    const hooks = this.hooks.get(slot(label, role));
+    const k = slot(label, role);
+    if (this.sessions.get(k) !== session) return;
+    const hooks = this.hooks.get(k);
     this.forget(label, role);
-    messageBus.emit('state', { type: 'dirty' });
     hooks?.onError(message);
   }
 
@@ -70,6 +68,7 @@ export class EditorAcpManager {
     if (persona !== undefined) this.roles.delete(`${label}:${persona}`);
     this.personas.delete(k);
     this.hooks.delete(k);
+    this.sessions.delete(k);
     const runtime = this.runtime(label);
     if (runtime) forgetPersonaRole(runtime, role);
   }
@@ -120,5 +119,6 @@ export class EditorAcpManager {
     this.personas.clear();
     this.roles.clear();
     this.hooks.clear();
+    this.sessions.clear();
   }
 }

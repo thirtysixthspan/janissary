@@ -248,13 +248,18 @@ describe('EditorAcpManager', () => {
       expect(next).not.toBe(dead.session);
     });
 
-    it('reports the death to the hook from the latest session() call, not the first', () => {
+    it('reports the death to the editor hook from the latest session() call, not the first', () => {
       mocks.connectAcp.mockReturnValue(makeSession().session);
       const { managers, editor } = harness();
       const first = vi.fn();
       const latest = vi.fn();
-      openSlot(managers, editor, 'notes', persona('reviewer', 'research'), { onError: first });
-      openSlot(managers, editor, 'notes', persona('reviewer', 'research'), { onError: latest });
+      const core = { onError: () => {} };
+      const bind = (hooks: Hooks) => {
+        managers.personaRoleSessions.session('notes', 'research', ENTRY, '/repo', core);
+        editor.session('notes', persona('reviewer', 'research'), 'research', '/repo', hooks);
+      };
+      bind({ onError: first });
+      bind({ onError: latest });
 
       die(0, 'ACP agent exited.');
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's one-time editor death notice after a reply has already settled.
-
-Existing Issue: When a persona agent dies between editor requests, the core role session forgets its slot before invoking the death hook, so the editor handler's connectionLost callback never runs and the death is reported nowhere. Severity: 6/10
-
-Existing Risk: 5/10 - A persona connection that died after a successful suggestion stays silent; the next `>` request fails on a closed session and the user cannot tell the connection is gone until the tab is closed.
-
-Proposal Risk: 2/10 - The notice is delivered once through the existing handler path, but any fix that orders forget after the hook must keep model fallback and late-error guards intact so a replaced session cannot emit a second notice.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2170 "restore the editor persona session's one-time death notice after a settled reply". In `src/acp/persona-role-session.ts`, `PersonaRoleSessionManager.died` deletes the runtime slot (`forget`) before calling `state.hooks.onError`, while the wrapper installed by `EditorAcpManager.session` in `src/editor/acp-manager.ts` calls `EditorAcpManager.died`, which returns early once the slot is gone; the core hooks then no-op because no prompt is pending. Rewire this so the editor's stored hook is still reached for a death after a settled reply — for example, keep a session-to-hooks map on `EditorAcpManager` consulted by `died` instead of reading `existingPersonaRoleRuntime`, or invoke the captured hooks before `forget` while keeping `settleAcpPrompt` working from its captured attempt state. Keep the `state.session !== session` guard so a closed or replaced session's late error is ignored, and keep the single-notice behavior in `connectionLost` in `src/editor-suggest/handler.ts`. Add an integration test (not just the current mocked-hook test in `src/editor-suggest/handler.test.ts`) that drives a real `PersonaRoleSessionManager` death after a settled reply and asserts exactly one editor-suggest death notification and no second callback; the existing mid-request-error and no-duplicate tests must keep passing.
-
-
 * Handle the monitor stop-and-restart path so it opens a fresh role session.
 
 Existing Issue: `stopMonitor` kills `reg.session` directly, but that session is now the shared `personaRoles` slot entry, so the slot survives holding a killed session and a later `monitor` for the same persona and role on the same tab reuses it. Severity: 6/10
