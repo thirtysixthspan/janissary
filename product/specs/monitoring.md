@@ -67,7 +67,7 @@ Both summaries and suggestions are delivered the same way — either inline (pre
 
 ### Role-backed sessions
 
-A monitor uses the command grants of the role its persona declares, through the same tool loop as `ask` and `tell` — there is no persona-specific tool allowlist and no separate monitor tool mode. A role that grants no commands leaves the session tool-less. Role connections deny their harness's own internal tools in both layers, so only commands the role grants and the native-command settings permit can run.
+A monitor's session is configured by the role its persona declares, and that role's command grants are applied through the same core tool loop as `ask` and `tell` on the priming prompt — there is no persona-specific tool allowlist and no separate monitor tool mode. A role that grants no commands leaves the session tool-less. Role connections deny their harness's own internal tools in both layers, so only commands the role grants and the native-command settings permit can run. The periodic flush prompts that follow post directly to that session rather than through the tool loop, and their replies are parsed for suggestions rather than executed as commands.
 
 Because the role file is a reviewable, checked-in setting and monitors receive full target transcripts, which commands a role grants is a real trust decision: a role granting a fetch-capable command could place transcript content into an outbound request. Keep a monitor's role grants to what that persona actually needs.
 
