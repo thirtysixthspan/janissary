@@ -50,7 +50,6 @@ export function primeMonitorSession(reg: MonitorSub, managers: Managers): void {
   void pending.then((result) => {
     reg.inFlight = false;
     if (result.answered) recordContext(reg, result.reply, 'response');
-    else managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${result.error}` });
   });
 }
 

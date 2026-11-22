@@ -139,7 +139,7 @@ describe('primeMonitorSession', () => {
     expect(reg.contextText.map((entry) => entry.text)).toContain('recorded reply');
   });
 
-  it('clears in-flight with only a failure line on a notification-only role failure', () => {
+  it('clears in-flight with no owner-tab line on a notification-only role failure', () => {
     mocks.promptPersonaRole.mockImplementation(() => settled({
       answered: false, error: 'Persona "reviewer" requests unknown role "research".',
     }));
@@ -150,7 +150,9 @@ describe('primeMonitorSession', () => {
 
     expect(reg.inFlight).toBe(false);
     expect(reg.session).toBe(idle);
-    expect(append).toHaveBeenCalledWith('main', { input: '', output: 'monitor reviewer: Persona "reviewer" requests unknown role "research".' });
+    expect(append).not.toHaveBeenCalledWith('main', expect.objectContaining({
+      output: expect.stringContaining('monitor reviewer:'),
+    }));
     expect(append).not.toHaveBeenCalledWith('main', expect.objectContaining({ output: expect.stringContaining('connected') }));
   });
 });
