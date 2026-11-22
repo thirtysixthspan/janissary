@@ -4,6 +4,13 @@ import type { PluginFailureOrigin } from './failure.js';
 import { TabPluginRejection } from './api-capabilities.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 import { ownTabLabel } from './own-tab.js';
+import type { AcpRole } from '../acp/role.js';
+import { DEFAULT_ACP_ROLE } from '../acp/role.js';
+import { knownRoleSettings, noRoleModels } from '../acp/ask-role.js';
+import { noEnabledModelsNotice, unknownRoleNotice } from '../acp/persona-role.js';
+import { notify } from '../notifications/index.js';
+
+const ROLE_PERSONA = 'summarizer';
 
 export function acpCapabilities(input: {
   managers: Managers;
@@ -20,8 +27,23 @@ export function acpCapabilities(input: {
     if (!isEnabled()) throw new TabPluginRejection('ACP tab is unavailable.');
     return ownTabLabel({ managers, declaration, origin, answeringLabel }, 'ACP tab is unavailable.');
   };
+  // The role established by `startAcp` is the one `promptAcpResult` prompts under, so the connection
+  // and the prompt cannot drift to different roles. Defaults to `ask` for callers that name none.
+  let role: string = DEFAULT_ACP_ROLE;
   return {
-    startAcp: (request) => managers.acp.start(ownLabel(), request),
+    startAcp: (request) => {
+      if (request?.role !== undefined) role = request.role;
+      const label = ownLabel();
+      const started = managers.acp.start(label, request, role);
+      if (request?.role !== undefined && started.error === noRoleModels(role as AcpRole)) {
+        const message = knownRoleSettings(managers.tab.launchDir, role)
+          ? noEnabledModelsNotice(ROLE_PERSONA, role)
+          : unknownRoleNotice(ROLE_PERSONA, role);
+        notify(managers, 'manual', label, message);
+        return { error: message };
+      }
+      return started;
+    },
     promptAcp: (prompt) => {
       const label = ownLabel();
       const run = () => managers.acp.prompt(label, `ask ${prompt}`);
@@ -29,7 +51,7 @@ export function acpCapabilities(input: {
     },
     promptAcpResult: (prompt) => {
       const label = ownLabel();
-      const run = () => managers.acp.promptResult(label, `ask ${prompt}`);
+      const run = () => managers.acp.promptResult(label, prompt, role);
       return deadline ? deadline.exempt(run) : run();
     },
     resetAcp: () => managers.acp.close(ownLabel()),

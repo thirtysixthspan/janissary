@@ -230,12 +230,13 @@ export type TabPluginServerCapabilities =QueueCapabilityTypes & TabPluginRemoteW
   // runs it and nothing that recognizes it — the shape a consumer whose reply is only ever read
   // should ask for. It is recorded against the tab, so every prompt on that session is held to it.
   // Additive, and a strictly smaller session than the ordinary one, so it needs no declaration of
-  // its own: omit it and the full tool loop is what runs.
+  // its own: omit it and the full tool loop is what runs. An optional `role` names the role whose
+  // model entries configure this session; the same role is used by `promptAcpResult` on that tab.
   //
   // `session` names the session that was begun or reused, and changes whenever the tab's session is
   // replaced. A caller that primed one session — a persona, a trust delimiter — compares it to learn
   // that the session it is now talking to is a different one.
-  startAcp(request?: { withoutTools?: true }): { model?: string; error?: string; session?: string };
+  startAcp(request?: { withoutTools?: true; role?: string }): { model?: string; error?: string; session?: string };
   promptAcp(prompt: string): Promise<string>;
   // The same prompt as `promptAcp`, answered as a result rather than as a string: the reply and the
   // session that produced it, or the reason there was none. A refusal — a session that closed, a

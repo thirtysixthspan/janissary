@@ -187,9 +187,10 @@ export async function summarizeOnce(input: {
   capabilities: Pick<TabPluginServerCapabilities, 'startAcp' | 'promptAcpResult'>;
   state: SummarizerState;
   personaBody: string;
+  role: string;
   readTabs: () => TabActivityEntry[];
 }): Promise<Map<string, string>> {
-  const { capabilities, state, personaBody, readTabs } = input;
+  const { capabilities, state, personaBody, role, readTabs } = input;
   if (state.inFlight) return new Map();
   const current = readTabs();
   const live = new Map(current.map((tab) => [tab.label, tab.incarnation]));
@@ -203,7 +204,7 @@ export async function summarizeOnce(input: {
   const now = Date.now();
   state.inFlight = true;
   try {
-    const started = capabilities.startAcp({ withoutTools: true });
+    const started = capabilities.startAcp({ withoutTools: true, role });
     if (started.error !== undefined) throw new Error(started.error);
     // A session the host replaced since the last flush is one nobody primed: it has no persona, no
     // reply shape, and none of the framing this delimiter names. The delimiter is minted afresh too,

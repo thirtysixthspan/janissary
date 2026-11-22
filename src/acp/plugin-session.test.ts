@@ -958,4 +958,74 @@ describe('core ACP for plugin tabs', () => {
     });
     managers.acp.closeAll();
   });
+
+  // The launcher's declared role configures the same connection its prompts use: the role reaches the
+  // core start, and the prompt no longer arrives under a hardcoded `ask`.
+  it('starts a role-backed plugin session and prompts under that same role', async () => {
+    const { managers, handlers, session } = setup(() => ({
+      name: 'tell',
+      entries: [{ harness: 'opencode', model: 'tell/model' }],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+    const start = vi.spyOn(managers.acp, 'start');
+    const promptResult = vi.spyOn(managers.acp, 'promptResult');
+
+    const started = capabilities.startAcp({ role: 'tell' });
+    expect(started).toEqual({ model: 'tell/model', session: expect.any(String) });
+    expect(start).toHaveBeenCalledWith('consumer', { role: 'tell' }, 'tell');
+
+    const pending = capabilities.promptAcpResult('summarize the tabs');
+    expect(promptResult).toHaveBeenCalledWith('consumer', 'summarize the tabs', 'tell');
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalled(); });
+    expect(session.prompt.mock.calls[0][0]).not.toMatch(/^(ask|tell)\b/u);
+
+    handlers().onChunk('done');
+    handlers().onEnd('end_turn');
+    await expect(pending).resolves.toMatchObject({ answered: true });
+    managers.acp.closeAll();
+  });
+
+  // A role that does not resolve produces only the core's exact notification, not a reply line.
+  it('reports an unknown declared role as a notification with no answer', () => {
+    const { managers } = setup((_root, role) => ({
+      name: role,
+      entries: role === 'missing-role' ? [] : [{ harness: 'opencode', model: 'google/gemini-3.1-flash-lite' }],
+      commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    expect(capabilities.startAcp({ role: 'missing-role' })).toEqual({
+      error: 'Persona "summarizer" requests unknown role "missing-role".',
+    });
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'manual', 'consumer', 'Persona "summarizer" requests unknown role "missing-role".',
+    );
+    managers.acp.closeAll();
+  });
+
+  // A known role with no enabled model is the other notification-only configuration failure.
+  it('reports a declared role with no enabled models as a notification with no answer', () => {
+    const { managers } = setup((_root, role) => ({
+      name: role, entries: [], commands: [...NATIVE_ACP_COMMANDS],
+    }));
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    expect(capabilities.startAcp({ role: 'ask' })).toEqual({
+      error: 'Persona "summarizer" finds no enabled models in role "ask".',
+    });
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'manual', 'consumer', 'Persona "summarizer" finds no enabled models in role "ask".',
+    );
+    managers.acp.closeAll();
+  });
 });

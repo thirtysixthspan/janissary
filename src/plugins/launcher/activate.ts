@@ -19,7 +19,7 @@ import {
 } from './shared.js';
 import { readLauncherFile } from './commands-file.js';
 import { configureIntent } from './configure.js';
-import { readPersonaBody } from './persona.js';
+import { isRoleConfigurationFailure, readPersonaBody, readPersonaRole } from './persona.js';
 import {
   initialSummarizerState,
   summarizeOnce,
@@ -208,11 +208,15 @@ export function activate(): TabPluginActivation {
         payload: isEmptyIntent,
         run: async (_tab, _payload: Record<string, never>, capabilities) => {
           const incarnation = launcherIncarnation;
+          const root = capabilities.originTab()?.root ?? process.cwd();
+          let role: string | undefined;
           try {
+            role = readPersonaRole(root);
             const summaries = await summarizeOnce({
               capabilities,
               state: summarizer,
-              personaBody: readPersonaBody(capabilities.originTab()?.root ?? process.cwd()),
+              personaBody: readPersonaBody(root),
+              role,
               readTabs: () => summarizedTabs(capabilities),
             });
             if (incarnation !== launcherIncarnation) return null;
@@ -248,6 +252,7 @@ export function activate(): TabPluginActivation {
             return null;
           } catch (error) {
             if (incarnation !== launcherIncarnation) return null;
+            if (role !== undefined && isRoleConfigurationFailure(error, role, errorText)) return null;
             capabilities.notifyUser(`launcher summarizer: ${errorText(error)}`);
             return null;
           }

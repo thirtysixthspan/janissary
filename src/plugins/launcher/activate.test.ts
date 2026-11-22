@@ -43,6 +43,7 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   const notified: string[] = [];
   const dispatched: string[] = [];
   const prompted: string[] = [];
+  const starts: ({ withoutTools?: true; role?: string } | undefined)[] = [];
   // What each `tabActivity` read asked for. The host attaches a transcript tail only to a caller that
   // names a positive limit, which is the rule this fake reproduces rather than a convenience: the
   // summarizer reads transcripts and the display path must not.
@@ -63,7 +64,10 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     spawnTerminal: () => ({ ptyId: 'test-pty', cols: 80, rows: 24, running: false }),
   };
   const capabilities: TabPluginServerCapabilities = {
-    startAcp: () => (startError === undefined ? { session: 'acp-test' } : { error: startError }),
+    startAcp: (request) => {
+      starts.push(request);
+      return startError === undefined ? { session: 'acp-test' } : { error: startError };
+    },
     promptAcp: async () => '',
     promptAcpResult: async (prompt) => {
       prompted.push(prompt);
@@ -117,7 +121,7 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   };
   return {
-    actions, activityReads, capabilities, dispatched, docks, notified, opened, focused, prompted, updated,
+    actions, activityReads, capabilities, dispatched, docks, notified, opened, focused, prompted, starts, updated,
     answerWith: (text: string) => { reply = text; },
     failStartWith: (reason: string) => { startError = reason; },
     refuseWith: (reason: string | undefined) => { refusal = reason; },
@@ -169,6 +173,16 @@ function project(): string {
   writeFileSync(
     path.join(root, '.janissary', 'launcher.json'),
     `${JSON.stringify([{ id: 'tasks', icon: 'faListCheck', label: 'Tasks', command: 'tasks' }], null, 2)}\n`,
+  );
+  return root;
+}
+
+function projectWithPersona(role: string): string {
+  const root = project();
+  mkdirSync(path.join(root, 'ai/personas/launcher'), { recursive: true });
+  writeFileSync(
+    path.join(root, 'ai/personas/launcher/summarizer.md'),
+    `[//]: # role: ${role}\n\nYou summarize the tabs.\n`,
   );
   return root;
 }
@@ -721,6 +735,57 @@ describe('summarizing', () => {
     // A later flush must still get to try, which is what "not wedged" means.
     entry.failStartWith('');
     await expect(summarize(entry, activation)).resolves.toBeUndefined();
+  });
+
+  it('passes the persona\'s declared role into the tool-less ACP session', async () => {
+    const root = projectWithPersona('planning');
+    try {
+      const entry = openLauncher(ROWS, root);
+      const activation = activate();
+      entry.answerWith('[[tab:shell]] Running the test suite.');
+
+      await summarize(entry, activation);
+
+      expect(entry.starts).toEqual([{ withoutTools: true, role: 'planning' }]);
+      expect(entry.notified).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['missing', 'Persona "summarizer" requests unknown role "missing".'],
+    ['ask', 'Persona "summarizer" finds no enabled models in role "ask".'],
+  ])('leaves a role configuration failure to the core notification alone: %s', async (role, message) => {
+    const root = projectWithPersona(role);
+    try {
+      const entry = openLauncher(ROWS, root);
+      const activation = activate();
+      entry.failStartWith(message);
+
+      await expect(summarize(entry, activation)).resolves.toBeUndefined();
+
+      // The core already notified; the summarize intent neither repeats it nor produces an answer.
+      expect(entry.notified).toEqual([]);
+      expect(entry.prompted).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('still reports a genuine prompt failure when the role is known', async () => {
+    const root = projectWithPersona('planning');
+    try {
+      const entry = openLauncher(ROWS, root);
+      const activation = activate();
+      entry.refuseWith('ACP error: rate limited');
+
+      await summarize(entry, activation);
+
+      expect(entry.notified).toEqual(['launcher summarizer: ACP error: rate limited']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('publishes the paragraph it was given, under its tab', async () => {

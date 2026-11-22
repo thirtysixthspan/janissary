@@ -11,6 +11,7 @@ import {
 } from './summarizer.js';
 
 const DELIMITER = 'janus-launcher-test-marker';
+const ROLE = 'ask';
 
 function tab(overrides: Partial<TabActivityEntry> = {}): TabActivityEntry {
   return {
@@ -254,14 +255,14 @@ describe('summarizeOnce', () => {
 
   function stub(tabs: TabActivityEntry[], reply: string, startError?: string) {
     const prompted: string[] = [];
-    // What each flush asked the host to start. Recorded because the tool-less request is the
-    // launcher's half of the boundary `src/acp/manager.ts` enforces.
-    const starts: ({ withoutTools?: true } | undefined)[] = [];
+    // What each flush asked the host to start. Recorded because the tool-less request and the
+    // declared role are the launcher's half of the boundary `src/acp/manager.ts` enforces.
+    const starts: ({ withoutTools?: true; role?: string } | undefined)[] = [];
     // Which session the host says answered. Changed by a test to reproduce a session the core
     // replaced between two flushes.
     let session = 'acp-1';
     const capabilities = {
-      startAcp: (request?: { withoutTools?: true }) => {
+      startAcp: (request?: { withoutTools?: true; role?: string }) => {
         starts.push(request);
         return startError === undefined ? { session } : { error: startError };
       },
@@ -288,8 +289,8 @@ describe('summarizeOnce', () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
     const summarizer = state();
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', readTabs: tabs });
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', readTabs: tabs });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', role: ROLE, readTabs: tabs });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', role: ROLE, readTabs: tabs });
 
     expect(stubs.prompted).toHaveLength(3);
     expect(stubs.prompted[0]).toContain('You summarize.');
@@ -303,12 +304,12 @@ describe('summarizeOnce', () => {
   ])('retries tabs omitted from an %s reply while skipping accepted tabs', async (_kind, reply, acceptedShell) => {
     const summarizer = state();
     const first = stub(tabs(), reply);
-    await summarizeOnce({ capabilities: first.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    await summarizeOnce({ capabilities: first.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs });
     expect(summarizer.fed.has('shell')).toBe(acceptedShell);
     expect(summarizer.fed.has('agent')).toBe(false);
 
     const retry = stub(tabs(), '[[tab:agent]] Second.');
-    await summarizeOnce({ capabilities: retry.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    await summarizeOnce({ capabilities: retry.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs });
     expect(retry.prompted).toHaveLength(1);
     expect(retry.prompted[0]).toContain('[[tab:agent]]');
     expect(retry.prompted[0].includes('[[tab:shell]]')).toBe(!acceptedShell);
@@ -319,7 +320,7 @@ describe('summarizeOnce', () => {
     const stubs = stub(rows, '');
     const summarizer = state();
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => rows });
 
     expect(stubs.starts).toHaveLength(0);
     expect(stubs.prompted).toHaveLength(0);
@@ -335,7 +336,7 @@ describe('summarizeOnce', () => {
       ]),
     });
 
-    const published = await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', readTabs: tabs });
+    const published = await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', role: ROLE, readTabs: tabs });
 
     expect(stubs.prompted).toHaveLength(0);
     expect(published.size).toBe(0);
@@ -345,13 +346,13 @@ describe('summarizeOnce', () => {
     const failing = stub(tabs(), '', 'no session');
     const summarizer = state();
 
-    await expect(summarizeOnce({ capabilities: failing.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs }))
+    await expect(summarizeOnce({ capabilities: failing.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs }))
       .rejects.toThrow('no session');
 
     expect([...summarizer.fed.keys()]).toEqual([]);
 
     const recovered = stub(tabs(), '[[tab:shell]] Back.');
-    await summarizeOnce({ capabilities: recovered.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    await summarizeOnce({ capabilities: recovered.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs });
 
     expect(summarizer.fed.get('shell')).toEqual({ incarnation: 'shell-incarnation', length: 4, revision: 4 });
   });
@@ -364,7 +365,7 @@ describe('summarizeOnce', () => {
     // A cursor from a closed shell tab that held four entries and had been written seven times.
     const summarizer = state({ fed: new Map([['shell', { incarnation: 'shell-incarnation', length: 4, revision: 7 }]]) });
 
-    const published = await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => fresh });
+    const published = await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => fresh });
 
     // The dead cursor would have starved it; dropping unseen labels lets it through.
     expect(stubs.prompted).toHaveLength(2);
@@ -382,7 +383,7 @@ describe('summarizeOnce', () => {
     } satisfies Parameters<typeof summarizeOnce>[0]['capabilities'];
     const summarizer = state({ primed: true, session: 'acp-1' });
 
-    const pending = summarizeOnce({ capabilities, state: summarizer, personaBody: 'x', readTabs: () => live });
+    const pending = summarizeOnce({ capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => live });
     live = [replacement];
     deferred.resolve({ answered: true, reply: '[[tab:shell]] Old work.', session: 'acp-1' });
     const published = await pending;
@@ -395,7 +396,7 @@ describe('summarizeOnce', () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
     const summarizer = state({ fed: new Map([['gone', { incarnation: 'gone', length: 3, revision: 3 }]]) });
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs });
 
     expect(summarizer.fed.has('gone')).toBe(false);
     expect(summarizer.fed.get('shell')).toEqual({ incarnation: 'shell-incarnation', length: 4, revision: 4 });
@@ -405,7 +406,7 @@ describe('summarizeOnce', () => {
     const stubs = stub(tabs(), '', 'ACP tab is unavailable.');
     const summarizer = state();
 
-    await expect(summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs }))
+    await expect(summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs }))
       .rejects.toThrow('ACP tab is unavailable.');
     expect(stubs.prompted).toHaveLength(0);
     expect(summarizer.inFlight).toBe(false);
@@ -418,14 +419,14 @@ describe('summarizeOnce', () => {
     const stubs = stub(tabs(), '', undefined);
     const summarizer = state({ primed: true, session: 'acp-1' });
 
-    await expect(summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs }))
+    await expect(summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs }))
       .rejects.toThrow('ACP session closed.');
     expect(summarizer.fed.size).toBe(0);
 
     // The next flush tries again rather than believing these tabs already answered.
     refusal = undefined;
     const recovered = stub(tabs(), '[[tab:shell]] Back.');
-    await summarizeOnce({ capabilities: recovered.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    await summarizeOnce({ capabilities: recovered.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: tabs });
 
     expect(recovered.prompted).toHaveLength(1);
     expect(summarizer.fed.get('shell')).toEqual({ incarnation: 'shell-incarnation', length: 4, revision: 4 });
@@ -438,14 +439,14 @@ describe('summarizeOnce', () => {
     const stubs = stub(rows, '[[tab:shell]] First.');
     const summarizer = state({ primed: true, session: 'acp-1' });
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => rows });
     const primedDelimiter = summarizer.delimiter;
     expect(stubs.prompted).toHaveLength(1);
 
     // The session died, and the shell tab has moved again — so there is a flush to make.
     stubs.replaceSession('acp-2');
     rows = [{ ...rows[0], logLength: 5, revision: 5 }, rows[1]];
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => rows });
 
     expect(stubs.prompted).toHaveLength(3);
     // The priming went again: the persona body, the reply shape, and the trust framing.
@@ -465,7 +466,7 @@ describe('summarizeOnce', () => {
     const stubs = stub(grown, '[[tab:shell]] Finished the suite; two left.');
     const summarizer = state({ primed: true, session: 'acp-1', fed: new Map([['shell', { incarnation: 'shell-incarnation', length: 4, revision: 4 }]]) });
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => grown });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => grown });
 
     expect(stubs.prompted).toHaveLength(1);
     expect(summarizer.fed.get('shell')).toEqual({ incarnation: 'shell-incarnation', length: 4, revision: 5 });
@@ -484,7 +485,7 @@ describe('summarizeOnce', () => {
     });
     rows[0] = { ...editor, contentFingerprint: 'new' };
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => rows });
 
     expect(stubs.prompted).toHaveLength(1);
     expect(summarizer.fed.get('notes')).toEqual({
@@ -507,20 +508,37 @@ describe('summarizeOnce', () => {
       ]),
     });
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => full });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: ROLE, readTabs: () => full });
 
     expect(stubs.prompted).toHaveLength(1);
     expect(summarizer.fed.get('agent')).toEqual({ incarnation: 'agent-incarnation', length: 2, revision: 3 });
   });
 
-  // The boundary the host enforces is the one this asks for: a session with no tool table, so a
-  // reply naming a browser, question, or database command has nothing to run it.
-  it('starts its session without tools', async () => {
+  // The role the persona declares configures the connection, while the tool-less request the host
+  // enforces is kept exactly as it was: no browser, question, or database command can run.
+  it('starts its session with the declared role and no tools', async () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
     const summarizer = state();
 
-    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: 'planning', readTabs: tabs });
 
-    expect(stubs.starts).toEqual([{ withoutTools: true }]);
+    expect(stubs.starts).toEqual([{ withoutTools: true, role: 'planning' }]);
+  });
+
+  it('keeps the declared role on every flush, including a re-prime after session replacement', async () => {
+    let rows = tabs();
+    const stubs = stub(rows, '[[tab:shell]] First.');
+    const summarizer = state({ primed: true, session: 'acp-1' });
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: 'planning', readTabs: () => rows });
+    stubs.replaceSession('acp-2');
+    rows = [{ ...rows[0], logLength: 5, revision: 5 }, rows[1]];
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: 'planning', readTabs: () => rows });
+
+    expect(stubs.starts).toEqual([
+      { withoutTools: true, role: 'planning' },
+      { withoutTools: true, role: 'planning' },
+    ]);
+    expect(summarizer.session).toBe('acp-2');
   });
 });
