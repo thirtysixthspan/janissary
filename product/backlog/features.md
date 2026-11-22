@@ -2,7 +2,7 @@
 
 ## ready
 
-
+* AI personas should specify a role instead of a model and tools. When the persona is used, the role must be used in the acp connection. Migrate editor agent support to the same acp pipeline that the ask and tell commands use.
 
 ## development
 
