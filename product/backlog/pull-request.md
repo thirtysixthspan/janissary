@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle the monitor stop-and-restart path so it opens a fresh role session.
-
-Existing Issue: `stopMonitor` kills `reg.session` directly, but that session is now the shared `personaRoles` slot entry, so the slot survives holding a killed session and a later `monitor` for the same persona and role on the same tab reuses it. Severity: 6/10
-
-Existing Risk: 6/10 - After `unmonitor`, restarting the same persona silently produces a dead session whose prompts fail with "ACP session closed.", leaving the monitor permanently broken until the tab is closed.
-
-Proposal Risk: 2/10 - Closing through the owner releases the slot, but two monitors on one owner that share a role also share one session, so a stop must not tear down a session another live monitor still uses.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2170 "release the shared role slot when a monitor stops so restart opens a fresh session". In `src/monitor/stop.ts`, replace the direct `reg.session.kill()` with a close through `managers.personaRoleSessions.close(reg.owner, reg.persona.role)` so the runtime state is forgotten rather than left holding a killed session. Decide and pin the shared-slot case (two monitor registrations on one owner declaring the same role): close only when no other live monitor on that owner uses the same role, otherwise leave the session for the survivor. Keep the current behavior for dropping a single target and for reporting-tab teardown. Add a test in `src/monitor/manager.test.ts` that starts a monitor, stops it, starts the same persona again on the same owner, and asserts a fresh session is primed with the suggestion format; the existing stop, reset, and respawn tests must keep passing.
-
-
 * Correct the stale monitor manager comment that still calls sessions dedicated and tool-less.
 
 Existing Issue: The `MonitorManager` class comment in `src/monitor/manager.ts` still says each monitor is a dedicated, tool-less ACP session, but this commit moved monitors onto shared role-backed sessions that use the role's command grants. Severity: 2/10

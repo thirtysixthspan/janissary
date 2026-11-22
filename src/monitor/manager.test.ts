@@ -444,6 +444,22 @@ describe('MonitorManager', () => {
     expect(manager.list()).toEqual([]);
   });
 
+  it('stopping then restarting a persona on the same owner primes a fresh session', () => {
+    const { managers } = makeFakeManagers([janus]);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
+    manager.start('janus', 'security', []);
+    expect(sessions[0].prompts[0]).toContain('[SUGGESTION]');
+
+    expect(manager.stop('janus', 'security')).toBe(true);
+    expect(manager.start('janus', 'security', [])).toBeNull();
+
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0].kill).toHaveBeenCalledTimes(1);
+    expect(sessions[1].prompts[0]).toContain('[SUGGESTION]');
+    expect(sessions[1].kill).not.toHaveBeenCalled();
+  });
+
   it('a flush error arriving after stop does not respawn a session', () => {
     const { managers, appended } = makeFakeManagers([janus]);
     const { sessions } = fakeSpawnFactory();

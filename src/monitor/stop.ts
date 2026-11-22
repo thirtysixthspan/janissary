@@ -26,7 +26,11 @@ export function stopMonitor(
   }
   for (const sub of reg.subs) sub.unsubscribe();
   clearInterval(reg.timer);
-  reg.session.kill();
+  // The role session is shared per owner tab; keep it alive for another monitor still using it.
+  const shared = [...monitors.values()].some(
+    (other) => other !== reg && other.owner === reg.owner && other.persona.role === reg.persona.role,
+  );
+  if (!shared) managers.personaRoleSessions.close(reg.owner, reg.persona.role);
   monitors.delete(key);
   if (!reg.inline) closeIfUnfed(monitors, managers, name);
   return true;

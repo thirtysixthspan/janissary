@@ -14,7 +14,7 @@ function makeMonitor(overrides: Partial<MonitorSub> = {}) {
   const tick = vi.fn();
   const reg = {
     owner: 'main', name: 'watch', inline: false,
-    persona: { name: 'reviewer', harness: { harness: 'opencode', model: 'test', variant: 'test' }, body: '', tools: [] },
+    persona: { name: 'reviewer', role: 'research', harness: { harness: 'opencode', model: 'test', variant: 'test' }, body: '', tools: [] },
     targets: [target], buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(),
     editorSeen: new Map(), pageSeen: new Map(), delimiter: 'test-delimiter',
     session: { prompt: vi.fn(), kill: vi.fn() }, inFlight: false, delivered: 0,
@@ -28,10 +28,17 @@ function makeMonitor(overrides: Partial<MonitorSub> = {}) {
 function setup(overrides: Partial<MonitorSub> = {}) {
   const fixture = makeMonitor(overrides);
   const monitors = new Map<string, MonitorSub>([[`${fixture.reg.owner}:${fixture.reg.name}`, fixture.reg]]);
+  const close = vi.fn((owner: string, role: string) => {
+    const match = [...monitors.values()].find((r) => r.owner === owner && r.persona.role === role);
+    if (!match) return false;
+    match.session.kill();
+    return true;
+  });
   const managers = {
     tab: { tabs: [{ ...makeTab('worker', '#aaa'), title: 'Reviewer' }] },
+    personaRoleSessions: { close },
   } as unknown as Managers;
-  return { ...fixture, monitors, managers };
+  return { ...fixture, monitors, managers, close };
 }
 
 function expectRunning(reg: MonitorSub) {
@@ -39,7 +46,8 @@ function expectRunning(reg: MonitorSub) {
   for (const sub of reg.subs) expect(sub.unsubscribe).not.toHaveBeenCalled();
 }
 
-function expectStopped(reg: MonitorSub) {
+function expectStopped(reg: MonitorSub, close: ReturnType<typeof vi.fn>) {
+  expect(close).toHaveBeenCalledWith(reg.owner, reg.persona.role);
   expect(reg.session.kill).toHaveBeenCalledTimes(1);
   for (const sub of reg.subs) expect(sub.unsubscribe).toHaveBeenCalledTimes(1);
 }
@@ -104,48 +112,63 @@ describe('stopMonitor', () => {
   );
 
   it.each([undefined, target])('releases every resource on a full stop or last-target removal (%j)', (dropped) => {
-    const { reg, tick, monitors, managers } = setup();
+    const { reg, tick, monitors, managers, close } = setup();
     expect(stopMonitor(monitors, managers, 'main', 'watch', dropped)).toBe(true);
     expect(monitors.size).toBe(0);
-    expectStopped(reg);
+    expectStopped(reg, close);
     expect(vi.getTimerCount()).toBe(0);
     vi.advanceTimersByTime(2000);
     expect(tick).not.toHaveBeenCalled();
     expect(closeMonitorTab).toHaveBeenCalledExactlyOnceWith(managers, 'watch');
     expect(updateMonitorMeta).not.toHaveBeenCalled();
     expect(stopMonitor(monitors, managers, 'main', 'watch', dropped)).toBe(false);
-    expectStopped(reg);
+    expectStopped(reg, close);
     expect(closeMonitorTab).toHaveBeenCalledTimes(1);
   });
 
   it('keeps another owner feeding the same reporting tab until its last target is dropped', () => {
-    const { reg, monitors, managers } = setup();
+    const { reg, monitors, managers, close } = setup();
     const other = makeMonitor({ owner: 'other' });
     monitors.set('other:watch', other.reg);
     expect(stopMonitor(monitors, managers, 'main', 'watch', target)).toBe(true);
     expect([...monitors]).toEqual([['other:watch', other.reg]]);
-    expectStopped(reg);
+    expectStopped(reg, close);
     expectRunning(other.reg);
     expect(closeMonitorTab).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1000);
     expect(other.tick).toHaveBeenCalledTimes(1);
     expect(stopMonitor(monitors, managers, 'other', 'watch', target)).toBe(true);
-    expectStopped(other.reg);
+    expectStopped(other.reg, close);
     expect(monitors.size).toBe(0);
     expect(vi.getTimerCount()).toBe(0);
     expect(closeMonitorTab).toHaveBeenCalledExactlyOnceWith(managers, 'watch');
   });
 
   it.each([undefined, target])('stops an inline monitor without closing a tab (%j)', (dropped) => {
-    const { reg, tick, monitors, managers } = setup({ inline: true, targets: [{ kind: 'tab', label: 'main' }] });
+    const { reg, tick, monitors, managers, close } = setup({ inline: true, targets: [{ kind: 'tab', label: 'main' }] });
     expect(stopMonitor(monitors, managers, 'main', 'watch', dropped)).toBe(true);
-    expectStopped(reg);
+    expectStopped(reg, close);
     expect(monitors.size).toBe(0);
     expect(vi.getTimerCount()).toBe(0);
     vi.advanceTimersByTime(2000);
     expect(tick).not.toHaveBeenCalled();
     expect(closeMonitorTab).not.toHaveBeenCalled();
     expect(updateMonitorMeta).not.toHaveBeenCalled();
+  });
+
+  it('leaves the shared role session alive when another monitor on the same owner uses it', () => {
+    const { reg, monitors, managers, close } = setup();
+    const sibling = makeMonitor({ name: 'watch-b' });
+    monitors.set('main:watch-b', sibling.reg);
+
+    expect(stopMonitor(monitors, managers, 'main', 'watch')).toBe(true);
+
+    expect(close).not.toHaveBeenCalled();
+    expect(reg.session.kill).not.toHaveBeenCalled();
+    expect(sibling.reg.session.kill).not.toHaveBeenCalled();
+    expect([...monitors.keys()]).toEqual(['main:watch-b']);
+    for (const sub of reg.subs) expect(sub.unsubscribe).toHaveBeenCalledTimes(1);
+    for (const sub of sibling.reg.subs) expect(sub.unsubscribe).not.toHaveBeenCalled();
   });
 });
 
