@@ -55,7 +55,7 @@ describe('editorSuggest', () => {
 
   it('parses hunks from a happy-path reply, reusing the tab\'s persona session', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session, prompt } = makeSession();
     const sessionFn = vi.fn(() => session);
     const record = vi.fn();
@@ -80,7 +80,7 @@ describe('editorSuggest', () => {
 
   it('records the exchange into the real EditorAcpManager so its transcript is non-empty afterward', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session, prompt } = makeSession();
     mocks.spawnMonitorSession.mockReturnValue(session);
     const editorAcp = new EditorAcpManager({} as unknown as Managers);
@@ -110,7 +110,7 @@ describe('editorSuggest', () => {
 
   it('a second request for the same persona reuses the same session (spawn called once)', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session, prompt } = makeSession();
     const sessionFn = vi.fn(() => session);
     const managers = makeManagers(sessionFn);
@@ -126,7 +126,7 @@ describe('editorSuggest', () => {
 
   it('only the first request in a tab/persona session primes with the persona body and hunk format; later requests send just the buffer and prompt', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session, prompt } = makeSession();
     const hasSession = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
     const sessionFn = vi.fn(() => session);
@@ -160,7 +160,7 @@ describe('editorSuggest', () => {
 
   it('notifies and returns no hunks on a connect error', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session } = makeSession();
     let capturedOnError: ((message: string) => void) | undefined;
     const sessionFn = vi.fn((_label, _persona, _cwd, hooks: { onError: (message: string) => void }) => {
@@ -180,7 +180,7 @@ describe('editorSuggest', () => {
   describe('a connection lost after the request settled', () => {
     function captureConnectionHook(): { sessionFn: ReturnType<typeof vi.fn>; prompt: ReturnType<typeof vi.fn>; lost: () => (message: string) => void } {
       mocks.listPersonas.mockReturnValue(['reviewer']);
-      mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+      mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
       const { session, prompt } = makeSession();
       let captured: ((message: string) => void) | undefined;
       const sessionFn = vi.fn((_label, _persona, _cwd, hooks: { onError: (message: string) => void }) => {
@@ -220,7 +220,7 @@ describe('editorSuggest', () => {
 
   it('a request after the persona\'s agent died spawns a fresh session and primes it again', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const dead = makeSession();
     const fresh = makeSession();
     mocks.spawnMonitorSession.mockReturnValueOnce(dead.session).mockReturnValueOnce(fresh.session);
@@ -239,7 +239,7 @@ describe('editorSuggest', () => {
 
   it('notifies and returns no hunks on a prompt error, without killing the session', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session, prompt, kill } = makeSession();
     const sessionFn = vi.fn(() => session);
     const managers = makeManagers(sessionFn);
@@ -256,7 +256,7 @@ describe('editorSuggest', () => {
 
   it('notifies "no suggestion" when the persona proposes nothing, without killing the session', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'ask', body: 'Watch for bugs.' });
     const { session, prompt, kill } = makeSession();
     const sessionFn = vi.fn(() => session);
     const managers = makeManagers(sessionFn);
