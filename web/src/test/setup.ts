@@ -16,4 +16,9 @@ HTMLCanvasElement.prototype.getContext = () => null;
 // defensive .catch() path callers attach to the result.
 HTMLMediaElement.prototype.play = () => Promise.resolve();
 
+// jsdom has no canvas encoder; toDataURL() logs a "Not implemented" warning on every image or video
+// save. A minimal PNG data URL keeps the save path's intent payload valid without pulling in the
+// native canvas package.
+HTMLCanvasElement.prototype.toDataURL = () => 'data:image/png;base64,';
+
 afterEach(cleanup);
