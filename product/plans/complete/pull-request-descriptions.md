@@ -64,7 +64,7 @@ Make a pull request description reflect the work the pull request carries at eve
 13. Both build tasks open their PR through the dedicated plan PR task — `ai/tasks/feature/build-a-complex-feature.md:47` (`Delegate ai/tasks/workspace/open-plan-pull-request.md`) and `ai/tasks/feature/build-a-feature.md:104` (`Execute ai/tasks/workspace/open-plan-pull-request.md`).
 14. The complex-feature task overrides only the plan PR task's branch and commit steps — `ai/tasks/feature/build-a-complex-feature.md:47` (`Override the plan task's branch/commit steps because the plan commit is already pushed`).
 15. The product spec states that the description is corrected in the author's own structure — `product/specs/pull-request-updating.md:9` (`keeping the author's section headings and order and leaving accurate prose alone`).
-16. The plan PR task is a standalone peer of the full-body task, with its own short-summary body and no mode flag — `ai/tasks/workspace/open-plan-pull-request.md` (`A plan-first pull request is opened by ... the dedicated plan task`).
+16. The plan PR task is a standalone peer of the full-body task, with its own short-summary body and no mode flag — `ai/tasks/workspace/open-plan-pull-request.md` (`Your job: take the plan-only changes in this repository ... and open a pull request against master on GitHub carrying a short summary of the plan`).
 
 ## Existing functionality
 
@@ -77,7 +77,7 @@ Make a pull request description reflect the work the pull request carries at eve
 7. The product spec describing description authoring and updating — `product/specs/pull-request-updating.md:5` (`### What an update changes`).
 8. The product spec describing description fidelity in review — `product/specs/pull-request-review.md:5` (`description fidelity`).
 9. The product spec describing testing steps and the Additional test cases section — `product/specs/pull-request-testing.md:15` (`An "Additional test cases" section`).
-10. The dedicated plan PR task that writes the short summary — `ai/tasks/workspace/open-plan-pull-request.md` (`The PR body is a short plan summary, not a full description`).
+10. The dedicated plan PR task that writes the short summary — `ai/tasks/workspace/open-plan-pull-request.md` (`The body is a short plan summary, not a full description`).
 
 ## Implementation steps
 
