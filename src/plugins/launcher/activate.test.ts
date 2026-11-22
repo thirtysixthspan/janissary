@@ -43,7 +43,7 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   const notified: string[] = [];
   const dispatched: string[] = [];
   const prompted: string[] = [];
-  const starts: ({ withoutTools?: true; role?: string } | undefined)[] = [];
+  const starts: ({ role?: string } | undefined)[] = [];
   // What each `tabActivity` read asked for. The host attaches a transcript tail only to a caller that
   // names a positive limit, which is the rule this fake reproduces rather than a convenience: the
   // summarizer reads transcripts and the display path must not.
@@ -737,7 +737,7 @@ describe('summarizing', () => {
     await expect(summarize(entry, activation)).resolves.toBeUndefined();
   });
 
-  it('passes the persona\'s declared role into the tool-less ACP session', async () => {
+  it('passes the persona\'s declared role into the tool-enabled ACP session', async () => {
     const root = projectWithPersona('planning');
     try {
       const entry = openLauncher(ROWS, root);
@@ -746,7 +746,7 @@ describe('summarizing', () => {
 
       await summarize(entry, activation);
 
-      expect(entry.starts).toEqual([{ withoutTools: true, role: 'planning' }]);
+      expect(entry.starts).toEqual([{ role: 'planning' }]);
       expect(entry.notified).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });

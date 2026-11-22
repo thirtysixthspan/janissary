@@ -204,7 +204,7 @@ export async function summarizeOnce(input: {
   const now = Date.now();
   state.inFlight = true;
   try {
-    const started = capabilities.startAcp({ withoutTools: true, role });
+    const started = capabilities.startAcp({ role });
     if (started.error !== undefined) throw new Error(started.error);
     // A session the host replaced since the last flush is one nobody primed: it has no persona, no
     // reply shape, and none of the framing this delimiter names. The delimiter is minted afresh too,

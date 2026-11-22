@@ -255,14 +255,15 @@ describe('summarizeOnce', () => {
 
   function stub(tabs: TabActivityEntry[], reply: string, startError?: string) {
     const prompted: string[] = [];
-    // What each flush asked the host to start. Recorded because the tool-less request and the
-    // declared role are the launcher's half of the boundary `src/acp/manager.ts` enforces.
-    const starts: ({ withoutTools?: true; role?: string } | undefined)[] = [];
+    // What each flush asked the host to start. Recorded because the declared role is the launcher's
+    // half of the boundary `src/acp/manager.ts` enforces: the session keeps its tools so the primer
+    // explains the role's commands.
+    const starts: ({ role?: string } | undefined)[] = [];
     // Which session the host says answered. Changed by a test to reproduce a session the core
     // replaced between two flushes.
     let session = 'acp-1';
     const capabilities = {
-      startAcp: (request?: { withoutTools?: true; role?: string }) => {
+      startAcp: (request?: { role?: string }) => {
         starts.push(request);
         return startError === undefined ? { session } : { error: startError };
       },
@@ -514,15 +515,26 @@ describe('summarizeOnce', () => {
     expect(summarizer.fed.get('agent')).toEqual({ incarnation: 'agent-incarnation', length: 2, revision: 3 });
   });
 
-  // The role the persona declares configures the connection, while the tool-less request the host
-  // enforces is kept exactly as it was: no browser, question, or database command can run.
-  it('starts its session with the declared role and no tools', async () => {
+  // The role the persona declares configures the connection. The launcher does not ask for a
+  // tool-less session, so the core primer explains the role's commands instead of saying there
+  // are none.
+  it('starts its session with the declared role and its tools', async () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
     const summarizer = state();
 
     await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: 'planning', readTabs: tabs });
 
-    expect(stubs.starts).toEqual([{ withoutTools: true, role: 'planning' }]);
+    expect(stubs.starts).toEqual([{ role: 'planning' }]);
+  });
+
+  it('leaves the tab-wide no-tools override off so the primer explains the role\'s tools', async () => {
+    const stubs = stub(tabs(), '[[tab:shell]] First.');
+    const summarizer = state();
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: 'ask', readTabs: tabs });
+
+    expect(stubs.starts).toEqual([{ role: 'ask' }]);
+    expect(stubs.starts[0]).not.toHaveProperty('withoutTools');
   });
 
   it('keeps the declared role on every flush, including a re-prime after session replacement', async () => {
@@ -536,8 +548,8 @@ describe('summarizeOnce', () => {
     await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', role: 'planning', readTabs: () => rows });
 
     expect(stubs.starts).toEqual([
-      { withoutTools: true, role: 'planning' },
-      { withoutTools: true, role: 'planning' },
+      { role: 'planning' },
+      { role: 'planning' },
     ]);
     expect(summarizer.session).toBe('acp-2');
   });
