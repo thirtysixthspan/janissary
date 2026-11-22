@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that an editor persona's connection row reports the role's configured model.
-
-Existing Issue: The behavior example and verification steps 1 and 2 say the persona row's connection string reports the role's model (`claude:claude-haiku-4-5`, `codex:gpt-6-luna`), but the code labels that row with the persona name only and names tracked records by role and owner, never by model. Severity: 6/10
-
-Existing Risk: 5/10 - A verifier follows the "How to verify" steps, cannot find the promised model in the connections window, and reports the role-backed pipeline as broken even though it works, delaying release over a documentation mismatch.
-
-Proposal Risk: 2/10 - The description and code agree afterwards; no runtime behavior changes, so the only remaining risk is that a later model change makes the corrected wording stale again.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2170 "correct the pull request description's editor connection-row example and verification steps". In the pull request body's "Behavior examples" block, replace the `acp:claude:claude-haiku-4-5 ... Idle` line and its "the model is the research role's configured model" comment with the row the code actually renders: the editor connections window shows `<persona> (acp)` from `connectionsFor` in `src/editor/acp-manager.ts`, carried through `src/connection/catalog.ts` and rendered as plain text in `web/src/shared/status-windows/StatusPanels.tsx`; the connections tab's tracked record name is `acp:<role>:<ownerName>` from `recordConnectionName` in `src/plugins/connections/shared.ts`. Rewrite "How to verify" steps 1 and 2 so they confirm one row per persona role and the absence of an `ask` default, and direct the model check to the monitor connection-info line in `src/monitor/session.ts` or to the connection record, as the closing paragraph of the description already does for other server-side facts. Preserve every other character of the description, including the corrected monitor tool-loop sentence and the Screenshots reason. No code, spec, or test changes: `src/editor/acp-manager.test.ts` already pins the row text.
-
 * Stop the unbounded growth of per-slot death hooks when an editor persona is suggested repeatedly.
 
 Existing Issue: `PersonaRoleSessionManager.session` appends a hook to an in-memory list on every call and clears it only on death or close, so every repeated suggestion on one role slot adds another closure that the death path later walks. Severity: 5/10
