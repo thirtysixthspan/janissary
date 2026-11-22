@@ -3,21 +3,17 @@ import path from 'node:path';
 
 // AI personas: markdown files under `ai/personas/monitor/` (the `monitor` command) and
 // `ai/personas/editor/` (in-editor `>` suggestion requests). The filename (without `.md`)
-// is the persona name. The first line is a required harness directive; the rest of the file
+// is the persona name. The first line is a required role directive; the rest of the file
 // is the session's startup prompt.
 
-import { parseDirective, isPersonaToolsLine, parsePersonaTools } from './persona-parsing.js';
-import type { PersonaHarness } from './persona-parsing.js';
+import { parseDirective } from './persona-parsing.js';
 
 export type PersonaKind = 'monitor' | 'editor';
 
 export type Persona = {
   name: string;
-  harness: PersonaHarness;
+  role: string;
   body: string;
-  // Tools the persona opted into via the `[//]: # tools:` line (see persona-parsing). Always
-  // present — `[]` for a tool-less persona — so callers never branch on undefined.
-  tools: string[];
 };
 
 function personasDir(root: string, kind: PersonaKind): string {
@@ -25,7 +21,7 @@ function personasDir(root: string, kind: PersonaKind): string {
 }
 
 // Read and parse `ai/personas/<kind>/<name>.md` under `root` (the app's working directory).
-// Throws on a missing file or a missing/malformed/unknown-harness directive.
+// Throws on a missing file or a missing/malformed role directive.
 export function loadPersona(name: string, kind: PersonaKind, root: string = process.cwd()): Persona {
   const file = path.join(personasDir(root, kind), `${name}.md`);
   let raw: string;
@@ -35,22 +31,27 @@ export function loadPersona(name: string, kind: PersonaKind, root: string = proc
     throw new Error(`No persona "${name}" (looked in ${path.join('ai', 'personas', kind, `${name}.md`)}).`);
   }
   const lines = raw.split('\n');
-  const harness = parseDirective(name, (lines[0] ?? '').trim());
-  // An optional second `[//]: #` comment line lists the persona's tools; anything else (a blank
-  // line, an ordinary comment, or prose) starts the body, so existing personas are unaffected.
-  const secondLine = (lines[1] ?? '').trim();
-  const hasTools = isPersonaToolsLine(secondLine);
-  const tools = hasTools ? parsePersonaTools(name, secondLine) : [];
-  const body = lines.slice(hasTools ? 2 : 1).join('\n').trim();
-  return { name, harness, body, tools };
+  const role = parseDirective(name, (lines[0] ?? '').trim());
+  const body = lines.slice(1).join('\n').trim();
+  return { name, role, body };
 }
 
 // Persona names available for the given kind (used by completion and errors).
 export function listPersonas(kind: PersonaKind, root: string = process.cwd()): string[] {
   try {
-    return readdirSync(personasDir(root, kind))
+    const dir = personasDir(root, kind);
+    return readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
       .map((f) => f.slice(0, -3))
+      .filter((name) => {
+        try {
+          const firstLine = (readFileSync(path.join(dir, `${name}.md`), 'utf8').split('\n', 1)[0] ?? '').trim();
+          parseDirective(name, firstLine);
+          return true;
+        } catch {
+          return false;
+        }
+      })
       .toSorted((a, b) => a.localeCompare(b));
   } catch {
     return [];
