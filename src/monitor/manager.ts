@@ -18,11 +18,14 @@ import { errorText } from '../error-text.js';
 
 export const MONITOR_FLUSH_MS = 30_000;
 
-// Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor is a
-// dedicated, tool-less ACP session primed with its persona; transcript entries from its
-// targets buffer up and flush as one prompt every 30s (never when the buffer is empty,
-// never while a previous prompt is still streaming). Suggestions route to the owner
-// tab's transcript (inline mode) or the persona's reporting tab (external mode).
+// Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor drives one
+// role-configured core ACP session per owner tab and role, primed with its persona and shared
+// with the tab's editor persona requests through the same core pipeline `ask` and `tell` use;
+// its model and command grants come from the persona's declared role and its configured
+// fallback entries, not a persona tool allowlist. Transcript entries from its targets buffer
+// up and flush as one prompt every 30s (never when the buffer is empty, never while a previous
+// prompt is still streaming). Suggestions route to the owner tab's transcript (inline mode)
+// or the persona's reporting tab (external mode).
 export class MonitorManager extends LiveMonitors {
   constructor(
     managers: Managers,
