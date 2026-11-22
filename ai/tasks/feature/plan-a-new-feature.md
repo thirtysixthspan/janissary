@@ -103,6 +103,7 @@ Work the product-decision tree using the mechanism described above. Ask the user
 
 - **Primary flow** — what exactly does the user do, and what do they see happen, step by step.
 - **Edge cases** — what happens on the empty state, a conflict, a cancel, an error, or an unexpected input.
+- **Preserved behavior** — when the feature touches an existing surface, ask exactly: "Which behaviors must continue, and what specifically must not happen?"
 - **Scope boundary** — what is explicitly *not* included in this version.
 - **Scope boundary for user-visible changes** — when the feature changes something the user sees or operates, ask how to record its documentation work. State in the question that the plan records the documentation work as a follow-up feature candidate: "User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan." Offer at least three concrete answers: record a follow-up feature candidate for the prose documentation page only; record candidates for both the prose documentation page and any in-app help page or key-binding row; or record the work in the report's `Open` items for a human to file, naming no page in the plan. Mark the recommended and lowest-cost answer per the question format, and never write a documentation page into this feature's plan.
 - **Naming/wording** — any user-visible text (labels, commands, messages) the plan needs to fix precisely.
@@ -174,6 +175,7 @@ Before moving on, check the completed plan against this list:
 - [ ] The plan has every section `ai/guidelines/plan-template.md` requires, in the template's order, with `UI design` present only when the feature has a UI.
 - [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
 - [ ] Every question identified by the final review is resolved in the plan.
+- [ ] Every preservation claim in the plan has a negative assertion and a named test.
 - [ ] Both improvement tasks passed their separate 2g gates before this review.
 
 ### 2i. Promote the completed plan
