@@ -1,12 +1,14 @@
 # AI Monitoring with Personas
 
-Persona-driven AI sessions that watch tab activity and surface suggestions inline or in dedicated reporting tabs. Monitors are tool-less by default; a persona may opt into a small fixed set of web tools (see Persona web tools below).
+Persona-driven AI sessions that watch tab activity and surface suggestions inline or in dedicated reporting tabs. A monitor's session runs through the shared core ACP pipeline using the role named in its persona file, with that role's model choices and command grants (see Role-backed sessions below).
 
 ### Starting a monitor
 
 `monitor <persona> [target...]` starts a dedicated monitoring session. Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a reporting tab named after the monitor and colored after the monitored tab. A tab target may be given by its display alias (see `rename`) as well as its underlying label, matched case-insensitively; `unmonitor`'s target argument recognizes an alias the same way.
 
-Once the monitor's ACP session connects, the owner tab's transcript shows a line naming the monitor, its connection (provider/model), and a one-sentence summary of the persona's role — before any suggestion has been produced.
+A monitor persona's first line declares the role its session uses (`[//]: # role: <role>`); the rest of the file is the persona's startup instructions. Starting a monitor opens its session through the same core ACP role pipeline the `ask` and `tell` commands use, so its model and command grants come from the declared role's entry in the roles file in effect. A role with no enabled models, or a role name that resolves nowhere, produces only a notification — no session and no reply in the owner tab.
+
+Once the monitor's ACP session connects, the owner tab's transcript shows a line naming the monitor, its configured connection (harness/model), and a one-sentence summary of the persona's instructions — before any suggestion has been produced.
 
 ### Naming a monitor
 
@@ -63,20 +65,11 @@ A monitor's reply is parsed for one of two deliverable reports, using explicit m
 
 Both summaries and suggestions are delivered the same way — either inline (prefixed with the persona name and a sparkle indicator in the owner's transcript) or to the persona's reporting tab feed. Clicking a suggested command in the reporting tab runs it in the tab the suggestion is about, dispatching immediately even if the agent is busy. Reports from monitors are excluded from other monitors' feeds.
 
-### Persona web tools
+### Role-backed sessions
 
-By default a monitor can use no tools: `connectAcp`'s permission handler (`src/acp.ts`) denies every tool-permission request. A persona may opt into a fixed allowlist — currently only `web_search` and `web_fetch` — by adding an optional second config line to its file, in the same `[//]: #` comment style as the harness directive:
+A monitor uses the command grants of the role its persona declares, through the same tool loop as `ask` and `tell` — there is no persona-specific tool allowlist and no separate monitor tool mode. A role that grants no commands leaves the session tool-less. Role connections deny their harness's own internal tools in both layers, so only commands the role grants and the native-command settings permit can run.
 
-```
-[//]: # claude:Sonnet:high
-[//]: # tools: web_search, web_fetch
-```
-
-The list is comma-separated, case-insensitive, and de-duplicated; an empty or absent line means no tools (unchanged from before). An unknown tool name fails the persona load with `Persona "<name>" requests unknown tool "<x>" (supported: web_search, web_fetch).`. Only these two web tools are ever grantable — no filesystem, terminal, or generic HTTP tool is routed through this mechanism.
-
-Enforcement stays in the permission handler: a request is approved only when the requested tool classifies (`classifyTool` in `src/acp-tools.ts`) as an allowed web tool, and denied otherwise. The allowlist is authoritative only for a harness that actually asks for permission through ACP (the `claude` adapter); enabling web tools on the `opencode` harness is not yet supported.
-
-Because the opt-in lives in the persona file (a reviewable, checked-in diff, not a runtime toggle) and monitors receive full target transcripts, granting `web_fetch` is a real trust decision — a fetch-enabled persona could place transcript content into an outbound request. Keep the allowlist to the two web tools and enable them only on personas that need to look things up.
+Because the role file is a reviewable, checked-in setting and monitors receive full target transcripts, which commands a role grants is a real trust decision: a role granting a fetch-capable command could place transcript content into an outbound request. Keep a monitor's role grants to what that persona actually needs.
 
 ### Asking a monitor
 

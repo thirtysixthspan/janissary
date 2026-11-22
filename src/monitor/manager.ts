@@ -2,8 +2,7 @@ import type { MonitorTarget } from '../tab/types.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { openMonitorTab, updateMonitorMeta } from './window.js';
 import { rateSuggestion } from './suggestions.js';
-import { createMonitorSession, primeMonitorSession } from './session.js';
-import { spawnMonitorSession } from './acp.js';
+import { idleSession, primeMonitorSession } from './session.js';
 import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
 import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries } from './feeds.js';
@@ -27,10 +26,9 @@ export const MONITOR_FLUSH_MS = 30_000;
 export class MonitorManager extends LiveMonitors {
   constructor(
     managers: Managers,
-    spawn: typeof spawnMonitorSession = spawnMonitorSession,
     private flushMs: number = MONITOR_FLUSH_MS,
   ) {
-    super(managers, spawn);
+    super(managers);
   }
 
   // Start a monitor; returns an error message, or null on success. No targets = inline
@@ -59,9 +57,8 @@ export class MonitorManager extends LiveMonitors {
       contextBytes: 0, contextText: [],
       subs: [],
     };
-    const session = createMonitorSession(setup, this.managers, this.spawn);
-    const reg: MonitorSub = { ...setup, session, timer: setInterval(() => this.flush(key), this.flushMs) };
-    primeMonitorSession(reg);
+    const reg: MonitorSub = { ...setup, session: idleSession(), timer: setInterval(() => this.flush(key), this.flushMs) };
+    primeMonitorSession(reg, this.managers);
     this.subscribe(key, reg);
     reg.buffer.push(...seedFeedEntries(this.managers, this.managers.tab.tabs, resolved, reg));
     this.monitors.set(key, reg);

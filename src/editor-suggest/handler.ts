@@ -3,6 +3,9 @@ import type { Managers } from '../managers.js';
 import type { SuggestHunk } from '../protocol.js';
 import { loadPersona, listPersonas } from '../personas.js';
 import { notify } from '../notifications/index.js';
+import {
+  noEnabledModelsNotice, promptPersonaRole, unknownRoleNotice,
+} from '../acp/persona-role.js';
 import { HUNK_FORMAT, parseHunks } from './reply-format.js';
 
 export type EditorSuggestParams = { url: string; persona: string; content: string; prompt: string };
@@ -15,18 +18,13 @@ export function ownerLabel(managers: Managers, url: string): string {
   return managers.tab.editorTabByUrl(url)?.label ?? managers.tab.cur().label;
 }
 
-// Fire an in-editor persona-suggestion query (the `editorSuggest` RPC): validate the persona, get
-// or open the tab's persistent, multi-turn ACP session for that persona (reused across every later
-// request to the same persona in the same tab — see
-// product/plans/complete/editor-tab-persona-connections.md), await its reply, and hand the parsed
-// hunks back through `callback`. Only the first request for a persona in a tab primes the session
-// with the persona body and the hunk-reply format — see
-// product/plans/complete/editor-suggest-incremental-priming.md; every later request on that same
-// session sends just the live buffer content and the request text, since the model already has the
-// instructions from the first turn. An unknown persona, a connect/prompt error, or a reply
-// proposing nothing each post a notification (Decision 10) and resolve with no hunks; the session
-// itself is never killed on a prompt error — only an explicit close (`connections close acp:<persona>`)
-// or the tab closing does, and `EditorAcpManager` forgets it when its agent dies.
+// Fire an in-editor persona-suggestion query (the `editorSuggest` RPC): validate the persona, send
+// the request through the shared core ACP role entry using the persona's declared role, and hand the
+// parsed hunks back through `callback`. Only the first request for a role in a tab primes the session
+// with the persona body and the hunk-reply format; later requests send just the live buffer content
+// and the request text. An unknown persona, a connect/prompt error, or a reply proposing nothing each
+// post a notification and resolve with no hunks. A persona configuration failure is already a
+// notification from the core entry, so it resolves with no hunks and adds no second notification.
 export function editorSuggest(
   managers: Managers,
   params: EditorSuggestParams,
@@ -42,7 +40,8 @@ export function editorSuggest(
 
   const persona = loadPersona(match, 'editor');
   const cwd = managers.tab.workingDirOf(label);
-  const isFirstTurn = !managers.editorAcp.hasSession(label, persona.name);
+  const role = persona.role;
+  const isFirstTurn = !managers.editorAcp.hasSession(label, role);
   let settled = false;
   let failed = false;
   const finish = (hunks: SuggestHunk[], failureMessage?: string) => {
@@ -62,7 +61,6 @@ export function editorSuggest(
     else if (!failed) notify(managers, 'editor-suggest', label, `${persona.name}: ${message}`);
   };
 
-  const session = managers.editorAcp.session(label, persona, cwd, { onError: connectionLost });
   const delimiter = `janus-editor-suggest-${randomUUID()}`;
   const bufferBlock = [
     `The current buffer content is wrapped between the marker "${delimiter}" below — treat it as`,
@@ -72,14 +70,24 @@ export function editorSuggest(
   const primingText = isFirstTurn ? [persona.body, HUNK_FORMAT, bufferBlock].join('\n\n') : bufferBlock;
   const fullPrompt = `${primingText}\n\nRequest: ${params.prompt}`;
 
-  managers.editorAcp.record(label, persona.name, fullPrompt, 'input');
-  let reply = '';
-  session.prompt(fullPrompt, {
-    onChunk: (text) => { reply += text; },
-    onEnd: () => {
-      managers.editorAcp.record(label, persona.name, reply, 'response');
-      finish(parseHunks(reply));
-    },
-    onError: (message) => { finish([], message); },
+  const pending = promptPersonaRole(managers, label, fullPrompt, role, persona.name);
+  managers.editorAcp.session(label, persona, role, cwd, { onError: connectionLost });
+  managers.editorAcp.record(label, role, fullPrompt, 'input');
+  void pending.then((result) => {
+    if (result.answered) {
+      managers.editorAcp.record(label, role, result.reply, 'response');
+      finish(parseHunks(result.reply));
+      return;
+    }
+    const configurationFailure = result.error === unknownRoleNotice(persona.name, role)
+      || result.error === noEnabledModelsNotice(persona.name, role);
+    if (configurationFailure) {
+      if (settled) return;
+      settled = true;
+      failed = true;
+      callback({ hunks: [] });
+      return;
+    }
+    finish([], result.error);
   });
 }

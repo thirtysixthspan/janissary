@@ -1,30 +1,53 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AcpSession, PromptHandlers } from '../acp/types.js';
+import type * as PersonaRole from '../acp/persona-role.js';
 import type { Managers } from '../managers.js';
 
 const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
   listPersonas: vi.fn(),
   loadPersona: vi.fn(),
-  spawnMonitorSession: vi.fn(),
+  promptPersonaRole: vi.fn(),
 }));
 
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
 vi.mock('../personas.js', () => ({ listPersonas: mocks.listPersonas, loadPersona: mocks.loadPersona }));
-vi.mock('../monitor/acp.js', () => ({ spawnMonitorSession: mocks.spawnMonitorSession }));
+vi.mock('../acp/persona-role.js', async (importOriginal) => ({
+  ...await importOriginal<typeof PersonaRole>(), promptPersonaRole: mocks.promptPersonaRole,
+}));
 
 import { editorSuggest } from './handler.js';
-import { EditorAcpManager } from '../editor/acp-manager.js';
+import { noEnabledModelsNotice, unknownRoleNotice } from '../acp/persona-role.js';
 
-function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn> } {
-  const prompt = vi.fn();
-  const kill = vi.fn();
-  return { session: { prompt, kill, cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) }, prompt, kill };
+type PromptResult = { answered: boolean; reply?: string; error?: string; session?: string };
+
+// An already-settled core result: the proxy exposes `then` without a thenable object literal, so the
+// synchronous tests observe the reply without advancing the microtask queue.
+function settled(result: PromptResult): unknown {
+  return new Proxy({}, {
+    get: (_target, key) => key === 'then'
+      ? (callback: (value: PromptResult) => void) => { callback(result); }
+      : undefined,
+  });
 }
 
-function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<typeof vi.fn> = vi.fn()): Managers {
+function settleWith(result: PromptResult): void {
+  mocks.promptPersonaRole.mockImplementation(() => settled(result));
+}
+
+function makeManagers(hasSession = false): {
+  managers: Managers;
+  session: ReturnType<typeof vi.fn>;
+  record: ReturnType<typeof vi.fn>;
+  hooks: { onError: (message: string) => void };
+} {
   const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
-  return {
+  const session = vi.fn();
+  const record = vi.fn();
+  const hooks = { onError: () => {} };
+  session.mockImplementation((_label, _persona, _role, _cwd, h: { onError: (message: string) => void }) => {
+    hooks.onError = h.onError;
+  });
+  const managers = {
     tab: {
       tabs,
       byLabel: (label: string) => tabs.find((t) => t.label === label),
@@ -32,18 +55,25 @@ function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<type
       cur: () => ({ label: 'notes' }),
       cwdOf: () => '/repo', workingDirOf: () => '/repo',
     },
-    editorAcp: { session, record, hasSession: vi.fn(() => false) },
+    editorAcp: { session, record, hasSession: vi.fn(() => hasSession) },
   } as unknown as Managers;
+  return { managers, session, record, hooks };
 }
 
 const baseParams = { url: '/open/1', persona: 'reviewer', content: 'hello world', prompt: 'rewrite this' };
+const HUNK = '[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.listPersonas.mockReturnValue(['reviewer']);
+  mocks.loadPersona.mockReturnValue({ name: 'reviewer', role: 'research', body: 'Watch for bugs.' });
+  settleWith({ answered: true, reply: HUNK, session: 'persona-acp-1' });
+});
 
 describe('editorSuggest', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
-
   it('notifies and returns no hunks for an unknown persona', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
-    const managers = makeManagers(vi.fn());
+    const { managers } = makeManagers();
     const callback = vi.fn();
 
     editorSuggest(managers, { ...baseParams, persona: 'ghostwriter' }, callback);
@@ -51,224 +81,105 @@ describe('editorSuggest', () => {
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'editor-suggest', 'notes', 'ghostwriter: unknown persona');
     expect(callback).toHaveBeenCalledWith({ hunks: [] });
     expect(mocks.loadPersona).not.toHaveBeenCalled();
+    expect(mocks.promptPersonaRole).not.toHaveBeenCalled();
   });
 
-  it('parses hunks from a happy-path reply, reusing the tab\'s persona session', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session, prompt } = makeSession();
-    const sessionFn = vi.fn(() => session);
-    const record = vi.fn();
-    const managers = makeManagers(sessionFn, record);
+  it('reaches the core role entry with the persona role and returns parsed hunks', () => {
+    const { managers, record } = makeManagers();
     const callback = vi.fn();
 
     editorSuggest(managers, baseParams, callback);
 
-    expect(sessionFn).toHaveBeenCalledWith('notes', expect.objectContaining({ name: 'reviewer' }), '/repo', expect.objectContaining({ onError: expect.any(Function) }));
-    expect(prompt).toHaveBeenCalledTimes(1);
-    const [promptText, handlers] = prompt.mock.calls[0] as [string, PromptHandlers];
-    expect(promptText).toContain('Watch for bugs.');
-    expect(promptText).toContain('hello world');
-    expect(record).toHaveBeenCalledWith('notes', 'reviewer', promptText, 'input');
-    handlers.onChunk('[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]');
-    handlers.onEnd('end_turn');
-
-    expect(record).toHaveBeenCalledWith('notes', 'reviewer', '[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]', 'response');
+    expect(mocks.promptPersonaRole).toHaveBeenCalledWith(
+      managers, 'notes', expect.any(String), 'research', 'reviewer',
+    );
+    const prompt = mocks.promptPersonaRole.mock.calls[0][2] as string;
+    expect(prompt).toContain('Watch for bugs.');
+    expect(prompt).toContain('Reply with zero or more proposed edits');
+    expect(prompt).toContain('hello world');
+    expect(record).toHaveBeenCalledWith('notes', 'research', prompt, 'input');
+    expect(record).toHaveBeenCalledWith('notes', 'research', HUNK, 'response');
     expect(callback).toHaveBeenCalledWith({ hunks: [{ anchor: 'hello', replacement: 'goodbye' }] });
     expect(mocks.notify).not.toHaveBeenCalled();
   });
 
-  it('records the exchange into the real EditorAcpManager so its transcript is non-empty afterward', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session, prompt } = makeSession();
-    mocks.spawnMonitorSession.mockReturnValue(session);
-    const editorAcp = new EditorAcpManager({} as unknown as Managers);
-    const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
-    const managers = {
-      tab: {
-        tabs,
-        byLabel: (label: string) => tabs.find((t) => t.label === label),
-        editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
-        cur: () => ({ label: 'notes' }),
-        cwdOf: () => '/repo', workingDirOf: () => '/repo',
-      },
-      editorAcp,
-    } as unknown as Managers;
-
-    expect(editorAcp.transcript('notes', 'reviewer')).toBe('');
+  it('primes only the first request; a later request sends only the buffer and request text', () => {
+    const { managers } = makeManagers(true);
 
     editorSuggest(managers, baseParams, vi.fn());
-    const handlers = prompt.mock.calls[0][1] as PromptHandlers;
-    handlers.onChunk('OK, nothing to change.');
-    handlers.onEnd('end_turn');
 
-    const transcript = editorAcp.transcript('notes', 'reviewer');
-    expect(transcript).not.toBe('');
-    expect(transcript).toContain('OK, nothing to change.');
+    const prompt = mocks.promptPersonaRole.mock.calls[0][2] as string;
+    expect(prompt).not.toContain('Watch for bugs.');
+    expect(prompt).not.toContain('Reply with zero or more proposed edits');
+    expect(prompt).toContain('hello world');
+    expect(prompt).toContain('Request: rewrite this');
   });
 
-  it('a second request for the same persona reuses the same session (spawn called once)', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session, prompt } = makeSession();
-    const sessionFn = vi.fn(() => session);
-    const managers = makeManagers(sessionFn);
-
-    editorSuggest(managers, baseParams, vi.fn());
-    (prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
-    editorSuggest(managers, baseParams, vi.fn());
-    (prompt.mock.calls[1][1] as PromptHandlers).onEnd('end_turn');
-
-    expect(sessionFn).toHaveBeenCalledTimes(2);
-    expect(prompt).toHaveBeenCalledTimes(2);
-  });
-
-  it('only the first request in a tab/persona session primes with the persona body and hunk format; later requests send just the buffer and prompt', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session, prompt } = makeSession();
-    const hasSession = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
-    const sessionFn = vi.fn(() => session);
-    const record = vi.fn();
-    const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
-    const managers = {
-      tab: {
-        tabs,
-        byLabel: (label: string) => tabs.find((t) => t.label === label),
-        editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
-        cur: () => ({ label: 'notes' }),
-        cwdOf: () => '/repo', workingDirOf: () => '/repo',
-      },
-      editorAcp: { session: sessionFn, record, hasSession },
-    } as unknown as Managers;
-
-    editorSuggest(managers, baseParams, vi.fn());
-    (prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
-    editorSuggest(managers, baseParams, vi.fn());
-    (prompt.mock.calls[1][1] as PromptHandlers).onEnd('end_turn');
-
-    const firstPrompt = prompt.mock.calls[0][0] as string;
-    const secondPrompt = prompt.mock.calls[1][0] as string;
-    expect(firstPrompt).toContain('Watch for bugs.');
-    expect(firstPrompt).toContain('Reply with zero or more proposed edits');
-    expect(secondPrompt).not.toContain('Watch for bugs.');
-    expect(secondPrompt).not.toContain('Reply with zero or more proposed edits');
-    expect(secondPrompt).toContain('hello world');
-    expect(secondPrompt).toContain('Request: rewrite this');
-  });
-
-  it('notifies and returns no hunks on a connect error', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session } = makeSession();
-    let capturedOnError: ((message: string) => void) | undefined;
-    const sessionFn = vi.fn((_label, _persona, _cwd, hooks: { onError: (message: string) => void }) => {
-      capturedOnError = hooks.onError;
-      return session;
-    });
-    const managers = makeManagers(sessionFn);
+  it('resolves a notification-only role failure with no hunks and no duplicate notification', () => {
+    settleWith({ answered: false, error: unknownRoleNotice('reviewer', 'research') });
+    const { managers } = makeManagers();
     const callback = vi.fn();
 
     editorSuggest(managers, baseParams, callback);
-    capturedOnError?.('spawn failed');
 
-    expect(mocks.notify).toHaveBeenCalledWith(managers, 'editor-suggest', 'notes', 'reviewer: spawn failed');
     expect(callback).toHaveBeenCalledWith({ hunks: [] });
+    expect(mocks.notify).not.toHaveBeenCalled();
   });
 
-  describe('a connection lost after the request settled', () => {
-    function captureConnectionHook(): { sessionFn: ReturnType<typeof vi.fn>; prompt: ReturnType<typeof vi.fn>; lost: () => (message: string) => void } {
-      mocks.listPersonas.mockReturnValue(['reviewer']);
-      mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-      const { session, prompt } = makeSession();
-      let captured: ((message: string) => void) | undefined;
-      const sessionFn = vi.fn((_label, _persona, _cwd, hooks: { onError: (message: string) => void }) => {
-        captured = hooks.onError;
-        return session;
-      });
-      return { sessionFn, prompt, lost: () => captured! };
-    }
-
-    it('is reported once after a successful reply, without calling back again', () => {
-      const { sessionFn, prompt, lost } = captureConnectionHook();
-      const managers = makeManagers(sessionFn);
-      const callback = vi.fn();
-
-      editorSuggest(managers, baseParams, callback);
-      (prompt.mock.calls[0][1] as PromptHandlers).onChunk('[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]');
-      (prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
-      lost()('ACP agent exited.');
-
-      expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'editor-suggest', 'notes', 'reviewer: ACP agent exited.');
-      expect(callback).toHaveBeenCalledTimes(1);
-    });
-
-    it('is not reported a second time after the request already failed', () => {
-      const { sessionFn, prompt, lost } = captureConnectionHook();
-      const managers = makeManagers(sessionFn);
-      const callback = vi.fn();
-
-      editorSuggest(managers, baseParams, callback);
-      (prompt.mock.calls[0][1] as PromptHandlers).onError('connection closed');
-      lost()('ACP agent exited.');
-
-      expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'editor-suggest', 'notes', 'reviewer: connection closed');
-      expect(callback).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('a request after the persona\'s agent died spawns a fresh session and primes it again', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const dead = makeSession();
-    const fresh = makeSession();
-    mocks.spawnMonitorSession.mockReturnValueOnce(dead.session).mockReturnValueOnce(fresh.session);
-    const editorAcp = new EditorAcpManager({} as unknown as Managers);
-    const managers = { ...makeManagers(vi.fn()), editorAcp } as unknown as Managers;
-
-    editorSuggest(managers, baseParams, vi.fn());
-    (dead.prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
-    (mocks.spawnMonitorSession.mock.calls[0][2] as { onError: (message: string) => void }).onError('ACP agent exited.');
-    editorSuggest(managers, baseParams, vi.fn());
-
-    expect(mocks.spawnMonitorSession).toHaveBeenCalledTimes(2);
-    expect(dead.prompt).toHaveBeenCalledTimes(1);
-    expect(fresh.prompt.mock.calls[0][0]).toContain('Watch for bugs.');
-  });
-
-  it('notifies and returns no hunks on a prompt error, without killing the session', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session, prompt, kill } = makeSession();
-    const sessionFn = vi.fn(() => session);
-    const managers = makeManagers(sessionFn);
+  it('resolves a no-enabled-models failure with no hunks and no duplicate notification', () => {
+    settleWith({ answered: false, error: noEnabledModelsNotice('reviewer', 'research') });
+    const { managers } = makeManagers();
     const callback = vi.fn();
 
     editorSuggest(managers, baseParams, callback);
-    const handlers = prompt.mock.calls[0][1] as PromptHandlers;
-    handlers.onError('boom');
 
-    expect(kill).not.toHaveBeenCalled();
+    expect(callback).toHaveBeenCalledWith({ hunks: [] });
+    expect(mocks.notify).not.toHaveBeenCalled();
+  });
+
+  it('notifies with the core error on a prompt failure', () => {
+    settleWith({ answered: false, error: 'boom' });
+    const { managers, session } = makeManagers();
+    const callback = vi.fn();
+
+    editorSuggest(managers, baseParams, callback);
+
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'editor-suggest', 'notes', 'reviewer: boom');
     expect(callback).toHaveBeenCalledWith({ hunks: [] });
+    expect(session).toHaveBeenCalledWith('notes', expect.objectContaining({ name: 'reviewer' }), 'research', '/repo', expect.objectContaining({ onError: expect.any(Function) }));
   });
 
-  it('notifies "no suggestion" when the persona proposes nothing, without killing the session', () => {
-    mocks.listPersonas.mockReturnValue(['reviewer']);
-    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
-    const { session, prompt, kill } = makeSession();
-    const sessionFn = vi.fn(() => session);
-    const managers = makeManagers(sessionFn);
+  it('notifies "no suggestion" when the persona proposes nothing', () => {
+    settleWith({ answered: true, reply: 'OK, nothing to change.', session: 'persona-acp-1' });
+    const { managers } = makeManagers();
     const callback = vi.fn();
 
     editorSuggest(managers, baseParams, callback);
-    const handlers = prompt.mock.calls[0][1] as PromptHandlers;
-    handlers.onChunk('OK, nothing to change.');
-    handlers.onEnd('end_turn');
 
-    expect(kill).not.toHaveBeenCalled();
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'editor-suggest', 'notes', 'reviewer: no suggestion');
     expect(callback).toHaveBeenCalledWith({ hunks: [] });
+  });
+
+  it('reports an agent death after a settled reply once, without calling back again', () => {
+    const { managers, hooks } = makeManagers();
+    const callback = vi.fn();
+
+    editorSuggest(managers, baseParams, callback);
+    hooks.onError('ACP agent exited.');
+
+    expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'editor-suggest', 'notes', 'reviewer: ACP agent exited.');
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not report an agent death a second time after the request already failed', () => {
+    settleWith({ answered: false, error: 'connection closed' });
+    const { managers, hooks } = makeManagers();
+    const callback = vi.fn();
+
+    editorSuggest(managers, baseParams, callback);
+    hooks.onError('ACP agent exited.');
+
+    expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'editor-suggest', 'notes', 'reviewer: connection closed');
+    expect(callback).toHaveBeenCalledTimes(1);
   });
 });

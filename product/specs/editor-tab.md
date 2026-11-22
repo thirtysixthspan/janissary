@@ -739,14 +739,24 @@ primed with the editor's current buffer content exactly as it
 stands at that moment — including any unsaved edits, and excluding the query text itself, since it
 was never part of the buffer — plus the request text.
 
-The first request to a given persona in an editor tab opens a connection to that persona, which
-stays open for the rest of that tab's life; every later request to the same persona in that same
-tab reuses the same connection rather than starting a fresh one, and the persona's replies can draw
-on what it said earlier in the tab, the same as a multi-turn conversation. As with any multi-turn
-conversation, the persona's full instructions are only needed once: only the first request on a
-connection includes them, while every later request on that same connection sends just the current
-buffer content and the new request text. A request to a different persona in the same tab opens its
-own separate connection alongside it. These connections appear in the tab's connections window (see
+An editor persona's first line declares the role its requests use (`[//]: # role: <role>`); the rest
+of the file is the persona's instructions. The request runs through the same core ACP role pipeline
+as `ask` and `tell`, using the declared role's model choices and command grants rather than a
+persona-specific tool allowlist. A role that grants no commands leaves the session tool-less. A
+persona that names an unknown role, or a role with no enabled models, produces only a notification —
+no connection and no answer in the editor. The editor `>` request line and the hunk results are
+unchanged by this.
+
+The first request to a given persona in an editor tab opens a connection for that persona's role,
+which stays open for the rest of that tab's life; every later request to the same persona in that
+same tab reuses the same connection rather than starting a fresh one, and the persona's replies can
+draw on what it said earlier in the tab, the same as a multi-turn conversation. As with any
+multi-turn conversation, the persona's full instructions are only needed once: only the first request
+on a connection includes them, while every later request on that same connection sends just the
+current buffer content and the new request text. A request to a different persona declaring a
+different role in the same tab opens its own separate connection alongside it; two personas naming
+the same role share that role's connection. The connections window keeps naming the persona that was
+asked for, not the role behind it. These connections appear in the tab's connections window (see
 [[connection]]) and are closed automatically when the editor tab itself is closed, or manually from
 the connections window at any point — closing a connection and firing a new request to that persona
 starts over with a fresh connection, primed again from the top.

@@ -1,255 +1,281 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type * as AcpIndex from '../acp/index.js';
 import type { AcpSession } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
 
-const mocks = vi.hoisted(() => ({ spawnMonitorSession: vi.fn() }));
-vi.mock('../monitor/acp.js', () => ({ spawnMonitorSession: mocks.spawnMonitorSession }));
+const ENTRY = { harness: 'opencode', model: 'model-x' };
+const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
+vi.mock('../acp/index.js', async (importOriginal) => ({
+  ...await importOriginal<typeof AcpIndex>(), connectAcp: mocks.connectAcp,
+}));
 
 import { EditorAcpManager } from './acp-manager.js';
+import { PersonaRoleSessionManager } from '../acp/persona-role-session.js';
 import { messageBus } from '../bus.js';
 
-type SpawnHooks = { onError: (message: string) => void };
-
-function spawnHook(call: number): SpawnHooks {
-  return mocks.spawnMonitorSession.mock.calls[call][2] as SpawnHooks;
-}
+type Hooks = { onError: (message: string) => void };
 
 function makeSession(): { session: AcpSession; kill: ReturnType<typeof vi.fn> } {
   const kill = vi.fn();
-  return { session: { prompt: vi.fn(), kill, cancel: vi.fn(async () => {}), shutdown: vi.fn(async () => {}) }, kill };
+  return {
+    session: { prompt: vi.fn(), kill, cancel: async () => {}, shutdown: async () => {} },
+    kill,
+  };
 }
 
-function persona(name: string): Persona {
-  return { name, harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] };
+function persona(name: string, role: string): Persona {
+  return { name, role, body: 'Watch for bugs.' };
 }
+
+function harness(labels: string[] = ['notes']): {
+  managers: Managers;
+  editor: EditorAcpManager;
+  tabs: Tab[];
+} {
+  const tabs = labels.map((label) => ({
+    label, title: label, runtime: { busy: false, context: [], queue: [] },
+  })) as unknown as Tab[];
+  const managers = {
+    tab: {
+      tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
+      cwdOf: () => '/repo',
+    },
+  } as unknown as Managers;
+  managers.personaRoleSessions = new PersonaRoleSessionManager(managers);
+  return { managers, editor: new EditorAcpManager(managers), tabs };
+}
+
+// Open a role slot on the shared core owner, then let the editor owner bind the persona to it.
+function openSlot(
+  managers: Managers, editor: EditorAcpManager, label: string, p: Persona, hooks?: Hooks,
+): AcpSession {
+  const bound = hooks ?? { onError: () => {} };
+  const session = managers.personaRoleSessions.session(label, p.role, ENTRY, '/repo', bound);
+  editor.session(label, p, p.role, '/repo', bound);
+  return session;
+}
+
+function die(call: number, message: string): void {
+  const options = mocks.connectAcp.mock.calls[call][0] as { onError: (message: string) => void };
+  options.onError(message);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  messageBus.clear();
+});
 
 describe('EditorAcpManager', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  it('reuses the same core session for the same label and role', () => {
+    mocks.connectAcp.mockReturnValue(makeSession().session);
+    const { managers, editor } = harness();
 
-  it('spawns once and reuses the same session for the same label/persona', () => {
-    const { session } = makeSession();
-    mocks.spawnMonitorSession.mockReturnValue(session);
-    const manager = new EditorAcpManager({} as Managers);
-
-    const first = manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    const second = manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+    const first = openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    const second = openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
 
     expect(first).toBe(second);
-    expect(mocks.spawnMonitorSession).toHaveBeenCalledTimes(1);
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(1);
   });
 
-  it('gives a different persona its own session', () => {
-    mocks.spawnMonitorSession.mockReturnValueOnce(makeSession().session).mockReturnValueOnce(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
+  it('gives two personas declaring different roles on one tab separate sessions', () => {
+    mocks.connectAcp
+      .mockReturnValueOnce(makeSession().session)
+      .mockReturnValueOnce(makeSession().session);
+    const { managers, editor } = harness();
 
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.session('notes', persona('critic'), '/repo', { onError: vi.fn() });
+    const reviewer = openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    const critic = openSlot(managers, editor, 'notes', persona('critic', 'planning'));
 
-    expect(mocks.spawnMonitorSession).toHaveBeenCalledTimes(2);
+    expect(reviewer).not.toBe(critic);
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+    expect(editor.hasSession('notes', 'research')).toBe(true);
+    expect(editor.hasSession('notes', 'planning')).toBe(true);
   });
 
-  it('gives a different label its own session for the same persona', () => {
-    mocks.spawnMonitorSession.mockReturnValueOnce(makeSession().session).mockReturnValueOnce(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
+  it('opens a role slot without a persona-specific tool allowlist', () => {
+    mocks.connectAcp.mockReturnValue(makeSession().session);
+    const { managers, editor } = harness();
 
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.session('todo', persona('reviewer'), '/repo', { onError: vi.fn() });
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
 
-    expect(mocks.spawnMonitorSession).toHaveBeenCalledTimes(2);
+    const options = mocks.connectAcp.mock.calls[0][0] as Record<string, unknown>;
+    expect(options).not.toHaveProperty('allowedTools');
   });
 
-  it('connectionsFor reflects only currently-open sessions', () => {
-    mocks.spawnMonitorSession.mockReturnValueOnce(makeSession().session).mockReturnValueOnce(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.session('todo', persona('critic'), '/repo', { onError: vi.fn() });
+  it('gives a different label its own session for the same role', () => {
+    mocks.connectAcp
+      .mockReturnValueOnce(makeSession().session)
+      .mockReturnValueOnce(makeSession().session);
+    const { managers, editor } = harness(['notes', 'todo']);
 
-    expect(manager.connectionsFor('notes')).toEqual([
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    openSlot(managers, editor, 'todo', persona('reviewer', 'research'));
+
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+  });
+
+  it('connectionsFor reflects only open role slots and labels them with the persona name', () => {
+    mocks.connectAcp
+      .mockReturnValueOnce(makeSession().session)
+      .mockReturnValueOnce(makeSession().session);
+    const { managers, editor } = harness(['notes', 'todo']);
+
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    openSlot(managers, editor, 'todo', persona('critic', 'research'));
+
+    expect(editor.connectionsFor('notes')).toEqual([
       { text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } },
     ]);
-    expect(manager.connectionsFor('todo')).toEqual([
+    expect(editor.connectionsFor('todo')).toEqual([
       { text: 'critic (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'todo', persona: 'critic' } },
     ]);
-    expect(manager.connectionsFor('other')).toEqual([]);
+    expect(editor.connectionsFor('other')).toEqual([]);
   });
 
-  it('hasSession reflects whether a session is currently open, including after close/closeTab', () => {
-    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
+  it('hasSession reflects whether a slot is open, including after close/closeTab', () => {
+    mocks.connectAcp.mockReturnValue(makeSession().session);
+    const { managers, editor } = harness();
 
-    expect(manager.hasSession('notes', 'reviewer')).toBe(false);
+    expect(editor.hasSession('notes', 'research')).toBe(false);
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    expect(editor.hasSession('notes', 'research')).toBe(true);
+    expect(editor.hasSession('notes', 'planning')).toBe(false);
+    expect(editor.hasSession('todo', 'research')).toBe(false);
 
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    expect(manager.hasSession('notes', 'reviewer')).toBe(true);
-    expect(manager.hasSession('notes', 'critic')).toBe(false);
-    expect(manager.hasSession('todo', 'reviewer')).toBe(false);
+    editor.close('notes', 'reviewer');
+    expect(editor.hasSession('notes', 'research')).toBe(false);
 
-    manager.close('notes', 'reviewer');
-    expect(manager.hasSession('notes', 'reviewer')).toBe(false);
-
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.closeTab('notes');
-    expect(manager.hasSession('notes', 'reviewer')).toBe(false);
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    editor.closeTab('notes');
+    expect(editor.hasSession('notes', 'research')).toBe(false);
   });
 
-  it('close kills and removes just the matching session, returning whether one was open', () => {
-    const { session: reviewerSession, kill: reviewerKill } = makeSession();
-    const { session: criticSession, kill: criticKill } = makeSession();
-    mocks.spawnMonitorSession.mockReturnValueOnce(reviewerSession).mockReturnValueOnce(criticSession);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.session('notes', persona('critic'), '/repo', { onError: vi.fn() });
+  it('close kills and removes just the matching persona slot', () => {
+    const reviewer = makeSession();
+    const critic = makeSession();
+    mocks.connectAcp
+      .mockReturnValueOnce(reviewer.session)
+      .mockReturnValueOnce(critic.session);
+    const { managers, editor } = harness();
 
-    expect(manager.close('notes', 'reviewer')).toBe(true);
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    openSlot(managers, editor, 'notes', persona('critic', 'planning'));
 
-    expect(reviewerKill).toHaveBeenCalledTimes(1);
-    expect(criticKill).not.toHaveBeenCalled();
-    expect(manager.connectionsFor('notes')).toEqual([
+    expect(editor.close('notes', 'reviewer')).toBe(true);
+    expect(reviewer.kill).toHaveBeenCalledTimes(1);
+    expect(critic.kill).not.toHaveBeenCalled();
+    expect(editor.connectionsFor('notes')).toEqual([
       { text: 'critic (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'critic' } },
     ]);
-    expect(manager.close('notes', 'reviewer')).toBe(false);
+    expect(editor.close('notes', 'reviewer')).toBe(false);
   });
 
-  it('closeTab closes every session for that label only', () => {
-    const { session: notesSession, kill: notesKill } = makeSession();
-    const { session: todoSession, kill: todoKill } = makeSession();
-    mocks.spawnMonitorSession.mockReturnValueOnce(notesSession).mockReturnValueOnce(todoSession);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.session('todo', persona('reviewer'), '/repo', { onError: vi.fn() });
+  it('closeTab closes every slot for that label only, and dispose clears the rest', () => {
+    const notes = makeSession();
+    const todo = makeSession();
+    mocks.connectAcp
+      .mockReturnValueOnce(notes.session)
+      .mockReturnValueOnce(todo.session);
+    const { managers, editor } = harness(['notes', 'todo']);
 
-    manager.closeTab('notes');
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    openSlot(managers, editor, 'todo', persona('reviewer', 'research'));
+    editor.closeTab('notes');
 
-    expect(notesKill).toHaveBeenCalledTimes(1);
-    expect(todoKill).not.toHaveBeenCalled();
-    expect(manager.connectionsFor('notes')).toEqual([]);
-    expect(manager.connectionsFor('todo')).toEqual([
-      { text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'todo', persona: 'reviewer' } },
-    ]);
+    expect(notes.kill).toHaveBeenCalledTimes(1);
+    expect(todo.kill).not.toHaveBeenCalled();
+    expect(editor.connectionsFor('notes')).toEqual([]);
+    expect(editor.connectionsFor('todo')).toHaveLength(1);
+
+    editor.dispose();
+    editor.dispose();
+    expect(todo.kill).toHaveBeenCalledTimes(1);
+    expect(editor.connectionsFor('todo')).toEqual([]);
+    expect(editor.transcript('todo', 'reviewer')).toBe('');
   });
 
-  it('dispose kills every session and clears connection and transcript state', () => {
-    const { session: notesSession, kill: notesKill } = makeSession();
-    const { session: todoSession, kill: todoKill } = makeSession();
-    mocks.spawnMonitorSession.mockReturnValueOnce(notesSession).mockReturnValueOnce(todoSession);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.session('todo', persona('critic'), '/repo', { onError: vi.fn() });
-    manager.record('notes', 'reviewer', 'Review this', 'input');
+  it('record then transcript round-trips an exchange looked up by persona', () => {
+    mocks.connectAcp.mockReturnValue(makeSession().session);
+    const { managers, editor } = harness();
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
 
-    manager.dispose();
-    manager.dispose();
+    editor.record('notes', 'research', 'Review this diff', 'input');
+    editor.record('notes', 'research', 'Looks good', 'response');
 
-    expect(notesKill).toHaveBeenCalledOnce();
-    expect(todoKill).toHaveBeenCalledOnce();
-    expect(manager.connectionsFor('notes')).toEqual([]);
-    expect(manager.connectionsFor('todo')).toEqual([]);
-    expect(manager.transcript('notes', 'reviewer')).toBe('');
-  });
-
-  it('record then transcript round-trips an input block and a response block', () => {
-    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-
-    manager.record('notes', 'reviewer', 'Review this diff', 'input');
-    manager.record('notes', 'reviewer', 'Looks good', 'response');
-
-    const text = manager.transcript('notes', 'reviewer');
+    const text = editor.transcript('notes', 'reviewer');
     expect(text).toContain('SENT TO MODEL');
     expect(text).toContain('Review this diff');
     expect(text).toContain('MODEL RESPONSE');
     expect(text).toContain('Looks good');
   });
 
-  it('transcript returns an empty string for a session with no recorded exchange', () => {
-    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
+  it('transcript is empty for an unknown persona and after close', () => {
+    mocks.connectAcp.mockReturnValue(makeSession().session);
+    const { managers, editor } = harness();
+    expect(editor.transcript('notes', 'ghost')).toBe('');
 
-    expect(manager.transcript('notes', 'reviewer')).toBe('');
-  });
-
-  it('transcript returns an empty string for an unknown label/persona', () => {
-    const manager = new EditorAcpManager({} as Managers);
-    expect(manager.transcript('notes', 'reviewer')).toBe('');
-  });
-
-  it('close drops the context store for the closed session', () => {
-    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.record('notes', 'reviewer', 'hi', 'input');
-
-    manager.close('notes', 'reviewer');
-
-    expect(manager.transcript('notes', 'reviewer')).toBe('');
+    openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+    editor.record('notes', 'research', 'hi', 'input');
+    editor.close('notes', 'reviewer');
+    expect(editor.transcript('notes', 'reviewer')).toBe('');
   });
 
   describe('when the agent dies', () => {
-    beforeEach(() => { messageBus.clear(); });
-
-    it('forgets the session without killing it, marks state dirty, and spawns afresh next time', () => {
-      const { session, kill } = makeSession();
-      mocks.spawnMonitorSession.mockReturnValueOnce(session).mockReturnValueOnce(makeSession().session);
-      const manager = new EditorAcpManager({} as Managers);
+    it('forgets the slot without killing it, marks state dirty, and opens fresh next time', () => {
+      const dead = makeSession();
+      mocks.connectAcp
+        .mockReturnValueOnce(dead.session)
+        .mockReturnValueOnce(makeSession().session);
+      const { managers, editor } = harness();
       const dirty = vi.fn();
       messageBus.on('state', 'dirty', dirty);
-      manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-      manager.record('notes', 'reviewer', 'hi', 'input');
+      openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+      editor.record('notes', 'research', 'hi', 'input');
 
-      spawnHook(0).onError('ACP agent exited.');
+      die(0, 'ACP agent exited.');
 
-      expect(manager.hasSession('notes', 'reviewer')).toBe(false);
-      expect(manager.connectionsFor('notes')).toEqual([]);
-      expect(manager.transcript('notes', 'reviewer')).toBe('');
-      expect(kill).not.toHaveBeenCalled();
+      expect(editor.hasSession('notes', 'research')).toBe(false);
+      expect(editor.connectionsFor('notes')).toEqual([]);
+      expect(editor.transcript('notes', 'reviewer')).toBe('');
+      expect(dead.kill).not.toHaveBeenCalled();
       expect(dirty).toHaveBeenCalledOnce();
 
-      const next = manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-      expect(mocks.spawnMonitorSession).toHaveBeenCalledTimes(2);
-      expect(next).not.toBe(session);
+      const next = openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+      expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+      expect(next).not.toBe(dead.session);
     });
 
     it('reports the death to the hook from the latest session() call, not the first', () => {
-      mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
-      const manager = new EditorAcpManager({} as Managers);
+      mocks.connectAcp.mockReturnValue(makeSession().session);
+      const { managers, editor } = harness();
       const first = vi.fn();
       const latest = vi.fn();
-      manager.session('notes', persona('reviewer'), '/repo', { onError: first });
-      manager.session('notes', persona('reviewer'), '/repo', { onError: latest });
+      openSlot(managers, editor, 'notes', persona('reviewer', 'research'), { onError: first });
+      openSlot(managers, editor, 'notes', persona('reviewer', 'research'), { onError: latest });
 
-      spawnHook(0).onError('ACP agent exited.');
+      die(0, 'ACP agent exited.');
 
       expect(first).not.toHaveBeenCalled();
       expect(latest).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
     });
 
-    it('ignores a late error from a session that was already closed and replaced', () => {
-      mocks.spawnMonitorSession.mockReturnValueOnce(makeSession().session).mockReturnValueOnce(makeSession().session);
-      const manager = new EditorAcpManager({} as Managers);
+    it('does not chain an earlier hook into a late error from a replaced slot', () => {
+      mocks.connectAcp
+        .mockReturnValueOnce(makeSession().session)
+        .mockReturnValueOnce(makeSession().session);
+      const { managers, editor } = harness();
       const onError = vi.fn();
-      manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-      manager.close('notes', 'reviewer');
-      const replacement = manager.session('notes', persona('reviewer'), '/repo', { onError });
+      openSlot(managers, editor, 'notes', persona('reviewer', 'research'));
+      editor.close('notes', 'reviewer');
+      openSlot(managers, editor, 'notes', persona('reviewer', 'research'), { onError });
 
-      spawnHook(0).onError('ACP agent exited.');
+      die(0, 'ACP agent exited.');
 
-      expect(manager.hasSession('notes', 'reviewer')).toBe(true);
-      expect(manager.session('notes', persona('reviewer'), '/repo', { onError })).toBe(replacement);
+      expect(editor.hasSession('notes', 'research')).toBe(true);
       expect(onError).not.toHaveBeenCalled();
     });
-  });
-
-  it('closeTab drops the context store for every closed session', () => {
-    mocks.spawnMonitorSession.mockReturnValue(makeSession().session);
-    const manager = new EditorAcpManager({} as Managers);
-    manager.session('notes', persona('reviewer'), '/repo', { onError: vi.fn() });
-    manager.record('notes', 'reviewer', 'hi', 'input');
-
-    manager.closeTab('notes');
-
-    expect(manager.transcript('notes', 'reviewer')).toBe('');
   });
 });

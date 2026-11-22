@@ -5,7 +5,6 @@ import type { Subscription } from '../bus.js';
 import type { Persona } from '../personas.js';
 import { parseSuggestion } from './reply-format.js';
 import { openMonitorSession, respawnMonitorSession } from './session.js';
-import type { spawnMonitorSession } from './acp.js';
 import { targetColor, formatTargets } from './targets.js';
 import { flushFeedEntries } from './feeds.js';
 import { frameUpdatePrompt } from './framing.js';
@@ -65,15 +64,12 @@ export class LiveMonitors {
   protected readonly monitors = new Map<string, MonitorSub>();
   private counter = 0;
 
-  constructor(
-    protected readonly managers: Managers,
-    protected readonly spawn: typeof spawnMonitorSession,
-  ) {}
+  constructor(protected readonly managers: Managers) {}
 
-  // Spawn the monitor's dedicated session and prime it with the persona body + reply
-  // format; `inFlight` holds flushes off until priming settles.
+  // Enter the core role entry with the persona body + reply format; `inFlight` holds flushes off
+  // until priming settles.
   protected openSession(reg: MonitorSub): void {
-    openMonitorSession(reg, this.managers, this.spawn);
+    openMonitorSession(reg, this.managers);
   }
 
   // Whether `reg` is still registered and still running on `session`. A local session keeps
@@ -88,7 +84,7 @@ export class LiveMonitors {
   // stopped monitor or a session already replaced, so no untracked subprocess is spawned.
   protected respawn(reg: MonitorSub, session: AcpSession = reg.session): void {
     if (!this.isCurrent(reg, session)) return;
-    respawnMonitorSession(reg, this.managers, this.spawn);
+    respawnMonitorSession(reg, this.managers);
     if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
   }
 

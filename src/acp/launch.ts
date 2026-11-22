@@ -1,4 +1,3 @@
-import type { PersonaHarness } from '../persona-parsing.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import { BUNDLED_ACP_ADAPTERS } from './bundled-adapters.js';
 import { internalToolDenial } from './internal-tools.js';
@@ -12,7 +11,9 @@ export type AcpLaunch = {
   sessionMeta?: Record<string, unknown>;
 };
 
-export function acpLaunchFor(harness: PersonaHarness): AcpLaunch {
+export type HarnessLaunch = { harness: string; model: string; variant: string };
+
+export function acpLaunchFor(harness: HarnessLaunch): AcpLaunch {
   if (harness.harness === 'opencode') {
     return {
       command: 'opencode',

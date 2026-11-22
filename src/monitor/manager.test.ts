@@ -9,14 +9,36 @@ import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { MonitorManager } from './manager.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
-import type * as monitorAcp from './acp.js';
+import { PersonaRoleSessionManager } from '../acp/persona-role-session.js';
+import { tabRuntime } from '../tab/runtime.js';
+import { personaRoleRuntime } from '../acp/persona-role-state.js';
+import type * as AcpIndex from '../acp/index.js';
+import type * as PersonaRole from '../acp/persona-role.js';
+import type * as AskRole from '../acp/ask-role.js';
+
+const ENTRY = { harness: 'opencode', model: 'test-model' };
 
 const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
+  connectAcp: vi.fn(),
+  promptPersonaRole: vi.fn(),
+  knownRoleSettings: vi.fn(),
 }));
 
 vi.mock('../notifications/index.js', () => ({
   notify: mocks.notify,
+}));
+
+vi.mock('../acp/index.js', async (importOriginal) => ({
+  ...await importOriginal<typeof AcpIndex>(), connectAcp: mocks.connectAcp,
+}));
+
+vi.mock('../acp/persona-role.js', async (importOriginal) => ({
+  ...await importOriginal<typeof PersonaRole>(), promptPersonaRole: mocks.promptPersonaRole,
+}));
+
+vi.mock('../acp/ask-role.js', async (importOriginal) => ({
+  ...await importOriginal<typeof AskRole>(), knownRoleSettings: mocks.knownRoleSettings,
 }));
 
 vi.mock('../harness/capture/file.js', () => ({
@@ -44,7 +66,9 @@ function makeFakeManagers(tabs: Tab[]) {
   const openFiles = new Map<string, string>();
   const fakeTab = {
     tabs,
+    launchDir: '/tmp',
     cwdOf: () => '/tmp',
+    byLabel: (label: string) => tabs.find((t) => t.label === label),
     cur: () => tabs[0],
     append: (label: string, entry: LogEntry) => { appended.push({ label, entry }); },
     startRunning: () => {},
@@ -68,7 +92,9 @@ function makeFakeManagers(tabs: Tab[]) {
       },
     },
     openFile: { edit },
+    acp: { launchableEntries: () => [ENTRY] },
   } as unknown as Managers;
+  managers.personaRoleSessions = new PersonaRoleSessionManager(managers);
   return { managers, appended, finished, screens, transcripts, edit, openFiles };
 }
 
@@ -86,7 +112,7 @@ function pageTab(label: string, domain = 'example.org'): Tab {
 
 function fakeSpawnFactory() {
   const sessions: FakeSession[] = [];
-  const spawn = (() => {
+  mocks.connectAcp.mockImplementation(() => {
     const session: FakeSession = { prompts: [], reply: () => {}, fail: () => {}, kill: vi.fn() };
     sessions.push(session);
     return {
@@ -96,10 +122,12 @@ function fakeSpawnFactory() {
         session.reply = (replyText: string) => { handlers.onChunk(replyText); handlers.onEnd('end'); };
         session.fail = (message: string) => { handlers.onError(message); };
       },
+      cancel: vi.fn(async () => {}),
       kill: session.kill,
+      shutdown: vi.fn(async () => {}),
     };
-  }) as unknown as typeof monitorAcp.spawnMonitorSession;
-  return { spawn, sessions };
+  });
+  return { sessions };
 }
 
 function emitEntry(tab: Tab, input: string, output: string): void {
@@ -115,6 +143,30 @@ beforeEach(() => {
   vi.useFakeTimers();
   janus = makeTab('janus', '#aaa');
   agent2 = { ...makeTab('agent2', '#bbb'), group: 2, groupColor: '#bbb' };
+  mocks.knownRoleSettings.mockReturnValue({ name: 'test', entries: [ENTRY], commands: [] });
+  mocks.promptPersonaRole.mockImplementation((
+    managers: Managers, label: string, prompt: string, role: string,
+  ) => {
+    const tab = managers.tab.byLabel(label)!;
+    const state = personaRoleRuntime(tabRuntime(tab), role);
+    const session = state.session
+      ?? managers.personaRoleSessions.session(label, role, ENTRY, '/tmp', { onError: () => {} });
+    let result: { answered: boolean; reply?: string; session?: string; error?: string } = {
+      answered: true, reply: '', session: 'test',
+    };
+    session.prompt(prompt, {
+      onChunk: () => {},
+      onEnd: () => {},
+      onError: (message: string) => { result = { answered: false, error: message }; },
+    });
+    // An already-settled core result: the proxy exposes `then` without a thenable object literal, so
+    // the fake-timer tests observe the reply without advancing the microtask queue.
+    return new Proxy({}, {
+      get: (_target, key) => key === 'then'
+        ? (callback: (value: typeof result) => void) => { callback(result); }
+        : undefined,
+    });
+  });
 });
 
 afterEach(() => {
@@ -125,8 +177,8 @@ afterEach(() => {
 describe('MonitorManager', () => {
   it('inline mode: watches the owner tab and appends suggestions to its transcript', () => {
     const { managers, appended } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.start('janus', 'security', [])).toBeNull();
     expect(sessions[0].prompts[0]).toContain('[SUGGESTION]'); // persona priming includes format
@@ -135,16 +187,17 @@ describe('MonitorManager', () => {
     vi.advanceTimersByTime(FLUSH_MS);
     expect(sessions[0].prompts[1]).toContain('cat .env');
     sessions[0].reply('[SUGGESTION]: Rotate that secret\n[COMMAND]: shell git status');
-    expect(appended).toHaveLength(1);
-    expect(appended[0].label).toBe('janus');
-    expect(appended[0].entry.background).toEqual(expect.any(String));
-    expect(appended[0].entry.output).toBe('💡 security: Rotate that secret\nshell git status');
+    const suggestion = appended.filter((a) => a.entry.output.startsWith('💡'));
+    expect(suggestion).toHaveLength(1);
+    expect(suggestion[0].label).toBe('janus');
+    expect(suggestion[0].entry.background).toEqual(expect.any(String));
+    expect(suggestion[0].entry.output).toBe('💡 security: Rotate that secret\nshell git status');
   });
 
   it('skips the flush entirely when no new transcripts arrived', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
 
     vi.advanceTimersByTime(FLUSH_MS * 3);
@@ -153,8 +206,8 @@ describe('MonitorManager', () => {
 
   it('batches multiple entries into one prompt per tick', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
 
     emitEntry(janus, 'ls', 'a b c');
@@ -167,8 +220,8 @@ describe('MonitorManager', () => {
 
   it('never feeds a monitor its own inline suggestions', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
 
     emitEntry(janus, '', '💡 security: previous suggestion');
@@ -179,8 +232,8 @@ describe('MonitorManager', () => {
   it('external mode: delivers into the persona reporting tab colored after the target', () => {
     const tabs = [janus, agent2];
     const { managers } = makeFakeManagers(tabs);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }])).toBeNull();
     // The reporting tab opens immediately on start, before any suggestion arrives.
@@ -199,8 +252,8 @@ describe('MonitorManager', () => {
 
   it('sets the reporting tab\'s persona, targets, and an initial contextBytes from priming', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
@@ -212,8 +265,8 @@ describe('MonitorManager', () => {
 
   it('increases contextBytes further after a flush', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     const before = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!.contextBytes;
 
@@ -227,8 +280,8 @@ describe('MonitorManager', () => {
 
   it('snapshotContext writes the accumulated context to a file and opens it in an editor tab', () => {
     const { managers, edit } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     emitEntry(agent2, 'npm test', '1 failing');
     vi.advanceTimersByTime(FLUSH_MS);
@@ -260,8 +313,8 @@ describe('MonitorManager', () => {
 
   it('snapshotContext is a no-op for an unknown reporting tab', () => {
     const { managers, edit } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     vi.mocked(writeCaptureFile).mockClear();
 
@@ -273,8 +326,8 @@ describe('MonitorManager', () => {
 
   it('transcript returns the formatted context for a running monitor', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     emitEntry(agent2, 'npm test', '1 failing');
     vi.advanceTimersByTime(FLUSH_MS);
@@ -290,8 +343,8 @@ describe('MonitorManager', () => {
 
   it('transcript returns an empty string for an unknown monitor name', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
     expect(manager.transcript('nonexistent')).toBe('');
@@ -300,8 +353,8 @@ describe('MonitorManager', () => {
   it('dropping one of two tab targets updates targets to the remaining one without closing the tab', () => {
     const agent3 = makeTab('agent3', '#ccc');
     const { managers } = makeFakeManagers([janus, agent2, agent3]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }, { kind: 'tab', label: 'agent3' }]);
 
     messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'agent2' });
@@ -314,8 +367,8 @@ describe('MonitorManager', () => {
   it('starting with a target given as a renamed tab\'s alias resolves and monitors it', () => {
     const renamed = { ...agent2, title: 'reviewer' };
     const { managers } = makeFakeManagers([janus, renamed]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'reviewer' }])).toBeNull();
 
@@ -327,8 +380,8 @@ describe('MonitorManager', () => {
     const agent3 = makeTab('agent3', '#ccc');
     const renamed = { ...agent2, title: 'reviewer' };
     const { managers } = makeFakeManagers([janus, renamed, agent3]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }, { kind: 'tab', label: 'agent3' }]);
 
     const stopped = manager.stop('janus', 'assistant', { kind: 'tab', label: 'reviewer' });
@@ -340,8 +393,8 @@ describe('MonitorManager', () => {
 
   it('group targets match tabs by group number', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }]);
 
     emitEntry(agent2, 'ls', 'x'); // group 2 → buffered
@@ -353,8 +406,8 @@ describe('MonitorManager', () => {
 
   it('a tab created after start and joining the monitored group is picked up', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }]);
 
     const agent3 = { ...makeTab('agent3', '#eee'), group: 2, groupColor: '#bbb' };
@@ -367,8 +420,8 @@ describe('MonitorManager', () => {
 
   it('rejects unknown targets, duplicate personas, and label collisions', () => {
     const { managers } = makeFakeManagers([janus, { ...makeTab('assistant', '#ccc') }]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.start('janus', 'security', [{ kind: 'tab', label: 'ghost' }])).toMatch(/No tab named/);
     expect(manager.start('janus', 'security', [{ kind: 'group', group: 9 }])).toMatch(/No group 9/);
@@ -379,8 +432,8 @@ describe('MonitorManager', () => {
 
   it('stop kills the dedicated session and stops feeding', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
 
     expect(manager.stop('janus', 'security')).toBe(true);
@@ -393,8 +446,8 @@ describe('MonitorManager', () => {
 
   it('a flush error arriving after stop does not respawn a session', () => {
     const { managers, appended } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
     emitEntry(janus, 'ls', 'x');
     vi.advanceTimersByTime(FLUSH_MS);
@@ -409,8 +462,8 @@ describe('MonitorManager', () => {
 
   it('a flush reply arriving after stop does not reopen the reporting tab', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     emitEntry(agent2, 'ls', 'x');
     vi.advanceTimersByTime(FLUSH_MS);
@@ -424,8 +477,8 @@ describe('MonitorManager', () => {
 
   it('a context reset mid-flush respawns exactly once when the old prompt then fails', () => {
     const { managers, appended } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     emitEntry(agent2, 'ls', 'x');
     vi.advanceTimersByTime(FLUSH_MS);
@@ -444,8 +497,8 @@ describe('MonitorManager', () => {
 
   it('an ask error arriving after stop finishes the running entry without respawning', () => {
     const { managers, finished } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
     expect(manager.ask('janus', 'security', 'anything risky?')).toBeNull();
 
@@ -458,8 +511,8 @@ describe('MonitorManager', () => {
 
   it('snapshot returns one record per live monitor with name, persona, authored targets, and inline', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
@@ -471,8 +524,8 @@ describe('MonitorManager', () => {
 
   it('two same-persona monitors with different names both run from one owner', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }], 'watch-a')).toBeNull();
     expect(manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'watch-b')).toBeNull();
@@ -488,8 +541,8 @@ describe('MonitorManager', () => {
 
   it('rejects a second monitor with the same owner and name', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }], 'watch')).toBeNull();
     expect(manager.start('janus', 'security', [{ kind: 'group', group: 2 }], 'watch')).toMatch(/Already monitoring/);
@@ -497,8 +550,8 @@ describe('MonitorManager', () => {
 
   it('defaults a monitor started without a name to its persona', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
@@ -508,16 +561,16 @@ describe('MonitorManager', () => {
 
   it('snapshot returns an empty array when no monitors are running', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     expect(manager.snapshot()).toEqual([]);
   });
 
   it('closing the owner tab tears down its monitors and their reporting tabs', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     expect(managers.tab.tabs.some((t) => t.view === 'monitor')).toBe(true);
 
@@ -529,8 +582,8 @@ describe('MonitorManager', () => {
 
   it('closing the reporting tab kills its session and stops feeding', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     const monitorIndex = managers.tab.tabs.findIndex((t) => t.view === 'monitor');
 
@@ -543,8 +596,8 @@ describe('MonitorManager', () => {
 
   it('reopening the same owner/persona after its reporting tab closes succeeds', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     const monitorIndex = managers.tab.tabs.findIndex((t) => t.view === 'monitor');
 
@@ -557,8 +610,8 @@ describe('MonitorManager', () => {
   it('closing every tab target closes the now-empty reporting tab', () => {
     const agent3 = makeTab('agent3', '#ccc');
     const { managers } = makeFakeManagers([janus, agent2, agent3]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }, { kind: 'tab', label: 'agent3' }]);
     expect(managers.tab.tabs.some((t) => t.view === 'monitor')).toBe(true);
 
@@ -573,8 +626,8 @@ describe('MonitorManager', () => {
 
   it('keeps a reporting tab fed by another owner when one owner closes', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     manager.start('agent2', 'assistant', [{ kind: 'group', group: 1 }]);
 
@@ -586,8 +639,8 @@ describe('MonitorManager', () => {
 
   it('ask queries the monitor session and lands the reply in the owner transcript', () => {
     const { managers, finished } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
 
     expect(manager.ask('janus', 'security', 'what have you seen?')).toBeNull();
@@ -600,8 +653,8 @@ describe('MonitorManager', () => {
 
   it('rating feeds back through the next batch and removes the suggestion either way', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
     emitEntry(agent2, 'npm test', '1 failing');
@@ -627,15 +680,15 @@ describe('MonitorManager', () => {
 
   it('restarts the session after a prompt error and keeps monitoring', () => {
     const { managers, appended } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
 
     emitEntry(janus, 'ls', 'x');
     vi.advanceTimersByTime(FLUSH_MS);
     sessions[0].fail('ACP connection closed');
 
-    expect(appended.at(-1)?.entry.output).toContain('restarting monitor session');
+    expect(appended.some((a) => a.entry.output.includes('restarting monitor session'))).toBe(true);
     expect(sessions[0].kill).toHaveBeenCalled();
     expect(sessions).toHaveLength(2);
     expect(sessions[1].prompts[0]).toContain('[SUGGESTION]'); // re-primed
@@ -647,8 +700,8 @@ describe('MonitorManager', () => {
 
   it('a flush error with a rate-limit-shaped message fires a rate-limited notification', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
     mocks.notify.mockClear();
 
@@ -661,8 +714,8 @@ describe('MonitorManager', () => {
 
   it('a flush error with an unrelated message does not fire a rate-limited notification', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
     mocks.notify.mockClear();
 
@@ -675,8 +728,8 @@ describe('MonitorManager', () => {
 
   it('resetContext respawns the session and re-primes it', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
     manager.resetContext('assistant');
@@ -688,8 +741,8 @@ describe('MonitorManager', () => {
 
   it('resetContext resets contextBytes back down after priming', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     emitEntry(agent2, 'npm test', '1 failing');
     vi.advanceTimersByTime(FLUSH_MS);
@@ -705,8 +758,8 @@ describe('MonitorManager', () => {
 
   it('resetContext is a no-op for a name with no matching monitor', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
     expect(() => manager.resetContext('ghost')).not.toThrow();
@@ -715,8 +768,8 @@ describe('MonitorManager', () => {
 
   it('resetContext respawns every owner sharing one reporting tab', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
     manager.start('agent2', 'assistant', [{ kind: 'group', group: 1 }]);
 
@@ -729,16 +782,16 @@ describe('MonitorManager', () => {
 
   it('ask on an unknown monitor reports an error', () => {
     const { managers } = makeFakeManagers([janus]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     expect(manager.ask('janus', 'security', 'hello?')).toMatch(/No "security" monitor/);
   });
 
   it('primes the buffer with existing transcript entries from a tab target', () => {
     const janusWithLog = makeTab('janus', '#aaa', 1, [], [{ input: 'ls', output: 'a b c' }, { input: 'pwd', output: '/tmp' }]);
     const { managers } = makeFakeManagers([janusWithLog]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'security', []);
     expect(sessions[0].prompts[0]).toContain('[SUGGESTION]');
@@ -753,8 +806,8 @@ describe('MonitorManager', () => {
   it('primes the buffer with entries from an external tab target', () => {
     const tabs = [janus, makeTab('agent2', '#bbb', 1, [], [{ input: 'npm test', output: '1 failing' }])];
     const { managers } = makeFakeManagers(tabs);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
 
@@ -768,8 +821,8 @@ describe('MonitorManager', () => {
     const member1 = { ...makeTab('agent2', '#bbb', 1, [], [{ input: 'ls', output: 'x' }]), group: 2, groupColor: '#bbb' };
     const member2 = { ...makeTab('agent3', '#ccc', 1, [], [{ input: 'pwd', output: '/tmp' }]), group: 2, groupColor: '#bbb' };
     const { managers } = makeFakeManagers([janus, member1, member2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }]);
 
@@ -783,8 +836,8 @@ describe('MonitorManager', () => {
   it('existing entries appear before new entries in the buffer', () => {
     const janusWithLog = makeTab('janus', '#aaa', 1, [], [{ input: 'existing', output: 'old' }]);
     const { managers } = makeFakeManagers([janusWithLog]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'security', []);
     emitEntry(janusWithLog, 'new', 'fresh');
@@ -800,8 +853,8 @@ describe('MonitorManager', () => {
     const claude = harnessTab('claude');
     const { managers, screens } = makeFakeManagers([janus, claude]);
     screens.claude = { text: 'on-screen output', capturedAt: 100 };
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
     vi.advanceTimersByTime(FLUSH_MS);
@@ -813,8 +866,8 @@ describe('MonitorManager', () => {
     const claude = harnessTab('claude');
     const { managers, screens } = makeFakeManagers([janus, claude]);
     screens.claude = { text: 'first screen', capturedAt: 100 };
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
     vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded first screen
@@ -829,8 +882,8 @@ describe('MonitorManager', () => {
     const claude = harnessTab('claude');
     const { managers, screens } = makeFakeManagers([janus, claude]);
     screens.claude = { text: 'steady screen', capturedAt: 100 };
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
     vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded screen (priming + 1)
@@ -844,8 +897,8 @@ describe('MonitorManager', () => {
     const { managers, screens, transcripts } = makeFakeManagers([janus, claude]);
     screens.claude = { text: 'on-screen output', capturedAt: 100 };
     transcripts.claude = ['[Explore: find the config] user: search the repo'];
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
     vi.advanceTimersByTime(FLUSH_MS);
@@ -860,8 +913,8 @@ describe('MonitorManager', () => {
     const { managers, screens, transcripts } = makeFakeManagers([janus, claude]);
     screens.claude = { text: 'steady screen', capturedAt: 100 };
     transcripts.claude = ['user: first turn'];
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'claude' }]);
     vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded transcript entry and screen
@@ -878,8 +931,8 @@ describe('MonitorManager', () => {
     writeFileSync(file, 'first content\n');
     const { managers, openFiles } = makeFakeManagers([janus, editorTab('notes', 'e1')]);
     openFiles.set('e1', file);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'notes' }]);
     vi.advanceTimersByTime(FLUSH_MS); // flushes the seeded full content
@@ -902,8 +955,8 @@ describe('MonitorManager', () => {
   it('feeds a page target its visible-text snapshot on seed and a diff on change', () => {
     const site = pageTab('site');
     const { managers } = makeFakeManagers([janus, site]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'tab', label: 'site' }]);
     site.pageSnapshot = { text: 'first visible text', capturedAt: Date.now() };
@@ -924,8 +977,8 @@ describe('MonitorManager', () => {
 
   it('lists monitors with mode and delivery counts', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'security', []);
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }]);
 
@@ -941,8 +994,8 @@ describe('MonitorManager', () => {
 
   it('lists a profile-named monitor by its name, with the persona beside it', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'nightly-watch');
 
@@ -955,8 +1008,8 @@ describe('MonitorManager', () => {
   // and the runtime name in the other let them disagree.
   it('names the runtime name in both the connections row text and its acpRef', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
 
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'nightly-watch');
 
@@ -973,8 +1026,8 @@ describe('MonitorManager', () => {
   // name. Completion offers the same names.
   it('stops and questions a profile-named monitor by that name', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
-    const { spawn, sessions } = fakeSpawnFactory();
-    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    const { sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, FLUSH_MS);
     manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'nightly-watch');
 
     expect(manager.namesFor('janus')).toEqual(['nightly-watch']);
