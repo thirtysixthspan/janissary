@@ -12,6 +12,8 @@ Client tests run with a DOM environment and isolated module state for each test 
 
 Canvas contexts are unavailable throughout the client suite: requesting one returns `null`, so code that measures text or captures image frames takes its existing no-canvas fallback. This keeps jsdom's unimplemented-canvas warning out of test output without requiring a native canvas package, and tests that need drawing behavior supply their own fake context.
 
+Media playback is stubbed the same way: `play()` resolves to a settled promise, so jsdom's unimplemented-media warning stays out of test output while the application's promise-based handling still works. Tests that need specific playback behavior supply their own override.
+
 ### Diff-scoped help tests
 
 When a Markdown file under `help/` changes, the diff-scoped check runs `src/commands.test.ts` in the server project. That test reads the command table and help pages directly, so it covers help changes that Vitest's changed-source dependency detection cannot associate with a test file.
