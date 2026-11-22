@@ -13,7 +13,7 @@ import {
 
 export class PersonaRoleSessionManager {
   private counter = 0;
-  private readonly deathHooks = new Map<string, PersonaRoleHooks[]>();
+  private readonly deathHooks = new Map<string, Map<string | PersonaRoleHooks, PersonaRoleHooks>>();
 
   constructor(private readonly managers: Managers) {}
 
@@ -21,19 +21,21 @@ export class PersonaRoleSessionManager {
     return this.existing(label, role)?.session !== undefined;
   }
 
-  session(label: string, role: string, entry: RoleEntry, cwd: string, hooks: PersonaRoleHooks): AcpSession {
+  session(
+    label: string, role: string, entry: RoleEntry, cwd: string, hooks: PersonaRoleHooks, caller?: string,
+  ): AcpSession {
     const tab = this.managers.tab.byLabel(label);
     if (!tab) throw new Error('Tab not found');
     const runtime = tabRuntime(tab);
     const state = personaRoleRuntime(runtime, role);
-    // Each consumer of a shared role slot owns a death hook. One composite invokes them all so a
-    // connection-level death reaches every monitor registered on the slot, not just the last one.
+    // One death hook per consumer of a shared slot. A repeated caller replaces its hook instead of
+    // accumulating another, while the composite still reaches every consumer when the connection dies.
     const key = `${label}:${role}`;
-    const registered = this.deathHooks.get(key) ?? [];
-    registered.push(hooks);
+    const registered = this.deathHooks.get(key) ?? new Map<string | PersonaRoleHooks, PersonaRoleHooks>();
+    registered.set(caller ?? hooks, hooks);
     this.deathHooks.set(key, registered);
     state.hooks = {
-      onError: (message) => { for (const hook of registered) hook.onError(message); },
+      onError: (message) => { for (const hook of registered.values()) hook.onError(message); },
     };
     if (state.session) return state.session;
     const launch = acpLaunchForEntry(entry);

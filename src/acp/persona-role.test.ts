@@ -194,6 +194,15 @@ describe('promptPersonaRole core pipeline', () => {
 
     expect(mocks.connectAcp).toHaveBeenCalledTimes(1);
   });
+
+  it('passes the persona as the caller identity for its role session', async () => {
+    const { managers } = harness();
+    const session = vi.spyOn(managers.personaRoleSessions, 'session');
+
+    await promptPersonaRole(managers, 'tab', 'hello', 'custom', 'reviewer');
+
+    expect(session).toHaveBeenCalledWith('tab', 'custom', ENTRY, '/repo', expect.any(Object), 'reviewer');
+  });
 });
 
 describe('PersonaRoleSessionManager', () => {
@@ -206,8 +215,8 @@ describe('PersonaRoleSessionManager', () => {
     const latest = vi.fn();
     const service = managers.personaRoleSessions;
 
-    service.session('tab', 'custom', ENTRY, '/repo', { onError: earlier });
-    service.session('tab', 'custom', ENTRY, '/repo', { onError: latest });
+    service.session('tab', 'custom', ENTRY, '/repo', { onError: earlier }, 'watch-a');
+    service.session('tab', 'custom', ENTRY, '/repo', { onError: latest }, 'watch-b');
     const onError = mocks.connectAcp.mock.calls[0][0].onError as (message: string) => void;
     onError('ACP agent exited.');
 
@@ -216,6 +225,38 @@ describe('PersonaRoleSessionManager', () => {
     expect(earlier).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
     expect(latest).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
     expect(service.session('tab', 'custom', ENTRY, '/repo', { onError: vi.fn() })).toBe(next);
+  });
+
+  it('replaces a hook when the same caller registers again on a shared role slot', () => {
+    const { managers } = harness();
+    const service = managers.personaRoleSessions;
+    const earlier = vi.fn();
+    const latest = vi.fn();
+
+    service.session('tab', 'custom', ENTRY, '/repo', { onError: earlier }, 'reviewer');
+    service.session('tab', 'custom', ENTRY, '/repo', { onError: latest }, 'reviewer');
+    const onError = mocks.connectAcp.mock.calls[0][0].onError as (message: string) => void;
+
+    onError('ACP agent exited.');
+
+    expect(earlier).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
+  });
+
+  it('keeps one hook per persona when two personas declare the same role', () => {
+    const { managers } = harness();
+    const service = managers.personaRoleSessions;
+    const reviewer = vi.fn();
+    const analyst = vi.fn();
+
+    service.session('tab', 'custom', ENTRY, '/repo', { onError: reviewer }, 'reviewer');
+    service.session('tab', 'custom', ENTRY, '/repo', { onError: analyst }, 'analyst');
+    const onError = mocks.connectAcp.mock.calls[0][0].onError as (message: string) => void;
+
+    onError('ACP agent exited.');
+
+    expect(reviewer).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
+    expect(analyst).toHaveBeenCalledExactlyOnceWith('ACP agent exited.');
   });
 
   it('records a transcript and drops it on close', () => {

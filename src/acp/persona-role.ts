@@ -56,7 +56,7 @@ export async function promptPersonaRole(
       },
     };
     try {
-      const session = managers.personaRoleSessions.session(label, role, candidate, cwd, hooks);
+      const session = managers.personaRoleSessions.session(label, role, candidate, cwd, hooks, persona);
       const request: AcpPendingPrompt = {
         finish: () => {}, abort: new AbortController(), prompt, role: roleName,
         roleName: settings.name, commands: [...settings.commands], runningEntries: new Set(), state: attempt,
