@@ -14,6 +14,10 @@ export function ConnectionHistory({ window }: { window: ConnectionWindow | undef
             <summary>query</summary>
             <div className="connections-prompt">{block.prompt}</div>
           </details>
+          {block.answer !== undefined && <details className="connections-activity connections-response" open>
+            <summary>response</summary>
+            <div className="connections-response-text">{block.answer}</div>
+          </details>}
           {groupToolEntries(block.entries).map((row) => {
             if (row.kind === 'tool') {
               const parts = row.reply === undefined ? [row.command] : [row.command, row.reply];

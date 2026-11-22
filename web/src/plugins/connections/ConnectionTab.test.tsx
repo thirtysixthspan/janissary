@@ -96,16 +96,41 @@ describe('ConnectionTab', () => {
     expect(preamble.querySelector('pre')).toBeNull();
   });
 
-  it('does not render captured replies or the final answer as response sections', () => {
+  it('renders the final answer in an expanded response section as literal text', () => {
     const value = record();
     value.window!.blocks[0]!.replies = ['first **reply**', 'follow-up'];
     value.window!.blocks[0]!.answer = 'final **answer**';
     setup(value);
-    expect(screen.queryAllByText('response', { selector: 'summary' })).toHaveLength(0);
-    expect(document.querySelectorAll('.connections-answer')).toHaveLength(0);
+    const summaries = screen.getAllByText('response', { selector: 'summary' });
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].closest('details')).toHaveAttribute('open');
+    const text = document.querySelector('.connections-response-text')!;
+    expect(text.textContent).toBe('final **answer**');
+    expect(text.querySelector('strong')).toBeNull();
     expect(screen.queryByText('first reply')).toBeNull();
     expect(screen.queryByText('follow-up')).toBeNull();
-    expect(screen.queryByText('final answer')).toBeNull();
+  });
+
+  it('renders no response section while a block has no answer', () => {
+    const value = record();
+    delete value.window!.blocks[0]!.answer;
+    setup(value);
+    expect(screen.queryByText('response', { selector: 'summary' })).toBeNull();
+    expect(document.querySelector('.connections-response-text')).toBeNull();
+  });
+
+  it('keeps a response the reader collapsed closed through a streamed update', () => {
+    const value = record();
+    value.window!.blocks[0]!.answer = 'first **draft**';
+    const { view, capabilities } = setup(value);
+    const details = screen.getByText('response', { selector: 'summary' }).closest('details')!;
+    expect(details).toHaveAttribute('open');
+    details.open = false;
+    view.rerender(<ConnectionTab record={{ ...value, window: { ...value.window!,
+      blocks: [{ ...value.window!.blocks[0]!, answer: 'revised **answer**' }] } }} capabilities={capabilities} />);
+    expect(screen.getByText('response', { selector: 'summary' }).closest('details')).toBe(details);
+    expect(details).not.toHaveAttribute('open');
+    expect(document.querySelector('.connections-response-text')?.textContent).toBe('revised **answer**');
   });
 
   it('keeps a query the reader collapsed closed through a streamed update', () => {
