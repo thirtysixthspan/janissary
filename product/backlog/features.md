@@ -2,6 +2,11 @@
 
 ## ready
 
+* This is a documentation-only change to the pipeline that authors, improves, rates, decomposes and promotes plans. Start with `ai/guidelines/plan-template.md`, the single owner of plan shape: add a required `## Lifecycle matrix` section immediately after `## Design decisions`, define it as a table with exactly the columns `Transition | Trigger | Owner | Observable result | Other consumers of the key | Test`, require one row for each of the transitions named above whenever the plan introduces or reworks long-lived state, and allow a plan with no such resource to write exactly `None found` instead — mirroring the convention `Existing functionality` already uses when reconnaissance finds no precedent. have 2c write the section skeleton into the initial draft alongside the other template sections, and add a box to both 2h checklists requiring that every row has an answer and every answer has been written into the plan. In `ai/tasks/planning/improve-plan.md`, extend Step 3's list of ways an implementer could go wrong with a check that each row names a real owner, an observable result that says what must not happen as well as what must, every other consumer that can hold the same key, and a colocated test, and require Step 2 to anchor each row to `path:line` plus a quoted identifier so the matrix survives line drift; in `ai/tasks/planning/improve-plan-with-minimalism.md`, mark the matrix as protected content so the trimming ladder cannot delete it as apparent redundancy. In `ai/tasks/planning/decompose-plan.md`, treat every row as a requirement in the Step 2 inventory and the Step 6 coverage map, require each to land in exactly one subplan or be explicitly shared across named subplans, and add an ordering rule that a resource's create and close transitions must be delivered by the same subplan.
+
+
+
+
 ## development
 
 ## deferred
