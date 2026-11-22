@@ -3,9 +3,6 @@
 ## ready
 
 * resolve the warning in the test suite:
-Not implemented: HTMLMediaElement's play() method
-
-* resolve the warning in the test suite:
 Not implemented: HTMLCanvasElement's toDataURL() method: without installing the canvas npm package
 
 * resolve the issue in the test suite:
