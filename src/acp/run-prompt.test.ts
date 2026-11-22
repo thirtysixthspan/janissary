@@ -14,6 +14,7 @@ import { readWorkspaceLines } from '../file-read/read.js';
 import type { Managers } from '../managers.js';
 import type { TabRuntime } from '../tab/types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
+import type { AcpRole } from './role.js';
 import type {
   AcpLoopDeps, AcpLoopHandlers, AcpLoopSession, AcpPromptHandlers, AcpRunSnapshot, AcpSession, AcpToolHost,
 } from './types.js';
@@ -1831,5 +1832,48 @@ describe('runCorePrompt listing and inspecting commands', () => {
     expect(mocks.listFilesInTab).toHaveBeenCalled();
     expect(mocks.readFileInTab).not.toHaveBeenCalled();
     expect(dispatchNativeLine).not.toHaveBeenCalled();
+  });
+});
+
+describe('runCorePrompt persona role state', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  function startPersona(commands: string[]) {
+    const h = harness({ commands, settings: settingsWith({}) });
+    const state: { prompt?: AcpPendingPrompt; recordId: string; recordName: string } = {
+      recordId: 'record-1', recordName: 'Custom Role (acp)',
+    };
+    const request: AcpPendingPrompt = {
+      finish: vi.fn(), abort: new AbortController(), prompt: 'instructions',
+      role: 'custom' as AcpRole, roleName: 'Custom Role', commands, runningEntries: new Set(),
+      recordId: 'record-1', state,
+    };
+    state.prompt = request;
+    mocks.runAcpToolLoop.mockClear();
+    mocks.runToolLoop.mockClear();
+    runCorePrompt(h.managers, 'shell', h.tab.runtime as TabRuntime, request,
+      h.managers.nativeCommandSettings?.current(), { prompt: vi.fn() } as unknown as AcpSession,
+      'persona-acp-1', () => true);
+    const deps = mocks.runAcpToolLoop.mock.calls.at(-1)?.[2] as AcpLoopDeps;
+    return { ...h, request, state, deps };
+  }
+
+  it('runs granted commands against the request\'s own state, not the ask/tell slots', async () => {
+    const { deps, managers, state, request, tab } = startPersona(['db sqlite query']);
+
+    expect(deps.primer).toContain('Only these commands are allowed: db sqlite query.');
+    await expect(deps.runCommand('db sqlite query shop SELECT 1')).resolves.toBe('dispatched output');
+    expect(managers.acpRecords.activity).toHaveBeenCalledWith(
+      'record-1', 'tool', 'db sqlite query shop SELECT 1', 'command',
+    );
+    expect(state.prompt).toBe(request);
+    expect(tab.runtime?.acpRoles).toEqual({});
+  });
+
+  it('produces the no-tools primer and no runnable command for a grant-less role', () => {
+    const { deps } = startPersona([]);
+
+    expect(deps.primer).toBe([NO_TOOLS_LINE, MARKDOWN_INSTRUCTION].join('\n\n'));
+    expect(deps.extractCommand('db sqlite query shop SELECT 1')).toEqual({ kind: 'absent' });
   });
 });

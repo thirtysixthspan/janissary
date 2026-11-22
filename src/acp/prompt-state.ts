@@ -4,6 +4,8 @@ import type { LogEntry } from '../tab/types.js';
 
 export type AcpPromptAdmission = { isCurrent: () => boolean; onDrop: () => void };
 
+export type PromptRuntimeState = { prompt?: AcpPendingPrompt; recordId?: string; recordName?: string };
+
 export type PromptResultOptions = {
   appendRefusalToTranscript?: boolean;
   replyId?: string;
@@ -19,6 +21,7 @@ export type AcpPendingPrompt = {
   roleName: string;
   commands: string[];
   runningEntries: Set<LogEntry>;
+  state?: PromptRuntimeState;
   replyId?: string;
   echo?: string;
   recordId?: string;

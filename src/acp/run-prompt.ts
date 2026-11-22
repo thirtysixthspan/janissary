@@ -112,14 +112,14 @@ export function runCorePrompt(
   nativeSettings: CommandSettingsSnapshot | undefined,
   session: AcpSession | RemoteAcpSession, identity: string, current: () => boolean,
 ): void {
-  const roleState = acpRoleRuntime(runtime, request.role);
+  const roleState = request.state ?? acpRoleRuntime(runtime, request.role);
   const active = () => current() && roleState.prompt === request && !request.abort.signal.aborted;
   const updateRunning = (output: string, running: boolean) => {
     managers.tab.updateRunning(label, { markdown: true, entries: request.runningEntries }, output, running, { trailing: true });
   };
   const snapshot = coreSnapshot(runtime, request, nativeSettings);
   const recordTool = (text: string, toolPhase?: 'command' | 'reply', toolCommand?: string) =>
-    coreActivity(managers.acpRecords, runtime, 'tool', text, request.role, toolPhase, toolCommand);
+    coreActivity(managers.acpRecords, runtime, 'tool', text, request.role, toolPhase, toolCommand, request.state);
   const host: AcpToolHost = {
     runCaller: (command) => {
       if (!active()) throw new Error('ACP: prompt cancelled.');
@@ -158,7 +158,7 @@ export function runCorePrompt(
       updateRunning(final, false);
       lastAnswer = final;
       request.replied = true;
-      replyCoreRecord(managers.acpRecords, runtime, final, request.role);
+      replyCoreRecord(managers.acpRecords, runtime, final, request.role, request.state);
     },
     startCommand: (command, workspace) => { recordTool(tagged(command, workspace), 'command'); },
     ranCommand: (command, result, workspace, refused) => {
@@ -174,7 +174,7 @@ export function runCorePrompt(
       const reply = reason === 'capped'
         ? `${lastAnswer}${lastAnswer ? '\n\n' : ''}(stopped after ${maxSteps} tool steps)`
         : lastAnswer;
-      settleAcpPrompt(managers, label, { answered: true, reply, session: identity }, undefined, request.role);
+      settleAcpPrompt(managers, label, { answered: true, reply, session: identity }, undefined, request.role, request.state);
     },
     error: (message) => {
       const error = `ACP error: ${message}`;
@@ -182,7 +182,7 @@ export function runCorePrompt(
       notify(managers, 'state-change', label);
       if (isRateLimitError(message)) notify(managers, 'rate-limited', label);
       request.modelFailed = true;
-      settleAcpPrompt(managers, label, { answered: false, error }, undefined, request.role);
+      settleAcpPrompt(managers, label, { answered: false, error }, undefined, request.role, request.state);
     },
   }, active), request.abort.signal);
 }

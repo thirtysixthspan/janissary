@@ -3,6 +3,7 @@ import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import type { LogEntry } from '../tab/types.js';
 import type { AcpPromptResult } from './types.js';
+import type { PromptRuntimeState } from './prompt-state.js';
 import { messageBus } from '../bus.js';
 import { errorText } from '../error-text.js';
 import { recordConnectionName } from '../plugins/connections/shared.js';
@@ -80,11 +81,11 @@ export function runAcpCommand(
 // resolves with a line of prose that looks exactly like an answer.
 export function settleAcpPrompt(
   managers: Managers, label: string, result: AcpPromptResult, afterSettlement?: () => void,
-  role: AcpRole = DEFAULT_ACP_ROLE,
+  role: AcpRole = DEFAULT_ACP_ROLE, explicitState?: PromptRuntimeState,
 ): void {
   const tab = managers.tab.byLabel(label);
   const runtime = tab?.runtime;
-  const state = runtime ? acpRoleRuntime(runtime, role) : undefined;
+  const state = explicitState ?? (runtime ? acpRoleRuntime(runtime, role) : undefined);
   const pending = state?.prompt;
   if (!tab || !runtime || !state || !pending) { afterSettlement?.(); return; }
   answerCoreRecord(managers.acpRecords, pending, result);

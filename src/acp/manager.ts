@@ -12,12 +12,13 @@ import { prepareCorePromptRecord, runCorePrompt } from './run-prompt.js';
 import type { Managers } from '../managers.js';
 import type { RoleEntry } from '../plugins/roles/shared.js';
 import {
-  attemptOrder, exhaustedError, fallbackNotice, finalAttemptResult, noRoleModels, readRoleSettings,
-  type AcpRoleSettings, type Attempt, type AttemptFailure,
+  attemptOrder, fallbackNotice, finalAttemptResult, noRoleModels, readRoleSettings,
+  type AcpRoleSettings, type Attempt,
 } from './ask-role.js';
 import { acpRoleRuntime, existingAcpRoleRuntime } from './role-state.js';
 import { cancelAcpPrompt } from './cancel-prompt.js';
 import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
+import { startCoreSession } from './manager-start.js';
 
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 
@@ -30,42 +31,29 @@ export class AcpManager extends AcpSessionManager {
   }
 
   start(
-    label: string, request?: { withoutTools?: true }, role: AcpRole = DEFAULT_ACP_ROLE,
+    label: string, request?: { withoutTools?: true }, role: string = DEFAULT_ACP_ROLE,
   ): { model?: string; error?: string; session?: string } {
-    const tab = this.managers.tab.byLabel(label);
-    if (!tab) return { error: 'Tab not found' };
-    if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
-    const settings = this.roleSettings(this.managers.tab.launchDir, role);
-    const entries = this.queueFor(label, settings, role);
-    if (entries.length === 0) return { error: noRoleModels(role) };
-    if (request?.withoutTools === true) tabRuntime(tab).acpWithoutTools = true;
-    const failures: AttemptFailure[] = [];
-    for (const entry of entries) {
-      try {
-        const session = this.acquire(label, entry, role);
-        if (this.isCurrent(label, session, role)) {
-          return { model: entry.model, session: this.sessionIdentity(label, role) };
-        }
-        failures.push({ entry, error: 'ACP: the session closed while starting.' });
-      } catch (error) {
-        const output = `ACP error: ${errorText(error)}`;
-        appendAcp(this.managers, label, { input: '', output });
-        this.close(label, output, role);
-        failures.push({ entry, error: output });
-      }
-    }
-    return { error: failures.length > 1 ? exhaustedError(failures, role) : failures[0].error };
+    return startCoreSession({
+      managers: this.managers,
+      roleSettings: this.roleSettings,
+      queueFor: this.queueFor.bind(this),
+      stillConnecting: this.stillConnecting.bind(this),
+      acquire: this.acquire.bind(this),
+      sessionIdentity: this.sessionIdentity.bind(this),
+      close: this.close.bind(this),
+    }, label, request, role as AcpRole);
   }
 
-  async prompt(label: string, command: string, role: AcpRole = DEFAULT_ACP_ROLE): Promise<string> {
-    const prefix = role === 'ask' ? /^ask\b/i : /^tell\b/i;
-    const input = prefix.test(command.trim()) ? command : `${role} ${command}`;
-    const result = await this.promptResult(label, input, role);
+  async prompt(label: string, command: string, role: string = DEFAULT_ACP_ROLE): Promise<string> {
+    const roleName = role as AcpRole;
+    const prefix = roleName === 'ask' ? /^ask\b/i : /^tell\b/i;
+    const input = prefix.test(command.trim()) ? command : `${roleName} ${command}`;
+    const result = await this.promptResult(label, input, roleName);
     return result.answered ? result.reply : result.error;
   }
 
   promptResult(
-    label: string, command: string, role: AcpRole = DEFAULT_ACP_ROLE,
+    label: string, command: string, role: string = DEFAULT_ACP_ROLE,
     options: PromptResultOptions = {},
   ): Promise<AcpPromptResult> {
     return new Promise((finish) => { this.run(label, command, finish, role, options); });
@@ -73,8 +61,9 @@ export class AcpManager extends AcpSessionManager {
 
   run(
     label: string, command: string, onDone: (result: AcpPromptResult) => void = () => {},
-    role: AcpRole = DEFAULT_ACP_ROLE, options: PromptResultOptions = {},
+    role: string = DEFAULT_ACP_ROLE, options: PromptResultOptions = {},
   ): void {
+    const roleName = role as AcpRole;
     const admission = options.admission;
     const dropIfNotAdmitted = (): boolean => {
       if (!admission || admission.isCurrent()) return false;
@@ -86,16 +75,16 @@ export class AcpManager extends AcpSessionManager {
       const tab = this.managers.tab.byLabel(label);
       if (!tab) { onDone({ answered: false, error: 'Tab not found' }); return; }
       const runtime = tabRuntime(tab);
-      const prefix = role === 'ask' ? /^ask\b\s*/i : /^tell\b\s*/i;
+      const prefix = roleName === 'ask' ? /^ask\b\s*/i : /^tell\b\s*/i;
       const prompt = command.replace(prefix, '').trim();
-      const refusal = existingAcpRoleRuntime(runtime, role)?.prompt ? 'ACP: a prompt is already running.'
+      const refusal = existingAcpRoleRuntime(runtime, roleName)?.prompt ? 'ACP: a prompt is already running.'
         : prompt ? this.stillConnecting(label) ? STILL_CONNECTING : undefined
-          : `Usage: ${role} <prompt>.`;
-      const settings = refusal ? undefined : this.roleSettings(this.managers.tab.launchDir, role);
-      const queue = settings ? this.queueFor(label, settings, role) : [];
+          : `Usage: ${roleName} <prompt>.`;
+      const settings = refusal ? undefined : this.roleSettings(this.managers.tab.launchDir, roleName);
+      const queue = settings ? this.queueFor(label, settings, roleName) : [];
       if (!dropIfNotAdmitted()) {
         if (refusal || !settings || queue.length === 0) {
-          const error = refusal ?? noRoleModels(role);
+          const error = refusal ?? noRoleModels(roleName);
           if (options.appendRefusalToTranscript ?? true) {
             appendAcp(this.managers, label, { input: command, output: error });
           }
@@ -106,7 +95,7 @@ export class AcpManager extends AcpSessionManager {
         const nativeSettings = this.managers.nativeCommandSettings?.current();
         if (!dropIfNotAdmitted()) {
           this.attempt(label, {
-            nativeSettings, command, prompt, role, settings, queue, failures: [],
+            nativeSettings, command, prompt, role: roleName, settings, queue, failures: [],
             ...options.replyId && { replyId: options.replyId },
             ...(options.echo !== undefined && { echo: options.echo }), onDone,
           });
@@ -118,8 +107,8 @@ export class AcpManager extends AcpSessionManager {
   // One model's try at the request. A request that settles because this model failed before it
   // replied closes the failed session and moves on to the next entry; anything else — an answer, a
   // refusal, a cancellation, a reset, or the last entry failing — settles the caller.
-  deliver(label: string, role: AcpRole, delivery: SubagentDelivery): void {
-    deliverSubagentMessage(this.managers, this.promptResult.bind(this), label, role, delivery);
+  deliver(label: string, role: string, delivery: SubagentDelivery): void {
+    deliverSubagentMessage(this.managers, this.promptResult.bind(this), label, role as AcpRole, delivery);
   }
 
   private attempt(label: string, attempt: Attempt): void {
@@ -173,6 +162,15 @@ export class AcpManager extends AcpSessionManager {
     scheduleSubagentDrain(this.managers, this.promptResult.bind(this), label, attempt.role, runtime);
   }
 
+  launchableEntries(label: string, settings: AcpRoleSettings, role: string): RoleEntry[] {
+    return this.queueFor(label, settings, role as AcpRole);
+  }
+
+  override closeTab(label: string, output?: AcpPromptResult | string): void {
+    super.closeTab(label, output);
+    this.managers.personaRoleSessions?.releaseTab(label);
+  }
+
   private queueFor(label: string, settings: AcpRoleSettings, role: AcpRole): RoleEntry[] {
     const current = this.entryOf(label, role);
     const queue = attemptOrder(settings.entries, current)
@@ -183,15 +181,16 @@ export class AcpManager extends AcpSessionManager {
     return queue;
   }
 
-  cancel(label: string, role: AcpRole = DEFAULT_ACP_ROLE): Promise<boolean> {
+  cancel(label: string, role: string = DEFAULT_ACP_ROLE): Promise<boolean> {
+    const roleName = role as AcpRole;
     const managers = this.managers;
     const runtime = managers.tab.byLabel(label)?.runtime;
-    const request = runtime ? acpRoleRuntime(runtime, role).prompt : undefined;
+    const request = runtime ? acpRoleRuntime(runtime, roleName).prompt : undefined;
     if (!runtime || !request) return Promise.resolve(false);
-    const session = this.currentSession(label, role);
-    return cancelAcpPrompt(managers, label, role, runtime, request,
+    const session = this.currentSession(label, roleName);
+    return cancelAcpPrompt(managers, label, roleName, runtime, request,
       session && (() => session.cancel()),
-      () => session !== undefined && this.isCurrent(label, session, role));
+      () => session !== undefined && this.isCurrent(label, session, roleName));
   }
 
   private acquire(label: string, entry: RoleEntry, role: AcpRole) {

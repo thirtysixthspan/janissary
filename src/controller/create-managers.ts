@@ -18,6 +18,7 @@ import { OpenFileManager } from '../open/file-manager.js';
 import { FileNavigatorManager } from '../file-navigator/manager.js';
 import { EditorWatchManager } from '../editor/watch-manager.js';
 import { EditorAcpManager } from '../editor/acp-manager.js';
+import { PersonaRoleSessionManager } from '../acp/persona-role-session.js';
 import { BrowserManager } from '../browser/tab.js';
 import { CommandManager } from '../command/manager.js';
 import { MonitorManager } from '../monitor/manager.js';
@@ -76,6 +77,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   void refreshLaunchDirBranch(managers.tab.launchDir);
   managers.browser = new BrowserManager(managers);
   managers.acp = new AcpManager(managers);
+  managers.personaRoleSessions = new PersonaRoleSessionManager(managers);
   managers.openFile = new OpenFileManager(managers);
   managers.fileNavigator = new FileNavigatorManager(managers);
   managers.editorWatch = new EditorWatchManager(managers);
