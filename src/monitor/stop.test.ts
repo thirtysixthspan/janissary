@@ -14,7 +14,7 @@ function makeMonitor(overrides: Partial<MonitorSub> = {}) {
   const tick = vi.fn();
   const reg = {
     owner: 'main', name: 'watch', inline: false,
-    persona: { name: 'reviewer', role: 'research', harness: { harness: 'opencode', model: 'test', variant: 'test' }, body: '', tools: [] },
+    persona: { name: 'reviewer', role: 'research', body: '' },
     targets: [target], buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(),
     editorSeen: new Map(), pageSeen: new Map(), delimiter: 'test-delimiter',
     session: { prompt: vi.fn(), kill: vi.fn() }, inFlight: false, delivered: 0,

@@ -6,9 +6,8 @@ import type { AcpSession } from '../acp/types.js';
 
 const persona = (name: string): Persona => ({
   name,
-  harness: { harness: 'claude', model: 'sonnet', variant: 'default' },
+  role: 'research',
   body: '',
-  tools: [],
 });
 const session: AcpSession = { prompt: () => {}, kill: () => {}, cancel: async () => {}, shutdown: async () => {} };
 

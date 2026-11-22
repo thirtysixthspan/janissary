@@ -32,7 +32,7 @@ import { personaRoleRuntime } from '../acp/persona-role-state.js';
 import { messageBus } from '../bus.js';
 
 function makePersona(): Persona {
-  return { name: 'reviewer', role: 'research', body: 'Watch for bugs.', tools: [] };
+  return { name: 'reviewer', role: 'research', body: 'Watch for bugs.' };
 }
 
 function makeSession(): { session: AcpSession; kill: ReturnType<typeof vi.fn> } {
