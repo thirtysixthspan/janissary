@@ -14,7 +14,7 @@ Your job: pick the simplest available plan from `./product/plans/ready/`, implem
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `./product/plans/ready/` to `./product/plans/complete/`. Run `$janissary/scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done. Once the PR is open, delegate `ai/tasks/feature/review-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, and `ai/tasks/feature/update-pull-request.md` against it.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `./product/plans/ready/` to `./product/plans/complete/`. Run `$janissary/scripts/run.mjs check-diff` after each change. Open the PR via `ai/tasks/workspace/open-plan-pull-request.md` when the plan is promoted, since there is no code to describe yet; other PRs use `ai/tasks/workspace/open-feature-pull-request.md`. Once the PR is open, delegate `ai/tasks/feature/review-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, and `ai/tasks/feature/update-pull-request.md` against it.
 
 ### Forbidden — no exceptions
 
@@ -22,7 +22,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the plan d
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** If the plan specifies tests, write them. If it does not, still verify with `$janissary/scripts/run.mjs check-diff`.
 4. **Choosing a plan at complexity 7 or above.** If every plan in `./product/plans/ready/` is rated 7+, stop and report — do not pick one anyway.
-5. **Merging or closing the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it, and the review, repairs, and update all leave it open; merging is the human's decision.
+5. **Merging or closing the PR.** `ai/tasks/workspace/open-plan-pull-request.md` opens it, and the review, repairs, and update all leave it open; merging is the human's decision.
 
 ---
 
@@ -101,7 +101,7 @@ git mv ./product/plans/ready/<plan-file> ./product/plans/complete/<plan-file>
 
 ## Step 7 — Open the pull request
 
-Execute `ai/tasks/workspace/open-feature-pull-request.md` in full. That document owns the PR workflow — follow its steps without deviation.
+Execute `ai/tasks/workspace/open-plan-pull-request.md`, which carries only the short plan summary because the plan is already promoted and there is no code or UI to describe yet. That document owns the plan PR workflow — follow its steps without deviation.
 
 Record the PR number, URL, and head branch it reports. Steps 8 and 9 work on that PR and no other.
 
