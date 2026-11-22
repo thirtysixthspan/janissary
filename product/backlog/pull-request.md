@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's "How to verify" claim that the branch changes only five documents and the plan's move.
-
-Existing Issue: Step 9 of "How to verify" tells a reader to expect that the only changes are the five `ai/` documents and the promoted plan's move, while the branch also adds three fix plans under `product/plans/complete/`. Severity: 4/10
-
-Existing Risk: 4/10 - A reader auditing the changed-file list against the description finds files the description denies exist, so the description stops being a reliable scope statement and a reviewer cannot tell whether the extra plans are intentional or stray.
-
-Proposal Risk: 1/10 - The correction touches one sentence of prose, leaves every rule, document, and test untouched, and the true invariant that no source, test, config, or spec file changed remains checkable from the same step.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2183 "correct the description's claim that only five documents and the plan move changed". In the pull request body's "How to verify" section, step 9 ("No spec or application file changed"), remove the false "The only changes are the five `ai/` documents and the promoted plan's move" clause from the Expect line and keep the true rest of the expectation, that no source, test, config, or `product/specs/` file is modified, so the step stays checkable against `git diff origin/master...HEAD --name-status`. If the "What" paragraph's statement that the change touches the plan template and the four stages that consume plans is read as an exhaustive change list, reword it to say those are the rule changes and that the branch also carries the fix plans added by the three repairs. Change only the pull request description, leave the title and every other paragraph word-for-word as the author wrote them, and do not edit any file to make the description match. Verify by re-reading the body and checking that the revised Expect line agrees with the branch's actual changed-file list while the no-source, no-test, no-config, no-spec guarantee still holds.
-
-
 * Deliver the fix plan's promise that every anchor in the promoted plan resolves to its quoted fragment.
 
 Existing Issue: The refresh fix plan states that after its repair every `path:line` anchor in the promoted plan lands on the line carrying its quoted fragment, yet the plan still cites `product/backlog/features.md:7` and `product/backlog/features.md:12` for feature text removed from that backlog when the ready plan was promoted, and its `ai/guidelines/plan-template.md:15` anchor quotes "Every section is required in every plan." on a line that now reads "Every section is required in every plan;" after the section-rule repair. Severity: 5/10
