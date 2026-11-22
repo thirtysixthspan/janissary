@@ -51,9 +51,9 @@ Make a pull request description reflect the work the pull request carries at eve
 
 ## Assumptions
 
-1. The canonical pull request body has four ordered sections — `ai/tasks/workspace/open-feature-pull-request.md:36` (`the body must include **every section below**, in this order`) and `ai/tasks/workspace/open-feature-pull-request.md:68` (`### How to verify`).
-2. One authoring task writes that body — `ai/tasks/workspace/open-feature-pull-request.md:161` (`## Step 5 — Write the PR body`).
-3. The open-feature task writes its body from a plan, specs and the diff before code is final — `ai/tasks/workspace/open-feature-pull-request.md:171` (`Write them from the plan, the specs the change touches, and the diff`).
+1. The canonical pull request body has four ordered sections — `ai/tasks/workspace/open-feature-pull-request.md:15` (`The body must include **every section below**, in this order`) and `ai/tasks/workspace/open-feature-pull-request.md:47` (`### How to verify`).
+2. One authoring task writes that body — `ai/tasks/workspace/open-feature-pull-request.md:140` (`## Step 5 — Write the PR body`).
+3. The open-feature task writes its body from a plan, specs and the diff before code is final — `ai/tasks/workspace/open-feature-pull-request.md:148` (`Write them from the plan, the specs the change touches, and the diff`).
 4. A later task rewrites the description from the final code just before the pull request is updated — `ai/tasks/feature/update-pull-request.md:160` (`## Step 9 — Update the description`) and `ai/tasks/feature/update-pull-request.md:162` (`This comes after the push, never before`).
 5. That rewrite keeps the author's section headings and order — `ai/tasks/feature/update-pull-request.md:168` (`Keep the author's section headings and their order`).
 6. That rewrite never starts the app — `product/specs/pull-request-updating.md:9` (`since the update never starts the app`).
@@ -70,7 +70,7 @@ Make a pull request description reflect the work the pull request carries at eve
 
 ## Existing functionality
 
-1. The four-section pull request body structure — `ai/tasks/workspace/open-feature-pull-request.md:36` (`the body must include **every section below**, in this order`).
+1. The four-section pull request body structure — `ai/tasks/workspace/open-feature-pull-request.md:15` (`The body must include **every section below**, in this order`).
 2. The post-push description rewrite — `ai/tasks/feature/update-pull-request.md:160` (`## Step 9 — Update the description`).
 3. The Additional test cases section owned by the testing task — `ai/tasks/feature/test-pull-request.md:240` (`## Step 11 — Add the additional steps to the description`).
 4. The description-fidelity review dimension — `ai/tasks/feature/review-pull-request.md:128` (`Description fidelity. Does the description describe what the diff actually does?`).
