@@ -10,7 +10,7 @@ type SourceMetadata = {
 };
 
 export type AcpRecordSource = SourceMetadata & (
-  | { kind: 'acp'; role?: AcpRole }
+  | { kind: 'acp'; role?: AcpRole; declaredRole?: string }
   | { kind: 'agent'; runId: string; taskPath: string; subagentRole?: string }
 );
 
@@ -55,6 +55,7 @@ export type AcpRecordRow = {
   ownerName: string;
   host?: string;
   role?: AcpRole;
+  declaredRole?: string;
   runId?: string;
   subagentRole?: string;
   startedAt: number;

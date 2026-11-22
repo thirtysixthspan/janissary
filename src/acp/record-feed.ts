@@ -20,7 +20,10 @@ export function beginCoreRecord(
   const target = state ?? acpRoleRuntime(runtime, role);
   if (!target.recordId) {
     target.recordId = records.begin(source);
-    target.recordName = recordConnectionName({ kind: 'acp', role, ownerName: source.ownerName });
+    target.recordName = recordConnectionName({
+      kind: 'acp', role, ownerName: source.ownerName,
+      ...(source.kind === 'acp' && source.declaredRole !== undefined && { declaredRole: source.declaredRole }),
+    });
   }
   ownRecord(runtime, target.recordId);
   if (target.prompt) promptCoreRecord(records, runtime, target.prompt);

@@ -112,6 +112,21 @@ describe('record model', () => {
     expect(window).toMatchObject({ subagentRole: 'research' });
   });
 
+  it('copies the declared role onto core rows and window sources only when defined', () => {
+    const declared: AcpRecordSource = {
+      kind: 'acp', model: 'provider/model', ownerLabel: 'bob', ownerName: 'Bob', role: 'ask', declaredRole: 'research',
+    };
+    const [declaredRow, coreRow] = recordRows([
+      { ...record(), id: 'declared', source: declared, updatedAt: 200 },
+      { ...record(), id: 'core', source: core, updatedAt: 100 },
+    ]);
+    expect(declaredRow).toMatchObject({ kind: 'acp', role: 'ask', declaredRole: 'research' });
+    expect(coreRow).not.toHaveProperty('declaredRole');
+    const window = recordWindow({ ...record(), source: declared });
+    expect(window.source).toMatchObject({ declaredRole: 'research' });
+    expect(window).toMatchObject({ declaredRole: 'research' });
+  });
+
   it.each([0, 20, 21, 41])('projects the newest default suffix of %s blocks', (count) => {
     const value = record(count);
     const view = recordWindow(value);

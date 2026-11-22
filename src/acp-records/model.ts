@@ -48,6 +48,7 @@ export function recordRow(record: AcpRecord): AcpRecordRow {
     ownerName: source.ownerName,
     ...(source.host !== undefined && { host: source.host }),
     ...(source.kind === 'acp' && source.role !== undefined && { role: source.role }),
+    ...(source.kind === 'acp' && source.declaredRole !== undefined && { declaredRole: source.declaredRole }),
     ...(source.kind === 'agent' && { runId: source.runId }),
     ...(source.kind === 'agent' && source.subagentRole !== undefined && { subagentRole: source.subagentRole }),
     ...(endedAt !== undefined && { endedAt }),

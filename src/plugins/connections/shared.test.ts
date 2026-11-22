@@ -94,6 +94,19 @@ describe('connections shared contract', () => {
     expect(recordConnectionName({ kind: 'agent', ownerName: 'release notes' })).toBe('agent:release notes');
   });
 
+  it('accepts a declared persona role on an ACP record row and window source and names it', () => {
+    const declared = {
+      ...record, role: 'ask', declaredRole: 'research',
+      window: { ...record.window, source: { ...record.window.source, role: 'ask', declaredRole: 'research' } },
+    };
+
+    expect(isConnectionsPayload({ kind: 'list', rows: [declared] })).toBe(true);
+    expect(isConnectionsPayload({ kind: 'connection', record: declared })).toBe(true);
+    expect(recordConnectionName({ kind: 'acp', ownerName: 'build', role: 'ask', declaredRole: 'research' })).toBe('acp:research:build');
+    expect(recordConnectionName({ kind: 'acp', ownerName: 'build', role: 'ask' })).toBe('acp:ask:build');
+    expect(recordConnectionName({ kind: 'acp', ownerName: 'build' })).toBe('acp:build');
+  });
+
   it('accepts a live row marked permanent', () => {
     expect(isConnectionsPayload({ kind: 'list', rows: [{ ...live, permanent: true }] })).toBe(true);
   });
@@ -140,6 +153,12 @@ describe('connections shared contract', () => {
     { kind: 'list', rows: [{ ...subagent, window: { ...subagent.window, source: { ...subagent.window.source, subagentRole: '' } } }] },
     { kind: 'list', rows: [{ ...record, subagentRole: 'research' }] },
     { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { ...record.window.source, subagentRole: 'research' } } }] },
+    { kind: 'list', rows: [{ ...record, declaredRole: '' }] },
+    { kind: 'list', rows: [{ ...record, declaredRole: ' '.repeat(3) }] },
+    { kind: 'list', rows: [{ ...record, declaredRole: 7 }] },
+    { kind: 'list', rows: [{ ...record, window: { ...record.window, source: { ...record.window.source, declaredRole: '' } } }] },
+    { kind: 'list', rows: [{ ...subagent, declaredRole: 'research' }] },
+    { kind: 'list', rows: [{ ...live, declaredRole: 'research' }] },
     { kind: 'list', rows: [{ ...live, role: 'tell' }] },
     { kind: 'connection', record: { ...record, model: undefined } },
   ])('rejects malformed payload %j', (value) => {

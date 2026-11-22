@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { AcpPromptResult } from './types.js';
 import type { AcpPendingPrompt } from './prompt-state.js';
-import type { AcpRole } from './role.js';
+import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 import type { PersonaRoleHooks } from './persona-role-state.js';
 import { knownRoleSettings, exhaustedError, fallbackNotice } from './ask-role.js';
 import { notify } from '../notifications/index.js';
@@ -66,7 +66,8 @@ export async function promptPersonaRole(
         attempt.prompt = request;
         prepareCorePromptRecord(managers.acpRecords, runtime, request, nativeSettings);
         beginCoreRecord(managers.acpRecords, runtime, {
-          kind: 'acp', role: roleName, model: candidate.model, ownerLabel: label, ownerName: tab.title ?? label,
+          kind: 'acp', role: DEFAULT_ACP_ROLE, declaredRole: role,
+          model: candidate.model, ownerLabel: label, ownerName: tab.title ?? label,
         }, attempt);
         runCorePrompt(managers, label, runtime, request, nativeSettings, session, attempt.identity ?? '',
           () => managers.personaRoleSessions.hasSession(label, role)

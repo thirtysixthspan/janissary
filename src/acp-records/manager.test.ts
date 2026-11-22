@@ -56,6 +56,22 @@ describe('AcpSessionRecords transitions', () => {
     expect(next.rows().find((row) => row.id === nextId)?.status).toBe('Idle');
   });
 
+  it('keeps a declared persona role on the row, window, and reloaded source', () => {
+    const records = create();
+    const source: AcpRecordSource = {
+      kind: 'acp', model: 'provider/model', ownerLabel: 'bob', ownerName: 'Original Bob',
+      role: 'ask', declaredRole: 'research',
+    };
+    const id = records.begin(source);
+
+    expect(records.rows()[0]).toMatchObject({ role: 'ask', declaredRole: 'research' });
+    expect(records.window(id)).toMatchObject({
+      role: 'ask', declaredRole: 'research', source: { declaredRole: 'research' },
+    });
+    expect(read(id)).toMatchObject({ source: { declaredRole: 'research' } });
+    expect(create().window(id)?.source).toMatchObject({ declaredRole: 'research' });
+  });
+
   it('hands out the persisted file path for a valid id and nothing for a malformed one', () => {
     const records = create();
     const id = records.begin(core);

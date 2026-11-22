@@ -20,10 +20,11 @@ export function isRecordSource(value: unknown): value is AcpRecordSource {
     || !nonempty(value.ownerLabel) || !nonempty(value.ownerName)
     || (value.host !== undefined && !nonempty(value.host))) return false;
   if (value.kind === 'acp') {
+    if (value.declaredRole !== undefined && !nonempty(value.declaredRole)) return false;
     return value.role === undefined || (typeof value.role === 'string'
       && validAcpRoles.includes(value.role));
   }
-  return value.kind === 'agent' && nonempty(value.runId) && nonempty(value.taskPath)
+  return value.kind === 'agent' && value.declaredRole === undefined && nonempty(value.runId) && nonempty(value.taskPath)
     && (value.subagentRole === undefined || nonempty(value.subagentRole));
 }
 

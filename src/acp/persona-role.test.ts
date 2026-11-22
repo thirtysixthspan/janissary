@@ -6,6 +6,7 @@ import type { AcpSession } from './types.js';
 import type { Managers } from '../managers.js';
 import type { Tab, TabRuntime } from '../tab/types.js';
 import { messageBus } from '../bus.js';
+import { isRecordSource } from '../acp-records/validation.js';
 
 const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
@@ -60,7 +61,11 @@ function harness(labels: string[] = ['tab']) {
     },
     acp: { launchableEntries: mocks.launchableEntries },
     acpRecords: {
-      begin: vi.fn(() => 'record-1'), prompt: vi.fn(() => true), activity: vi.fn(),
+      begin: vi.fn((source: unknown) => {
+        if (!isRecordSource(source)) throw new Error('Invalid ACP record source.');
+        return 'record-1';
+      }),
+      prompt: vi.fn(() => true), activity: vi.fn(),
       reply: vi.fn(), answer: vi.fn(), close: vi.fn(), rows: vi.fn(() => []),
     },
   } as unknown as Managers;
@@ -126,8 +131,21 @@ describe('promptPersonaRole core pipeline', () => {
 
     expect(mocks.connectAcp).toHaveBeenCalledWith(expect.objectContaining({ command: 'opencode', cwd: '/repo' }));
     expect(managers.acpRecords.begin).toHaveBeenCalledWith({
-      kind: 'acp', role: 'custom', model: 'model-x', ownerLabel: 'tab', ownerName: 'tab',
+      kind: 'acp', role: 'ask', declaredRole: 'custom', model: 'model-x', ownerLabel: 'tab', ownerName: 'tab',
     });
+    expect(result).toEqual({ answered: true, reply: 'done', session: 'persona-acp-1' });
+  });
+
+  it('opens a connection record under a custom declared role instead of failing validation', async () => {
+    const { managers } = harness();
+
+    const result = await promptPersonaRole(managers, 'tab', 'hello', 'research', 'researcher');
+
+    expect(mocks.launchableEntries).toHaveBeenCalledWith('tab', expect.anything(), 'research');
+    expect(managers.acpRecords.begin).toHaveBeenCalledExactlyOnceWith({
+      kind: 'acp', role: 'ask', declaredRole: 'research', model: 'model-x', ownerLabel: 'tab', ownerName: 'tab',
+    });
+    expect(managers.acpRecords.prompt).toHaveBeenCalled();
     expect(result).toEqual({ answered: true, reply: 'done', session: 'persona-acp-1' });
   });
 

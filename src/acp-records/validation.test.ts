@@ -16,6 +16,35 @@ describe('ACP record source validation', () => {
     expect(isRecordSource({ ...agent, subagentRole })).toBe(false);
   });
 
+  it('accepts a declared role of any nonempty spelling while keeping the built-in roles strict', () => {
+    for (const declaredRole of ['research', 'Research', 'custom role']) {
+      expect(isRecordSource({ ...core, declaredRole })).toBe(true);
+    }
+    expect(isRecordSource({ ...core, role: 'ask', declaredRole: 'research' })).toBe(true);
+    expect(isRecordSource({ ...core, role: 'tell', declaredRole: 'research' })).toBe(true);
+    expect(isRecordSource({ ...core, role: 'research' })).toBe(false);
+    expect(isRecordSource({ ...core, role: 'reader', declaredRole: 'research' })).toBe(false);
+    expect(isRecordSource({ ...agent, declaredRole: 'research' })).toBe(false);
+  });
+
+  it.each(['', ' '.repeat(3), 7, null])('rejects an invalid declared role %j', (declaredRole) => {
+    expect(isRecordSource({ ...core, declaredRole })).toBe(false);
+  });
+
+  it('loads a stored core record carrying a declared role', () => {
+    const id = 'a0b1c2d3-0000-4000-8000-00000000000d';
+    const record: AcpRecord = {
+      schemaVersion: ACP_RECORD_SCHEMA_VERSION, id,
+      source: {
+        kind: 'acp', model: 'provider/model', ownerLabel: 'caller', ownerName: 'Caller',
+        role: 'ask', declaredRole: 'research',
+      },
+      title: 'ACP: review', startedAt: 0, updatedAt: 1, endedAt: 1, outcome: 'Closed',
+      blocks: [{ prompt: 'review', startedAt: 0, entries: [], answer: 'done', endedAt: 1 }],
+    };
+    expect(isAcpRecord(record, id)).toBe(true);
+  });
+
   it('accepts legacy agent and core sources without a subagent role', () => {
     expect(isRecordSource(agent)).toBe(true);
     expect(isRecordSource(core)).toBe(true);
