@@ -226,7 +226,7 @@ the matching role does not exist in the file in effect, its built-in entries and
 an existing role has no entries, its model entries fall back to the built-in defaults while its own
 grants stay in effect; an empty or missing `commands` list grants no tools. A nonempty model list
 whose entries are all disabled does not fall back to the built-in models. No launch dialog, command
-flag, or agent consults a role description. Other consumers read `roles.json` itself. Entries carry
+flag, or agent consults a role description. The roles tab reads `roles.json` for display; persona-backed monitor, editor, and launcher sessions resolve their declared role through the same core path as `ask` and `tell` rather than reading the file themselves. Entries carry
 harness, model, and effort; `commands` contains native ACP grants.
 Role connections deny all of their harness's internal tools, so a role grants only native commands:
 the agent can run the granted commands that are enabled for agents and nothing else.

@@ -8,7 +8,7 @@ The `connections` and `connection` commands open the connections tab, inspect an
 |---|---|---|---|
 | `sqlite` | database name | Global (shared across tabs) | connection registry in `connections.ts` |
 | `shell` | shell program basename (`bash`, `zsh`, …) | Current tab | `ShellManager` |
-| `acp` | a supported plugin tab's role-qualified core ACP connection (`ask:<provider/model>` or `tell:<provider/model>`), a monitor's name, or a persona name (editor tab) | Current tab | `AcpManager`; a tab's monitors are kept by `MonitorManager`, and an editor tab's persona connections separately, one per persona |
+| `acp` | a supported plugin tab's role-qualified core ACP connection (`ask:<provider/model>` or `tell:<provider/model>`), a monitor's name, or a persona name (editor tab) | Current tab | `AcpManager`; a tab's monitors are kept by `MonitorManager`, and an editor tab's persona sessions are role-backed core ACP connections, one slot per declared role |
 | `browser` | window id (`w1`, `w2`, …) | Current tab | `BrowserManager` |
 | `ssh` | tab label, or the destination as typed | Global (the ssh tab is its own scope — it has no command bar to run `connections` from) | the ssh tab's own `HarnessView.destination`/`ptyId`, or a remote tab's channel |
 | `terminal` | the program a tab's terminal runs (`vim`, `claude`, …) | Current tab | `PseudoterminalManager` |
@@ -64,7 +64,7 @@ A row that already offers a transcript snapshot keeps that separate button. The 
 
 Connection record history belongs to the record tab described in [[connections-tab]].
 
-An editor tab carries the same connections button and window, listing its open persona connections (each shown as `<persona> (acp)`) alongside any other connections that tab has opened. Unlike every other kind of connection row, an editor tab's persona connection rows carry their own small close control; clicking it closes just that one persona's connection immediately, the same as running `connections close acp:<persona>`, without affecting any other open persona connection in that tab. A running agent row carries no close control there either: pressing it opens its record tab, where the run's **Terminate** remains its control. Monitor rows remain snapshot-only, and browser, terminal, and SQLite rows cannot be opened. A persona connection whose agent exits or fails to start leaves the window on its own, and the next request to that persona opens a fresh one (see [[editor-tab]] "In-editor persona suggestions").
+An editor tab carries the same connections button and window, listing its open persona connections (each shown as `<persona> (acp)`, backed by a role-configured core ACP session keyed by the persona's declared role) alongside any other connections that tab has opened. Unlike every other kind of connection row, an editor tab's persona connection rows carry their own small close control; clicking it closes just that one persona's connection immediately, the same as running `connections close acp:<persona>`, without affecting any other open persona connection in that tab. A running agent row carries no close control there either: pressing it opens its record tab, where the run's **Terminate** remains its control. Monitor rows remain snapshot-only, and browser, terminal, and SQLite rows cannot be opened. A persona connection whose agent exits or fails to start leaves the window on its own, and the next request to that persona opens a fresh one (see [[editor-tab]] "In-editor persona suggestions").
 
 ### Transcript button on ACP connection rows
 
