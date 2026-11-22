@@ -174,4 +174,26 @@ describe('respawnMonitorSession', () => {
     expect(reg.session).not.toBe(oldSession);
     expect(reg.inFlight).toBe(false);
   });
+
+  it('re-binds to the live shared session without re-priming when a sibling still uses the role', () => {
+    const { managers, reg } = setup();
+    primeMonitorSession(reg, managers);
+    const sharedSession = personaRoleRuntime(tabRuntime(managers.tab.byLabel('main')!), 'research').session;
+    const sibling = {
+      ...reg,
+      persona: { ...reg.persona, name: 'observer' },
+      session: idleSession(),
+    } as MonitorSub;
+    const monitors = new Map([
+      [`${reg.owner}:${reg.persona.name}`, reg],
+      [`${sibling.owner}:${sibling.persona.name}`, sibling],
+    ]);
+    reg.inFlight = true;
+
+    respawnMonitorSession(reg, managers, monitors);
+
+    expect(mocks.promptPersonaRole).toHaveBeenCalledTimes(1);
+    expect(reg.session).toBe(sharedSession);
+    expect(reg.inFlight).toBe(false);
+  });
 });

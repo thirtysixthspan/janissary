@@ -71,6 +71,11 @@ export function respawnMonitorSession(
   const tab = managers.tab.byLabel(reg.owner);
   const state = tab ? existingPersonaRoleRuntime(tabRuntime(tab), reg.persona.role) : undefined;
   const keepShared = siblings.length > 0 && state?.session !== undefined;
+  if (keepShared && state?.session) {
+    reg.session = state.session;
+    reg.inFlight = false;
+    return;
+  }
   // Another monitor still using this role keeps a live shared session; otherwise close it once
   // before priming a replacement. Priming re-binds this monitor to whichever session is current.
   if (!keepShared && !managers.personaRoleSessions.close(reg.owner, reg.persona.role)) reg.session.kill();
