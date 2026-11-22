@@ -149,6 +149,18 @@ describe('promptPersonaRole core pipeline', () => {
     expect(result).toEqual({ answered: true, reply: 'done', session: 'persona-acp-1' });
   });
 
+  it('opens no connection record when the caller opts out of recording', async () => {
+    const { managers } = harness();
+
+    const result = await promptPersonaRole(managers, 'tab', 'hello', 'custom', 'reviewer', { record: false });
+
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(1);
+    expect(mocks.runCorePrompt).toHaveBeenCalledTimes(1);
+    expect(managers.acpRecords.begin).not.toHaveBeenCalled();
+    expect(managers.acpRecords.prompt).not.toHaveBeenCalled();
+    expect(result).toEqual({ answered: true, reply: 'done', session: 'persona-acp-1' });
+  });
+
   it('passes the role grants into the core prompt request', async () => {
     const { managers } = harness();
 

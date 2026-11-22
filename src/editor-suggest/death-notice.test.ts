@@ -99,6 +99,19 @@ beforeEach(() => {
 });
 
 describe('editor persona death after a settled reply', () => {
+  it('launches one role-based session and lists one connection with no durable record', async () => {
+    const managers = harness();
+
+    editorSuggest(managers, PARAMS, vi.fn());
+    await settleReply();
+
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(1);
+    expect(managers.acpRecords.begin).not.toHaveBeenCalled();
+    expect(managers.editorAcp.connectionsFor('notes')).toEqual([
+      { text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } },
+    ]);
+  });
+
   it('reports the real role-session death once and never calls back again', async () => {
     const managers = harness();
     const callback = vi.fn();

@@ -44,7 +44,7 @@ function makeManagers(hasSession = false): {
   const session = vi.fn();
   const record = vi.fn();
   const hooks = { onError: () => {} };
-  session.mockImplementation((_label, _persona, _role, _cwd, h: { onError: (message: string) => void }) => {
+  session.mockImplementation((_label, _persona, _role, h: { onError: (message: string) => void }) => {
     hooks.onError = h.onError;
   });
   const managers = {
@@ -91,7 +91,7 @@ describe('editorSuggest', () => {
     editorSuggest(managers, baseParams, callback);
 
     expect(mocks.promptPersonaRole).toHaveBeenCalledWith(
-      managers, 'notes', expect.any(String), 'research', 'reviewer',
+      managers, 'notes', expect.any(String), 'research', 'reviewer', { record: false },
     );
     const prompt = mocks.promptPersonaRole.mock.calls[0][2] as string;
     expect(prompt).toContain('Watch for bugs.');
@@ -146,7 +146,7 @@ describe('editorSuggest', () => {
 
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'editor-suggest', 'notes', 'reviewer: boom');
     expect(callback).toHaveBeenCalledWith({ hunks: [] });
-    expect(session).toHaveBeenCalledWith('notes', expect.objectContaining({ name: 'reviewer' }), 'research', '/repo', expect.objectContaining({ onError: expect.any(Function) }));
+    expect(session).toHaveBeenCalledWith('notes', expect.objectContaining({ name: 'reviewer' }), 'research', expect.objectContaining({ onError: expect.any(Function) }));
   });
 
   it('notifies "no suggestion" when the persona proposes nothing', () => {

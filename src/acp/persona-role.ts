@@ -19,8 +19,11 @@ export function noEnabledModelsNotice(persona: string, role: string): string {
   return `Persona "${persona}" finds no enabled models in role "${role}".`;
 }
 
+export type PersonaPromptOptions = { record?: boolean };
+
 export async function promptPersonaRole(
   managers: Managers, label: string, prompt: string, role: string, persona: string,
+  options: PersonaPromptOptions = {},
 ): Promise<AcpPromptResult> {
   const settings = knownRoleSettings(managers.tab.launchDir, role);
   if (!settings) {
@@ -65,10 +68,12 @@ export async function promptPersonaRole(
         request.finish = finish;
         attempt.prompt = request;
         prepareCorePromptRecord(managers.acpRecords, runtime, request, nativeSettings);
-        beginCoreRecord(managers.acpRecords, runtime, {
-          kind: 'acp', role: DEFAULT_ACP_ROLE, declaredRole: role,
-          model: candidate.model, ownerLabel: label, ownerName: tab.title ?? label,
-        }, attempt);
+        if (options.record !== false) {
+          beginCoreRecord(managers.acpRecords, runtime, {
+            kind: 'acp', role: DEFAULT_ACP_ROLE, declaredRole: role,
+            model: candidate.model, ownerLabel: label, ownerName: tab.title ?? label,
+          }, attempt);
+        }
         runCorePrompt(managers, label, runtime, request, nativeSettings, session, attempt.identity ?? '',
           () => managers.personaRoleSessions.hasSession(label, role)
             && personaRoleRuntime(runtime, role).session === session);

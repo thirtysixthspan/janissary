@@ -43,6 +43,17 @@ function fixture() {
 }
 
 describe('connections topic rows', () => {
+  it('lists one live persona row and no durable record when the editor session opens no record', () => {
+    const { managers } = fixture();
+
+    const rows = composeConnectionsTopicData(managers, new Map()).rows;
+    const personaRows = rows.filter((row) => row.acpRef?.scope === 'editor');
+
+    expect(personaRows).toHaveLength(1);
+    expect(personaRows[0]).toMatchObject({ type: 'live', id: 'reviewer', display: 'persona session' });
+    expect(rows.filter((row) => row.type === 'record' && row.ownerLabel === 'second')).toHaveLength(0);
+  });
+
   it('composes live and durable rows once with truthful activity, ordering, and focus ownership', () => {
     const { managers } = fixture();
     const data = composeConnectionsTopicData(managers, new Map());

@@ -39,7 +39,6 @@ export function editorSuggest(
   }
 
   const persona = loadPersona(match, 'editor');
-  const cwd = managers.tab.workingDirOf(label);
   const role = persona.role;
   const isFirstTurn = !managers.editorAcp.hasSession(label, role);
   let settled = false;
@@ -70,8 +69,8 @@ export function editorSuggest(
   const primingText = isFirstTurn ? [persona.body, HUNK_FORMAT, bufferBlock].join('\n\n') : bufferBlock;
   const fullPrompt = `${primingText}\n\nRequest: ${params.prompt}`;
 
-  const pending = promptPersonaRole(managers, label, fullPrompt, role, persona.name);
-  managers.editorAcp.session(label, persona, role, cwd, { onError: connectionLost });
+  const pending = promptPersonaRole(managers, label, fullPrompt, role, persona.name, { record: false });
+  managers.editorAcp.session(label, persona, role, { onError: connectionLost });
   managers.editorAcp.record(label, role, fullPrompt, 'input');
   void pending.then((result) => {
     if (result.answered) {

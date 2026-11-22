@@ -54,7 +54,7 @@ function openSlot(
 ): AcpSession {
   const bound = hooks ?? { onError: () => {} };
   const session = managers.personaRoleSessions.session(label, p.role, ENTRY, '/repo', bound);
-  editor.session(label, p, p.role, '/repo', bound);
+  editor.session(label, p, p.role, bound);
   return session;
 }
 
@@ -256,7 +256,7 @@ describe('EditorAcpManager', () => {
       const core = { onError: () => {} };
       const bind = (hooks: Hooks) => {
         managers.personaRoleSessions.session('notes', 'research', ENTRY, '/repo', core);
-        editor.session('notes', persona('reviewer', 'research'), 'research', '/repo', hooks);
+        editor.session('notes', persona('reviewer', 'research'), 'research', hooks);
       };
       bind({ onError: first });
       bind({ onError: latest });

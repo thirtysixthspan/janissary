@@ -30,7 +30,7 @@ export class EditorAcpManager {
     return this.managers.personaRoleSessions.hasSession(label, role);
   }
 
-  session(label: string, persona: Persona, role: string, _cwd: string, hooks: SessionHooks): AcpSession | undefined {
+  session(label: string, persona: Persona, role: string, hooks: SessionHooks): AcpSession | undefined {
     const k = slot(label, role);
     this.personas.set(k, persona.name);
     this.roles.set(`${label}:${persona.name}`, role);
