@@ -46,7 +46,7 @@ State your pick in one sentence.
 
 1. Read the entire plan. Its complexity rating, or the lack of one, does not change what you do next: every plan is decomposed.
 2. Read the project constraints in [`AGENTS.md`](../../../AGENTS.md), every file under `ai/guidelines/`, and the specs and code the plan touches. Grep for call sites rather than trusting the plan's own description, because subplan boundaries have to match how the code is actually wired.
-3. List every requirement and edge case the source plan states. This list is what Step 6 checks coverage against.
+3. List every requirement and edge case the source plan states. This list is what Step 6 checks coverage against. Treat each preserved-behavior entry in the source plan as a tracked requirement in this inventory, pairing its behavior with the test that pins it.
 
 ---
 
@@ -76,7 +76,7 @@ After each improvement, verify that the subplan remains within the source scope,
 
 ## Step 6 — Verify and move the source plan
 
-1. Check coverage. Every requirement and edge case from Step 2 maps to exactly one subplan, or is explicitly shared across named subplans. Fill any gap by extending the subplan responsible for it, returned to `draft/` if necessary, then repeat improvement and quantitative rerating in Step 5. Preserve any increased rating without resplitting.
+1. Check coverage. Every requirement and edge case from Step 2 maps to exactly one subplan, or is explicitly shared across named subplans. Each preserved-behavior entry is a tracked requirement in this coverage map, and its behavior and the test that pins it land in the same subplan — never split across subplans. Fill any gap by extending the subplan responsible for it, returned to `draft/` if necessary, then repeat improvement and quantitative rerating in Step 5. Preserve any increased rating without resplitting.
 2. Check the order. Each subplan's dependencies point only at earlier subplans, and all references match the final ready paths and numbering.
 3. Check the ratings and improvement. Every subplan was initially rated 1–5, has completed improvement, is in `ready/`, and carries its honest quantitative rating after its final improvement. Any growth is reported, not a reason to resplit.
 4. Check buildability. For each subplan, list the files needed for the whole tree to compile. Confirm those files all lie inside that subplan's scope, and confirm no dangling reference is deferred to a later work unit. The file list must be sufficient for a green `$janissary/scripts/run.mjs check-diff` at that subplan's own commit, not after the whole feature lands.

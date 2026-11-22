@@ -12,7 +12,7 @@ A finished plan carries a `**Complexity: N/10** — <one-line rationale naming w
 
 ## Sections
 
-The sections appear in this order: `Goal`, `Requirements`, `Design decisions`, `Assumptions`, `Existing functionality`, `Implementation steps`, `UI design`, `Tests`, `Out of scope`, `Verification`. Each is a level-two (`##`) heading. Every section is required in every plan. Each section below states its heading and the format and content a reader can check.
+The sections appear in this order: `Goal`, `Requirements`, `Design decisions`, `Preserved behavior`, `Assumptions`, `Existing functionality`, `Implementation steps`, `UI design`, `Tests`, `Out of scope`, `Verification`. Each is a level-two (`##`) heading. Every section is required in every plan; the `Preserved behavior` section is required only in plans authored after its introduction, and existing plans in `ready/`, `complete/`, or `deferred/` are not backfilled or edited. Each section below states its heading and the format and content a reader can check.
 
 ### Goal
 
@@ -25,6 +25,10 @@ The behaviors and edge cases the implementation must satisfy, written as a numbe
 ### Design decisions
 
 The decisions that shape the implementation, one per bullet, established by the feature text, existing behavior, or a settled user answer. Decisions lead the plan: the sections that follow record their premises and acceptance criteria. Decisions based on assumptions must be explictly linked to an assumption listed in the Assumptions section. 
+
+### Preserved behavior
+
+This section records behavior the change must continue to provide. It is required in every plan authored after this section was introduced; existing plans in `ready/`, `complete/`, or `deferred/` are not backfilled or edited. Provide a numbered list with one entry per behavior, and write exactly `None found` when reconnaissance found no behavior to preserve, mirroring the `Existing functionality` fallback. Each entry has three parts: the behavior to be preserved, the negative assertion stating what specifically must not happen alongside the positive claim, and the name of the existing test that must keep passing and pins that behavior. An entry stands alone in this section and is not also written as an item in `Requirements`; decomposition still tracks it as a requirement. When more than one existing test pins a behavior, name one representative test rather than listing them all. When a behavior must continue but no existing test pins it, create no entry here and record the need to add that test as a normal requirement in `Requirements` instead. "Keep X working," "preserve Y," "unchanged," and "reuse Z" are not acceptable on their own and must be expanded into such entries.
 
 ### Assumptions
 
