@@ -14,6 +14,8 @@ Canvas contexts are unavailable throughout the client suite: requesting one retu
 
 Media playback is stubbed the same way: `play()` resolves to a settled promise, so jsdom's unimplemented-media warning stays out of test output while the application's promise-based handling still works. Tests that need specific playback behavior supply their own override.
 
+Canvas encoding is stubbed the same way: `toDataURL()` returns a minimal PNG data URL, so an image or video save keeps its intent payload valid and jsdom's unimplemented-canvas-encoder warning stays out of test output. Tests that assert the actual encoded bytes supply their own override.
+
 ### Diff-scoped help tests
 
 When a Markdown file under `help/` changes, the diff-scoped check runs `src/commands.test.ts` in the server project. That test reads the command table and help pages directly, so it covers help changes that Vitest's changed-source dependency detection cannot associate with a test file.

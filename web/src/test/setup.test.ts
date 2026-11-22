@@ -15,4 +15,15 @@ describe('client test setup', () => {
       error.mockRestore();
     }
   });
+
+  it('stubs canvas toDataURL() to return a data URL without an unimplemented warning', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const canvas = document.createElement('canvas');
+      expect(canvas.toDataURL('image/png')).toBe('data:image/png;base64,');
+      expect(error).not.toHaveBeenCalledWith(expect.stringContaining("HTMLCanvasElement's toDataURL"));
+    } finally {
+      error.mockRestore();
+    }
+  });
 });
