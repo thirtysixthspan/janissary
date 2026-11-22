@@ -34,13 +34,16 @@ describe('SystemScheduleManager mutations', () => {
   it('leaves memory and emits nothing when the atomic save cannot write', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-failure-'));
     writeFileSync(path.join(root, '.janissary'), 'not a directory');
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const controller = createController(sinks, root);
     const changed = vi.fn();
     const unsubscribe = messageBus.on('schedules', 'changed', changed);
     expect(controller.managers.systemSchedule.add(schedule('one', 'ignored')).ok).toBe(false);
     expect(controller.managers.systemSchedule.list()).toEqual([]);
     expect(changed).not.toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('System schedules could not save: Unsafe system schedule directory:'));
     unsubscribe.unsubscribe();
+    stderr.mockRestore();
     void controller.shutdown();
   });
 
