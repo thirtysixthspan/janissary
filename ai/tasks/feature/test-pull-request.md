@@ -100,7 +100,7 @@ Do not overstate what this buys. The gate keeps lifecycle scripts and known-bad 
 
 The description you collect steps from was already rewritten from the final code, tests and specs by [`update-pull-request.md`](update-pull-request.md), so its **How to verify** steps describe the delivered work rather than the plan written before code existed.
 
-1. Run `gh pr view <number> --json title,body`. Take every step in the body's **How to verify** section. For a plan-first pull request this section is named as written by [`update-pull-request.md`](update-pull-request.md), not by [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md), which wrote only the short plan summary at creation; it may include a **Replication steps** account inside it, which [`fix-a-bug.md`](../fix-a-bug.md) writes there.
+1. Run `gh pr view <number> --json title,body`. Take every step in the body's **How to verify** section. For a plan-first pull request this section is written by [`update-pull-request.md`](update-pull-request.md); the short summary at creation came from [`open-plan-pull-request.md`](../workspace/open-plan-pull-request.md) and carried no testing steps. A **Replication steps** account inside it is written by [`fix-a-bug.md`](../fix-a-bug.md).
 2. Run `gh pr diff <number> --name-only` and read each `./product/plans/**/*.md` file it lists. Take the manual checks in each plan's **Verification** section.
 3. A step that appears in both sources is run once, under its description id.
 4. Give each step an id by source: `D1`, `D2`, … for the description, `P1`, `P2`, … for the plan. Keep its verbatim text and its expected result exactly as the source states it.
