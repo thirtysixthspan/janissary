@@ -2,6 +2,8 @@
 
 Your job: pick the simplest available plan from `./product/plans/ready/`, implement it end to end, update the functional specs, promote the plan to `./product/plans/complete/`, and open a pull request. Then review the pull request and resolve every finding until a review adds none, and finish by updating the pull request to match its final code. You change source code, tests, spec files, and the plan file's location — nothing else. The review, repair, and update tasks you delegate keep their own edit scopes.
 
+**Documentation scope.** User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A feature plan names only the specs and help pages it touches and nothing under `documentation/user-documentation/` or `documentation/developer-documentation/`. A user-documentation gap found while building is a separate feature candidate, not an item on the plan's checklist.
+
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.

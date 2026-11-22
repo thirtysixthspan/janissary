@@ -16,6 +16,8 @@ This task **reviews and records**. It never fixes what it finds, never edits sou
 
 **Command hygiene for the whole run:** run each command plainly and read its output from the result — no piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see `AGENTS.md`) and cost a wasted call each time.
 
+**Documentation scope.** User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A missing or stale page under `documentation/user-documentation/` or `documentation/developer-documentation/` is not a finding on a feature pull request and must never be written into the backlog. Specs under `product/specs/` and in-application help under `help/` remain in scope, and a stale one is still a finding. Only when the pull request's own plan and title are about adding or updating user or developer documentation do those trees become the primary scope, judged as carefully as code. The distinction is about what the pull request is, not what its description mentions. A feature pull request that describes a user-visible change does not become a documentation pull request.
+
 ## What you may and may not do
 
 ### Allowed — do it automatically, never ask
@@ -107,7 +109,7 @@ Take the files one at a time. Read each one's whole diff with `git diff origin/m
 
 Judge every changed line under all five dimensions below. A line counts as reviewed once you have judged it, not once you have scrolled past it.
 
-Follow each change past the edge of the diff. Check the callers of a changed function, the consumers of a changed contract, and the specs, help pages, and docs that describe the changed behavior. A spec the diff leaves stale is a finding even though the diff never touched it.
+Follow each change past the edge of the diff. Check the callers of a changed function, the consumers of a changed contract, and the specs and help pages that describe the changed behavior. A spec or help page the diff leaves stale is a finding even though the diff never touched it. User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A missing or stale page under `documentation/user-documentation/` or `documentation/developer-documentation/` is not a finding on a feature pull request and must not be added to the backlog. The exception is a pull request whose own plan and title are about adding or updating user or developer documentation. Then those trees become the primary scope and are judged as carefully as code. The distinction is about what the pull request is, not what its description mentions. A feature PR that describes a user-visible change does not become a documentation PR.
 
 **Never sample.** Files that follow one pattern are each checked against their own source of truth. A set of per-command help pages is one example, and each page is compared with the command it documents. A run of similar tests is another. Checking a few and assuming the rest match is how a review misses findings that later reviews then turn up one at a time.
 

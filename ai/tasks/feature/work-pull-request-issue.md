@@ -1,6 +1,8 @@
 # Work a Pull Request Issue
 
-Take one work item for the explicitly specified open pull request: a recorded entry from its head-branch backlog, or the work item named when running this task, which need not be recorded there at all. Plan and implement its repair, verify it, update affected specs and existing documentation, record the completed fix plan, remove the resolved entry when that is where it came from, and publish to that same branch. Correct the PR description only when the work item requires it. Leave the PR open.
+Take one work item for the explicitly specified open pull request: a recorded entry from its head-branch backlog, or the work item named when running this task, which need not be recorded there at all. Plan and implement its repair, verify it, update affected specs and applicable help pages only, record the completed fix plan, remove the resolved entry when that is where it came from, and publish to that same branch. Correct the PR description only when the work item requires it. Leave the PR open.
+
+**Documentation scope.** User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A repair never edits `documentation/user-documentation/` or `documentation/developer-documentation/` as a drive-by, even when the fix touches behavior those pages describe.
 
 Invocation: `execute ./ai/tasks/feature/work-pull-request-issue.md <number|#number|PR URL> [work item]`. For example, `execute ./ai/tasks/feature/work-pull-request-issue.md 1916 Lookup doesn't match the visible name.` works PR 1916 on that described problem.
 
@@ -20,7 +22,7 @@ This overrides AGENTS.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read files relevant to the fix. Check out and prepare the specified PR's recorded head branch. Edit source, tests, CSS, specs, applicable help pages under `help/`, and existing user documentation as the fix requires. Write and promote the fix plan. Remove the resolved branch-backlog entry when the work item was recorded there, preserving all others and restoring the master comment-and-heading skeleton when empty. Run `$janissary/scripts/run.mjs check-diff` after each change. Commit and push to the same head branch, and use `gh pr edit --body-file` only for description corrections named by the entry or the named work item.
+Read files relevant to the fix. Check out and prepare the specified PR's recorded head branch. Edit source, tests, CSS, specs, and applicable help pages under `help/` as the fix requires; do not edit `documentation/user-documentation/` or `documentation/developer-documentation/`. Write and promote the fix plan. Remove the resolved branch-backlog entry when the work item was recorded there, preserving all others and restoring the master comment-and-heading skeleton when empty. Run `$janissary/scripts/run.mjs check-diff` after each change. Commit and push to the same head branch, and use `gh pr edit --body-file` only for description corrections named by the entry or the named work item.
 
 ### Forbidden — no exceptions
 
@@ -108,13 +110,12 @@ Every fix must be reflected in the functional specs under `./product/specs/`. Af
 
 ---
 
-## Step 6 — Update help and public documentation if affected
+## Step 6 — Update help if affected
 
-The fix only needs a documentation update if it changes behavior that `help/` or `documentation/user-documentation/` already describes — a changed flag, a renamed command, a corrected default, a behavior that no longer matches what's written. Do not add new documentation for behavior that wasn't previously documented; that is out of scope for this task.
+The fix needs a help update only when it changes a command, flag, or key binding that `help/` already describes. User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan, so do not edit `documentation/user-documentation/` or `documentation/developer-documentation/` even when the behavior it describes has changed. Do not add help for behavior that was not previously documented; that is out of scope for this task.
 
-1. Check `help/commands.md` and the corresponding `help/<command>.md` page for any command, flag, or behavior description the fix changes. Update them in place if found. For changed key bindings, update `help/keys.md`.
-2. Check `documentation/user-documentation/` for any page describing the changed behavior. Update it in place if found.
-3. If neither documents the changed behavior, do nothing here — do not create new documentation.
+1. Check `help/commands.md`, the matching `help/<command>.md` page, and `help/keys.md` for commands, flags, and key bindings the fix changes. Update them in place when found, keeping the Commands table alphabetical as `ai/guidelines/documentation.md` requires.
+2. If no help page describes the changed command, flag, or binding, do nothing here.
 
 ---
 
@@ -126,6 +127,7 @@ The fix only needs a documentation update if it changes behavior that `help/` or
    ```
 2. Remove the resolved entry whole from `./product/backlog/pull-request.md`: its lead `*` bullet through its `Proposal` paragraph and separating blank lines. Leave every other entry byte-for-byte unchanged. Entries use the five-part format in [review-pull-request.md](review-pull-request.md). If the named work item was not recorded there, leave the backlog unchanged and skip item 3.
 3. If no entries remain, rewrite the file to the exact master skeleton, retaining the leading comment and `# pull-request` heading. Never delete it.
+4. If the resolved entry asks for a change under `documentation/user-documentation/` or `documentation/developer-documentation/`, do not implement that part of it. Remove the entry from the pull request backlog as above and append a ready item describing the documentation work to `product/backlog/documentation.md`, in that file's existing bullet style, leaving every other entry there untouched. Name the refiled item in the report and give "User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan." as the reason it was not implemented here.
 
 The empty skeleton is:
 
@@ -165,7 +167,7 @@ Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
-Docs:           <help/<command>.md, help/commands.md, help/keys.md, and/or user-documentation file(s) updated, or "none needed">
+Docs:           <help/<command>.md, help/commands.md, and/or help/keys.md updated, or "none needed"; when a finding was refiled, "refiled <area> to product/backlog/documentation.md: User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan.">
 Backlog:        entry removed, <n> remaining in product/backlog/pull-request.md | drained — file restored to its comment-and-heading skeleton | unchanged — named work item was not recorded
 Description:    updated — <one line on what changed> | not needed
 Branch:         <the existing PR head branch>
