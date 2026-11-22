@@ -9,7 +9,7 @@ monitor security bilal
 monitor activity group:2
 ```
 
-Monitors are tool-less by default and receive no filesystem or terminal access. See Persona web tools below for the one narrow exception.
+A monitor has no tools unless the role its persona declares grants the matching command. See Persona roles and tools below.
 
 This periodic monitor is separate from the autonomous-agent monitor view, where agent messages render as Markdown. See [Read formatted Markdown in the transcript](/user-documentation/advanced-agents/markdown-rendering#read-autonomous-agent-activity).
 
@@ -80,16 +80,19 @@ In a reporting tab, a suggestion that carries a command shows it as a clickable 
 
 Only one direct question or scheduled flush can be in flight for a monitor at a time. If it is busy, wait and try again.
 
-## Persona web tools
+## Persona roles and tools
 
-A monitor has no tools by default. A persona file can opt into `web_search` and `web_fetch` with a second directive line:
+A monitor persona's first line declares the role its session uses:
 
 ```
-[//]: # claude:Sonnet:high
-[//]: # tools: web_search, web_fetch
+[//]: # role: research
 ```
 
-These are the only tools a persona can request. Both `claude` and `opencode` persona adapters are supported. The app grants an opted-in web tool only when the ACP session requests permission for it; it denies other tools, including filesystem and terminal access. A persona naming an unsupported tool fails to load with `Persona "<name>" requests unknown tool "<x>" (supported: web_search, web_fetch).`.
+The rest of the file is the persona's startup instructions. The role supplies the model choices and command grants, applied through the same core session pipeline the `ask` and `tell` commands use — there is no separate tools list for a persona. A role that grants no commands leaves the monitor tool-less; only commands the role grants and the app's own command settings allow can run. Set a role's grants in the [roles tab](/user-documentation/tab-types/roles).
+
+If the first line isn't a `[//]: # role: <role>` directive — it's missing, or the line is malformed — the persona fails to load with `Persona "<name>": expected first line [//]: # role: <role>.` and no session starts.
+
+An old `[//]: # tools:` line is no longer a directive. If one is left in a persona file, it's treated as ordinary prompt text and grants no tools.
 
 ## Stopping a monitor
 

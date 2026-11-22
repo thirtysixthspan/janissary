@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the user documentation that still describes the removed persona web tools and per-persona editor connections
-
-Existing Issue: The monitoring user page teaches the old `[//]: # claude:<model>:<variant>` directive and a `[//]: # tools: web_search, web_fetch` allowlist that the loader now treats as prompt text, and the editor persona page still promises a separate connection for each different persona even when two personas declare the same role. Severity: 5/10
-
-Existing Risk: 5/10 - A reader follows the documented web-tools opt-in and gets a persona load error, or expects two independent editor connections and misreads the shared role-backed row and its transcript.
-
-Proposal Risk: 2/10 - The pages will match the delivered role format and role-keyed slots, and the change is documentation-only with no runtime behavior to regress.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2170 "update user docs for role-backed personas". In documentation/user-documentation/automation/monitoring.md replace the "Persona web tools" section with the delivered behavior: a persona's first line is `[//]: # role: <role>`, the role's command grants configure its tools through the shared core ACP path, a leftover `[//]: # tools:` line is ordinary prompt text, and a missing or malformed directive fails with the exact error `Persona "<name>": expected first line [//]: # role: <role>.`. In documentation/user-documentation/tab-types/editor-persona-query.md correct the connection paragraph to say the slot is keyed by the persona's declared role, so two personas naming the same role share one connection while differing roles open separate connections, and the row keeps naming the persona the user typed. Keep product/specs/monitoring.md and product/specs/editor-tab.md as the source of truth for the wording and do not change any code or test. Verify by reading both pages against those spec files and confirming no old directive, web-tools allowlist, or "different persona gets its own connection" claim remains.
-
-
 * Reset the launcher capability's remembered role when its ACP session is reset
 
 Existing Issue: The `role` captured by `acpCapabilities` from an earlier `startAcp({ role })` survives `resetAcp`, so a later `startAcp` with no role starts under the stale role instead of the documented `ask` default and `promptAcpResult` keeps prompting under it. Severity: 4/10
