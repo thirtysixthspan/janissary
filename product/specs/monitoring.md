@@ -4,7 +4,7 @@ Persona-driven AI sessions that watch tab activity and surface suggestions inlin
 
 ### Starting a monitor
 
-`monitor <persona> [target...]` starts a dedicated monitoring session. Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a reporting tab named after the monitor and colored after the monitored tab. A tab target may be given by its display alias (see `rename`) as well as its underlying label, matched case-insensitively; `unmonitor`'s target argument recognizes an alias the same way.
+`monitor <persona> [target...]` starts a monitoring session backed by the persona's declared role (see Role-backed sessions below). Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a reporting tab named after the monitor and colored after the monitored tab. A tab target may be given by its display alias (see `rename`) as well as its underlying label, matched case-insensitively; `unmonitor`'s target argument recognizes an alias the same way.
 
 A monitor persona's first line declares the role its session uses (`[//]: # role: <role>`); the rest of the file is the persona's startup instructions. Starting a monitor opens its session through the same core ACP role pipeline the `ask` and `tell` commands use, so its model and command grants come from the declared role's entry in the roles file in effect. A role with no enabled models, or a role name that resolves nowhere, produces only a notification — no session and no reply in the owner tab.
 
