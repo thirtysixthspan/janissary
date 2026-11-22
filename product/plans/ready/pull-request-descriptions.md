@@ -1,0 +1,105 @@
+# Plan-first PRs carry a short summary and the update task authors the anchored final description
+
+**Complexity: 5/10** — ~100 added lines across 6 task-instruction files, 19 requirements, no application code or tests (p=5.53).
+
+## Goal
+
+Make a pull request description reflect the work the pull request carries at every stage. A plan-first pull request opens with a short summary of the plan instead of a full body written before any code exists; the full description is authored once, late, from the final code, tests and specs. Every Behavior example, screenshot claim and verification step then names the code or test that proves it, unanchored claims are deleted, and one fact is stated only once. The change is to the agent task instructions that author descriptions and the product specs that describe them, not to application behavior.
+
+## Requirements
+
+1. "Plan-first PRs write a short plan summary at creation" (User answer to scope question.)
+2. "no Behavior examples, Screenshots, or How to verify" appear in that short summary (User answer to scope question.)
+3. "Every PR opened after a plan commit, simple or decomposed, gets the short summary" (User answer to which-PRs question.)
+4. "Keep the existing '### What' section for the plan title and goal" (User answer to summary-layout question.)
+5. The short summary has a "'Plan:' ... naming the canonical source plan path" line (User answer to summary-layout question.)
+6. The short summary has a "'Subplans:' followed by the ordered list" line (User answer to summary-layout question.)
+7. "no 'Subplans:' line appears at all" when the plan was not decomposed (User answer to no-subplans question.)
+8. Each subplan entry shows "the subplan's plan path followed by its title" (User answer to subplan-entry question.)
+9. "update-pull-request.md Step 9 becomes the single owner that authors the full description from final code, tests and specs" (User answer to scope question.)
+10. "every Behavior example transcript, Screenshots claim and Do/Expect line must name the code anchor or test assertion that proves it" (User answer to anchor-scope question.)
+11. "anything without an anchor is deleted" (User answer to anchor-scope question.)
+12. "Strongest anchor wins (Recommended)" — when the same fact appears twice, the copy with the most specific proof survives and the other is deleted (User answer to dedup question.)
+13. "Leave Step 14 unchanged (Lowest cost)" — work-pull-request-issue.md keeps its description-correction path (User answer to surgical-fix question.)
+14. "Keep the boundary (Recommended, Lowest cost)" — test-pull-request.md remains the only task that writes 'Additional test cases', and update-pull-request.md leaves that section byte-for-byte (User answer to test-section question.)
+15. "test-pull-request.md Step 4 states it collects steps from a description that update-pull-request.md has already rewritten from real code" (User answer to test/review-alignment question.)
+16. test-pull-request.md's "step-correction path names the source line or test assertion supplying the true value" (User answer to test/review-alignment question.)
+17. "review-pull-request.md's description-fidelity pass adds a check that each Behavior example, Screenshot claim and Do/Expect line names an anchor, recording a finding when one is missing" (User answer to test/review-alignment question.)
+18. "Caller selects the mode (Recommended)" — open-feature-pull-request.md documents an explicit plan-first summary mode, and the two build tasks invoke it (User answer to mode-selection question.)
+19. Ordinary pull requests that are not opened from a plan keep the full four-section body. (User answer to mode-selection question.)
+
+## Design decisions
+
+- The whole authoring pipeline is in scope: plan-first PRs open with a short summary, the update task authors the full description, and the test and review tasks align with that flow. (User answer to scope question.)
+- Every PR opened after a plan commit gets the short summary, whether or not the plan was decomposed, because no feature PR has observable code at plan-commit time. Both build tasks are therefore callers of the new mode. (User answer to which-PRs question.)
+- The short summary reuses the existing `### What` heading for the plan title and goal, then `Plan:` and optional `Subplans:` labelled lines, and carries no other sections. A plan with no subplans omits the `Subplans:` line entirely; each subplan entry carries its path and title. (User answers to summary-layout and subplan-entry questions.)
+- Plan-first summary is an explicit mode of open-feature-pull-request.md chosen by the calling build task, not inferred from the branch, so a hygiene or documentation PR never gets a plan-shaped summary. (User answer to mode-selection question.)
+- `update-pull-request.md` Step 9 is the single author of the full description, writing it from final code, tests and specs after the push. "Single owner" means author of whole sections, not exclusive editor: work-pull-request-issue.md Step 14 keeps its surgical correction path, and test-pull-request.md keeps its own section. (User answers to scope, surgical-fix and test-section questions.)
+- Anchors are required on verifiable statements — Behavior examples, Screenshot claims and Do/Expect lines — not on What prose; an unanchored verifiable statement is deleted, and duplicate facts are resolved by the most specific anchor. (User answers to anchor-scope and dedup questions.)
+- The test task reads steps from that already-rewritten description and names the source of a corrected step; the review task's description-fidelity pass flags a missing anchor as a finding. (User answer to test/review-alignment question.)
+- Documentation-scope rules, the plan-template lifecycle matrix, application code and UI, PR titles, commit subjects and the merge workflow are unchanged. (User answer to scope-boundary question.)
+- In the short summary, `### What` carries the plan's own `#` title and `## Goal` text, `Plan:` carries the repo-relative path of the source plan under `product/plans/complete/`, and each `Subplans:` entry reads `<repo-relative path> — <title>`. These follow the plan structure at `ai/guidelines/plan-template.md:5` (`## Title`) and `:17` (`### Goal`).
+- The final description's Screenshots section carries the one-line reason no screenshot could be captured, not an image: a plan-first PR skips screenshot work at creation, and the update task never starts the app — `ai/tasks/workspace/open-feature-pull-request.md:45` (`the section gives the one-line reason instead`) and `product/specs/pull-request-updating.md:7` (`the app is never started to produce them`). This keeps the one-line-reason convention rather than inventing a capture step.
+- Anchor specificity is ordered: a named test assertion outranks a named code path and line, which outranks general prose. This is the concrete meaning of "strongest anchor wins" (User answer to dedup question).
+- The update task's current instruction to "Correct each section that exists; do not add missing sections or regenerate the body" at `ai/tasks/feature/update-pull-request.md:167` must be replaced with full authoring; keeping the author's section headings, their order, and accurate prose unchanged still applies.
+- PRs opened by `remove-an-existing-feature.md`, `fix-a-bug.md`, `hygiene/update-package-outside-range.md` and `workspace/quick-commit.md` are not opened from a plan commit and keep the full four-section body by default — `ai/tasks/feature/remove-an-existing-feature.md:215`, `ai/tasks/fix-a-bug.md:180`, `ai/tasks/hygiene/update-package-outside-range.md:265`, and `ai/tasks/workspace/quick-commit.md:3`.
+- The test task's statement that the **How to verify** section is written by the open-feature task at `ai/tasks/feature/test-pull-request.md:101` becomes stale for plan-first PRs and must be corrected to name the update task as the writer.
+- The complex-feature flow invokes the update task twice — `ai/tasks/feature/build-a-complex-feature.md:110` and `:122` — and both use the rewritten Step 9; the first runs before the full-PR review and the final one after the test cycle, so the description the test task reads has already been rewritten — `ai/tasks/feature/build-a-complex-feature.md:116` (`After the initial update above and the full-PR review in Step 8 complete`).
+
+## Assumptions
+
+1. The canonical pull request body has four ordered sections — `ai/tasks/workspace/open-feature-pull-request.md:15` (`The body must include every section below, in this order`) and `ai/tasks/workspace/open-feature-pull-request.md:47` (`### How to verify`).
+2. One authoring task writes that body — `ai/tasks/workspace/open-feature-pull-request.md:140` (`## Step 5 — Write the PR body`).
+3. The open-feature task writes its body from a plan, specs and the diff before code is final — `ai/tasks/workspace/open-feature-pull-request.md:148` (`Write them from the plan, the specs the change touches, and the diff`).
+4. A later task rewrites the description from the final code just before the pull request is updated — `ai/tasks/feature/update-pull-request.md:160` (`## Step 9 — Update the description`) and `ai/tasks/feature/update-pull-request.md:162` (`This comes after the push, never before`).
+5. That rewrite keeps the author's section headings and order — `ai/tasks/feature/update-pull-request.md:167` (`Keep the author's section headings and their order`).
+6. That rewrite never starts the app — `product/specs/pull-request-updating.md:7` (`the app is never started to produce them`).
+7. A separate testing task owns exactly one part of the description — `ai/tasks/feature/test-pull-request.md:5` (`never touches the pull request's description beyond its own Additional test cases section`).
+8. A review task judges description fidelity — `ai/tasks/feature/review-pull-request.md:128` (`Description fidelity. Does the description describe what the diff actually does?`).
+9. A review task never edits the description — `ai/tasks/feature/review-pull-request.md:31` (`Editing the pull request's title or description`).
+10. A work-item repair task corrects only description paragraphs a resolved item names — `ai/tasks/feature/work-pull-request-issue.md:146` (`When the resolved entry or named work item called for a description correction`).
+11. For a plan-first PR the source plan has already moved to `product/plans/complete/` in the first commit — `ai/tasks/feature/build-a-complex-feature.md:45` (`This first commit then adds exactly one plan under ./product/plans/complete/`).
+12. For a decomposed plan-first PR the subplans are added from `product/plans/ready/` in that same first commit — `ai/tasks/feature/build-a-complex-feature.md:45` (`add all improved subplan plan files from ./product/plans/ready/`).
+13. Both build tasks open their PR through the same open-feature task — `ai/tasks/feature/build-a-complex-feature.md:47` (`Delegate ai/tasks/workspace/open-feature-pull-request.md`) and `ai/tasks/feature/build-a-feature.md:104` (`Execute ai/tasks/workspace/open-feature-pull-request.md in full`).
+14. The complex-feature task currently overrides only the open-feature task's branch and commit steps — `ai/tasks/feature/build-a-complex-feature.md:47` (`Override its branch/commit steps because the plan commit is already pushed`).
+15. The product spec states that the description is corrected in the author's own structure — `product/specs/pull-request-updating.md:7` (`The section headings stay as the author wrote them, and text that is already accurate is left alone`).
+
+## Existing functionality
+
+1. The four-section pull request body structure — `ai/tasks/workspace/open-feature-pull-request.md:15` (`The body must include every section below, in this order`).
+2. The post-push description rewrite — `ai/tasks/feature/update-pull-request.md:160` (`## Step 9 — Update the description`).
+3. The Additional test cases section owned by the testing task — `ai/tasks/feature/test-pull-request.md:238` (`## Step 11 — Add the additional steps to the description`).
+4. The description-fidelity review dimension — `ai/tasks/feature/review-pull-request.md:128` (`Description fidelity. Does the description describe what the diff actually does?`).
+5. The named-work-item description-correction path — `ai/tasks/feature/work-pull-request-issue.md:146` (`When the resolved entry or named work item called for a description correction`).
+6. The source-plan discovery used by the update task — `ai/tasks/feature/build-a-complex-feature.md:45` (`so update-pull-request.md identifies the source plan as the pull request's own plan`).
+7. The product spec describing description authoring and updating — `product/specs/pull-request-updating.md:5` (`### What an update changes`).
+8. The product spec describing description fidelity in review — `product/specs/pull-request-review.md:5` (`description fidelity`).
+9. The product spec describing testing steps and the Additional test cases section — `product/specs/pull-request-testing.md:15` (`An "Additional test cases" section`).
+
+## Implementation steps
+
+Add a plan-first summary mode to `ai/tasks/workspace/open-feature-pull-request.md` in its "The PR description" instructions and Step 5: when a caller selects the mode, write only the existing `### What` section carrying the plan's own `#` title and `## Goal` text, a `Plan:` line with the repo-relative path of the source plan under `product/plans/complete/`, and a `Subplans:` line whose ordered entries each read `<repo-relative path> — <title>` for the plans added from `product/plans/ready/`; omit the `Subplans:` line when no subplans exist. That mode writes none of Behavior examples, Screenshots or How to verify, and Step 7's screenshot work is skipped for it because there is no UI to capture yet. Leave the full four-section body as the default for ordinary PRs, and keep the check gate, the screenshot follow-up behavior and the no-merge rule unchanged. The callers that are not opened from a plan commit — `ai/tasks/feature/remove-an-existing-feature.md`, `ai/tasks/fix-a-bug.md`, `ai/tasks/hygiene/update-package-outside-range.md` and `ai/tasks/workspace/quick-commit.md` — keep that default and need no change.
+
+Change the two callers so they select that mode. In `ai/tasks/feature/build-a-complex-feature.md` Step 2, replace the current instruction to preserve "complete PR description requirements" with the plan-first summary mode, keeping the branch, commit and no-merge overrides. In `ai/tasks/feature/build-a-feature.md` Step 7, instruct the task to invoke the plan-first summary mode rather than executing the open-feature task with no qualification, since its plan is already promoted before the PR opens.
+
+Make `ai/tasks/feature/update-pull-request.md` Step 9 the single author of the full description. Have it author all four sections from the final code, tests and specs after the push, using the existing section headings and order, replacing the current "Correct each section that exists; do not add missing sections or regenerate the body" rule at `ai/tasks/feature/update-pull-request.md:167`. Require an explicit code path and line or test assertion for every Behavior example transcript, Screenshot claim and Do/Expect line; delete any such statement without an anchor. Where two claims carry the same fact, keep the one with the most specific anchor — a named test assertion over a named code path and line, a code path and line over general prose — and delete the other. Write the Screenshots section as the one-line reason no capture was possible, following the existing one-line-reason convention, since the task never starts the app. All invocations of this task use the rewritten Step 9, including both calls in `ai/tasks/feature/build-a-complex-feature.md` at lines 110 and 122. Preserve the existing bans on starting the app, changing the PR title and editing `Additional test cases`, keep the guideline that omits change-set statistics, and leave accurate prose alone.
+
+Align the two downstream tasks without widening their scope. In `ai/tasks/feature/test-pull-request.md` Step 4, state that the description it collects steps from was already rewritten from real code by the update task, correct the attribution at `ai/tasks/feature/test-pull-request.md:101` so **How to verify** is named as written by the update task for plan-first PRs, and require its step-correction path to name the source line or test assertion that supplies the true value. Leave its Step 11 ownership and its ban on editing other description sections unchanged. In `ai/tasks/feature/review-pull-request.md`'s description-fidelity pass, add a check that each Behavior example, Screenshot claim and Do/Expect line names an anchor and record a finding when one is missing; keep the rule that review never edits the description. Leave `ai/tasks/feature/work-pull-request-issue.md` Step 14 exactly as it is.
+
+The changes land in this order: the open-feature mode first, then the two build callers that select it, then the update task's Step 9, then the test and review tasks, then the three product specs. Each step is an edit to a task instruction or spec, so nothing depends on a later step to compile or run; the description the test task reads is already rewritten because the complex-feature flow updates before its test cycle.
+
+Update the product specs to match: `product/specs/pull-request-updating.md` for the single-owner, anchored, deduplicated rewrite and the short plan-first starting body; `product/specs/pull-request-review.md` for the anchor check; and `product/specs/pull-request-testing.md` for the step-source requirement. No application source, test, configuration, UI, PR title, commit subject or merge-workflow file changes.
+
+## Tests
+
+This plan changes no application behavior and introduces no application code, so there are no application tests to add and no tests of documentation are introduced. Verification is by reading the changed task instructions and specs, as set out below.
+
+## Out of scope
+
+The documentation-scope exclusion rules in the review and work-item tasks, the lifecycle-matrix work on the plan template and planning tasks, and every item in the two other ready backlog entries are not part of this version. Application code, UI, PR titles, commit subjects, the PR creation and merge scripts, and the `Additional test cases` ownership boundary are unchanged. work-pull-request-issue.md Step 14 is unchanged.
+
+## Verification
+
+Run `$janissary/scripts/run.mjs check-diff` to confirm no lint, typecheck or test regression.
+
+Then do a concrete reading-based check. Read `ai/tasks/workspace/open-feature-pull-request.md` and confirm its plan-first mode writes only `### What`, `Plan:` and an optional `Subplans:` line, and that the default body still has all four sections. Read Steps 2 and 7 of `ai/tasks/feature/build-a-complex-feature.md` and `ai/tasks/feature/build-a-feature.md` and confirm each selects that mode. Read Step 9 of `ai/tasks/feature/update-pull-request.md` and confirm it authors the body after the push, requires an anchor for every Behavior example, Screenshot claim and Do/Expect line, deletes unanchored ones, keeps the most specific copy of a duplicate fact, and still bans starting the app, changing the title and editing `Additional test cases`. Read Step 4 of `ai/tasks/feature/test-pull-request.md` and the description-fidelity passage of `ai/tasks/feature/review-pull-request.md` and confirm the step-source and anchor-check rules are present, and that the stale **How to verify** attribution at line 101 now names the update task. Confirm that `ai/tasks/feature/remove-an-existing-feature.md`, `ai/tasks/fix-a-bug.md`, `ai/tasks/hygiene/update-package-outside-range.md` and `ai/tasks/workspace/quick-commit.md` still use the default full-body flow unchanged. Finally read `product/specs/pull-request-updating.md`, `product/specs/pull-request-review.md` and `product/specs/pull-request-testing.md` and confirm each describes the new rule. A file that still describes the old full-body-at-creation flow, an unanchored claim that is kept, a captured screenshot where a one-line reason belongs, or a missing anchor check shows the change was not made correctly.
