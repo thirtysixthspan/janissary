@@ -5,10 +5,15 @@ import {
   initHarnessTranscriptDirectory,
   ensureHarnessTranscriptDirectory,
   harnessTranscriptPath,
-  clearHarnessTranscriptDirectory,
+  reapHarnessTranscripts,
 } from './transcript-file.js';
 
+const { reapFilesOlderThan } = vi.hoisted(() => ({
+  reapFilesOlderThan: vi.fn(),
+}));
+
 vi.mock('node:fs');
+vi.mock('../state/reaper.js', () => ({ reapFilesOlderThan }));
 
 const mockFs = fs as Record<string, ReturnType<typeof vi.fn>>;
 
@@ -17,8 +22,7 @@ afterEach(() => {
 });
 
 // Only what differs from `recording-file.ts` is asserted here: the directory name and the `.txt`
-// extension. The quartet's shared semantics (recursive create, clear, "ignores removal errors")
-// are already covered by `recording-file.test.ts` against the same builder.
+// extension. The sweep's cutoff arithmetic and uninitialized guard are covered below.
 describe('harness-transcript-file', () => {
   it('ensures .janissary/transcripts/harness under the project', () => {
     mockFs.mkdirSync.mockImplementation(() => {});
@@ -33,37 +37,36 @@ describe('harness-transcript-file', () => {
     const file = harnessTranscriptPath('claude', Date.UTC(2026, 6, 10, 18, 30, 5, 123));
     expect(file).toBe(path.join('/test/project', '.janissary', 'transcripts', 'harness', 'claude-2026-07-10T18-30-05-123Z.txt'));
   });
-});
 
-// `recording-file.test.ts` covers the quartet's shared clear semantics, but against the *recording*
-// builder: coverage is attributed per file, so this file's own clear is its own to answer.
-describe('clearHarnessTranscriptDirectory', () => {
-  it('removes the directory recursively and tolerates a second clear', () => {
-    mockFs.rmSync.mockImplementation(() => {});
+  it('reaps .txt files older than the retention window', async () => {
     initHarnessTranscriptDirectory('/test/project');
-
-    clearHarnessTranscriptDirectory();
-    expect(mockFs.rmSync).toHaveBeenCalledWith(
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapHarnessTranscripts(launchedAt, 7);
+    expect(reapFilesOlderThan).toHaveBeenCalledOnce();
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
       path.join('/test/project', '.janissary', 'transcripts', 'harness'),
-      { recursive: true, force: true },
+      '.txt',
+      launchedAt - 7 * 86_400_000,
     );
-
-    // `force` is what makes the second call a no-op rather than a throw, and both callers can reach
-    // it after another clear has already run.
-    expect(() => { clearHarnessTranscriptDirectory(); }).not.toThrow();
   });
 
-  it('ignores a removal that throws, so a fresh launch is never blocked by a stale directory', () => {
-    mockFs.rmSync.mockImplementation(() => { throw new Error('directory busy'); });
+  it('uses launch as the cutoff when retention is zero', async () => {
     initHarnessTranscriptDirectory('/test/project');
-    expect(() => { clearHarnessTranscriptDirectory(); }).not.toThrow();
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapHarnessTranscripts(launchedAt, 0);
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'transcripts', 'harness'),
+      '.txt',
+      launchedAt,
+    );
   });
 
-  it('removes nothing before a directory has been chosen', async () => {
+  it('reaps nothing before a directory has been chosen', async () => {
     // The directory is module state, so a fresh import is the only way to stand where a process that
     // has not yet run its boot sequence stands.
     vi.resetModules();
     const fresh = await import('./transcript-file.js');
-    expect(() => { fresh.clearHarnessTranscriptDirectory(); }).not.toThrow();
+    await expect(fresh.reapHarnessTranscripts(Date.now(), 7)).resolves.toBeUndefined();
+    expect(reapFilesOlderThan).not.toHaveBeenCalled();
   });
 });

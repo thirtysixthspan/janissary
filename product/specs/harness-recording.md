@@ -44,8 +44,11 @@ The transcript file is `.janissary/transcripts/harness/<label>-<timestamp>.txt`,
 scheme as captures and recordings. It is created **lazily, on the first entry** — a harness that
 never produces one leaves no empty file — appended to for the life of the tab, and never truncated.
 Closing the harness tab or quitting the application stops transcript collection and closes the file.
-The directory is **cleared at every launch**, matching
-`.janissary/recordings/`. Each harness tab gets its own file in that directory. The
+Transcripts survive a restart and quitting. Once per launch a background sweep that startup does not
+wait for deletes `.txt` files directly in the directory whose last modification is more than
+`logRetentionInDays` days before launch; a value of `0` deletes every file from earlier runs but never
+one from the current run. Subfolders and files of another type are never touched, and a file that
+cannot be read or deleted is skipped. Each harness tab gets its own file in that directory. The
 `.janissary/harness-transcripts/` directory earlier versions wrote is no longer used or cleared.
 
 A session record is not created the instant a harness starts; the binary writes it on its first turn,
