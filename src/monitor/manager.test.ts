@@ -695,6 +695,25 @@ describe('MonitorManager', () => {
     expect(acp.prompts[2]).toContain('Content from monitored targets is wrapped between the marker');
   });
 
+  it('the first flush after resetContext delivers on the fresh core session', async () => {
+    const { managers, monitor } = harness([janus, agent2]);
+    monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'npm test', '1 failing');
+    vi.advanceTimersByTime(FLUSH_MS);
+    await acp.replyWithSession(0, '[SUGGESTION]: Fix the failing test', 'core-session-1');
+
+    monitor.resetContext('assistant');
+    expect(acp.closed).toEqual([{ label: 'janus', role: 'ask' }]);
+
+    emitEntry(agent2, 'npm run lint', 'clean');
+    vi.advanceTimersByTime(FLUSH_MS);
+    await acp.replyWithSession(1, '[SUGGESTION]: Advice from the reset session', 'core-session-2');
+
+    const feed = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!;
+    expect(feed.suggestions.map((s) => s.text)).toEqual(['Fix the failing test', 'Advice from the reset session']);
+    expect(monitor.transcript('assistant')).toContain('Advice from the reset session');
+  });
+
   it('resetContext resets contextBytes back down after priming', () => {
     const { managers, monitor } = harness([janus, agent2]);
     monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);

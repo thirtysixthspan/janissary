@@ -98,6 +98,7 @@ export class LiveMonitors {
     reg.contextBytes = 0;
     reg.contextText = [];
     reg.firstPrompt = monitorFirstPrompt(reg.persona, reg.delimiter);
+    delete reg.coreSession;
     recordContext(reg, reg.firstPrompt, 'input');
     if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
   }
