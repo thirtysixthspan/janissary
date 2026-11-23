@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the verification claim that an editor persona query can be closed through a core row Close control.
-
-Existing Issue: The description's How to verify step 3 and Verification step 3 offer "press the core row's Close control" as an alternative to `connections close`, but the editor connections panel no longer supplies onCloseRow or canCloseRow, so no row in that window renders a close control. Severity: 3/10
-
-Existing Risk: 3/10 - A verifier following the stated steps looks for a control that does not exist on the editor tab they were told to open, concludes the feature is broken, or dismisses the row through an unrelated surface without realizing the panel is intentionally read-only.
-
-Proposal Risk: 1/10 - Rewording the two steps to name only the command path removes an unachievable instruction and leaves the delivered read-only panel and the working command unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "remove the editor close-control claim from the verification steps". Edit the pull request description's How to verify step 3 and Verification step 3 to describe closing through `connections close acp:<role>:<provider/model>` only, and add a sentence stating that the editor connections window is read-only for core rows, pointing at the removal of onCloseRow and canCloseRow in web/src/editor/EditorConnectionsPanel.tsx and web/src/editor/useEditorConnections.ts as proof. Leave code and product specs unchanged; no behavior change is proposed.
-
-
 * Refresh the monitor stop test fixture to the delivered Persona shape.
 
 Existing Issue: The `makeMonitor` fixture in src/monitor/stop.test.ts still builds a persona with the removed `harness` and `tools` fields and no `role`, relying on test files being excluded from typechecking to keep the stale shape silent. Severity: 2/10
