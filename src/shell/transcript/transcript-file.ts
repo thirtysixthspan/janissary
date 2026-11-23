@@ -1,14 +1,17 @@
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { harnessArtifactFilename } from '../../harness/artifact-name.js';
+import { reapFilesOlderThan } from '../../state/reaper.js';
 
-// `.janissary/shell-transcripts/`, distinct from `.janissary/transcripts/harness/` (harness session
-// transcripts). The clear-at-every-launch policy comes from this directory's entry in
-// `src/state/dirs.ts`.
+// `.janissary/transcripts/shell/`, beside `.janissary/transcripts/harness/` (harness session
+// transcripts). Both are kept across launches and quitting; `reapShellTranscripts`, started from
+// `src/main.ts`, deletes those last modified more than `logRetentionInDays` days before launch.
 let transcriptDirectory = '';
 
+const DAY_MS = 86_400_000;
+
 export function initShellTranscriptDirectory(projectDirectory: string): void {
-  transcriptDirectory = path.join(projectDirectory, '.janissary', 'shell-transcripts');
+  transcriptDirectory = path.join(projectDirectory, '.janissary', 'transcripts', 'shell');
 }
 
 export function ensureShellTranscriptDirectory(): void {
@@ -20,7 +23,8 @@ export function shellTranscriptPath(label: string, startedAt: number): string {
   return path.join(transcriptDirectory, harnessArtifactFilename(label, startedAt, '.txt'));
 }
 
-export function clearShellTranscriptDirectory(): void {
+export async function reapShellTranscripts(launchedAt: number, days: number): Promise<void> {
   if (!transcriptDirectory) return;
-  try { rmSync(transcriptDirectory, { recursive: true, force: true }); } catch { /* ignore */ }
+  // The cutoff is `days` days before launch, so only files last modified earlier than that are reaped.
+  await reapFilesOlderThan(transcriptDirectory, '.txt', launchedAt - days * DAY_MS);
 }

@@ -1,7 +1,7 @@
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from '../harness/capture/file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from '../harness/recording-file.js';
 import { initHarnessTranscriptDirectory } from '../harness/transcript-file.js';
-import { initShellTranscriptDirectory, clearShellTranscriptDirectory } from '../shell/transcript/transcript-file.js';
+import { initShellTranscriptDirectory } from '../shell/transcript/transcript-file.js';
 import { initBrowserLogDirectory, clearBrowserLogDirectory } from '../browser/browser-log.js';
 import { initGitFailureDirectory, clearGitFailureDirectory } from '../git/failure-output.js';
 import { initGlobalHistory } from '../global-history.js';
@@ -41,9 +41,11 @@ export const STATE_DIRECTORY_ENTRIES = [
     init: (projectDir: string): void => { initHarnessTranscriptDirectory(projectDir); },
   },
   {
+    // No `clear`, deliberately: transcripts are kept for the `logRetentionInDays` window, so a fresh
+    // start must not sweep them. `reapShellTranscripts`, started from `src/main.ts`, removes the old
+    // ones by age instead.
     name: 'shellTranscript',
     init: (projectDir: string): void => { initShellTranscriptDirectory(projectDir); },
-    clear: (): void => { clearShellTranscriptDirectory(); },
   },
   {
     name: 'browserLog',

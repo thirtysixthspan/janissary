@@ -304,7 +304,7 @@ shell starts. It sits among the row's actions after the **Show diff in the works
 only on a workspaced shell) and before the connections window button. Pressing it opens the file as it
 stands in an editor tab named after the file, `<label>-<timestamp>.txt`. Once drawn it stays after the transcript has
 failed and opens whatever was written. A docked shell's button works the same way. Under
-`"recordShellTabs": false` it is never drawn. See § Text transcript.
+`"logEnabled": false` it is never drawn. See § Text transcript.
 
 A remote shell also shows the remote host as ordinary text matching the working-directory text, with
 the full destination in its tooltip. Its connection status plug sits in the flag group beside the
@@ -531,21 +531,26 @@ tab. The flag stays and still opens whatever was written.
 ## Text transcript
 
 Beside its recording, every shell tab keeps a plain-text transcript of its session: the rows the
-terminal displayed, as text, in a file under `.janissary/shell-transcripts/`. It is a separate file
-from the recording above and from the harness session transcript under `.janissary/transcripts/harness/`
-(see [[harness-recording]]); either the recording or the text transcript can fail without stopping the
-other. It is opened from the metadata row's **Open transcript** button (see § The metadata row).
+terminal displayed, as text, in a file under `.janissary/transcripts/shell/`, beside the harness
+session transcripts. It is a separate file from the recording above and from the harness session
+transcript (see [[harness-recording]]); either the recording or the text transcript can fail without
+stopping the other. Transcripts are kept across launches and quitting; once per launch a background
+sweep deletes those whose last modification is more than `logRetentionInDays` days old, in step with
+harness transcripts (see `application-config.md`). It is opened from the metadata row's **Open
+transcript** button (see § The metadata row).
 
-**Which shells keep one.** Exactly the shells that are recorded: the launch `janus` shell, every
-`shell` tab, remote shells and their siblings. A PTY started with `!` from another tab keeps none, as it
-has no recording (see [[harness-recording]] § What is **not** recorded). A project that sets
-`"recordShellTabs": false` turns off the text transcript along with the recording.
+**Which shells keep one.** Every shell whose plugin asked for its terminals to be recorded: the launch
+`janus` shell, every `shell` tab, remote shells and their siblings. A PTY started with `!` from another
+tab keeps none, as its plugin did not ask (see [[harness-recording]] § What is **not** recorded). Unlike
+the recording, the transcript is not gated by `recordShellTabs`: with `"recordShellTabs": false` a tab
+still writes its transcript, but no recording. `"logEnabled": false` turns off the text transcript.
 
 **The file.** It is named `<label>-<timestamp>.txt`: the tab's label, sanitized for a filename, and the
 ISO time it started with `:` and `.` replaced by `-`. A tab's `.txt` and its `.cast` recording are named
 alike, but their timestamps are taken separately and may differ by a few milliseconds. The file is
 created lazily, on the shell's first output; zsh's first prompt provides that at once, and a shell that
-finished before printing anything leaves no file. It is cleared at every launch.
+finished before printing anything leaves no file. It survives quitting and launches, and is removed
+only by the launch-time age sweep.
 
 **What it holds.** Every normal-screen row as displayed: prompts, the command lines typed, their output,
 background-job output and startup-file output, as plain text with no escape sequence or colour, and
@@ -568,8 +573,8 @@ unbroken line longer than 1000 terminal rows keeps only the row it ends on.
 (a python REPL, `read`) lands in the file, while a password typed at a prompt that turns echo off
 (`sudo`, `ssh`, `psql`) prints nothing, so nothing of it reaches the file. The mitigations are the
 recording's: the file is under the project's own `.janissary/`, never served over the network or
-handed to a client except when the user presses **Open transcript**, and cleared at the next fresh
-launch. `"recordShellTabs": false` is the opt-out.
+handed to a client except when the user presses **Open transcript**. It is kept for
+`logRetentionInDays` days and then swept at launch, and `"logEnabled": false` is the opt-out.
 
 **End of session.** When the tab closes or zsh exits, the cursor's unfinished row — a waiting prompt, a
 progress bar — is written as it stands, then the file closes. The transcript remains protected from

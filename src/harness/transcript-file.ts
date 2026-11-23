@@ -3,9 +3,9 @@ import path from 'node:path';
 import { harnessArtifactFilename } from './artifact-name.js';
 import { reapFilesOlderThan } from '../state/reaper.js';
 
-// `.janissary/transcripts/harness/`, the only thing under `.janissary/transcripts/`. Transcripts are
-// kept across launches and quitting; `reapHarnessTranscripts`, started from `src/main.ts`, deletes
-// those last modified more than `logRetentionInDays` days before launch.
+// `.janissary/transcripts/harness/`, beside `.janissary/transcripts/shell/` (shell session
+// transcripts). Transcripts are kept across launches and quitting; `reapHarnessTranscripts`,
+// started from `src/main.ts`, deletes those last modified more than `logRetentionInDays` days before launch.
 let transcriptDirectory = '';
 
 const DAY_MS = 86_400_000;

@@ -305,6 +305,20 @@ describe('TabManager queue', () => {
     });
 
     expect(managers.terminalRuntime.registerShellObservers).not.toHaveBeenCalled();
+    expect(managers.shellTranscript.install).toHaveBeenCalledOnce();
+  });
+
+  it('writes no shell transcript when logEnabled is false', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+    projectConfig({ logEnabled: false });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(managers.terminalRuntime.registerShellObservers).toHaveBeenCalledOnce();
     expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
