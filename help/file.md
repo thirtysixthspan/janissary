@@ -210,6 +210,8 @@ A row is fixed tokens separated by single spaces: a type word (`file` or `dir`),
 
 These commands answer in one word instead of a verbose error line: `missing` for an absent path, `forbidden` for a path outside the workspace or a secret path, and `notdir` when `file list` is pointed at a file. `file exists <path>` answers with the type word `file`, `dir`, or `link` for a regular file, a directory, or a symbolic link — the link itself, even when its target is missing — and with `missing` or `forbidden` otherwise. It prints only that word and never echoes the path.
 
+An absent final segment doesn't change a `forbidden` answer when an earlier segment is a symbolic link that resolves outside the workspace or to a secret location. Containment is judged from the nearest existing part of the path, so the missing leaf can't hide the escape. A plain absent path with no escaping link still answers `missing`.
+
 `file head <path> [-n <lines>]` and `file tail <path> [-n <lines>]` print the first or last N numbered lines of a file with the same numbering and line truncation as `file read`. `-n` defaults to 10 and accepts no value above 2000; a count larger than the file prints every line, and an empty file prints `(empty file)`. A directory target prints `notdir`. Other failures keep `file read`'s verbose lines naming the path as typed, such as `File not found: <path>.`, `Outside the workspace: <path>.`, `Secret file: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`
 
 Malformed arguments print `Usage: file list <path>` (also for `file ls`), `Usage: file stat <path>`, `Usage: file exists <path>`, `Usage: file head <path> [-n <lines>]`, or `Usage: file tail <path> [-n <lines>]`.

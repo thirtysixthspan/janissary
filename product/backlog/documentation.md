@@ -4,8 +4,6 @@
 
 ## development
 
-* file-exists (3/10) — 13 of 14 facts are correct and 1 missing. `help/file.md` documents `forbidden` for paths outside the workspace or secret paths and `missing` for absent paths, but never says which wins when the absent leaf sits behind a symlink that escapes the workspace: containment is judged from the nearest existing segment, so the answer is `forbidden`. Add a sentence to that effect in the "Listing and inspecting paths" paragraph of `help/file.md`; no new page is needed. Evidence: `product/specs/file-exists.md`, `src/file-exists/tab-exists.test.ts`, `src/file-exists/exists-core.ts`, `help/file.md`.
-
 * file-list-stat (3/10) — 12 of 15 facts are correct and 3 missing, none wrong. `help/file.md` does not say that `file list`/`file stat` answer `forbidden` for a symlink whose resolved target escapes the workspace or is secret, that an entry vanishing before it can be described still gets a zero-valued row, or that local and remote tabs apply the same path policy and print identical refusal wording. Add a short paragraph covering all three to the "Listing and inspecting paths" section; no new page or change to `help/commands.md` is needed. Evidence: `product/specs/file-list-stat.md`, `src/file-list/list-core.ts`, `src/file-stat/stat-core.ts`, `src/file-failure.ts`, `help/file.md`.
 
 * harness (3/10) — 19 of 20 facts are correct and 1 missing. The "New harness dialog" section of `documentation/user-documentation/advanced-agents/harness.md` explains that typing filters models, Tab completes and a blank field uses the default, but never says that non-blank text is accepted only when it is exactly an enabled model id of the chosen harness, that any other text disables Create and makes Return refuse to submit, that with the dropdown open Escape closes only the dropdown and Return accepts the highlighted row without launching, or that the field is disabled when the harness has no enabled models. Add those rules there and mirror a short note in `help/harness.md`. Evidence: `product/specs/harness.md`, `documentation/user-documentation/advanced-agents/harness.md`, `help/harness.md`.
@@ -26,6 +24,7 @@
 
 ## resolved
 
+* file-exists — documented in help/file.md (removed 2026-11-23)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md (removed 2026-11-23)
 * clipboard-history — documented in documentation/user-documentation/command-bar/clipboard.md, help/clipboard.md, help/keys.md (removed 2026-11-23)
 * application-commands — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md (removed 2026-11-23)
