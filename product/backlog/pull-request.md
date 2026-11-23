@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's account of why the schedule storage integration test was removed
-
-Existing Issue: The description presents the deletion of src/schedule/system/storage.integration.test.ts as the consequence of one capture-sentinel assertion, while only one of the file's eight tests used captures and seven tested unrelated schedule storage and git behavior. Severity: 6/10
-
-Existing Risk: 5/10 - A reviewer approves a 197-line test deletion as a narrow side effect of the retention change and never notices the unrelated integration coverage that went with it.
-
-Proposal Risk: 1/10 - Rewording the paragraph changes no behavior; the only residual risk is that the disclosure is omitted again by a later edit.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2195 "correct the description's account of the removed schedule storage integration test". Rewrite the paragraph in the pull request body that says the file "used .janissary/captures/ as its per-run sentinel and asserted that startup cleanup deleted it" so it states that only the repeated-startup-cleanup test depended on captures and that the file's other seven tests cover snapshot round-tripping, malformed and future-version stores, atomic write failure cleanup, space-safe git excludes, tracked targets, preignored rules, and symlinked storage. State where that coverage lives after the change, and pair this edit with the entry that restores those tests rather than implying the deletion was scoped to one assertion. Do not change any source file here.
-
-
 * Correct the verification steps that expect a pre-relaunch capture to survive zero retention
 
 Existing Issue: Steps 4 and 6 of How to verify expect a capture left in place before a relaunch with logRetentionInDays set to 0 to remain present, but the sweep's cutoff is the new launch time, so a capture last modified before that relaunch is deleted. Severity: 7/10
