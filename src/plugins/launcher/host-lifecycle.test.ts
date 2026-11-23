@@ -30,7 +30,7 @@ function managersWithTabLifecycle(): Managers {
     browser: { closeTab: vi.fn() }, pty: { closeTab: vi.fn() }, harness: { closeTab: vi.fn() },
     terminalRuntime: { closeTab: vi.fn() }, shellTranscript: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() }, editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
-    editorAcp: { closeTab: vi.fn() }, schedule: { delete: vi.fn(), closeTab: vi.fn() },
+    schedule: { delete: vi.fn(), closeTab: vi.fn() },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
     communication: { closeTab: vi.fn() }, command: { closeTab: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() }, remote: { closeTab: vi.fn() },

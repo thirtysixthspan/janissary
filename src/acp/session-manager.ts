@@ -10,7 +10,7 @@ import { tabRuntime } from '../tab/runtime.js';
 import type { TabRuntime } from '../tab/types.js';
 import { acpActivity, type AcpActivityKind } from './activity.js';
 import { beginCoreRecord, closeCoreRecord, coreActivity } from './record-feed.js';
-import { ACP_ROLES, DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
+import { DEFAULT_ACP_ROLE, type AcpRole } from './role.js';
 
 type ConnectHooks = { onError: (message: string) => void; onConnect: () => void };
 type Handshake = 'connecting' | 'idle' | 'published' | 'failed';
@@ -154,7 +154,8 @@ export class AcpSessionManager {
   }
 
   closeTab(label: string, output?: AcpPromptResult | string): void {
-    for (const role of ACP_ROLES) this.close(label, output, role);
+    const roles = [...(this.sessions.get(label)?.keys() ?? [])];
+    for (const role of roles) this.close(label, output, role);
   }
 
   closeAll(): void {

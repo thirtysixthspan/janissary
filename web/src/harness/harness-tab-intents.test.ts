@@ -47,7 +47,6 @@ describe('harnessTabIntents', () => {
 
   it.each([
     ['monitor', { scope: 'monitor' as const, name: 'watch' }],
-    ['editor', { scope: 'editor' as const, label: 'agent2', persona: 'reviewer' }],
     ['another tab', { scope: 'tab' as const, label: 'other', role: 'ask' as const }],
   ])('leaves a %s row snapshot-only', (_case, acpRef) => {
     const { client, send } = fakeClient();

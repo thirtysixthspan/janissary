@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterAll, describe, it, expect, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { connectionCatalog } from './catalog.js';
 import { ConnectionManager } from './manager.js';
 import { SHELL_NAME } from '../shell/manager.js';
@@ -8,6 +11,19 @@ import type { Tab } from '../tab/types.js';
 
 const notifications = vi.hoisted(() => ({ notify: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: notifications.notify }));
+
+const ROOT = mkdtempSync(path.join(tmpdir(), 'janus-catalog-'));
+mkdirSync(path.join(ROOT, '.janissary'), { recursive: true });
+writeFileSync(path.join(ROOT, '.janissary', 'roles.json'), JSON.stringify({
+  ask: { description: 'Questions.', entries: [] },
+  tell: { description: 'Tasks.', entries: [] },
+  'review-bot': { description: 'Reviews.', entries: [{ harness: 'opencode', model: 'opencode/review' }] },
+}));
+afterAll(() => { rmSync(ROOT, { recursive: true, force: true }); });
+
+const MODELS: Record<string, string> = {
+  ask: 'anthropic/claude-sonnet', tell: 'opencode/tell', 'review-bot': 'opencode/review',
+};
 
 function remoteTab(label: string): Tab {
   const tab = makeTab(label, 'red');
@@ -30,16 +46,12 @@ function populated(): Managers {
     shell: { has: vi.fn(() => true), close: vi.fn((label: string) => label === 'main') },
     acp: {
       has: vi.fn(() => true),
-      label: vi.fn((_label: string, role = 'ask') => role === 'tell' ? 'opencode/tell' : 'anthropic/claude-sonnet'),
+      label: vi.fn((_label: string, role = 'ask') => MODELS[role]),
       close: vi.fn((label: string) => label === 'main'),
     },
     monitor: {
       connectionsFor: vi.fn(() => [{ text: 'monitor:security (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'security' } }]),
       stop: vi.fn((owner: string, name: string) => owner === 'main' && name === 'security'),
-    },
-    editorAcp: {
-      connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } }]),
-      close: vi.fn((label: string, persona: string) => label === 'main' && persona === 'reviewer'),
     },
     browser: { info: vi.fn(() => ({ ids: ['w1'], mode: 'headless' })), run: vi.fn(() => Promise.resolve('Closed connection browser:w1.')) },
     pty: {
@@ -51,6 +63,7 @@ function populated(): Managers {
     database: { openDbs: vi.fn(() => ['mine']), listOpen: vi.fn(() => ['mine', 'shared']), close: vi.fn(() => true) },
     tab: {
       tabs,
+      launchDir: ROOT,
       byLabel: (label: string) => tabs.find((t) => t.label === label),
       shorten: (p: string) => p,
       cwdOf: () => '/repo',
@@ -69,8 +82,8 @@ describe('connectionCatalog', () => {
       [`shell:${SHELL_NAME}`, 'tab'],
       ['acp:ask:anthropic/claude-sonnet', 'tab'],
       ['acp:tell:opencode/tell', 'tab'],
+      ['acp:review-bot:opencode/review', 'tab'],
       ['acp:security', 'tab'],
-      ['acp:reviewer', 'tab'],
       ['browser:w1', 'tab'],
       ['ssh:main', 'tab'],
       ['terminal:claude', 'tab'],
@@ -90,9 +103,11 @@ describe('connectionCatalog', () => {
     expect(entries.find((e) => e.id === 'tell:opencode/tell')).toMatchObject({
       display: 'acp:tell:opencode/tell', acpRef: { scope: 'tab', label: 'main', role: 'tell' },
     });
+    expect(entries.find((e) => e.id === 'review-bot:opencode/review')).toMatchObject({
+      display: 'acp:review-bot:opencode/review', acpRef: { scope: 'tab', label: 'main', role: 'review-bot' },
+    });
     expect(entries.find((e) => e.kind === 'browser')?.display).toBe('browser:w1 (headless)');
     expect(entries.find((e) => e.id === 'bastion')).toMatchObject({ display: 'ssh:host.example.com', detail: 'host.example.com' });
-    expect(entries.find((e) => e.id === 'reviewer')).toMatchObject({ display: 'reviewer (acp)', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } });
   });
 
   it('gives an ssh tab its ssh entry and no terminal entry for the ssh session itself', () => {

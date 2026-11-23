@@ -7,11 +7,10 @@ import type { AgentRunView } from '../agent/types.js';
 import type { AcpRole } from '../acp/role.js';
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
-// route on: the tab's own agent, a monitor session, or an editor-persona session.
+// route on: the tab's own agent or a monitor session.
 export type AcpRef =
   | { scope: 'tab'; label: string; role: AcpRole }
-  | { scope: 'monitor'; name: string }
-  | { scope: 'editor'; label: string; persona: string };
+  | { scope: 'monitor'; name: string };
 
 // One row in the floating "connections" panel (shell / acp / terminal card / sqlite). `acpRef`
 // identifies which session a row's transcript button opens. `recordId` identifies a durable ACP

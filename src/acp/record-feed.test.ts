@@ -693,7 +693,7 @@ describe('core record feeds', () => {
     const noOpManager = { closeTab: () => {} };
     Object.assign(f.managers, {
       shell: noOpManager, schedule: noOpManager, pty: noOpManager, terminalRuntime: noOpManager,
-      harness: noOpManager, shellTranscript: noOpManager, editorAcp: noOpManager, editorWatch: noOpManager,
+      harness: noOpManager, shellTranscript: noOpManager, editorWatch: noOpManager,
       fileNavigator: noOpManager, browser: noOpManager, questions: noOpManager,
       remote: { ...f.managers.remote, closeTab: () => {} },
       database: { ...f.managers.database, closeTab: () => {} },

@@ -10,7 +10,6 @@ vi.mock('../harness/capture/file.js', () => ({
 function makeAcpManagers(overrides: {
   tabs?: { label: string; log: { input: string; output: string }[] }[];
   transcript?: ReturnType<typeof vi.fn>;
-  editorTranscript?: ReturnType<typeof vi.fn>;
   edit?: ReturnType<typeof vi.fn>;
   curLabel?: string;
 } = {}) {
@@ -19,7 +18,6 @@ function makeAcpManagers(overrides: {
   return {
     tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => ({ label: overrides.curLabel ?? 'active' }) },
     monitor: { transcript: overrides.transcript ?? vi.fn(() => '') },
-    editorAcp: { transcript: overrides.editorTranscript ?? vi.fn(() => '') },
     openFile: { edit },
   } as unknown as Managers;
 }
@@ -121,24 +119,14 @@ describe('openAcpTranscript', () => {
     expect(edit).toHaveBeenCalledWith('transcript monitor:security', '/project/.janissary/captures/agent-now.txt', 'active');
   });
 
-  it('routes an editor-scoped ref to EditorAcpManager.transcript', () => {
-    const edit = vi.fn();
-    const editorTranscript = vi.fn(() => 'persona exchange');
-    const managers = makeAcpManagers({ editorTranscript, edit });
-
-    openAcpTranscript(managers, { scope: 'editor', label: 'notes', persona: 'reviewer' });
-
-    expect(editorTranscript).toHaveBeenCalledWith('notes', 'reviewer');
-    expect(writeCaptureFile).toHaveBeenCalledWith('reviewer', expect.any(Number), 'persona exchange');
-    expect(edit).toHaveBeenCalledWith('transcript reviewer', '/project/.janissary/captures/agent-now.txt', 'active');
-  });
-
   it('substitutes the placeholder when the source is empty, for every scope', () => {
     const edit = vi.fn();
     const managers = makeAcpManagers({ tabs: [], edit });
 
     openAcpTranscript(managers, { scope: 'tab', label: 'missing', role: 'ask' });
+    openAcpTranscript(managers, { scope: 'monitor', name: 'missing' });
 
     expect(writeCaptureFile).toHaveBeenCalledWith('acp:missing', expect.any(Number), 'No transcript yet.');
+    expect(writeCaptureFile).toHaveBeenCalledWith('monitor:missing', expect.any(Number), 'No transcript yet.');
   });
 });

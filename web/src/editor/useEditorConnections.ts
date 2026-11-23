@@ -1,32 +1,21 @@
 // Wires an editor tab into the same button-driven connections window tabs use (see
-// `useStatusWindows`), plus a close control on each persona connection row. Split out of
-// EditorTab.tsx to stay under the 200-line file cap, mirroring useEditorSuggest.ts's own extraction
-// for the same reason (see product/plans/complete/editor-tab-persona-connections.md).
+// `useStatusWindows`). Split out of EditorTab.tsx to stay under the 200-line file cap, mirroring
+// useEditorSuggest.ts's own extraction for the same reason.
 
 import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { statusButton, type StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
-import { isEditorTabView } from '../shared/tab/view-guards';
 
 export type EditorConnectionsApi = {
   windows: ReturnType<typeof useStatusWindows>;
   connectionsButton: StatusWindowButtonProps;
-  closeRow: (row: ConnectionView) => void;
   openAcpTranscript: (acpRef: AcpRef) => void;
   openRow: (row: ConnectionView) => void;
 };
 
 export function useEditorConnections(client: JanusClient, tab: TabView): EditorConnectionsApi {
   const windows = useStatusWindows(tab.label, { connectionsHaveContent: tab.connections.length > 0 });
-
-  // There is no connection to close without the editor payload that names the file, so a tab missing
-  // it is left alone rather than dereferenced — the row simply does nothing.
-  const closeRow = (row: ConnectionView) => {
-    if (!isEditorTabView(tab) || row.acpRef?.scope !== 'editor') return;
-    const persona = row.text.replace(/ \(acp\)$/, '');
-    client.send({ method: 'closeEditorConnection', params: { url: tab.editor.url, persona } });
-  };
 
   const openAcpTranscript = (acpRef: AcpRef) => {
     client.send({ method: 'openAcpTranscript', params: { acpRef } });
@@ -43,5 +32,5 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
 
   const connectionsButton = statusButton(tab.connections.length > 0, windows.connections);
 
-  return { windows, connectionsButton, closeRow, openAcpTranscript, openRow };
+  return { windows, connectionsButton, openAcpTranscript, openRow };
 }

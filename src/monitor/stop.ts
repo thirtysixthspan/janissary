@@ -26,7 +26,6 @@ export function stopMonitor(
   }
   for (const sub of reg.subs) sub.unsubscribe();
   clearInterval(reg.timer);
-  reg.session.kill();
   monitors.delete(key);
   if (!reg.inline) closeIfUnfed(monitors, managers, name);
   return true;

@@ -23,14 +23,13 @@ export const SHELL_PROGRAM = '/bin/zsh';
 export type ShellConnectionKind =
   | 'shell' | 'acp' | 'ssh' | 'browser' | 'terminal' | 'sqlite';
 
-// A discriminated union, as the protocol's own is: a tab-scoped reference names only its tab, a
-// monitor-scoped one only the monitor's runtime name, and an editor-scoped one names a persona too.
-// Flattening that into one optional field would make a row that claims an editor scope without a
-// persona expressible, which the protocol deliberately is not.
+// A discriminated union, as the protocol's own is: a tab-scoped reference names only its tab and a
+// monitor-scoped one only the monitor's runtime name. Flattening that into one optional field would
+// make a row that claims a scope without its identifying field expressible, which the protocol
+// deliberately is not.
 export type ShellAcpRef =
-  | { scope: 'tab'; label: string; role: 'ask' | 'tell' }
-  | { scope: 'monitor'; name: string }
-  | { scope: 'editor'; label: string; persona: string };
+  | { scope: 'tab'; label: string; role: string }
+  | { scope: 'monitor'; name: string };
 
 export type ShellConnectionRow = {
   text: string;
@@ -106,7 +105,7 @@ export type ShellQueuedCommandRequest = { receipt: string; discard?: true };
 export type ShellDispatchResult = { dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown };
 
 export type ShellAcpReceipt =
-  | { replyId: string; role: 'ask' | 'tell'; name: string; echo?: string }
+  | { replyId: string; role: string; name: string; echo?: string }
   | { replyId: string; kind: 'record'; recordId: string; name: string };
 
 // The completion the application's command bar would show. Carried by the same intent rather than a
@@ -142,9 +141,8 @@ const CONNECTION_KINDS: ReadonlySet<string> = new Set([
 function isAcpRef(value: unknown): value is ShellAcpRef {
   if (!isRecord(value)) return false;
   if (value.scope === 'monitor') return typeof value.name === 'string';
-  if (typeof value.label !== 'string') return false;
-  if (value.scope === 'tab') return value.role === 'ask' || value.role === 'tell';
-  return value.scope === 'editor' && typeof value.persona === 'string';
+  if (value.scope !== 'tab' || typeof value.label !== 'string') return false;
+  return typeof value.role === 'string' && value.role.trim().length > 0;
 }
 
 function isConnectionRow(value: unknown): value is ShellConnectionRow {
@@ -235,7 +233,7 @@ export function isShellCommandState(value: unknown): value is ShellCommandState 
 export function isShellAcpReceipt(value: unknown): value is ShellAcpReceipt {
   if (!isRecord(value)) return false;
   if (typeof value.replyId !== 'string' || typeof value.name !== 'string') return false;
-  const role = value.role === 'ask' || value.role === 'tell';
+  const role = typeof value.role === 'string' && value.role.trim().length > 0;
   const record = value.kind === 'record';
   if (role === record) return false;
   if (record) {

@@ -1,6 +1,6 @@
 export const CONNECTIONS_PAYLOAD_SCHEMA_VERSION = 2;
 
-export type AcpRole = 'ask' | 'tell';
+export type AcpRole = string;
 
 export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
 export type ConnectionStatus = 'Idle' | 'Running' | 'Closed' | 'Completed' | 'Failed' | 'Partial' | 'Terminated';
@@ -40,8 +40,7 @@ type ConnectionRowBase = {
   ownerName: string;
   orderingTimestamp: number;
   focusTarget?: string;
-  acpRef?: { scope: 'tab'; label: string; role: AcpRole } | { scope: 'monitor'; name: string }
-    | { scope: 'editor'; label: string; persona: string };
+  acpRef?: { scope: 'tab'; label: string; role: AcpRole } | { scope: 'monitor'; name: string };
 };
 
 export type LiveConnectionRow = ConnectionRowBase & {
@@ -79,7 +78,7 @@ function object(value: unknown): value is Record<string, unknown> {
 }
 
 function isAcpRole(value: unknown): value is AcpRole {
-  return value === 'ask' || value === 'tell';
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function optionalString(row: Record<string, unknown>, key: string): boolean {
@@ -133,8 +132,7 @@ function isWindow(value: unknown): value is ConnectionWindow {
 function isAcpRef(value: unknown): boolean {
   if (!object(value)) return false;
   if (value.scope === 'tab') return typeof value.label === 'string' && isAcpRole(value.role);
-  if (value.scope === 'monitor') return typeof value.name === 'string';
-  return value.scope === 'editor' && typeof value.label === 'string' && typeof value.persona === 'string';
+  return value.scope === 'monitor' && typeof value.name === 'string';
 }
 
 export function isConnectionRow(value: unknown): value is ConnectionRow {

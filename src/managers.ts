@@ -19,7 +19,6 @@ import type { GitSync } from './git/sync.js';
 import type { MonitorManager } from './monitor/manager.js';
 import type { FileNavigatorManager } from './file-navigator/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
-import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
@@ -62,7 +61,6 @@ type ManagerRegistry = {
   monitor: MonitorManager;
   fileNavigator: FileNavigatorManager;
   editorWatch: EditorWatchManager;
-  editorAcp: EditorAcpManager;
   questions: Questions;
   plugins: TabPluginHost;
   conversations: ConversationsManager;
@@ -109,7 +107,6 @@ export const MANAGER_DISPOSE_ORDER = [
   'systemSchedule',
   'systemShell',
   'pty',
-  'editorAcp',
   'editorWatch',
   'fileNavigator',
   'openFile',
@@ -159,7 +156,6 @@ export const MANAGER_TAB_RELEASE = [
   'terminalRuntime',
   'harness',
   'shellTranscript',
-  'editorAcp',
   'editorWatch',
   'fileNavigator',
   'acp',

@@ -32,7 +32,6 @@ function makeManagers(): Managers {
     pty: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
-    editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn() },
     questions: { cancelTab: vi.fn(), pendingFor: vi.fn() },
     database: { forgetTab: vi.fn(), closeAll: vi.fn() },

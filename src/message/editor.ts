@@ -4,7 +4,7 @@ import { unhandledClientMethod } from '../client-message.js';
 
 type EditorMessage = Extract<ClientMessage, {
   method: 'editorSync' | 'resyncEditorTab' | 'renameEditorFile' | 'commitEditorFile'
-    | 'editorPersonas' | 'editorSuggest' | 'closeEditorConnection';
+    | 'editorPersonas' | 'editorSuggest';
 }>;
 
 // The editor RPC cases, split out of the main dispatcher to keep both files focused: these act on
@@ -27,10 +27,6 @@ export function dispatchEditorMessage(controller: Controller, message: EditorMes
       return (resolve: (value: unknown) => void) => {
         controller.editorSuggest(message.params, resolve);
       };
-    }
-    case 'closeEditorConnection': {
-      controller.closeEditorConnection(message.params.url, message.params.persona);
-      break;
     }
     default: { return unhandledClientMethod(message);
     }

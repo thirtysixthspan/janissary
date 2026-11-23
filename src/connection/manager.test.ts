@@ -11,7 +11,6 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     shell: { has: vi.fn(() => false) },
     acp: { has: vi.fn(() => false), label: vi.fn() },
     monitor: { connectionsFor: vi.fn(() => []) },
-    editorAcp: { connectionsFor: vi.fn(() => []) },
     browser: { info: vi.fn(), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []) },
@@ -93,19 +92,6 @@ describe('ConnectionManager connectionsFor', () => {
 
   it('omits the shell connection when no shell is open', () => {
     expect(new ConnectionManager(makeManagers()).connectionsFor('main').some((row) => row.kind === 'shell')).toBe(false);
-  });
-
-  it('includes editor ACP rows with their owner reference', () => {
-    const managers = makeManagers({
-      editorAcp: {
-        connectionsFor: vi.fn(() => [{
-          text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
-        }]),
-      },
-    } as unknown as Partial<Managers>);
-    expect(new ConnectionManager(managers).connectionsFor('notes')).toContainEqual({
-      text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
-    });
   });
 
   it('keeps global-only connections out of a tab-owned projection', () => {

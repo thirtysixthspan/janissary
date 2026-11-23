@@ -1,5 +1,6 @@
 import { messageBus } from '../bus.js';
 import { SHELL_NAME } from '../shell/manager.js';
+import { knownRoleSettings } from '../acp/ask-role.js';
 import type { Managers } from '../managers.js';
 import type { ConnectionKind } from './types.js';
 import type { AcpRole } from '../acp/role.js';
@@ -12,23 +13,24 @@ function closeRemoteChannel(managers: Managers, id: string): boolean {
   return tab !== undefined && managers.remote.close(tab.label);
 }
 
-function coreAcpTarget(id: string): { role: AcpRole; suffix?: string } {
-  if (id === 'tell') return { role: 'tell' };
-  if (id.startsWith('tell:')) return { role: 'tell', suffix: id.slice('tell:'.length) };
-  if (id === 'ask') return { role: 'ask' };
-  if (id.startsWith('ask:')) return { role: 'ask', suffix: id.slice('ask:'.length) };
+function coreAcpTarget(id: string, root: string): { role: AcpRole; suffix?: string } {
+  const separator = id.indexOf(':');
+  const name = separator === -1 ? id : id.slice(0, separator);
+  if (knownRoleSettings(root, name) !== undefined) {
+    return separator === -1 ? { role: name } : { role: name, suffix: id.slice(separator + 1) };
+  }
   return { role: 'ask', suffix: id };
 }
 
-// Editor personas and monitors keep priority over the role-qualified core-session aliases. The core
-// fallback accepts any ask id, so a session still connecting can still be closed.
+// Monitors keep priority over the role-qualified core-session aliases. The core fallback accepts any
+// ask id, so a session still connecting can still be closed.
 function closeAcp(managers: Managers, label: string, id: string, out: (text: string) => void): void {
-  if (managers.editorAcp.close(label, id) || managers.monitor.stop(label, id)) {
+  if (managers.monitor.stop(label, id)) {
     messageBus.emit('state', { type: 'dirty' });
     out(`Closed connection acp:${id}.`);
     return;
   }
-  const target = coreAcpTarget(id);
+  const target = coreAcpTarget(id, managers.tab.launchDir);
   const model = managers.acp.label(label, target.role);
   const name = model === undefined
     ? (target.suffix === undefined ? target.role : `${target.role}:${target.suffix}`)

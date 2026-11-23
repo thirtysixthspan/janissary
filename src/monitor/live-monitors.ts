@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { AcpInfo, AcpSession } from '../acp/types.js';
 import type { LogEntry, MonitorTarget } from '../tab/types.js';
 import type { Subscription } from '../bus.js';
 import type { Persona } from '../personas.js';
 import { parseSuggestion } from './reply-format.js';
-import { openMonitorSession, respawnMonitorSession } from './session.js';
-import type { spawnMonitorSession } from './acp.js';
+import { monitorFirstPrompt } from './session.js';
 import { targetColor, formatTargets } from './targets.js';
 import { flushFeedEntries } from './feeds.js';
 import { frameUpdatePrompt } from './framing.js';
@@ -16,6 +14,7 @@ import { notify } from '../notifications/index.js';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import { buildSuggestion, formatInlineSuggestion } from './suggestion.js';
 import type { Managers } from '../managers.js';
+import { errorText } from '../error-text.js';
 
 export type MonitorSub = {
   owner: string;
@@ -41,59 +40,71 @@ export type MonitorSub = {
   // Random, per-session token every buffered entry is wrapped in (see monitor/framing.ts), so the
   // persona can tell monitored content apart from its own instructions.
   delimiter: string;
-  session: AcpSession;
-  info?: AcpInfo;
+  // The persona's instructions, reply format and trust framing. Prepended to the next prompt on
+  // the owner tab's core role session, then cleared once that prompt is answered; a reset or a
+  // failed first prompt puts it back so the next core session is primed again.
+  firstPrompt: string;
+  // The core session that last answered this monitor's prompt. A different identity on a later
+  // answered result means another surface closed and reopened the shared role session, so the
+  // reply must be discarded and the new session re-primed on the next flush.
+  coreSession?: string;
   inFlight: boolean;
+  // Incrementing generation for reporting-tab resets. A flush captures it at send time; a failed
+  // result from an older generation is the close settling that flush, not a real failure.
+  resetGeneration: number;
   delivered: number;
-  // Running total of bytes sent/received on this session (priming, flushes, asks) — reset on respawn.
+  // Running total of bytes sent/received on this monitor's core prompts, reset on an explicit reset.
   contextBytes: number;
-  // The accumulated context text itself (priming, update prompts, asks, replies), kept in order so
-  // it can be snapshotted into a view tab. Grows and resets in lockstep with `contextBytes`.
+  // The accumulated context text itself (first prompt, update prompts, asks, replies), kept in
+  // order so it can be snapshotted into a view tab. Grows and resets with `contextBytes`.
   contextText: MonitorContextEntry[];
   timer: ReturnType<typeof setInterval>;
   subs: Subscription[];
 };
 
-export type MonitorSubSetup = Omit<MonitorSub, 'session' | 'timer'>;
+export type MonitorSubSetup = Omit<MonitorSub, 'timer'>;
 
-// The live monitors and the session each one runs, keyed by `${ownerLabel}:${name}`: opened and
-// primed, respawned when a prompt fails, batched on the flush timer, and delivered into the owner
-// tab's transcript or the persona's reporting tab. `MonitorManager` owns the rest of a monitor's
-// life — starting it, stopping it, and the listings — so this half reads as the session itself.
+// The live monitors and the core role prompts each one drives, keyed by `${ownerLabel}:${name}`:
+// batched on the flush timer and delivered into the owner tab's transcript or the persona's
+// reporting tab. `MonitorManager` owns the rest of a monitor's life — starting it, stopping it,
+// and the listings — so this half reads as the prompting side of a monitor.
 
 export class LiveMonitors {
   protected readonly monitors = new Map<string, MonitorSub>();
   private counter = 0;
 
-  constructor(
-    protected readonly managers: Managers,
-    protected readonly spawn: typeof spawnMonitorSession,
-  ) {}
+  constructor(protected readonly managers: Managers) {}
 
-  // Spawn the monitor's dedicated session and prime it with the persona body + reply
-  // format; `inFlight` holds flushes off until priming settles.
-  protected openSession(reg: MonitorSub): void {
-    openMonitorSession(reg, this.managers, this.spawn);
+  // Whether `reg` is still registered. A core prompt settles asynchronously, so a result from a
+  // monitor that was stopped in the meantime must not deliver a suggestion or append an error.
+  protected isCurrent(reg: MonitorSub): boolean {
+    return this.monitors.get(`${reg.owner}:${reg.name}`) === reg;
   }
 
-  // Whether `reg` is still registered and still running on `session`. A local session keeps
-  // delivering a pending prompt's callbacks after `kill()`, so a callback from a monitor that was
-  // stopped or whose session was replaced must not act on it.
-  protected isCurrent(reg: MonitorSub, session: AcpSession): boolean {
-    return this.monitors.get(`${reg.owner}:${reg.name}`) === reg && reg.session === session;
+  // A core prompt failed or was refused. Surface it on the existing monitor error line; core owns
+  // model fallback and session lifecycle, so there is no local process to respawn here.
+  private promptFailed(reg: MonitorSub, message: string): void {
+    this.managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message} — restarting monitor session` });
+    if (isRateLimitError(message)) notify(this.managers, 'rate-limited', reg.owner);
   }
 
-  // A prompt failed (typically the ACP subprocess died). Replace the session with a
-  // fresh, re-primed one so the monitor recovers instead of staying dead. A no-op for a
-  // stopped monitor or a session already replaced, so no untracked subprocess is spawned.
-  protected respawn(reg: MonitorSub, session: AcpSession = reg.session): void {
-    if (!this.isCurrent(reg, session)) return;
-    respawnMonitorSession(reg, this.managers, this.spawn);
+  // The reporting tab's reset button: close the tab's core session for this role and start the
+  // monitor's context over. The next prompt re-sends the persona's first prompt on a fresh core
+  // session; no monitor process is killed here.
+  protected reset(reg: MonitorSub): void {
+    if (!this.isCurrent(reg)) return;
+    reg.resetGeneration += 1;
+    this.managers.acp.close(reg.owner, undefined, reg.persona.role);
+    reg.contextBytes = 0;
+    reg.contextText = [];
+    reg.firstPrompt = monitorFirstPrompt(reg.persona, reg.delimiter);
+    delete reg.coreSession;
+    recordContext(reg, reg.firstPrompt, 'input');
     if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
   }
 
-  // The 30-second batch. No new transcripts → no ACP query at all; also skipped while a
-  // previous prompt (including the persona priming) is still streaming.
+  // The 30-second batch. No new transcripts → no ACP query at all; also skipped while a previous
+  // core prompt (flush or ask) is still outstanding.
   protected flush(key: string): void {
     const reg = this.monitors.get(key);
     if (!reg || reg.inFlight) return;
@@ -104,28 +115,37 @@ export class LiveMonitors {
     if (reg.buffer.length === 0) return;
     const batch = reg.buffer;
     reg.buffer = [];
-    const prompt = frameUpdatePrompt(batch, reg.delimiter);
-    recordContext(reg, prompt, 'input');
+    const framed = frameUpdatePrompt(batch, reg.delimiter);
+    recordContext(reg, framed, 'input');
+    const prompt = reg.firstPrompt ? `${reg.firstPrompt}\n\n${framed}` : framed;
+    const generation = reg.resetGeneration;
     reg.inFlight = true;
-    let reply = '';
-    const session = reg.session;
-    // A stale callback leaves `inFlight` alone too: a replacement session's priming owns the slot.
-    session.prompt(prompt, {
-      onChunk: (text) => { reply += text; },
-      onEnd: () => {
-        if (!this.isCurrent(reg, session)) return;
+    void this.managers.acp.promptResult(reg.owner, prompt, reg.persona.role, { appendRefusalToTranscript: false }).then(
+      (result) => {
+        if (!this.isCurrent(reg)) return;
         reg.inFlight = false;
-        recordReply(reg, this.managers, reply);
-        const suggestion = parseSuggestion(reply);
+        if (!result.answered) {
+          if (generation === reg.resetGeneration) this.promptFailed(reg, result.error);
+          return;
+        }
+        if (generation !== reg.resetGeneration) return;
+        if (reg.coreSession !== undefined && reg.coreSession !== result.session) {
+          reg.coreSession = result.session;
+          reg.firstPrompt = monitorFirstPrompt(reg.persona, reg.delimiter);
+          return;
+        }
+        reg.coreSession = result.session;
+        reg.firstPrompt = '';
+        recordReply(reg, this.managers, result.reply);
+        const suggestion = parseSuggestion(result.reply);
         if (suggestion) this.deliver(reg, batch.at(-1)!.tabLabel, suggestion);
       },
-      onError: (message) => {
-        if (!this.isCurrent(reg, session)) return;
-        this.managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message} — restarting monitor session` });
-        if (isRateLimitError(message)) notify(this.managers, 'rate-limited', reg.owner);
-        this.respawn(reg, session);
+      (error: unknown) => {
+        if (!this.isCurrent(reg)) return;
+        reg.inFlight = false;
+        if (generation === reg.resetGeneration) this.promptFailed(reg, errorText(error));
       },
-    });
+    );
   }
 
   protected deliver(reg: MonitorSub, about: string, parsed: { text: string; command?: string }): void {

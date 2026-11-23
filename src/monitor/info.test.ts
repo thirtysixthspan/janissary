@@ -1,16 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { listMonitors, monitorConnections, formatConnection, personaSummary } from './info.js';
+import { listMonitors, monitorConnections, monitorNames } from './info.js';
 import type { MonitorSub } from './live-monitors.js';
 import type { Persona } from '../personas.js';
-import type { AcpSession } from '../acp/types.js';
 
 const persona = (name: string): Persona => ({
   name,
-  harness: { harness: 'claude', model: 'sonnet', variant: 'default' },
+  role: 'ask',
   body: '',
-  tools: [],
 });
-const session: AcpSession = { prompt: () => {}, kill: () => {}, cancel: async () => {}, shutdown: async () => {} };
 
 function makeSub(overrides: Partial<MonitorSub> = {}): MonitorSub {
   return {
@@ -20,9 +17,17 @@ function makeSub(overrides: Partial<MonitorSub> = {}): MonitorSub {
     persona: persona('bilal'),
     targets: [],
     buffer: [],
-    session,
+    harnessTranscriptSeen: new Map(),
+    harnessSeen: new Map(),
+    editorSeen: new Map(),
+    pageSeen: new Map(),
+    delimiter: 'test-delimiter',
+    firstPrompt: 'Watch closely',
     inFlight: false,
+    resetGeneration: 0,
     delivered: 0,
+    contextBytes: 0,
+    contextText: [],
     timer: setInterval(() => {}, 1_000_000),
     subs: [],
     ...overrides,
@@ -53,6 +58,14 @@ describe('listMonitors', () => {
   });
 });
 
+describe('monitorNames', () => {
+  it('returns only the runtime names of one owner\'s monitors', () => {
+    const mine = makeSub({ name: 'security' });
+    const theirs = makeSub({ name: 'other', owner: 'elsewhere' });
+    expect(monitorNames([mine, theirs], 'janus')).toEqual(['security']);
+  });
+});
+
 describe('monitorConnections', () => {
   it('returns an empty array when no monitors match the owner', () => {
     const sub = makeSub({ owner: 'other' });
@@ -65,52 +78,10 @@ describe('monitorConnections', () => {
     expect(row.acpRef).toEqual({ scope: 'monitor', name: 'security' });
   });
 
-  it('returns a connection row without model info', () => {
+  it('is a name-only row with no provider/model suffix', () => {
     const sub = makeSub();
     expect(monitorConnections([sub], 'janus')).toEqual([
       { text: 'monitor:bilal', kind: 'acp', acpRef: { scope: 'monitor', name: 'bilal' } },
     ]);
-  });
-
-  it('includes provider/model info when present', () => {
-    const sub = makeSub({ info: { provider: 'anthropic', model: 'sonnet' } });
-    expect(monitorConnections([sub], 'janus')).toEqual([
-      { text: 'monitor:bilal (anthropic/sonnet)', kind: 'acp', acpRef: { scope: 'monitor', name: 'bilal' } },
-    ]);
-  });
-
-  it('falls back to just the model when provider is missing', () => {
-    const sub = makeSub({ info: { model: 'sonnet' } });
-    expect(monitorConnections([sub], 'janus')).toEqual([
-      { text: 'monitor:bilal (sonnet)', kind: 'acp', acpRef: { scope: 'monitor', name: 'bilal' } },
-    ]);
-  });
-});
-
-describe('formatConnection', () => {
-  it('joins provider and model with a slash', () => {
-    expect(formatConnection({ provider: 'anthropic', model: 'sonnet' })).toBe('anthropic/sonnet');
-  });
-
-  it('omits the slash when only the model is present', () => {
-    expect(formatConnection({ model: 'sonnet' })).toBe('sonnet');
-  });
-
-  it('returns an empty string when both are absent', () => {
-    expect(formatConnection({})).toBe('');
-  });
-});
-
-describe('personaSummary', () => {
-  it('returns the first sentence including its period', () => {
-    const p = persona('bilal');
-    p.body = 'You are a security monitor. You watch for problems.';
-    expect(personaSummary(p)).toBe('You are a security monitor.');
-  });
-
-  it('falls back to the trimmed full body when there is no period', () => {
-    const p = persona('bilal');
-    p.body = 'Watch closely';
-    expect(personaSummary(p)).toBe('Watch closely');
   });
 });

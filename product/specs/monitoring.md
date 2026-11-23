@@ -1,12 +1,12 @@
 # AI Monitoring with Personas
 
-Persona-driven AI sessions that watch tab activity and surface suggestions inline or in dedicated reporting tabs. Monitors are tool-less by default; a persona may opt into a small fixed set of web tools (see Persona web tools below).
+Persona-driven AI sessions that watch tab activity and surface suggestions inline or in dedicated reporting tabs. A persona names a role on its first line, and any web access it has comes from that role's grants rather than from the persona file (see Persona web tools below).
 
 ### Starting a monitor
 
 `monitor <persona> [target...]` starts a dedicated monitoring session. Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a reporting tab named after the monitor and colored after the monitored tab. A tab target may be given by its display alias (see `rename`) as well as its underlying label, matched case-insensitively; `unmonitor`'s target argument recognizes an alias the same way.
 
-Once the monitor's ACP session connects, the owner tab's transcript shows a line naming the monitor, its connection (provider/model), and a one-sentence summary of the persona's role — before any suggestion has been produced.
+A monitor runs on the owner tab's core ACP connection under the persona's role (see [[acp]]), so it opens no session of its own to announce. The tab's connections window shows that core `acp:<role>:<provider/model>` row, and the monitor is addressed by its runtime name, which has a name-only `monitor:<name>` handle there.
 
 ### Naming a monitor
 
@@ -16,9 +16,9 @@ Names are unique per owner tab. Two monitors started from the same tab may share
 
 ### Reporting tab metadata
 
-An external-mode monitor's reporting tab carries a metadata line above its suggestion feed, styled like the file navigator's and notifications tab's headers: the monitor's name, its persona where that is a different word, the tab(s)/group(s) it monitors (e.g. `agent2, group:3`), and the total size of everything sent to and received from its dedicated ACP session so far, shown in bytes/kilobytes/megabytes. The size grows with every flush and every direct question (`monitor ask`), and resets when the session is respawned after an error, since a fresh session starts a fresh context. Dropping one of several tab targets updates the target list shown; inline monitors have no reporting tab and so show no metadata line.
+An external-mode monitor's reporting tab carries a metadata line above its suggestion feed, styled like the file navigator's and notifications tab's headers: the monitor's name, its persona where that is a different word, the tab(s)/group(s) it monitors (e.g. `agent2, group:3`), and the total size of everything sent to and received through the owner tab's core role connection on the monitor's behalf so far, shown in bytes/kilobytes/megabytes. The size grows with every flush and every direct question (`monitor ask`), and resets when the monitor's context is reset from the reporting tab, since a fresh context starts a fresh exchange. Dropping one of several tab targets updates the target list shown; inline monitors have no reporting tab and so show no metadata line.
 
-The metadata line's right-floated reset button discards the accumulated conversation on the monitor's dedicated ACP session and reloads just its persona context — the same recovery the monitor already performs automatically after a prompt error, now available on demand. When two owners share one reporting tab (two different shell and harness tabs monitored by the same persona), resetting it resets every monitor feeding that tab, not just one.
+The metadata line's right-floated reset button closes the owner tab's core ACP session for the persona's role and starts the monitor's context over: the next flush re-sends its first prompt on a fresh session, on demand. When two owners share one reporting tab (two different shell and harness tabs monitored by the same persona), resetting it resets every monitor feeding that tab, not just one.
 
 The metadata line also carries a right-floated context button that opens a point-in-time snapshot of the monitor's current context — the actual accumulated content whose size the byte counter reports — in a text tab. The snapshot is the ordered context the monitor has built up: its persona priming followed by every batched update, direct question, and reply. Each block is wrapped between a pair of markers that delineate its direction — one immediately before and one immediately after its content — whether it was sent to the model (persona priming, batched updates, direct questions) or is a response received from the model (a reply) — so the two are visually distinct rather than an undifferentiated run of text. It opens as a normal editor tab, so it scrolls with the arrow keys, Page Up/Down, and the mouse wheel. It is a snapshot, not a live view: it reflects the context as of the moment the button was clicked, and clicking again opens a fresh snapshot. When two owners share one reporting tab, the snapshot is of the monitor feeding that tab.
 
@@ -55,7 +55,7 @@ Every target's fed content — ACP response entries, harness screens, harness se
 
 ### Flush cycle
 
-New transcript entries from target tabs (including the initial historical entries) are buffered and flushed to the monitor's ACP session every 30 seconds as a single batch prompt. No prompt is sent when the buffer is empty or when a previous prompt is still streaming.
+New transcript entries from target tabs (including the initial historical entries) are buffered and flushed to the owner tab's core ACP connection under the persona's role every 30 seconds as a single batch prompt. No prompt is sent when the buffer is empty or when a previous prompt for that role is still running.
 
 ### Suggestions
 
@@ -65,22 +65,17 @@ Both summaries and suggestions are delivered the same way — either inline (pre
 
 ### Persona web tools
 
-By default a monitor can use no tools: `connectAcp`'s permission handler (`src/acp.ts`) denies every tool-permission request. A persona may opt into a fixed allowlist — currently only `web_search` and `web_fetch` — by adding an optional second config line to its file, in the same `[//]: #` comment style as the harness directive:
+A persona's first line is a role directive, `[//]: # role:<name>`, naming the role whose core ACP connection the monitor uses on its owner tab. Every shipped persona names the `ask` role. A first line that omits the directive fails to load with `Persona "<name>" has no role directive. First line must be: [//]: # role:<name>.`; one with an empty role name fails with `Persona "<name>" has a malformed role directive.`. The launcher summarizer's own reader uses the same directive and reports a missing one as `ai/personas/launcher/summarizer.md has no role directive. First line must be: [//]: # role:<name>.`.
 
-```
-[//]: # claude:Sonnet:high
-[//]: # tools: web_search, web_fetch
-```
+A named role must exist and have a usable model. An unknown one fails with `Unknown role "<role>" in persona "<name>".`, and one whose entries are empty or all disabled fails with `ACP: the <role> role lists no models.`; either failure stops the monitor before any connection is opened.
 
-The list is comma-separated, case-insensitive, and de-duplicated; an empty or absent line means no tools (unchanged from before). An unknown tool name fails the persona load with `Persona "<name>" requests unknown tool "<x>" (supported: web_search, web_fetch).`. Only these two web tools are ever grantable — no filesystem, terminal, or generic HTTP tool is routed through this mechanism.
+Web access comes from the role's `commands`, not from a line in the persona file. The default `ask` role grants `web search` and `web fetch`, so a persona naming `ask` can look things up on the web; a persona whose role grants no web commands has no web access. There is no tools line to configure in a persona file.
 
-Enforcement stays in the permission handler: a request is approved only when the requested tool classifies (`classifyTool` in `src/acp-tools.ts`) as an allowed web tool, and denied otherwise. The allowlist is authoritative only for a harness that actually asks for permission through ACP (the `claude` adapter); enabling web tools on the `opencode` harness is not yet supported.
-
-Because the opt-in lives in the persona file (a reviewable, checked-in diff, not a runtime toggle) and monitors receive full target transcripts, granting `web_fetch` is a real trust decision — a fetch-enabled persona could place transcript content into an outbound request. Keep the allowlist to the two web tools and enable them only on personas that need to look things up.
+Because monitors receive full target transcripts, the web access a role grants is a real trust decision — a persona with `web fetch` could place transcript content into an outbound request. Grant web commands only to roles whose personas need to look things up.
 
 ### Asking a monitor
 
-`monitor ask <name> <question>` sends a direct question to a running monitor's session, bypassing the batch buffer. The reply lands in the owner tab's transcript. Only one question or flush may be in flight at a time per monitor.
+`monitor ask <name> <question>` sends a direct question to a running monitor through the owner tab's core role connection, bypassing the batch buffer. The reply lands in the owner tab's transcript. Only one question or flush may be in flight at a time per monitor.
 
 ### Rating
 
@@ -88,9 +83,9 @@ Thumbs-up or thumbs-down on a reporting-tab suggestion feeds back to the monitor
 
 ### Lifecycle
 
-A monitor's session ends when `unmonitor <name>` stops it, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. Stopping releases its periodic updates and activity subscriptions as well as its session, and removes it from the active monitor list. The same owner/name combination can then be started again.
+A monitor ends when `unmonitor <name>` stops it, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. Stopping releases its periodic updates and activity subscriptions along with its accumulated context, leaves the tab's core role session alone, and removes the monitor from the active list. The same owner/name combination can then be started again.
 
-A reply or error that arrives from a session after its monitor was stopped, or after its session was replaced by a reset or an error recovery, is ignored. It restarts nothing, delivers no suggestion, reopens no reporting tab, and writes no "restarting monitor session" line, because a killed local ACP session still reports the prompt it had in flight. So stopping a monitor mid-prompt never leaves an untracked session running, and a reset during an update restarts the session once, not twice. The one exception is `monitor ask`: its late reply or error still closes the owner tab's running `monitor ask` entry with the text it would otherwise show, so the command bar is never left waiting, but the session is still not restarted.
+A reply or error that arrives after its monitor was stopped, or after a reset began a fresh context, is ignored. It restarts nothing, delivers no suggestion, reopens no reporting tab, and writes no `monitor <persona>: … — restarting monitor session` line. Stopping a monitor mid-prompt leaves the tab's core role session alone for any other consumer; it never leaves an untracked monitor process running, and a reset during an update starts the context over once, not twice. The one exception is `monitor ask`: its late reply or error still closes the owner tab's running `monitor ask` entry with the text it would otherwise show, so the command bar is never left waiting, but nothing is restarted.
 
 Removing one target from an external monitor keeps its remaining targets active and updates the reporting tab's target list without resetting its accumulated context size. A target that matches none of the monitor's targets leaves it running unchanged. Removing the final target stops the monitor.
 

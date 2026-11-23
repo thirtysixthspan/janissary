@@ -25,12 +25,9 @@ export function openAcpTranscript(managers: Managers, acpRef: AcpRef): void {
   if (acpRef.scope === 'tab') {
     name = `acp:${acpRef.label}`;
     text = transcriptText(managers.tab.byLabel(acpRef.label)?.log ?? []);
-  } else if (acpRef.scope === 'monitor') {
+  } else {
     name = `monitor:${acpRef.name}`;
     text = managers.monitor.transcript(acpRef.name);
-  } else {
-    name = acpRef.persona;
-    text = managers.editorAcp.transcript(acpRef.label, acpRef.persona);
   }
   const file = writeCaptureFile(name, Date.now(), text.length === 0 ? 'No transcript yet.' : text);
   managers.openFile.edit(`transcript ${name}`, file, managers.tab.cur().label);

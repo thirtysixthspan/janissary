@@ -591,6 +591,46 @@ describe('AcpManager role sessions', () => {
     expect(acp.has('tab1')).toBe(false);
   });
 
+  it('runs a custom role with its own entries and keys its state by the custom name', () => {
+    const roleSettings = vi.fn((_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'review-bot' ? CLAUDE : GEMINI], commands: [],
+    }));
+    const { acp, managers } = setup([], roleSettings);
+    mocks.connectAcp.mockImplementation(() => makeSession());
+
+    const started = acp.start('tab1', undefined, 'review-bot');
+    expect(started.model).toBe(CLAUDE.model);
+    expect(roleSettings).toHaveBeenCalledWith('/project', 'review-bot');
+
+    acp.run('tab1', 'review-bot   summarize the diff', undefined, 'review-bot');
+    expect(mocks.runAcpToolLoop.mock.calls[0][1]).toBe('summarize the diff');
+    expect(managers.tab.byLabel('tab1')?.runtime?.acpRoles?.['review-bot']?.prompt).toBeDefined();
+
+    const duplicate = vi.fn();
+    acp.run('tab1', 'review-bot again', duplicate, 'review-bot');
+    expect(duplicate).toHaveBeenCalledWith({ answered: false, error: 'ACP: a prompt is already running.' });
+    expect(managers.tab.byLabel('tab1')?.runtime?.acpRoles?.['ask']).toBeUndefined();
+  });
+
+  it('strips a custom role prefix only at a word boundary without interpolating the role', () => {
+    const { acp } = setup([], (_root, role) => ({ name: role, entries: [GEMINI], commands: [] }));
+
+    acp.run('tab1', 'review-bot-summarize', undefined, 'review-bot');
+    expect(mocks.runAcpToolLoop.mock.calls[0][1]).toBe('review-bot-summarize');
+
+    acp.run('tab1', 'c++ help', undefined, 'c++');
+    expect(mocks.runAcpToolLoop.mock.calls[1][1]).toBe('help');
+  });
+
+  it('reports usage with the custom role name when no prompt follows it', () => {
+    const { acp, append } = setup([], (_root, role) => ({ name: role, entries: [GEMINI], commands: [] }));
+
+    acp.run('tab1', 'review-bot', undefined, 'review-bot');
+
+    expect(append).toHaveBeenCalledWith('tab1', { input: 'review-bot', output: 'Usage: review-bot <prompt>.' });
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
+  });
+
   it('cancels only the selected role and keeps the tab busy until the other role settles', async () => {
     const roleSettings = (_root: string, role: AcpRole) => ({
       name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
@@ -650,6 +690,36 @@ describe('AcpManager role sessions', () => {
     }
   });
 
+  it('closes a custom-role session along with the built-in roles when the tab closes', () => {
+    const roleSettings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'review-bot' ? CLAUDE : GEMINI], commands: [],
+    });
+    const { acp } = setup([], roleSettings);
+    const askSession = makeSession();
+    const tellSession = makeSession();
+    const customSession = makeSession();
+    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession).mockReturnValueOnce(customSession);
+
+    const ask = acp.start('tab1');
+    const tell = acp.start('tab1', undefined, 'tell');
+    const custom = acp.start('tab1', undefined, 'review-bot');
+    expect(acp.sessionIdentity('tab1')).toBe(ask.session);
+    expect(acp.sessionIdentity('tab1', 'tell')).toBe(tell.session);
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBe(custom.session);
+
+    acp.closeTab('tab1');
+
+    expect(acp.sessionIdentity('tab1')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'tell')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBeUndefined();
+    expect(acp.has('tab1')).toBe(false);
+    expect(acp.has('tab1', 'tell')).toBe(false);
+    expect(acp.has('tab1', 'review-bot')).toBe(false);
+    expect(askSession.kill).toHaveBeenCalledOnce();
+    expect(tellSession.kill).toHaveBeenCalledOnce();
+    expect(customSession.kill).toHaveBeenCalledOnce();
+  });
+
   it('closes every role session with closeAll', () => {
     const roleSettings = (_root: string, role: AcpRole) => ({
       name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
@@ -657,21 +727,27 @@ describe('AcpManager role sessions', () => {
     const { acp } = setup([], roleSettings);
     const askSession = makeSession();
     const tellSession = makeSession();
-    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession);
+    const customSession = makeSession();
+    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession).mockReturnValueOnce(customSession);
 
     const ask = acp.start('tab1');
     const tell = acp.start('tab1', undefined, 'tell');
+    const custom = acp.start('tab1', undefined, 'review-bot');
     expect(acp.sessionIdentity('tab1')).toBe(ask.session);
     expect(acp.sessionIdentity('tab1', 'tell')).toBe(tell.session);
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBe(custom.session);
 
     acp.closeAll();
 
     expect(acp.sessionIdentity('tab1')).toBeUndefined();
     expect(acp.sessionIdentity('tab1', 'tell')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBeUndefined();
     expect(acp.has('tab1')).toBe(false);
     expect(acp.has('tab1', 'tell')).toBe(false);
+    expect(acp.has('tab1', 'review-bot')).toBe(false);
     expect(askSession.kill).toHaveBeenCalledOnce();
     expect(tellSession.kill).toHaveBeenCalledOnce();
+    expect(customSession.kill).toHaveBeenCalledOnce();
   });
 
   it('closes only the session whose model failed', () => {

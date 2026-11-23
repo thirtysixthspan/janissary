@@ -17,7 +17,6 @@ import { ConnectionManager } from '../connection/manager.js';
 import { OpenFileManager } from '../open/file-manager.js';
 import { FileNavigatorManager } from '../file-navigator/manager.js';
 import { EditorWatchManager } from '../editor/watch-manager.js';
-import { EditorAcpManager } from '../editor/acp-manager.js';
 import { BrowserManager } from '../browser/tab.js';
 import { CommandManager } from '../command/manager.js';
 import { MonitorManager } from '../monitor/manager.js';
@@ -79,7 +78,6 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.openFile = new OpenFileManager(managers);
   managers.fileNavigator = new FileNavigatorManager(managers);
   managers.editorWatch = new EditorWatchManager(managers);
-  managers.editorAcp = new EditorAcpManager(managers);
   managers.pty = new PseudoterminalManager(managers);
   managers.systemShell = new SystemShellManager(managers);
   managers.schedule = new ScheduleManager(managers);

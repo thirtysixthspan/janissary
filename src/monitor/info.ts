@@ -1,7 +1,5 @@
 import type { ConnectionView } from '../protocol.js';
 import type { MonitorSub } from './live-monitors.js';
-import type { Persona } from '../personas.js';
-import type { AcpInfo } from '../acp/types.js';
 import { formatTargets } from './targets.js';
 
 // Read-only projections of the live monitor registry: the `monitors` command listing
@@ -25,25 +23,11 @@ export function monitorNames(monitors: Iterable<MonitorSub>, owner: string): str
   return [...monitors].filter((reg) => reg.owner === owner).map((reg) => reg.name);
 }
 
-// Joins provider and model into a single "provider/model" label, dropping whichever is absent.
-export function formatConnection(info: AcpInfo): string {
-  return [info.provider, info.model].filter(Boolean).join('/');
-}
-
-// A persona's body opens with a single declarative sentence (e.g. "You are a security
-// monitor."); take up to its first period as a concise one-sentence summary.
-export function personaSummary(persona: Persona): string {
-  const period = persona.body.indexOf('.');
-  return period === -1 ? persona.body.trim() : persona.body.slice(0, period + 1);
-}
-
-// Rows for a tab's monitors (e.g. `monitor:security (opencode/…)`). The text names the same runtime
-// name the `acpRef` beside it carries, so the row and the thing it addresses cannot disagree.
+// Name-only handle rows for a tab's monitors (e.g. `monitor:security`). The model now belongs to
+// the tab's core role row, so no provider/model suffix is shown here; the row and its `acpRef`
+// still name the same runtime monitor so `connections close monitor:<name>` stops it.
 export function monitorConnections(monitors: Iterable<MonitorSub>, owner: string): ConnectionView[] {
   return [...monitors]
     .filter((reg) => reg.owner === owner)
-    .map((reg) => {
-      const info = reg.info ? ` (${formatConnection(reg.info)})` : '';
-      return { text: `monitor:${reg.name}${info}`, kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: reg.name } };
-    });
+    .map((reg) => ({ text: `monitor:${reg.name}`, kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: reg.name } }));
 }

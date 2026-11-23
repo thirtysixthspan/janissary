@@ -1418,7 +1418,7 @@ describe('ShellTab', () => {
 
   it.each([
     { label: 'missing', result: undefined },
-    { label: 'malformed', result: { replyId: 'bad', role: 'unknown', name: 'acp:ask:shell1' } },
+    { label: 'malformed', result: { replyId: 'bad', role: '', name: 'acp:ask:shell1' } },
     { label: 'malformed record', result: { replyId: 'bad', kind: 'record', name: 'subagent:research' } },
   ])('does not mark a core response with a $label receipt', async ({ result }) => {
     const { releaseDispatch } = renderTab({ dispatched: true, coreResponse: true, result });
@@ -2194,7 +2194,7 @@ describe('ShellTab', () => {
       await act(async () => { releaseDispatch(); });
     }
 
-    chords.run('ctrl+r', 'shell1');
+    act(() => { chords.run('ctrl+r', 'shell1'); });
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
     // The popup puts the newest line at the bottom, like the application picker, so Up moves older.
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
@@ -2206,6 +2206,9 @@ describe('ShellTab', () => {
       expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('second');
     });
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    await waitFor(() => {
+      expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('first');
+    });
     fireEvent.keyDown(bar(), { key: 'Enter' });
 
     await waitFor(() => { expect(bar().value).toBe('first'); });

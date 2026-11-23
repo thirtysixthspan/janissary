@@ -17,7 +17,7 @@ type Settlement =
   | { kind: 'link'; record: ReplyRecord }
   | { kind: 'none' };
 
-type RoleReceipt = Extract<ShellAcpReceipt, { role: 'ask' | 'tell' }>;
+type RoleReceipt = Extract<ShellAcpReceipt, { role: string }>;
 
 type MarkerTarget = { role: RoleReceipt['role'] } | { recordId: string };
 

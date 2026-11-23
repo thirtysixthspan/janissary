@@ -27,7 +27,6 @@ function fixture() {
       ? role === 'tell' ? 'tell-model' : 'same-session-name'
       : null) },
     monitor: { connectionsFor: vi.fn((label: string) => label === 'first' ? [{ text: 'monitor session', kind: 'acp', acpRef: { scope: 'monitor', name: 'monitor-1' } }] : []) },
-    editorAcp: { connectionsFor: vi.fn((label: string) => label === 'second' ? [{ text: 'persona session', kind: 'acp', acpRef: { scope: 'editor', label: 'second', persona: 'reviewer' } }] : []) },
     browser: { info: vi.fn(() => null) },
     pty: { terminalsFor: vi.fn((label: string) => label === 'first' ? ['term-a'] : []) },
     database: {
@@ -49,7 +48,6 @@ describe('connections topic rows', () => {
 
     expect(data.rows.map((row) => [row.type, row.id, row.orderingTimestamp])).toEqual([
       ['record', 'core-record', 400],
-      ['live', 'reviewer', 300],
       ['live', 'shared-db', 300],
       ['live', 'monitor-1', 100],
       ['live', 'tell:tell-model', 100],
@@ -88,7 +86,7 @@ describe('connections topic rows', () => {
     tabs[1]!.runtime!.lastActivity = 1000;
     const result = composeConnectionsTopicData(managers, new Map()).rows;
     expect(result.filter((row) => row.orderingTimestamp === 1000).map((row) => `${row.kind}:${row.id}`))
-      .toEqual(['acp:monitor-1', 'acp:reviewer', 'acp:tell:tell-model', 'sqlite:shared-db', 'terminal:term-a']);
+      .toEqual(['acp:monitor-1', 'acp:tell:tell-model', 'sqlite:shared-db', 'terminal:term-a']);
   });
 
   it('suppresses a live row only with its own role slot record id', () => {
@@ -191,7 +189,6 @@ describe('connections topic rows', () => {
     const rows = composeConnectionsTopicData(managers, new Map()).rows;
     const hostOf = (id: string) => rows.find((row) => row.id === id)?.host;
 
-    expect(hostOf('reviewer')).toBe('devbox');
     expect(rows.find((row) => row.kind === 'ssh' && row.ownerLabel === 'second')?.host).toBe('devbox');
     expect(rows.find((row) => row.kind === 'ssh' && row.ownerLabel === 'ssh-tab')?.host).toBe('jump-host');
     expect(hostOf('monitor-1')).toBe('Local');
@@ -237,7 +234,6 @@ describe('connections topic rows', () => {
 
     expect(rows.map((row) => [row.id, row.status, row.orderingTimestamp])).toEqual([
       ['core-record', 'Running', 400],
-      ['reviewer', 'Open', 300],
       ['shared-db', 'Open', 300],
       ['monitor-1', 'Open', 100],
       ['tell:tell-model', 'Open', 100],

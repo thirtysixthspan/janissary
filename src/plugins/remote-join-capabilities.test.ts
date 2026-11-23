@@ -50,7 +50,7 @@ function setup(): Setup {
     remote,
     workspace: { release: vi.fn(), cancel: vi.fn() },
     shell: noop, acp: noop, browser: noop, pty: noop, harness: noop, terminalRuntime: noop, shellTranscript: noop,
-    fileNavigator: noop, editorWatch: noop, editorAcp: noop, schedule: noop, questions: noop,
+    fileNavigator: noop, editorWatch: noop, schedule: noop, questions: noop,
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     communication: noop, command: noop,
   } as unknown as Managers;

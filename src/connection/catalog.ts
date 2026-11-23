@@ -1,9 +1,11 @@
+import { homedir } from 'node:os';
 import { SHELL_NAME } from '../shell/manager.js';
 import type { AcpRef, ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import type { ConnectionKind } from './types.js';
 import { ACP_ROLES } from '../acp/role.js';
+import { readRolesFile } from '../plugins/roles/roles-file.js';
 
 // One open connection as every connection surface sees it. `id` is exactly what
 // `connections close <kind>:<id>` accepts; `display` is the connections-panel text; `scope` is
@@ -18,16 +20,19 @@ export type ConnectionEntry = {
   acpRef?: AcpRef;
 };
 
-// A monitor's close id is its runtime name, an editor persona's its persona name.
+// A monitor's close id is its runtime name.
 function acpId(ref: AcpRef): string {
   if (ref.scope === 'monitor') return ref.name;
-  if (ref.scope === 'editor') return ref.persona;
   return `${ref.role}:${ref.label}`;
 }
 
 function acpEntries(managers: Managers, label: string): ConnectionEntry[] {
   const entries: ConnectionEntry[] = [];
-  for (const role of ACP_ROLES) {
+  const root = managers.tab.launchDir;
+  const roles = new Set(root
+    ? [...readRolesFile(homedir(), root, { create: false }).roles.map((role) => role.name), ...ACP_ROLES]
+    : ACP_ROLES);
+  for (const role of roles) {
     // Only a session whose handshake has named it is listed — the panel has always waited for that.
     const model = managers.acp.label(label, role);
     if (model) entries.push({
@@ -35,7 +40,7 @@ function acpEntries(managers: Managers, label: string): ConnectionEntry[] {
       acpRef: { scope: 'tab', label, role },
     });
   }
-  const rows: ConnectionView[] = [...managers.monitor.connectionsFor(label), ...managers.editorAcp.connectionsFor(label)];
+  const rows: ConnectionView[] = managers.monitor.connectionsFor(label);
   for (const row of rows) {
     if (row.acpRef) entries.push({ kind: 'acp', id: acpId(row.acpRef), display: row.text, scope: 'tab', acpRef: row.acpRef });
   }

@@ -1,17 +1,28 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterAll, describe, it, expect, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { closeConnection } from './close.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
+
+const ROOT = mkdtempSync(path.join(tmpdir(), 'janus-close-'));
+mkdirSync(path.join(ROOT, '.janissary'), { recursive: true });
+writeFileSync(path.join(ROOT, '.janissary', 'roles.json'), JSON.stringify({
+  ask: { description: 'Questions.', entries: [] },
+  tell: { description: 'Tasks.', entries: [] },
+  'review-bot': { description: 'Reviews.', entries: [{ harness: 'opencode', model: 'opencode/review' }] },
+}));
+afterAll(() => { rmSync(ROOT, { recursive: true, force: true }); });
 
 function makeManagers(overrides: Partial<Managers> = {}): Managers {
   return {
     database: { close: vi.fn(() => false) },
     shell: { close: vi.fn(() => false) },
     acp: { close: vi.fn(() => false), label: vi.fn(() => { /* no named session */ }) },
-    editorAcp: { close: vi.fn(() => false) },
     monitor: { stop: vi.fn(() => false) },
     pty: { kill: vi.fn(), killTerminal: vi.fn(() => false) },
-    tab: { tabs: [] },
+    tab: { tabs: [], launchDir: ROOT },
     ...overrides,
   } as unknown as Managers;
 }
@@ -97,26 +108,12 @@ describe('closeConnection', () => {
     expect(out).toHaveBeenCalledWith('Closed connection acp:security.');
   });
 
-  it('closes an editor tab\'s persona connection without touching the interactive session', () => {
-    const editorAcpClose = vi.fn(() => true);
-    const acpClose = vi.fn(() => true);
-    const managers = makeManagers({ editorAcp: { close: editorAcpClose }, acp: { close: acpClose } } as unknown as Partial<Managers>);
-    const out = vi.fn();
-
-    closeConnection('acp', 'reviewer', managers, 'notes', out);
-
-    expect(editorAcpClose).toHaveBeenCalledWith('notes', 'reviewer');
-    expect(acpClose).not.toHaveBeenCalled();
-    expect(out).toHaveBeenCalledWith('Closed connection acp:reviewer.');
-  });
-
-  it('falls back to the interactive session close when no editor persona or monitor matches', () => {
+  it('falls back to the interactive session close when no monitor matches', () => {
     const managers = makeManagers({ acp: { close: vi.fn(() => true), label: vi.fn(() => 'opencode/big-pickle') } } as unknown as Partial<Managers>);
     const out = vi.fn();
 
     closeConnection('acp', 'opencode/big-pickle', managers, 'main', out);
 
-    expect(managers.editorAcp.close).toHaveBeenCalledWith('main', 'opencode/big-pickle');
     expect(managers.monitor.stop).toHaveBeenCalledWith('main', 'opencode/big-pickle');
     expect(managers.acp.close).toHaveBeenCalledWith('main', undefined, 'ask');
     expect(out).toHaveBeenCalledWith('Closed connection acp:ask:opencode/big-pickle.');
@@ -151,6 +148,19 @@ describe('closeConnection', () => {
     expect(close.mock.calls[1]?.[0]).toBe('main');
     expect(close.mock.calls[1]?.[2]).toBe('ask');
     expect(askOut).toHaveBeenCalledWith('Closed connection acp:ask:provider/model.');
+  });
+
+  it('closes a custom role session addressed by acp:<role>:<model>', () => {
+    const close = vi.fn((_label: string, _output?: unknown, role?: string) => role === 'review-bot');
+    const label = vi.fn((_owner: string, role = 'ask') => role === 'review-bot' ? 'opencode/review' : undefined);
+    const managers = makeManagers({ acp: { close, label } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'review-bot:opencode/review', managers, 'main', out);
+
+    expect(label).toHaveBeenCalledWith('main', 'review-bot');
+    expect(close.mock.calls[0]?.[2]).toBe('review-bot');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:review-bot:opencode/review.');
   });
 
   it('keeps every unrecognized id on the ask fallback and preserves the entered id on failure', () => {

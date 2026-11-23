@@ -13,7 +13,6 @@ const EDITOR_CASES: Array<[keyof typeof EDITOR_PARAMS, Record<string, unknown>, 
     { url: '/open/1', persona: 'critic', content: 'x' },
     { url: '/open/1', persona: 7, content: 'x', prompt: 'y' },
   ]],
-  ['closeEditorConnection', { url: '/open/1', persona: 'critic' }, [{ url: '/open/1' }]],
   ['editorPluginFailed', { url: '/open/1', plugin: 'vim', reason: 'boom' }, [
     { url: '/open/1', plugin: 'vim' },
     { url: '/open/1', plugin: 'vim', reason: {} },

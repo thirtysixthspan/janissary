@@ -38,75 +38,22 @@ describe('useEditorConnections', () => {
     expect(typeof button.onClick).toBe('function');
   });
 
-  it('closeRow strips the " (acp)" suffix and sends closeEditorConnection with the tab\'s url', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
-    const tab = makeTab();
-    const { result } = renderHook(() => useEditorConnections(client, tab));
-
-    result.current.closeRow({
-      text: 'reviewer (acp)', kind: 'acp',
-      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
-    });
-
-    expect(client.send).toHaveBeenCalledWith({
-      method: 'closeEditorConnection',
-      params: { url: '/open/1', persona: 'reviewer' },
-    });
-  });
-
-  // There is no connection to close without the editor payload that names the file, so a tab missing
-  // it is left alone rather than dereferenced — the row simply does nothing.
-  it('closeRow does nothing for a tab carrying no editor payload', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
-    const { editor, ...withoutEditor } = makeTab();
-    expect(editor).toBeDefined();
-    const { result } = renderHook(() => useEditorConnections(client, withoutEditor as TabView));
-
-    result.current.closeRow({
-      text: 'reviewer (acp)', kind: 'acp',
-      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
-    });
-
-    expect(client.send).not.toHaveBeenCalled();
-  });
-
-  it('closeRow sends a persona with no acp suffix unchanged', () => {
+  it('exposes no per-row close control; core rows are dismissed through the generic close path', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useEditorConnections(client, makeTab()));
 
-    result.current.closeRow({
-      text: 'reviewer', kind: 'shell',
-      acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
-    });
-
-    expect(client.send).toHaveBeenCalledWith({
-      method: 'closeEditorConnection',
-      params: { url: '/open/1', persona: 'reviewer' },
-    });
+    expect(Object.keys(result.current)).not.toContain('closeRow');
   });
 
-  it.each([
-    ['a record-id agent row', { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' }],
-    ['a monitor-scoped row', { text: 'watch (acp)', kind: 'acp' as const, acpRef: { scope: 'monitor' as const, name: 'watch' } }],
-    ['a tab-scoped row', { text: 'acp:tell:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'notes', role: 'tell' as const } }],
-  ])('closeRow refuses %s instead of sending a persona close', (_case, row) => {
+  it('openAcpTranscript addresses the core connection by its own reference', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useEditorConnections(client, makeTab()));
 
-    result.current.closeRow(row);
-
-    expect(client.send).not.toHaveBeenCalled();
-  });
-
-  it('openAcpTranscript addresses the agent connection by its own reference', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
-
-    result.current.openAcpTranscript({ scope: 'editor', label: 'notes', persona: 'reviewer' });
+    result.current.openAcpTranscript({ scope: 'tab', label: 'notes', role: 'ask' });
 
     expect(client.send).toHaveBeenCalledWith({
       method: 'openAcpTranscript',
-      params: { acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } },
+      params: { acpRef: { scope: 'tab', label: 'notes', role: 'ask' } },
     });
   });
 
@@ -127,7 +74,6 @@ describe('useEditorConnections', () => {
 
   it.each([
     ['monitor', { scope: 'monitor' as const, name: 'watch' }],
-    ['editor', { scope: 'editor' as const, label: 'notes', persona: 'reviewer' }],
     ['another tab', { scope: 'tab' as const, label: 'other', role: 'ask' as const }],
   ])('openRow leaves a %s reference snapshot-only', (_case, acpRef) => {
     const client = { send: vi.fn() } as unknown as JanusClient;

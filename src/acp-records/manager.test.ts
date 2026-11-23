@@ -75,7 +75,7 @@ describe('AcpSessionRecords transitions', () => {
   });
 
   it.each([null, [], {}, { ...core, model: '' }, { ...core, ownerLabel: ' ' }, { ...core, ownerName: '' },
-    { ...core, role: 'reader' }, { ...agent, runId: '' }, { ...agent, taskPath: '' }, { ...core, kind: 'unknown' }])('rejects invalid source %j without side effects', (source) => {
+    { ...core, role: ' ' }, { ...agent, runId: '' }, { ...agent, taskPath: '' }, { ...core, kind: 'unknown' }])('rejects invalid source %j without side effects', (source) => {
     const records = create();
     expect(() => records.begin(source as AcpRecordSource)).toThrow('Invalid ACP record source.');
     expect(records.rows()).toEqual([]);

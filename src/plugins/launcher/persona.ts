@@ -16,17 +16,16 @@ const SHIPPED_PERSONA = path.join(import.meta.dirname, '..', '..', '..', 'ai/per
 // It is read here rather than through `src/personas.ts` because that is a host internal a plugin
 // cannot import.
 //
-// Only the body is used. A persona file's first line is a harness directive naming the subprocess a
-// persona normally spawns, and the summarizer spawns none — it runs through the launcher tab's own core
-// ACP connection, whose model is the tab's own. So the directive is not sent: it would be a claim about
-// a process this session never starts.
+// Only the body is used. A persona file's first line is a role directive naming the role a persona
+// normally launches; the summarizer opens no connection of its own — it runs through the launcher
+// tab's core ACP connection — so the role is validated but never used here.
 export function readPersonaBody(root: string): string {
   const own = path.join(root, 'ai/personas/launcher/summarizer.md');
   const file = existsSync(own) ? own : SHIPPED_PERSONA;
   const lines = readFileSync(file, 'utf8').split('\n');
-  const directive = lines[0] ?? '';
-  if (!directive.trim().startsWith('[//]: # ')) {
-    throw new Error(`ai/personas/launcher/summarizer.md has no harness directive. First line must be: [//]: # <harness>:<model>:<variant>.`);
+  const directive = (lines[0] ?? '').trim();
+  if (!directive.startsWith('[//]: # role:') || !directive.slice('[//]: # role:'.length).trim()) {
+    throw new Error(`ai/personas/launcher/summarizer.md has no role directive. First line must be: [//]: # role:<name>.`);
   }
   return lines.slice(1).join('\n').trim();
 }

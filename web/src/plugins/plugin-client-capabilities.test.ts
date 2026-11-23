@@ -54,11 +54,10 @@ describe('openConnection capability', () => {
     });
   });
 
-  it('leaves monitor, editor, and other-tab references snapshot-only', () => {
+  it('leaves monitor and other-tab references snapshot-only', () => {
     const { capabilities, send } = setup();
 
     capabilities.openConnection?.({ text: 'monitor', kind: 'acp', acpRef: { scope: 'monitor', name: 'watch' } });
-    capabilities.openConnection?.({ text: 'reviewer', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } });
     capabilities.openConnection?.({ text: 'acp:other', kind: 'acp', acpRef: { scope: 'tab', label: 'other', role: 'ask' } });
 
     expect(send).not.toHaveBeenCalled();

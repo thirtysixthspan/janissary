@@ -220,8 +220,10 @@ trims to are dropped as well. An empty object is a valid file holding zero roles
 
 ## ACP role behavior
 
-The core ACP sessions behind `ask` and `tell` read roles. Each command reads its matching role's
-model entries and command grants fresh for each prompt, never creating a file (see [[acp]]). When
+Core ACP sessions read roles for any role in the file, not just `ask` and `tell`: a persona names its
+role on its first line with `[//]: # role:<name>`, and its editor query or monitor then runs on that
+role's core session (see [[monitoring]]). Each prompt reads the role's model entries and command
+grants fresh, never creating a file (see [[acp]]). When
 the matching role does not exist in the file in effect, its built-in entries and grants apply. When
 an existing role has no entries, its model entries fall back to the built-in defaults while its own
 grants stay in effect; an empty or missing `commands` list grants no tools. A nonempty model list
@@ -229,7 +231,10 @@ whose entries are all disabled does not fall back to the built-in models. No lau
 flag, or agent consults a role description. Other consumers read `roles.json` itself. Entries carry
 harness, model, and effort; `commands` contains native ACP grants.
 Role connections deny all of their harness's internal tools, so a role grants only native commands:
-the agent can run the granted commands that are enabled for agents and nothing else.
+the agent can run the granted commands that are enabled for agents and nothing else. A persona's
+`commands` are likewise the source of its web tools: the default `ask` role grants `web search` and
+`web fetch`, so a persona naming `ask` can look things up, and a persona whose role grants no web
+commands has none. There is no tools line in a persona file.
 Keyboard reordering is not provided — adding and removing entries and roles are pointer-free, but
 order rides the drag.
 

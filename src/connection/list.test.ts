@@ -10,7 +10,6 @@ function makeManagers(tabs: Tab[], terminals: string[] = []): Managers {
     shell: { has: vi.fn(() => false) },
     acp: { has: vi.fn(() => false), label: vi.fn() },
     monitor: { connectionsFor: vi.fn(() => []) },
-    editorAcp: { connectionsFor: vi.fn(() => []) },
     browser: { info: vi.fn() },
     pty: { terminalsFor: vi.fn(() => terminals) },
     database: { listOpen: vi.fn(() => []), openDbs: vi.fn(() => []) },
@@ -80,7 +79,6 @@ describe('connections list and completion names', () => {
       label: vi.fn((_label: string, role = 'ask') => role === 'tell' ? 'opencode/tell' : 'anthropic/claude-sonnet'),
     });
     Object.assign(managers.monitor, { connectionsFor: vi.fn(() => [{ text: 'monitor:security (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'security' } }]) });
-    Object.assign(managers.editorAcp, { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } }]) });
     return managers;
   }
 
@@ -93,10 +91,10 @@ describe('connections list and completion names', () => {
     expect(listCompletionConnections(managers, 'main')).toContain('acp:tell:opencode/tell');
   });
 
-  it('lists and completes the monitor and persona connections the panel shows', () => {
+  it('lists and completes the monitor connection the panel shows', () => {
     const managers = populated();
-    expect(listLines(managers, 'main')).toEqual(expect.arrayContaining(['acp:security', 'acp:reviewer']));
-    expect(listCompletionConnections(managers, 'main')).toEqual(expect.arrayContaining(['acp:security', 'acp:reviewer']));
+    expect(listLines(managers, 'main')).toEqual(expect.arrayContaining(['acp:security']));
+    expect(listCompletionConnections(managers, 'main')).toEqual(expect.arrayContaining(['acp:security']));
   });
 
   it('completes the terminal connections the list shows', () => {
