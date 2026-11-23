@@ -9,7 +9,7 @@ monitor security bilal
 monitor activity group:2
 ```
 
-Monitors are tool-less by default and receive no filesystem or terminal access. See Persona web tools below for the one narrow exception.
+A monitor runs under the role named on the first line of its persona file, and that role's granted commands decide what the persona can do. See [Persona web tools](#persona-web-tools) for how web access works.
 
 This periodic monitor is separate from the autonomous-agent monitor view, where agent messages render as Markdown. See [Read formatted Markdown in the transcript](/user-documentation/advanced-agents/markdown-rendering#read-autonomous-agent-activity).
 
@@ -82,14 +82,19 @@ Only one direct question or scheduled flush can be in flight for a monitor at a 
 
 ## Persona web tools
 
-A monitor has no tools by default. A persona file can opt into `web_search` and `web_fetch` with a second directive line:
+A persona file's first line names the role whose core connection the monitor uses:
 
 ```
-[//]: # claude:Sonnet:high
-[//]: # tools: web_search, web_fetch
+[//]: # role:ask
 ```
 
-These are the only tools a persona can request. Both `claude` and `opencode` persona adapters are supported. The app grants an opted-in web tool only when the ACP session requests permission for it; it denies other tools, including filesystem and terminal access. A persona naming an unsupported tool fails to load with `Persona "<name>" requests unknown tool "<x>" (supported: web_search, web_fetch).`.
+The rest of the file is the persona's instructions. A first line without that directive fails to load with `Persona "<name>" has no role directive. First line must be: [//]: # role:<name>.`; an empty role name fails with `Persona "<name>" has a malformed role directive.`
+
+The role must exist in your roles file and have at least one enabled model. An unknown role fails with `Unknown role "<role>" in persona "<name>".`, and a role with no enabled models fails with `ACP: the <role> role lists no models.` Either failure stops the monitor before it opens a connection.
+
+Web access comes from the role's granted commands, not from the persona file. The default `ask` role grants `web search` and `web fetch`, so a persona naming `ask` can look things up; a role that grants neither gives its personas no web access. There is no tools directive. A second directive-looking line such as `[//]: # tools: web_search, web_fetch` is read as part of the persona's instructions, not as configuration.
+
+Web access is a trust decision. A persona with `web fetch` can put content from a monitored tab into an outbound request, so grant web commands only to roles whose personas need them. Monitored content is always treated as data, as described in [What a monitor sees](#what-a-monitor-sees).
 
 ## Stopping a monitor
 
