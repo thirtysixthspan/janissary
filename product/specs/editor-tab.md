@@ -46,7 +46,7 @@ up/down, etc.) are not.
   reveal-in-file-navigator icon, the sync-status icon when present, save, commit to origin,
   connections status, and Split when available. The save button is enabled when the buffer has
   unsaved changes and disabled and dimmed when the buffer is clean. The connections-status button
-  opens the tab's connections window (see [[connection]]) and is dimmed and inert when no persona
+  opens the tab's connections window (see [[connection]]) and is dimmed and inert when no
   connection is open.
 
 ### Revealing in the file navigator
