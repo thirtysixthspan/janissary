@@ -4,8 +4,6 @@
 
 ## development
 
-* editor-tab (5/10) — 17 of 18 facts are correct and 1 is wrong. The "Multi-turn context" section of `documentation/user-documentation/tab-types/editor-persona-query.md` claims the first request to a persona opens a connection that stays open for the tab's life, that different personas open separate connections, and that a dying agent produces `reviewer: ACP agent exited.`; none of that ships. Editor persona queries run on the tab's core ACP session under the persona's role, with no per-persona connection rows and no persona-specific exit notification, and failures surface as `<persona>: <message>` notifications. Rewrite that section and check the connection phrasing in the page intro; no help-page change is needed. Evidence: `product/specs/editor-tab.md`, `src/editor-suggest/handler.ts`, `product/plans/complete/ai-personas.md`, `documentation/user-documentation/tab-types/editor-persona-query.md`.
-
 * hosts-tab (5/10) — 12 of 18 facts are correct, 5 missing and 1 wrong. `help/hosts.md` omits the no-match remove reply `No host named "<name>".`, case-insensitive verb matching, the exact `Usage: hosts add <name> <[user@]host[:port]> [path]` and `Usage: hosts remove <name>` strings, the list's Up/Down (no wrap), Home/End and Escape behavior, and the empty state `No saved hosts` with Refresh, New host and Split still available. The `hosts` row in `help/commands.md` wrongly claims `hosts <name> <[user@]host[:port]> [path]` saves a host, while shipped parsing treats the name as an unknown verb and refuses it; the real form is the separate `hosts add` row. Add the missing facts to `help/hosts.md` and fix that row. Evidence: `product/specs/hosts-tab.md`, `src/plugins/hosts/catalog-commands.ts`, `src/plugins/hosts/hosts-values.ts`, `web/src/plugins/hosts/HostList.tsx`, `help/hosts.md`, `help/commands.md`.
 
 * tab-completion (4/10) — 16 of 18 facts are correct and 2 missing, with no stale facts. Saved-host name completion is documented nowhere: Tab completes names from `hosts.json` at the `ssh` destination, after `hosts remove`, and after `on` in `shell`/`harness`/`agent`, case-insensitively with shared-prefix insertion and a personal-catalog fallback (`src/completion/hosts.ts`). The "After `file`" row of `documentation/user-documentation/command-bar/tab-completion.md` lists only `glob`, `grep` and `read`, but `src/completion/file-read.ts` shows `list`, `ls`, `stat`, `exists`, `head` and `tail` are also candidates; `head`/`tail` skip path completion after `-n` and the flag itself is never offered. Add both to that page and note them in the Tab row of `help/keys.md`. Evidence: `product/specs/tab-completion.md`, `src/completion/hosts.ts`, `src/completion/file-read.ts`, `documentation/user-documentation/command-bar/tab-completion.md`.
@@ -40,6 +38,7 @@
 
 ## resolved
 
+* editor-tab — documented in documentation/user-documentation/tab-types/editor-persona-query.md (removed 2026-11-23)
 * acp — documented in help/tell.md, help/ask.md, help/roles.md, documentation/user-documentation/advanced-agents/acp-agent.md, documentation/user-documentation/tab-types/roles.md (removed 2026-11-23)
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-11-23)
 * web-search — documented in help/web.md (removed 2026-11-23)

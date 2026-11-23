@@ -60,9 +60,11 @@ If the named persona doesn't exist, the request fails, or the reply proposes no 
 
 ## Multi-turn context
 
-The first request to a given persona in an editor tab opens a connection to it, visible in the tab's [connections window](/user-documentation/command-bar/connections), that stays open for the rest of the tab's life. Later requests to that same persona in the same tab reuse the connection, so the persona can draw on what it said earlier — the same as a multi-turn conversation. A request to a different persona opens its own separate connection alongside it. Closing a connection and firing a new request to that persona starts over from scratch.
+An editor persona query runs on the tab's core connection under the persona's role. It opens no connection of its own, so the tab's [connections window](/user-documentation/command-bar/connections) shows no separate row for the persona. The query uses the role's `acp:<role>:<provider/model>` row instead. Queries that share a role continue the same conversation in that tab, so a persona can draw on what an earlier query under that role said. A persona with a different role uses that role's own connection. The persona, the reply format, your buffer and your request all go out on every query, including the first.
 
-If the persona's agent stops running on its own, its connection leaves the connections window and a notification names the persona, for example `reviewer: ACP agent exited.` Your next request to that persona starts a fresh connection from scratch, the same as after closing it yourself.
+One prompt can run under a role at a time. If you send a second query while that role is busy, it doesn't queue or interrupt the running prompt. You get a notification named after the persona with `ACP: a prompt is already running.`, and the first prompt carries on.
+
+A failed query reports through a `<persona>: <message>` notification, including when its agent dies mid-request. If the failure ends the role's connection, the next query under that role starts fresh. If the connection survives, it stays open for later queries. There's no separate notification for a persona agent that dies between requests, since the editor holds no session for that persona. Close the role's connection with `connections close acp:<role>:<provider/model>`.
 
 ## Nothing here is persisted
 
