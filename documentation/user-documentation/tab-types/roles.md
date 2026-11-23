@@ -18,7 +18,7 @@ If neither your project nor your home folder has a `roles.json` file, opening th
 
 ## Add a model to a role
 
-Each card has **Models** and **Commands** sections. Click **Add model** in the Models section, pick the harness, then type to search for the model. The field offers only the harness's enabled models: typing narrows the list, `Tab` completes a single match or a common prefix, and you can click a row to fill the field. Press `Return` on a highlighted row to fill the field with that model, then press `Return` again to add it. With the field blank, the list shows the models your roles use most, or `type to search` when none are used; text that matches nothing shows `No matching models`. Press **Add** when the field holds an exact model id — it stays unavailable for partial or unknown text. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
+Each card has **Models** and **Commands** sections. Click **Add model** in the Models section, pick the harness, then type to search for the model. The field offers only the harness's enabled models: typing narrows the list to at most ten matches, `Tab` completes a single match or a common prefix, and you can click a row to fill the field. Press `Return` on a highlighted row to fill the field with that model, then press `Return` again to add it. With the field blank, the list shows at most ten models your roles use most, or `type to search` when none are used; text that matches nothing shows `No matching models`. Press **Add** when the field holds an exact model id — it stays unavailable for partial or unknown text. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
 The **Models** list has the accessible name `Models of role <name>` for screen readers. When a role has no model choices, the section shows a muted `No models` row.
 
@@ -28,7 +28,7 @@ Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, 
 
 ## Grant commands to a role
 
-In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove `<command>`** control; removing a command removes every duplicate copy from the file. When all twenty native commands are granted, **Add command** is hidden.
+In the **Commands** section, choose **Add command**, select a native command, and press **Add**. The picker only offers commands the role does not already have. Remove a command with its **Remove `<command>`** control; removing a command removes every duplicate copy from the file. When all native commands are granted, **Add command** is hidden.
 
 A granted command that is currently disabled is dimmed and carries the tooltip `Disabled application-wide` when it is off everywhere or `Disabled for agents` when only its agent access is off. A disabled parent command is off everywhere for every command beneath it, so those commands also read `Disabled application-wide`. The grant stays in your roles file, and the picker still offers the command.
 

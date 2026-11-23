@@ -4,8 +4,6 @@
 
 ## development
 
-* roles (6/10) — 18 of 20 facts are correct, 1 missing and 1 wrong. `documentation/user-documentation/tab-types/roles.md` says "when all twenty native commands are granted" but the published vocabulary has 26 commands, verified in `src/plugins/roles/shared.ts` and asserted in `web/src/plugins/roles/RolesTab.test.tsx`; the spec is stale here too, saying twenty-five. The model picker's ten-result cap on both typed search and the blank most-used list, from `RESULT_CAP = 10` in `web/src/shared/model-search/model-search.ts`, is nowhere in either doc surface. Fix both in the existing roles page by saying "all native commands" and adding a short note that the picker shows at most ten matches; `help/roles.md` and `help/commands.md` are accurate. Evidence: `product/specs/roles.md`, `src/plugins/roles/shared.ts`, `src/plugins/roles/default-roles.ts`, `web/src/shared/model-search/model-search.ts`, `documentation/user-documentation/tab-types/roles.md`.
-
 * connections-tab (5/10) — 20 of 23 facts are correct, 2 missing and 1 wrong. `documentation/user-documentation/command-bar/connections.md` states a retained ACP row name as `acp:<tab name>`, but the app (`src/plugins/connections/shared.ts`) renders `acp:<role>:<tab name>` for role-bearing records, a form `help/connections.md` already has right. The two Open record JSON refusals (`The record no longer exists.`, `The record file could not be opened.`) and five lifecycle-control refusals (`Only a running record can be cancelled.`, `Only an open record can be closed.`, `The run is no longer live.`, `An open record cannot be deleted.`, `The owning tab no longer holds this record.`) appear in neither doc surface. Fix the Name and connection-tabs paragraphs and add the refusal strings to that page, mirroring them in `help/connections.md`. Evidence: `product/specs/connections-tab.md`, `src/plugins/connections/shared.ts`, `src/plugins/connections-topic-actions.ts`, `src/acp-records/model.ts`.
 
 * web-search (5/10) — 19 of 20 facts are correct and 1 is wrong. The Agent tool section of `help/web.md` tells users the agent requests a search by ending its reply with one lowercase `web search …` line, but shipped behavior requires exactly one lowercase `web search` command inside a final fenced block whose info string is exactly `janissary`, with a bare outside line staying prose and zero or multiple commands drawing the shared correction. The accurate wording already exists in `documentation/user-documentation/advanced-agents/acp-agent.md`, so update that section of `help/web.md` to match it and include a fenced example. Evidence: `product/specs/web-search.md`, `help/web.md`, `documentation/user-documentation/advanced-agents/acp-agent.md`, `src/web/search/command.ts`, `src/agent/command-tools.ts`.
@@ -52,6 +50,7 @@
 
 ## resolved
 
+* roles — documented in documentation/user-documentation/tab-types/roles.md (removed 2026-11-23)
 * monitoring — documented in documentation/user-documentation/automation/monitoring.md (removed 2026-11-23)
 * connection — documented in documentation/user-documentation/command-bar/connections.md (removed 2026-11-23)
 * sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md, documentation/user-documentation/command-bar/database.md (removed 2026-11-23)
