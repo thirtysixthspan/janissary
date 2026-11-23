@@ -455,6 +455,22 @@ the global SSH rows.
 
 Before the tab opens, the `ssh <destination> […]` command itself is recorded in the transcript of the tab you ran it from. That happens first, so the launch stays visible even if the connection fails immediately — an unreachable host or a rejected login closes the new tab right away, and its error output goes with it rather than echoing back to the tab you launched from.
 
+### Saved hosts
+
+A bare `ssh <name>` can name a saved host instead of a literal destination. Type the command word and a single name, with nothing else:
+
+```
+ssh lab
+```
+
+The name matches a saved host without regard to case, and a leading hyphen is fine, so `ssh -v` can pick a host called `-v`. A matching name beats a literal hostname or an `~/.ssh/config` alias of the same spelling. Flags, extra words, a trailing remote command, or an address with `@` or `:` keep the verbatim path and go straight to `ssh`.
+
+If the hosts file in effect can't be used, the name goes to `ssh` as a literal destination and the problem shows up once in the [notifications](/user-documentation/tab-types/notifications) feed, attributed to the tab you typed the command in. It isn't written into that tab's transcript. A valid personal catalog still supplies the match when a project hosts file is malformed.
+
+A saved host can carry a user, a port and a remote working directory. The port is passed to `ssh` and a directory asks for a terminal: after login the remote side changes into that directory and then starts your login shell. An absolute path is used as it stands, a relative path starts at the SSH login directory, and `~` or a path beginning with `~/` points at the remote home with the rest held literal, so your local shell never expands it. If the directory can't be entered, the remote side reports the failure and still starts the login shell in the original directory.
+
+The new tab joins the group, color and working directory of the tab you typed the command in, even when a different tab has focus as it opens. That tab's transcript keeps the line you typed exactly as entered, including a leading `/`, while the connection details come from the saved host. Opening a host from the Hosts tab writes no transcript line, since that tab has none; an immediate launch error goes back to the caller instead of a log.
+
 ### Recording an SSH session
 
 Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. It records terminal output and resizes, without input events. Text echoed by the remote program is still output. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels. The tab's own [recording flag](#the-recording-flag) opens it without naming the file.
