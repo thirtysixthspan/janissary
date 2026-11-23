@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
 import { ActivityLogger } from './logger.js';
 import { messageBus } from '../bus.js';
+import * as config from '../config.js';
 import { getDateStr, getTimeStr as getTimeString } from '../datetime.js';
 import type { LogEntry, Tab } from '../tab/types.js';
 
@@ -58,8 +59,10 @@ describe('logger I/O', () => {
     return logger;
   };
 
-  it('creates the log directory on init', () => {
+  it('creates no directory until the first entry is written', () => {
     createLogger();
+    expect(existsSync(path.join(tmpDir, '.janissary', 'logs', 'activity'))).toBe(false);
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
     expect(existsSync(path.join(tmpDir, '.janissary', 'logs', 'activity'))).toBe(true);
   });
 
@@ -182,5 +185,46 @@ describe('ActivityLogger', () => {
     const logger = createLogger();
     logger.unsubscribe();
     expect(() => messageBus.emit('transcript', appendedEvent())).not.toThrow();
+  });
+
+  it('writes no entry and creates no directory when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    createLogger();
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+
+    expect(existsSync(path.join(tmpDir, '.janissary', 'logs', 'activity'))).toBe(false);
+  });
+
+  it('still delivers entries to other subscribers when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    createLogger();
+    const listener = vi.fn();
+    const sub = messageBus.on('transcript', 'entry:appended', listener);
+    try {
+      const failures = messageBus.emit('transcript', appendedEvent());
+      expect(listener).toHaveBeenCalledOnce();
+      expect(failures).toEqual([]);
+    } finally {
+      sub.unsubscribe();
+    }
+  });
+
+  it('prints one stderr line and stops writing after a failed write', () => {
+    const regularFile = path.join(tmpDir, 'not-a-directory');
+    writeFileSync(regularFile, 'x');
+    const logger = new ActivityLogger(regularFile);
+    loggers.push(logger);
+    const stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+    ActivityLogger.append({ timestamp: '22:55:21.000', agent: 'janus', text: 'again' });
+
+    const lines = stderrWrite.mock.calls.map(([chunk]) => String(chunk));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^activity log: write failed, not logging for the rest of this run: /);
+    expect(lines[0].endsWith('\n')).toBe(true);
+    expect(lines.some((line) => line.includes('message bus:'))).toBe(false);
   });
 });

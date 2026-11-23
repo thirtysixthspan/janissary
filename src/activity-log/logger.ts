@@ -4,8 +4,11 @@ import type { ActivityLogRecord } from './types.js';
 import { getDateStr, getTimeStr } from '../datetime.js';
 import type { Subscription } from '../bus.js';
 import { messageBus } from '../bus.js';
+import { getConfig } from '../config.js';
+import { errorText } from '../error-text.js';
 
 let logDir = '';
+let abandoned = false;
 
 export class ActivityLogger {
   static get logDir(): string {
@@ -13,17 +16,23 @@ export class ActivityLogger {
   }
 
   static append(entry: ActivityLogRecord): void {
-    if (!logDir) return;
+    if (!logDir || abandoned || !getConfig().logEnabled) return;
     const logPath = path.join(logDir, `${getDateStr()}.json`);
-    appendFileSync(logPath, JSON.stringify(entry) + '\n');
+    try {
+      mkdirSync(logDir, { recursive: true });
+      appendFileSync(logPath, JSON.stringify(entry) + '\n');
+    } catch (error) {
+      process.stderr.write(`activity log: write failed, not logging for the rest of this run: ${errorText(error)}\n`);
+      abandoned = true;
+    }
   }
 
   private sub: Subscription;
 
   constructor(projectDir?: string) {
+    abandoned = false;
     if (projectDir) {
       logDir = path.join(projectDir, '.janissary', 'logs', 'activity');
-      mkdirSync(logDir, { recursive: true });
     }
     this.sub = messageBus.on('transcript', 'entry:appended', (event) => {
       if (event.type !== 'entry:appended') return;
