@@ -99,7 +99,7 @@ Write the short plan summary described under "The PR body" to `./temp/pr-body.md
 
 ## Step 6 — Open the PR against `master`
 
-Use the commit subject (which follows Conventional Commits format) as `<title>`. The PR title must match the commit subject and therefore also follows the Conventional Commits specification. Substitute the actual `OWNER_REPO` and `BRANCH` values you read in Step 4, and pass the body file:
+Use the commit subject (which follows Conventional Commits format) as `<title>`. The PR title must match the commit subject and therefore also follows the Conventional Commits specification. That title is provisional: once implementation lands, [`update-pull-request.md`](../feature/update-pull-request.md) replaces it with a Conventional Commit subject describing the delivered work. Substitute the actual `OWNER_REPO` and `BRANCH` values you read in Step 4, and pass the body file:
 
 ```bash
 $janissary/scripts/run.mjs pr-create-pr owner/repo my-branch-name "<title>" ./temp/pr-body.md
