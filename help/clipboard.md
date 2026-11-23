@@ -22,4 +22,5 @@ Type `clip` alone in a command bar and press Enter. `clipboard` is the name of t
 **Notes**
 
 - Copies made in other applications are not listed. Empty and whitespace-only copies are skipped.
+- `Ctrl+Shift+V` suppresses the browser's **paste as plain text** shortcut, and `Cmd+Shift+V` suppresses **paste and match style**. Plain `Ctrl+V` and `Cmd+V` keep their usual paste behavior.
 - On a tab with no command line, such as a markdown or image tab, the popup does not appear, but the keyboard stays with it until you press `Escape`.

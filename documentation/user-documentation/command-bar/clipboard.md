@@ -14,7 +14,7 @@ Three routes, all to the same window:
 
 It opens above the command line with the newest copy at the bottom, nearest the input. With nothing copied it still opens, showing `(no clipboard history)`.
 
-`Ctrl+V` and `Cmd+V` are untouched. In an editor tab they are the ordinary paste.
+`Ctrl+V` and `Cmd+V` are untouched. In an editor tab they are the ordinary paste. The shifted chords suppress the browser's own shortcuts on them: **paste as plain text** for `Ctrl+Shift+V`, and **paste and match style** for `Cmd+Shift+V`.
 
 ### Tabs without a command line
 

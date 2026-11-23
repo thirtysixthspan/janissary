@@ -7,7 +7,7 @@
 | `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab; no-op with only one eligible center tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
 | `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**); blocked when `hist` is disabled in the Commands tab |
-| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (type `clip` for the same thing); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
+| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (type `clip` for the same thing); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. The browser's own **paste as plain text** / **paste and match style** shortcuts are suppressed on these chords; `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard; blocked when `tasks` is disabled in the Commands tab |
 | `Cmd+P` | Open the Quick Open file finder when the key reaches Janissary; a focused harness or SSH terminal sends it to its program |
