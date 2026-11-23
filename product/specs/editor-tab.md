@@ -363,7 +363,7 @@ a choice is made, and a click outside the dialog does nothing.
 
 ### Caret
 
-A blinking vertical bar marks the cursor position — where text will be inserted when typing. The caret is an accent-colored vertical line, 2 pixels wide, that blinks hard on/off on a 1-second cycle. It sits at the exact character column in the text flow without shifting the surrounding text. The caret is only visible when the editor tab is active; switching to another tab or opening a picker hides it.
+A blinking vertical bar marks the cursor position — where text will be inserted when typing. The caret is an accent-colored vertical line, 2 pixels wide, that blinks hard on/off on a 1-second cycle. It sits at the exact character column in the text flow without shifting the surrounding text. The caret is only visible while the editor tab holds keyboard focus: switching to another tab or opening a picker hides it, and so does moving focus out of the editor body — to the file's rename field, the buffer's find field, the command bar, or another pane. The bar goes out without shifting the surrounding text and resumes blinking at the same column as soon as the editor takes focus again.
 
 ### Syntax highlighting
 

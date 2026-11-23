@@ -11,6 +11,14 @@ describe('editor theme', () => {
     expect(editorContentRule).toContain('overflow-wrap: break-word');
     expect(editorContentRule).not.toContain('word-break: break-all');
   });
+
+  it('hides the blinking caret while keyboard focus is outside the editor body', () => {
+    const unfocusedRule = theme.match(/\.editor-body:not\(:focus-within\) \.editor-caret::after \{[^}]+\}/)?.[0];
+
+    expect(unfocusedRule).toBeDefined();
+    expect(unfocusedRule).toContain('animation: none');
+    expect(unfocusedRule).toContain('opacity: 0');
+  });
 });
 
 describe('metadata theme', () => {
