@@ -1,6 +1,6 @@
 # Rename the daily JSON log to the activity log, move it to .janissary/logs/activity/, and gate and reap it with logEnabled and logRetentionInDays
 
-**Complexity: 6/10** — 24 requirements, 7 production files, 10 test scenarios, ~35 added lines (p=6.43)
+**Complexity: 6/10** — 26 requirements, 7 production files, 17 test scenarios, ~35 added lines (p=6.43)
 
 ## Goal
 
@@ -89,7 +89,7 @@ The daily JSON transcript log is now the activity log and is written to `.janiss
 
 ## Implementation steps
 
-The work landed in four steps, each leaving the tree green under `$janissary/scripts/run.mjs check-diff`. The ready plan `product/plans/ready/recording-retention-reaper.md` also edits the launch sweep in `src/main.ts`, `src/state/dirs.ts`, the two config rows, and `product/specs/state-directory.md:5`; the two changes were kept side by side on those shared lines.
+The work landed in five steps, each leaving the tree green under `$janissary/scripts/run.mjs check-diff`. The ready plan `product/plans/ready/recording-retention-reaper.md` also edits the launch sweep in `src/main.ts`, `src/state/dirs.ts`, the two config rows, and `product/specs/state-directory.md:5`; the two changes were kept side by side on those shared lines.
 
 1. **Rename and move the logger.** Moved `src/transcript/logger.ts`, `src/transcript/types.ts`, and `src/transcript/logger.test.ts` to `src/activity-log/` and removed `src/transcript/`; renamed `TranscriptLogger` to `ActivityLogger` and `LogRecord` to `ActivityLogRecord`. Pointed the directory at `.janissary/logs/activity`. In `src/state/dirs.ts`, imported from `../activity-log/logger.js`, renamed the registry entry and its `KNOWN_STATE_DIRECTORY_KEYS` key from `transcriptLog` to `activityLog`, and added the "No `clear`, deliberately" comment naming `reapActivityLogs`. Repointed `src/state/dirs.test.ts` and `src/controller.test.ts`, renamed the controller test to "records transcript content in the activity log", and updated the moved logger test's path expectations. Updated the comments in `src/remote/serve.ts` and `src/notifications/record.ts`. Build command: `$janissary/scripts/run.mjs check-diff`.
 2. **Gate on `logEnabled`, create the directory lazily, and give up after a failure.** In `src/activity-log/logger.ts`, the constructor records the directory path, resets `abandoned`, and subscribes without creating the directory. `ActivityLogger.append` returns at once for no directory, `abandoned`, or `getConfig().logEnabled === false`; otherwise it creates the directory recursively and appends the line. Any throw writes the single dedicated stderr line with `errorText(error)`, sets `abandoned`, and returns without rethrowing. Replaced "creates the log directory on init" with the lazy-creation test and added the gating, other-subscriber, and failure tests. Build command: `$janissary/scripts/run.mjs check-diff`.
