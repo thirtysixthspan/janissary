@@ -2,6 +2,8 @@
 
 ## ready
 
+* every new shell tab should create a new file in .janissary/transcripts/shell/. The activity of the shell session should be continually appended to the file for the duration of the session. The shell transcripts should persist for N number of days where N is determined by the configuration flag in .janissary/config.json. the log reaper process that runs in the background on launch should be responsible for clearing out transcripts older than n days. shell transcripts should not be removed when the application is halted. shell transcripts should be tested. Prexisting code to save transcripts should be updated and used for the implementation of the current feature.
+
 ## development
 
 ## deferred
