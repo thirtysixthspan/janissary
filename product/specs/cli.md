@@ -54,10 +54,10 @@ For a normal launch (not `--help`, `--version`, or `stop`), the `janus` command 
 The detached server itself boots the full application against its target directory (the current directory, or the resolved `<project-dir>` argument):
 
 1. Acquire an instance lock on the target directory, failing fast if another live `janus` process already holds it. A lock naming a process the current user cannot signal is treated as stale and taken over, since a recorded process ID that has been recycled by another account's process cannot be the instance that recorded it. A lock file that does not record a valid process ID — empty, zero, negative, or not a number, as a crash mid-write can leave it — is likewise stale and taken over, and is never probed or signalled. The lock is created in one exclusive step, so of two instances started against the same directory at the same moment, only one runs and the other is refused.
-2. Initialize `.janissary/` subdirectories (database, profiles, workspace, and the per-run harness and browser directories).
+2. Initialize `.janissary/` subdirectories (database, profiles, workspace, the harness capture, recording, and harness and shell transcript directories that are kept across launches, and the per-run browser directory).
 3. Start the transcript logger.
 4. Load application config from `.janissary/config.json`.
-5. Clear the per-run directories and the workspace directory.
+5. Clear the per-run directories and the workspace directory. Then start the background sweep that deletes captures, recordings, and transcripts older than `logRetentionInDays` days (see `state-directory.md`). Startup does not wait for it.
 6. Open and validate the live `janus` launch shell (see `tabs.md`), failing the start when it cannot be opened. Attempt the hidden `system` shell after `janus`; a failure posts a startup-failure notification but does not stop the server. Load project system schedules and recover missed entries after shell preparation, then start the scheduler. Reattach parked remote sessions (see `sessions-tab.md`) without waiting for them, and start the HTTP server (on the requested port, or an ephemeral port if none given).
 7. Write the server URL (`__JANUS_URL__ <url>`) and a human-readable banner to the log.
 8. Unless `--no-open`: open the app in a Chrome app window (or the default browser if no system Chrome is found).

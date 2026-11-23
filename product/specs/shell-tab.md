@@ -295,8 +295,9 @@ flag gives way to the workspace mark and the button comes back.
 It also carries the **recording** flag — a film icon, drawn before the workspace mark — which reports
 that this shell's session is being recorded and opens the recording when pressed. It is drawn plain
 and inert until the shell has printed something, green and pressable from that moment on, and stays
-green and pressable once the recording has stopped, so a partial recording is still reachable. See
-[[harness-recording]] § The recording flag.
+green and pressable once the recording has stopped, so a partial recording is still reachable. With
+`"logEnabled": false` the shell never records, and its flag reads **not recording** from the moment the
+tab opens, plain and never pressable. See [[harness-recording]] § The recording flag.
 
 It also draws an **Open transcript** button — the clipboard icon, with the tooltip and accessible name
 `Open transcript` — once the shell's text transcript file has opened, which in practice is as the

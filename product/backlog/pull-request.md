@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bring the remaining specs that describe the recording flag and the launch's per-run directories in line with the not-recording state and kept recordings, which the diff left stale.
-
-Existing Issue: `product/specs/tabs.md`'s flag section names the recording flag's tooltip only as "recording" and says the flag turns green and pressable once the session produces output, `product/specs/shell-tab.md` § The metadata row and the recording-flag paragraph in `product/specs/harness.md` say the same with no off state, and `product/specs/cli.md`'s startup sequence still names "the per-run harness and browser directories" although no harness directory is cleared at launch any more. Severity: 3/10
-
-Existing Risk: 3/10 - The next change to the flag or to the launch clear is planned from a spec that omits the not-recording state or still lists a per-run harness directory, and quietly drops the off label or reintroduces a launch clear of recordings.
-
-Proposal Risk: 1/10 - The work is spec text only; what remains is wording drift from `product/specs/harness-recording.md` § The recording flag, which each edit cross-references rather than restates.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2199 "update the specs the diff left stale about the recording flag and per-run directories". In `product/specs/tabs.md`, add "not recording" to the list of flag tooltips and extend the recording-flag paragraph so it says a tab opened under `"logEnabled": false` shows the plain, inert flag labeled `not recording` for its whole life and never turns green. In `product/specs/shell-tab.md` § The metadata row (the paragraph that begins "It also carries the **recording** flag") and the harness recording-flag paragraph in `product/specs/harness.md` (the one that ends "See [[harness-recording]] § The recording flag"), add the same off state in one sentence each and point at `product/specs/harness-recording.md` § The recording flag. In `product/specs/cli.md` § Startup sequence, change step 2's "the per-run harness and browser directories" so it no longer implies a per-run harness directory, for example by naming the harness capture, recording, and transcript directories as kept and the browser directory as per-run, and add to step 5 that the background sweep of captures, recordings, and transcripts by `logRetentionInDays` starts there without delaying startup, matching `src/main.ts`. Check the wording against `web/src/shared/RecordingFlag.tsx` and `web/src/shared/tab/flag-display.ts`. No code or test changes.
-
-
 * Share the days-to-cutoff launch sweep wrapper instead of adding a fourth copy of it for recordings, which is technical debt this diff introduces.
 
 Existing Issue: `reapHarnessRecordings` is a line-for-line copy of `reapHarnessCaptures`, `reapHarnessTranscripts`, and `reapShellTranscripts`, each with its own module-private `DAY_MS` and the same empty-directory guard and cutoff arithmetic, and the boot sequence now starts the four through four near-identical unawaited lines. Severity: 2/10
