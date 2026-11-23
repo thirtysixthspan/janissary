@@ -4,8 +4,6 @@
 
 ## development
 
-* state-directory (3/10) — 16 of 20 facts are correct and 4 missing. `help/hosts.md` omits that a project `.janissary/hosts.json` holding `{}` explicitly means zero hosts, the exact unusable-file notice `Hosts file <path> is unusable: <problem>.`, the save refusal `Cannot save hosts: <path> is unusable — fix it by hand.` when the home file is unusable, and the concrete paths `~/.janissary/hosts.json` and `.janissary/hosts.json`. Add them to the Notes section; startup cleanup, the instance lock and system schedules are already accurate in `startup.md`, `scheduling.md` and the command table. Evidence: `product/specs/state-directory.md`, `src/plugins/hosts/hosts-file.ts`, `help/hosts.md`, `documentation/user-documentation/getting-started/startup.md`.
-
 * subagent (3/10) — 17 of 20 facts are correct and 3 missing. `help/subagent.md` omits the ACP-caller refusal `Subagent: caller session is not available.`, a glossary of completion statuses (`completed`, `partial`, `failed`, `terminated`) including `partial` meaning the tool-loop limit and showing as `Partial` in the connections list, and the record answer `Subagent terminated.`. Add them to that page's Notes section and cross-reference `Partial` in `documentation/user-documentation/command-bar/connections.md`; `documentation/user-documentation/getting-started/configuration.md` already documents the `maxToolTurns` default. Evidence: `product/specs/subagent.md`, `src/subagent/launch.ts`, `src/subagent/primer.ts`, `src/agent/record-feed.ts`, `help/subagent.md`.
 
 ## deferred
@@ -14,6 +12,7 @@
 
 ## resolved
 
+* state-directory — documented in help/hosts.md (removed 2026-11-23)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md, help/ssh.md, help/hosts.md (removed 2026-11-23)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-23)
 * pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md (removed 2026-11-23)
