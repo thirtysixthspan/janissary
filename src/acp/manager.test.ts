@@ -690,6 +690,36 @@ describe('AcpManager role sessions', () => {
     }
   });
 
+  it('closes a custom-role session along with the built-in roles when the tab closes', () => {
+    const roleSettings = (_root: string, role: AcpRole) => ({
+      name: role, entries: [role === 'review-bot' ? CLAUDE : GEMINI], commands: [],
+    });
+    const { acp } = setup([], roleSettings);
+    const askSession = makeSession();
+    const tellSession = makeSession();
+    const customSession = makeSession();
+    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession).mockReturnValueOnce(customSession);
+
+    const ask = acp.start('tab1');
+    const tell = acp.start('tab1', undefined, 'tell');
+    const custom = acp.start('tab1', undefined, 'review-bot');
+    expect(acp.sessionIdentity('tab1')).toBe(ask.session);
+    expect(acp.sessionIdentity('tab1', 'tell')).toBe(tell.session);
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBe(custom.session);
+
+    acp.closeTab('tab1');
+
+    expect(acp.sessionIdentity('tab1')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'tell')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBeUndefined();
+    expect(acp.has('tab1')).toBe(false);
+    expect(acp.has('tab1', 'tell')).toBe(false);
+    expect(acp.has('tab1', 'review-bot')).toBe(false);
+    expect(askSession.kill).toHaveBeenCalledOnce();
+    expect(tellSession.kill).toHaveBeenCalledOnce();
+    expect(customSession.kill).toHaveBeenCalledOnce();
+  });
+
   it('closes every role session with closeAll', () => {
     const roleSettings = (_root: string, role: AcpRole) => ({
       name: role, entries: [role === 'ask' ? GEMINI : CLAUDE], commands: [],
@@ -697,21 +727,27 @@ describe('AcpManager role sessions', () => {
     const { acp } = setup([], roleSettings);
     const askSession = makeSession();
     const tellSession = makeSession();
-    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession);
+    const customSession = makeSession();
+    mocks.connectAcp.mockReturnValueOnce(askSession).mockReturnValueOnce(tellSession).mockReturnValueOnce(customSession);
 
     const ask = acp.start('tab1');
     const tell = acp.start('tab1', undefined, 'tell');
+    const custom = acp.start('tab1', undefined, 'review-bot');
     expect(acp.sessionIdentity('tab1')).toBe(ask.session);
     expect(acp.sessionIdentity('tab1', 'tell')).toBe(tell.session);
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBe(custom.session);
 
     acp.closeAll();
 
     expect(acp.sessionIdentity('tab1')).toBeUndefined();
     expect(acp.sessionIdentity('tab1', 'tell')).toBeUndefined();
+    expect(acp.sessionIdentity('tab1', 'review-bot')).toBeUndefined();
     expect(acp.has('tab1')).toBe(false);
     expect(acp.has('tab1', 'tell')).toBe(false);
+    expect(acp.has('tab1', 'review-bot')).toBe(false);
     expect(askSession.kill).toHaveBeenCalledOnce();
     expect(tellSession.kill).toHaveBeenCalledOnce();
+    expect(customSession.kill).toHaveBeenCalledOnce();
   });
 
   it('closes only the session whose model failed', () => {
