@@ -5,7 +5,7 @@
 * The recordings in ./janissary/recordings should persist for N number of days where N is determined by the configuration logRetentionInDays flag in .janissary/config.json. logEnabled should gate recording. the log reaper process that runs in the background on launch should be responsible for clearing out recordings older than n days. recordings should not automatically be removed when the application is launched or halted, only when reaped. Prexisting code to save recordings should be updated and used for the implementation of the current feature.
 
 
-* the logs stored in .janissary/log should be called activity logs and moved to .janissary/logs/activity/. then rename the spec title "Append-only Log" → "Activity Log", and TranscriptLogger → ActivityLogger. these logs should be reaped and gated by logEnabled and logRetentionInDays.
+* the <YYYY-MM-DD>.json logs stored in .janissary/log should be called activity logs and moved to .janissary/logs/activity/. then rename the spec title "Append-only Log" → "Activity Log", and TranscriptLogger → ActivityLogger. these logs should be reaped and gated by logEnabled and logRetentionInDays.
 
 
 ## development
