@@ -53,7 +53,15 @@ A remote tab uses its workspace's tokens, where a token forwarded from the local
 
 **Agent tool**
 
-An `ask` or `tell` agent can run this search when its role grants `web search`; the built-in roles grant it. The agent asks for a search by ending its reply with one lowercase `web search …` line. Only a lowercase line counts, so an answer that begins a sentence with `Web search …` stays prose. A bare `web search` line answers with the usage line. If the granted row is disabled or agent-off, the tool refuses with `Command is disabled: web search.`. Disabling the parent `web` row does the same. An `agent` run refuses every `web` line, so this tool is available only to `ask` and `tell` sessions.
+An `ask` or `tell` agent can run this search when its role grants `web search`; the built-in roles grant it. To search the web, the agent puts exactly one lowercase `web search …` command inside a final fenced block whose info string is exactly `janissary`. Only a lowercase command in that block counts, so an answer that begins a sentence with `Web search …` stays prose. A bare `web search` final line outside the block is prose that ends the turn, not a command; a malformed `web search` command in the block answers with the usage line. Zero or more than one command in the block draws the shared correction instead of ending the turn.
+
+````text
+```janissary
+web search node.js permission model 2026 --results 5
+```
+````
+
+If the granted row is disabled or agent-off, the tool refuses with `Command is disabled: web search.`. Disabling the parent `web` row does the same. An `agent` run refuses every `web` line, so this tool is available only to `ask` and `tell` sessions.
 
 **Use cases**
 
