@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the verification steps that expect a pre-relaunch capture to survive zero retention
-
-Existing Issue: Steps 4 and 6 of How to verify expect a capture left in place before a relaunch with logRetentionInDays set to 0 to remain present, but the sweep's cutoff is the new launch time, so a capture last modified before that relaunch is deleted. Severity: 7/10
-
-Existing Risk: 6/10 - A verifier following the documented steps sees the expected result fail and either reports a phantom retention bug or adjusts the setup in a way that hides a real regression.
-
-Proposal Risk: 1/10 - Correcting two Expect lines and their rationale changes no code and leaves the actual retention rule intact.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2195 "correct the zero-retention verification expectations". In the pull request body's How to verify section, change steps 4 and 6 so that with a retention of 0 the capture that must survive is one written after the relaunch, not one carried in from the earlier run; the backdated and carried-in captures are expected to be gone. Replace the step 6 rationale that says the live capture's modification time is at or after "the launch" with wording that names the current launch's cutoff from reapHarnessCaptures in src/harness/capture/file.ts, called unawaited with config.logRetentionInDays from src/main.ts. Keep the plan-accurate general rule that a file last modified at or after the current launch is never reaped. The test "uses launch as the cutoff when retention is zero" in src/harness/capture/file.test.ts and "keeps files whose mtime is at or after the cutoff" in src/state/reaper.test.ts already pin the code and must not change.
-
-
 * Add the relaunch that triggers the sweep to the aged-out capture behavior example
 
 Existing Issue: The "After — an old capture is aged out, a current one stays, other entries are left alone" transcript backdates a capture, takes a new capture, and lists a directory with the old file gone, but the sweep runs only at launch, so no deletion occurs without an intervening stop and start. Severity: 6/10
