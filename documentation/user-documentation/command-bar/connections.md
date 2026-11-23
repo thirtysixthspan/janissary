@@ -32,6 +32,8 @@ Non-ACP connections appear in the connections tab only while they are live. Trac
 
 The tab's own ACP agent only appears once its handshake has named it, so a session you have just started with an `ask` prompt can be missing from the list for a moment.
 
+A remote session that's detached or parked has no open connection, so it shows up in neither `connections list` nor the connections panel. The [sessions tab](/user-documentation/tab-types/sessions) lists those sessions, including ones still running on their hosts waiting to be attached.
+
 Core ACP sessions carry their role in the name: `acp:ask:<provider/model>` and `acp:tell:<provider/model>`. The `ask` or `tell` part selects the role, so closing one leaves the other running.
 
 <img class="agent-float left" src="/agents/orhan-south-east.png" alt="" />
@@ -94,7 +96,7 @@ An active connection tab follows new output while you are at or near the bottom,
 
 - `sqlite:<name>`: closes the database connection. It reopens automatically the next time a `db` command or the SQL database browser uses that name.
 - `shell:<name>`: kills the tab's shell process. `<name>` is not compared. A shell tab has exactly one shell, and closing the connection closes it whatever you typed after the colon, so `connections close shell:zsh` on a bash machine closes the bash shell. A fresh shell spawns, restoring its working directory, on your next shell command. A command still running in a local shell ends its reply with `(shell exited)` once it stops producing output; see [Shell commands](/user-documentation/command-bar/shell).
-- `acp:<name>`: closes one ACP connection. Three things can match, and the first match wins. On an editor tab, `<name>` can be one of its personas: only that persona's connection closes, the tab's other persona connections stay open, and the next request to that persona opens a fresh one. Next, if `<name>` is one of the tab's monitors, only that monitor stops, the same as `unmonitor <name>`. Anything else kills the tab's own ACP session, which reconnects on your next `ask` prompt.
+- `acp:<name>`: closes one ACP connection. Two things can match, and the first match wins. If `<name>` is one of the tab's monitors, only that monitor stops, the same as `unmonitor <name>`. Otherwise the first part of `<name>` selects a role from your roles file, and that role's core session closes; the rest of `<name>` is used as a suffix for a session that is still connecting. An unknown name falls back to `ask`. A persona has no close target of its own: an editor persona query runs on the tab's core session under that persona's role, so you close it through its role. Your next prompt reconnects the session.
 - `browser:<id>`: closes that window. Closing a tab's last window ends its browser process.
 - `ssh:<id>`: kills the matching ssh tab's terminal, which closes the tab. `<id>` matches the tab's label first, then its destination.
 - `terminal:<program>`: kills the tab's terminal running that program. An inline terminal ends; a harness tab closes with it. A remote tab's ssh transport never answers to a `terminal:` id; it is the `ssh:` row, as above.
@@ -122,7 +124,7 @@ A `connections` panel floats at the top right of a shell tab or an editor tab an
 
 - Its shell and working directory, such as `bash:~/dir`.
 - Its ACP agents, as `acp:ask:<provider/model>` and `acp:tell:<provider/model>`.
-- Each [monitor](/user-documentation/automation/monitoring) it started, as `monitor:<persona> (<provider/model>)`. The persona name is also the monitor's name for `unmonitor` and `monitor ask`. The provider and model appear once the session has connected.
+- Each [monitor](/user-documentation/automation/monitoring) it started, as `monitor:<name>`. The name is the monitor's runtime name, which is what `unmonitor` and `monitor ask` address. The provider and model belong to the tab's core role row, not to this one.
 - Each browser window with its mode, such as `browser:w1 (headless)`.
 - Each terminal the tab runs, as `terminal:<program>`.
 - On a [remote](/user-documentation/advanced-agents/remote-agents) tab, the `ssh:<address>` transport it runs over, next to its terminals.
@@ -130,7 +132,7 @@ A `connections` panel floats at the top right of a shell tab or an editor tab an
 
 Open a row by clicking it, or by focusing it and pressing Enter or Space. A row that carries a retained ACP or agent record opens that record's connection tab. A row for the tab's own live ACP session opens its current connection tab. Monitor and editor-persona rows have no retained record, so they keep their snapshot behavior and do not open a record tab. While a run started from this tab is live, the window also lists it as an `Agent: <task filename>` row; that row opens the run's connection tab and leaves the window when the run ends. A row with a durable record id still opens its record tab after the session, run, or calling tab has ended; only a record that is gone or expired is refused.
 
-An [editor tab](/user-documentation/tab-types/editor-persona-query) lists each persona it has consulted as `<persona> (acp)`. Those rows are the one kind with their own ×. Clicking it closes just that persona's connection, the same as `connections close acp:<persona>`. A running agent row has no × there; its **Terminate** is in its record tab.
+An [editor tab](/user-documentation/tab-types/editor-persona-query) shows the core role sessions its persona queries run on, named `acp:<role>:<provider/model>`. It has no `<persona> (acp)` row and no × close control on any row: a persona query shares the tab's core session under that persona's role, and you close it with `connections close acp:<role>:<provider/model>`. A running agent row has no × there either; its **Terminate** is in its record tab.
 
 <img class="agent-float" src="/agents/selim-south-west.png" alt="" />
 
@@ -142,7 +144,7 @@ The panel also shows itself for a moment. Switching to a tab with live connectio
 
 ## Read a session as plain text
 
-A plain-text snapshot is not a connection tab and not a live view. It is a point-in-time copy of one session's exchange, opened in an editor tab from a snapshot button. Only an editor tab's connections panel draws those buttons: a `monitor:<name>` row, a `<persona> (acp)` row, and the editor tab's own `acp:ask:<provider/model>` or `acp:tell:<provider/model>` row when it has one. Shell and harness rows have no snapshot button, because their full view is the connection tab and, for a shell, a separate terminal transcript file.
+A plain-text snapshot is not a connection tab and not a live view. It is a point-in-time copy of one session's exchange, opened in an editor tab from a snapshot button. Only an editor tab's connections panel draws those buttons: its `monitor:<name>` rows and its core `acp:<role>:<provider/model>` rows, including the role a persona query runs under. Shell and harness rows have no snapshot button, because their full view is the connection tab and, for a shell, a separate terminal transcript file.
 
 Click the clipboard button to open the snapshot. What you get depends on the row:
 
