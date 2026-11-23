@@ -1,5 +1,4 @@
 import type { CoreRpcCall } from '../protocol/core-rpc.js';
-import { ACP_ROLES } from '../acp/role.js';
 import {
   isFiniteNumber, isInteger, isOneOf, isRecord, isString, noParams, type ParamsDecoder,
 } from './guards.js';
@@ -10,7 +9,7 @@ const DOCKS = ['left', 'right', null];
 // `AcpRef` is a discriminated union of two arms, so the scope decides which fields are read.
 function isAcpRef(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  if (value.scope === 'tab') return isString(value.label) && isOneOf(value.role, ACP_ROLES);
+  if (value.scope === 'tab') return isString(value.label) && isString(value.role) && value.role.trim().length > 0;
   return value.scope === 'monitor' && isString(value.name);
 }
 
@@ -54,11 +53,12 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   openRecordingFor: (p) => isString(p.label),
   openAcpTranscript: (p) => isAcpRef(p.acpRef),
   // Exactly one target, and a tab-scoped reference must name the popup-owning tab itself. Monitor
-  // and editor scopes are snapshot-only and never reach the record opener.
+  // scope is snapshot-only and never reaches the record opener.
   openConnectionRecord: (p) => isString(p.tab) && (
     (isString(p.recordId) && p.acpRef === undefined)
     || (p.recordId === undefined && isRecord(p.acpRef) && p.acpRef.scope === 'tab'
-      && isString(p.acpRef.label) && isOneOf(p.acpRef.role, ACP_ROLES) && p.acpRef.label === p.tab)
+      && isString(p.acpRef.label) && isString(p.acpRef.role) && p.acpRef.role.trim().length > 0
+      && p.acpRef.label === p.tab)
   ),
   projectFiles: noParams,
   revealNotifications: noParams,

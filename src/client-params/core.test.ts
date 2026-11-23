@@ -45,7 +45,8 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
     { acpRef: { scope: 'editor', label: 'one' } },
     { acpRef: 'one' },
     { acpRef: { scope: 'tab', label: 'one' } },
-    { acpRef: { scope: 'tab', label: 'one', role: 'other' } },
+    { acpRef: { scope: 'tab', label: 'one', role: '' } },
+    { acpRef: { scope: 'tab', label: 'one', role: ' '.repeat(3) } },
   ]],
   ['openConnectionRecord', { tab: 'one', recordId: 'record-1' }, [
     {},
@@ -57,7 +58,8 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
     { tab: 'one', acpRef: { scope: 'editor', label: 'one', persona: 'critic' } },
     { tab: 'one', acpRef: { scope: 'tab', label: 'other', role: 'ask' } },
     { tab: 'one', acpRef: { scope: 'tab', label: 'one' } },
-    { tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'other' } },
+    { tab: 'one', acpRef: { scope: 'tab', label: 'one', role: '' } },
+    { tab: 'one', acpRef: { scope: 'tab', label: 'one', role: ' '.repeat(3) } },
   ]],
 ];
 
@@ -86,5 +88,10 @@ describe('core RPC params decoders', () => {
   it('accepts a tab-scoped ACP target that names the popup-owning tab', () => {
     expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'ask' } })).toBe(true);
     expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'tell' } })).toBe(true);
+  });
+
+  it('accepts a roles-file role name in a tab-scoped ACP ref', () => {
+    expect(CORE_PARAMS.openAcpTranscript({ acpRef: { scope: 'tab', label: 'one', role: 'review-bot' } })).toBe(true);
+    expect(CORE_PARAMS.openConnectionRecord({ tab: 'one', acpRef: { scope: 'tab', label: 'one', role: 'review-bot' } })).toBe(true);
   });
 });

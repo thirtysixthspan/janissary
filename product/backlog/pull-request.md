@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Accept custom role names in the core client RPC decoders so custom-role connection rows can open their transcripts and records.
-
-Existing Issue: The core RPC params decoders still admit only `ask` and `tell` for tab-scoped ACP references in `openAcpTranscript` and `openConnectionRecord`, while the connection catalog now emits rows carrying roles from the roles file, so those rows fail param validation before reaching the controller. Severity: 7/10
-
-Existing Risk: 6/10 - A user clicks the transcript snapshot or row on a custom-role core connection and the call is rejected, leaving the newly advertised custom-role path unable to inspect its own session while the other three validation surfaces already accept the role.
-
-Proposal Risk: 2/10 - The decoders then match the guards the pull request already widened, so the only remaining risk is admitting a malformed non-empty role, which a trimmed non-empty check and the existing param tests cover.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "accept custom role names in the core client RPC decoders". In src/client-params/core.ts, replace the `isOneOf(value.role, ACP_ROLES)` check inside `isAcpRef` and the same check in the `openConnectionRecord` decoder with a trimmed non-empty string check, matching the widening already made in src/plugins/connections/shared.ts, src/plugins/shell/shared.ts and src/acp-records/validation.ts; drop the now-unused ACP_ROLES import and update the comment that still names an editor scope. Add cases to src/client-params/core.test.ts proving a tab-scoped acpRef with a roles-file role name is accepted and an empty or whitespace-only one is refused for both openAcpTranscript and openConnectionRecord. The custom-role row emission pinned in src/connection/catalog.test.ts must keep passing.
-
-
 * Ignore a monitor flush reply that settles after a reset instead of delivering a stale suggestion and dropping the re-primed first prompt.
 
 Existing Issue: LiveMonitors.flush guards failed results with `generation === reg.resetGeneration` but its success path has no such guard, so a reply landing after resetContext has closed the core session and re-set firstPrompt still clears firstPrompt, records the reply and delivers a suggestion. Severity: 6/10
