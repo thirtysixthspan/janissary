@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Restore the system schedule storage integration tests dropped along with the capture sentinel
-
-Existing Issue: The pull request deletes src/schedule/system/storage.integration.test.ts in full to remove one assertion that used .janissary/captures/ as a per-run sentinel, taking seven unrelated tests of schedule-store round-tripping, atomic write failure cleanup, space-safe git excludes, tracked-target refusal, preignored rules, and symlink-path rejection with it. Severity: 7/10
-
-Existing Risk: 7/10 - Schedule store corruption, git exclude regressions, and symlinked-store attacks can land unnoticed because the only end-to-end checks for that behavior are gone.
-
-Proposal Risk: 2/10 - The tests return with one sentinel changed to a directory that still loses its clear, keeping the prior coverage; the residual cost is the same git and temp-directory dependency the suite already carried.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2195 "restore the system schedule storage integration tests dropped with the capture sentinel". Restore src/schedule/system/storage.integration.test.ts from origin/master unchanged except for the single test "keeps snapshots and scripts through repeated real startup cleanup cycles": replace its .janissary/captures/ sentinel with a directory that still has a clear, such as .janissary/recordings/ through initHarnessRecordingDirectory and clearHarnessRecordingDirectory in src/harness/recording-file.ts, drop the initHarnessCaptureDirectory import, and keep the assertions that the persisted schedule file and runscripts survive clearStateDirectories() across both cycles. Leave the other seven tests byte-for-byte intact — they are the only integration coverage for malformed and future-version stores, atomic replacement failure cleanup, nested paths with spaces in git excludes, tracked targets, already-ignored rules, and symlinked persistent storage. The capture behavior is already pinned by src/harness/capture/file.test.ts and src/state/dirs.test.ts on this branch, so those files must keep passing untouched.
-
-
 * Correct the pull request description's account of why the schedule storage integration test was removed
 
 Existing Issue: The description presents the deletion of src/schedule/system/storage.integration.test.ts as the consequence of one capture-sentinel assertion, while only one of the file's eight tests used captures and seven tested unrelated schedule storage and git behavior. Severity: 6/10

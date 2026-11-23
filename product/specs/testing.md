@@ -8,6 +8,8 @@ Dedicated recorder and controller persistence tests continue to exercise real st
 
 Tests that deliberately break the system schedule store capture `process.stderr` and assert the reported error, so the expected failure line stays out of suite output without dropping coverage of the runtime report.
 
+System schedule storage integration checks run against real scratch projects and real git repositories. They cover complete snapshot round-tripping, malformed and future-version stores, atomic replacement failure cleanup, local git excludes in nested paths with spaces, tracked targets, already-ignored rules, and symlinked storage. A repeated-startup-cleanup check confirms that persisted schedules and runscripts survive two startup cleanups while a per-run sentinel is removed by the cleanup.
+
 ### Client test isolation
 
 Client tests run with a DOM environment and isolated module state for each test file. The DOM environment is prepared once per worker and reused across its files. Cleanup removes rendered React trees after each test.
