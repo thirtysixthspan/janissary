@@ -13,7 +13,7 @@ const RESOLVE_DEADLINE_MS = 120_000;
 // text. It accumulates for the tab's whole life whether or not anything is watching, so a monitor
 // started mid-session finds a populated buffer and `harness transcript` works on an unmonitored tab.
 //
-// The `.janissary/harness-transcripts/` file is opened lazily on the first entry (a harness that
+// The `.janissary/transcripts/harness/` file is opened lazily on the first entry (a harness that
 // never produces one leaves no empty file) through a single long-lived append stream, exactly as
 // `HarnessRecorder` does.
 export class HarnessTranscriptTailer {

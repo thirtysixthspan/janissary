@@ -40,13 +40,13 @@ launched into a sandboxed workspace (`-w`) still records its session normally.
 Entries are labeled with the subagent that produced them, so a subagent's work stays
 distinguishable from the parent's once the two are interleaved.
 
-The transcript file is `.janissary/harness-transcripts/<label>-<timestamp>.txt`, named on the same
+The transcript file is `.janissary/transcripts/harness/<label>-<timestamp>.txt`, named on the same
 scheme as captures and recordings. It is created **lazily, on the first entry** — a harness that
 never produces one leaves no empty file — appended to for the life of the tab, and never truncated.
 Closing the harness tab or quitting the application stops transcript collection and closes the file.
 The directory is **cleared at every launch**, matching
-`.janissary/recordings/`. It is separate from `.janissary/transcripts/`, which holds ordinary tabs'
-own logs.
+`.janissary/recordings/`. Each harness tab gets its own file in that directory. The
+`.janissary/harness-transcripts/` directory earlier versions wrote is no longer used or cleared.
 
 A session record is not created the instant a harness starts; the binary writes it on its first turn,
 and the tab keeps looking until it appears. When none can be found, the tab silently keeps its

@@ -532,7 +532,7 @@ tab. The flag stays and still opens whatever was written.
 
 Beside its recording, every shell tab keeps a plain-text transcript of its session: the rows the
 terminal displayed, as text, in a file under `.janissary/shell-transcripts/`. It is a separate file
-from the recording above and from the harness session transcript under `.janissary/harness-transcripts/`
+from the recording above and from the harness session transcript under `.janissary/transcripts/harness/`
 (see [[harness-recording]]); either the recording or the text transcript can fail without stopping the
 other. It is opened from the metadata row's **Open transcript** button (see § The metadata row).
 

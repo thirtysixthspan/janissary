@@ -2,14 +2,12 @@ import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { harnessArtifactFilename } from './artifact-name.js';
 
-// `.janissary/harness-transcripts/`, deliberately not `.janissary/transcripts/` — that directory
-// belongs to `TranscriptStore`'s per-tab `<label>.json` logs, an unrelated concept. Same
-// init/ensure/path/clear quartet as `recording-file.ts`, so the transcript files inherit the same
-// clear-at-every-launch policy from `src/main.ts`.
+// `.janissary/transcripts/harness/`, the only thing under `.janissary/transcripts/`. The
+// clear-at-every-launch policy comes from this directory's entry in `src/state/dirs.ts`.
 let transcriptDirectory = '';
 
 export function initHarnessTranscriptDirectory(projectDirectory: string): void {
-  transcriptDirectory = path.join(projectDirectory, '.janissary', 'harness-transcripts');
+  transcriptDirectory = path.join(projectDirectory, '.janissary', 'transcripts', 'harness');
 }
 
 export function ensureHarnessTranscriptDirectory(): void {

@@ -37,11 +37,11 @@ function makeHarnessManagers(
 describe('openTranscriptFileFor', () => {
   it('opens the tailer\'s transcript file in an editor tab', () => {
     const edit = vi.fn();
-    const managers = makeHarnessManagers({ transcriptFile: () => '/project/.janissary/harness-transcripts/claude-now.txt' }, edit);
+    const managers = makeHarnessManagers({ transcriptFile: () => '/project/.janissary/transcripts/harness/claude-now.txt' }, edit);
 
     openTranscriptFileFor(managers, 'claude');
 
-    expect(edit).toHaveBeenCalledWith('transcript claude', '/project/.janissary/harness-transcripts/claude-now.txt', 'claude');
+    expect(edit).toHaveBeenCalledWith('transcript claude', '/project/.janissary/transcripts/harness/claude-now.txt', 'claude');
   });
 
   it('is a no-op when the tab has no transcript tailer', () => {
@@ -76,14 +76,14 @@ describe('openTranscriptFileFor', () => {
   it('prefers the tailer\'s file over the tab record\'s transcript', () => {
     const edit = vi.fn();
     const managers = makeHarnessManagers(
-      { transcriptFile: () => '/project/.janissary/harness-transcripts/claude-now.txt' },
+      { transcriptFile: () => '/project/.janissary/transcripts/harness/claude-now.txt' },
       edit,
       [{ label: 'claude', transcript: '/project/.janissary/shell-transcripts/claude-other.txt' }],
     );
 
     openTranscriptFileFor(managers, 'claude');
 
-    expect(edit).toHaveBeenCalledWith('transcript claude', '/project/.janissary/harness-transcripts/claude-now.txt', 'claude');
+    expect(edit).toHaveBeenCalledWith('transcript claude', '/project/.janissary/transcripts/harness/claude-now.txt', 'claude');
   });
 
   it('is a no-op for a shell tab whose transcript has not opened yet', () => {

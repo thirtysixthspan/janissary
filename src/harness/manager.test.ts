@@ -233,11 +233,11 @@ describe('harness transcript', () => {
     const { managers, edit } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness claude')).toBeUndefined();
-    tailerMock.instances[0].transcriptFile.mockReturnValue('/project/.janissary/harness-transcripts/claude-now.txt');
+    tailerMock.instances[0].transcriptFile.mockReturnValue('/project/.janissary/transcripts/harness/claude-now.txt');
     expect(manager.run('harness transcript claude')).toBeUndefined();
     expect(edit).toHaveBeenCalledWith(
       'harness transcript claude',
-      '/project/.janissary/harness-transcripts/claude-now.txt',
+      '/project/.janissary/transcripts/harness/claude-now.txt',
       'janus',
     );
   });

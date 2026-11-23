@@ -2,8 +2,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { harnessArtifactFilename } from '../../harness/artifact-name.js';
 
-// `.janissary/shell-transcripts/`, distinct from `.janissary/transcripts/` (`TranscriptStore`'s
-// per-tab `<label>.json` logs) and from `.janissary/harness-transcripts/` (harness session
+// `.janissary/shell-transcripts/`, distinct from `.janissary/transcripts/harness/` (harness session
 // transcripts). The clear-at-every-launch policy comes from this directory's entry in
 // `src/state/dirs.ts`.
 let transcriptDirectory = '';

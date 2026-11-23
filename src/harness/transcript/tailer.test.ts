@@ -6,7 +6,7 @@ import type { TranscriptSource } from './source.js';
 
 vi.mock('../transcript-file.js', () => ({
   ensureHarnessTranscriptDirectory: vi.fn(),
-  harnessTranscriptPath: vi.fn(() => '/project/.janissary/harness-transcripts/claude-now.txt'),
+  harnessTranscriptPath: vi.fn((label: string) => `/project/.janissary/transcripts/harness/${label}-now.txt`),
 }));
 
 const streamMock = vi.hoisted(() => ({ writes: [] as string[], ended: 0 }));
@@ -56,13 +56,29 @@ describe('HarnessTranscriptTailer', () => {
     const tailer = new HarnessTranscriptTailer('claude', fakeSource([['user: hello'], ['assistant: hi']]), vi.fn());
     vi.advanceTimersByTime(POLL_MS);
     expect(tailer.entriesAfter(0)).toEqual(['user: hello']);
-    expect(tailer.transcriptFile()).toBe('/project/.janissary/harness-transcripts/claude-now.txt');
+    expect(tailer.transcriptFile()).toBe('/project/.janissary/transcripts/harness/claude-now.txt');
     vi.advanceTimersByTime(POLL_MS);
     expect(tailer.entriesAfter(0)).toEqual(['user: hello', 'assistant: hi']);
     expect(createWriteStream).toHaveBeenCalledTimes(1);
     expect(streamMock.writes).toEqual(['user: hello\n\n', 'assistant: hi\n\n']);
     expect(harnessTranscriptPath).toHaveBeenCalledWith('claude', expect.any(Number));
     tailer.dispose();
+  });
+
+  it('writes each tab to its own file', () => {
+    const claude = new HarnessTranscriptTailer('claude', fakeSource([['claude: hi']]), vi.fn());
+    const codex = new HarnessTranscriptTailer('codex', fakeSource([['codex: yo']]), vi.fn());
+    vi.advanceTimersByTime(POLL_MS);
+    expect(createWriteStream).toHaveBeenCalledTimes(2);
+    expect(createWriteStream).toHaveBeenCalledWith('/project/.janissary/transcripts/harness/claude-now.txt', { flags: 'a' });
+    expect(createWriteStream).toHaveBeenCalledWith('/project/.janissary/transcripts/harness/codex-now.txt', { flags: 'a' });
+    expect(harnessTranscriptPath).toHaveBeenCalledTimes(2);
+    expect(harnessTranscriptPath).toHaveBeenCalledWith('claude', expect.any(Number));
+    expect(harnessTranscriptPath).toHaveBeenCalledWith('codex', expect.any(Number));
+    expect(claude.transcriptFile()).toBe('/project/.janissary/transcripts/harness/claude-now.txt');
+    expect(codex.transcriptFile()).toBe('/project/.janissary/transcripts/harness/codex-now.txt');
+    claude.dispose();
+    codex.dispose();
   });
 
   it('serves entries after a caller\'s own index', () => {
