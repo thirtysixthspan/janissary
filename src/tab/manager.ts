@@ -238,12 +238,11 @@ export class TabManager extends TabTranscriptState {
   // the same question `buildTabViews` asks, through the same list — so a plugin that asked cannot be
   // left believing it is recorded when it is not, and one that did not cannot have its terminal
   // written to disk because of a name appearing here. Whether `logEnabled` lets it record is the
-  // runtime manager's gate, which also marks a tab it declines as not recording. The text transcript
-  // follows `logEnabled` too, so with it off neither is written.
+  // runtime manager's gate, which withholds the runtime; the tab itself was already marked as not
+  // recording when `openPluginTab` minted it. The text transcript follows `logEnabled` too, so with
+  // it off neither is written.
   recordTerminal(ptyId: string, label: string, pluginId: string): void {
-    const declares = this.managers.plugins.declarations
-      .find((declaration) => declaration.id === pluginId)?.recordsTerminal === true;
-    if (!declares) return;
+    if (!this.recordsTerminals(pluginId)) return;
     this.managers.terminalRuntime.registerShellObservers(ptyId, label);
     if (getConfig().logEnabled) this.managers.shellTranscript.install(ptyId, label);
   }

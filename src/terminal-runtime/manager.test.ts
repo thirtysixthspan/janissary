@@ -31,7 +31,7 @@ describe('TerminalRuntimeManager', () => {
     expect(managers.pty.terminalIdFor).toHaveBeenCalledWith('shell');
   });
 
-  it('installs no shell runtime and marks the tab not recording when logEnabled is false', () => {
+  it('installs no shell runtime and leaves the tab unmarked when logEnabled is false', () => {
     vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), logEnabled: false });
     const tab: { label: string; recordingOff?: true } = { label: 'shell' };
     const managers = {
@@ -42,8 +42,9 @@ describe('TerminalRuntimeManager', () => {
 
     manager.registerShellObservers('pty-shell', 'shell');
 
+    // The opener marks the tab when it is minted; the runtime manager only withholds the recorder.
     expect(manager.get('pty-shell')).toBeUndefined();
-    expect(tab.recordingOff).toBe(true);
+    expect(tab.recordingOff).toBeUndefined();
   });
 
   it('installs a shell runtime when logEnabled is true', () => {

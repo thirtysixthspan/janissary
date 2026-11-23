@@ -506,7 +506,8 @@ Every shell tab's session is recorded automatically, with no command or flag to 
 from the moment zsh starts to the moment it exits. The launch shell — `janus`, the tab every launch
 opens first — records on the same terms as any other shell tab. A project that sets
 `"logEnabled": false` in `.janissary/config.json` records no shell tab at all, and no harness or ssh
-tab either: no file is written and the tab's recording flag reads **not recording**. The shell and its
+tab either: no file is written and the tab's recording flag reads **not recording** from the moment
+the tab opens, including while its workspace clone or remote connection is still being made. The shell and its
 terminal are otherwise unaffected (see [[harness-recording]] § Scope). The retired `recordShellTabs`
 key is no longer read.
 

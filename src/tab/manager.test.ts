@@ -307,6 +307,52 @@ describe('TabManager queue', () => {
     expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
+  // A shell still provisioning its clone or connection has started no terminal, and its flag must
+  // already read "not recording" on the first broadcast rather than only once zsh starts.
+  it('marks a recorded plugin\'s tab not recording from the moment it opens when logEnabled is false', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+    projectConfig({ logEnabled: false });
+    let markedAtFirstBroadcast: boolean | undefined;
+    const subscription = messageBus.on('state', 'dirty', () => {
+      markedAtFirstBroadcast ??= tm.tabs.find((tab) => tab.plugin?.instanceKey === 'shell-1')?.recordingOff;
+    });
+
+    try {
+      tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', () => ({ title: 'shell', payload: {} }));
+    } finally {
+      subscription.unsubscribe();
+    }
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    expect(tab.recordingOff).toBe(true);
+    expect(markedAtFirstBroadcast).toBe(true);
+    expect(managers.terminalRuntime.registerShellObservers).not.toHaveBeenCalled();
+  });
+
+  it('never marks a plugin tab not recording when its declaration did not ask to record', () => {
+    const { tm } = makeTabManagerWithManagers();
+    projectConfig({ logEnabled: false });
+
+    tm.openPluginTab('other', 'other', 'other-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/bash', args: [] });
+      return { title: 'other', payload: {} };
+    });
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'other-1')!;
+    expect(tab.recordingOff).toBeUndefined();
+  });
+
+  it('leaves a recorded plugin\'s tab unmarked when logEnabled is true', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', () => ({ title: 'shell', payload: {} }));
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    expect(tab.recordingOff).toBeUndefined();
+  });
+
   it('records every terminal one factory started, not only the first', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });

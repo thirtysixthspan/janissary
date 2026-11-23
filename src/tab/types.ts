@@ -368,7 +368,8 @@ export type Tab = {
   // ends, and its recording is still worth replaying. Written once, by the observer that opened it.
   recording?: string;
   // Set on a tab of a recording kind (harness, ssh, shell) opened while `logEnabled` is false: no
-  // recorder is ever built for it. Set when the tab is created, so a provisioning tab already says so.
+  // recorder is ever built for it. Set when the tab is created, so a provisioning tab already says so:
+  // by its spawner for a harness or ssh tab, and by `openPluginTab` for a recorded plugin tab.
   recordingOff?: true;
   // The absolute path of this tab's text transcript, set by the writer that opened it on the shell's
   // first output. Remembered on the tab for the same reason as `recording`: the writer is released

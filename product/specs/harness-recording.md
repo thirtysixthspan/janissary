@@ -111,7 +111,9 @@ session starts. Shell tabs have the same recording flag for their owned terminal
 A tab opened while `"logEnabled": false` is set will never record, and its flag says so: the same film
 icon, plain and never green, with the tooltip and accessible name **not recording** instead of
 **recording**. It cannot be pressed or focused, and it reads that way for the tab's whole life —
-including while a `--workspace` or remote harness tab is still being set up, before any session runs.
+including while a `--workspace` or remote harness tab is still being set up, before any session runs,
+and while a shell tab is still having its workspace clone made or its remote connection opened,
+before its shell starts.
 A tab that will record but has produced no output yet keeps the plain **recording** flag.
 
 The flag **outlives the session**. A harness tab stays open after its process ends, and its flag stays

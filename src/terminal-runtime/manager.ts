@@ -32,14 +32,10 @@ export class TerminalRuntimeManager {
     this.install(id, label, sshRuntime(this.managers, id, label, command));
   }
 
-  // The shell recording gate: with `logEnabled` false the tab is marked as never recording and no
-  // runtime is installed for its terminal.
+  // The shell recording gate: with `logEnabled` false no runtime is installed for the terminal. The
+  // tab is marked as never recording by `openPluginTab` when it is minted, not here.
   registerShellObservers(id: string, label: string): void {
-    if (!getConfig().logEnabled) {
-      const tab = this.managers.tab.byLabel(label);
-      if (tab) tab.recordingOff = true;
-      return;
-    }
+    if (!getConfig().logEnabled) return;
     this.install(id, label, shellRuntime(this.managers, id, label, SHELL_PROGRAM));
   }
 
