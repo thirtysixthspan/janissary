@@ -59,7 +59,6 @@ function makeManagers(): Managers {
     plugins: { declarations: [] as { id: string; recordsTerminal?: boolean }[] },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
-    editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn(), closeTab: vi.fn(), get: vi.fn() },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
     communication: { closeTab: vi.fn() },

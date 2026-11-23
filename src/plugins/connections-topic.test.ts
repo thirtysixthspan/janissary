@@ -44,7 +44,6 @@ function fixture() {
     shell: { has: vi.fn(() => true) },
     acp: { label: vi.fn(() => null), cancel, close },
     monitor: { connectionsFor: vi.fn(() => []) },
-    editorAcp: { connectionsFor: vi.fn(() => []) },
     browser: { info: vi.fn(() => null) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { listOpen: vi.fn(() => []), openDbs: vi.fn(() => []) },

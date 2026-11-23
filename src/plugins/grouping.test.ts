@@ -26,7 +26,6 @@ function makeManagers(): Managers {
     shellTranscript: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
-    editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn(), closeTab: vi.fn() },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
     communication: { closeTab: vi.fn() },
