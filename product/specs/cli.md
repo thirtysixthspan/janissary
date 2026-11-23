@@ -39,7 +39,7 @@ Unknown flags, malformed flags (e.g. bare `--port` with no value), invalid `--po
 
 ### Startup failures
 
-When `janus` fails to start, the failed-to-start banner `<name> <version> — failed to start: <reason>` (so every report is self-identifying) followed by guidance on what to do next is written to both `.janissary/log/server.log` and the terminal, and the launcher exits with the server's own exit code (1 for startup failures, 2 for CLI usage errors). Two failures are recognized specifically:
+When `janus` fails to start, the failed-to-start banner `<name> <version> — failed to start: <reason>` (so every report is self-identifying) followed by guidance on what to do next is written to both `.janissary/logs/server.log` and the terminal, and the launcher exits with the server's own exit code (1 for startup failures, 2 for CLI usage errors). Two failures are recognized specifically:
 
 - The requested port is already in use: the message names the port and suggests picking another with `--port=<n>` or omitting `--port` to choose one automatically.
 - The web UI bundle is missing (a dev checkout where the web assets have not been built): the message points at `npm run build:web` or `npm start`.
@@ -49,7 +49,7 @@ Any other failure falls back to the underlying error's message with the same ban
 
 ### Startup sequence
 
-For a normal launch (not `--help`, `--version`, or `stop`), the `janus` command detaches the server into the background and returns the shell prompt as soon as the server is ready, redirecting all of its output to `.janissary/log/server.log` instead of the terminal. `--help`, `--version`, and `stop` run attached, printing straight to the terminal (see their own sections). So does a launch whose `<project-dir>` is missing or is not a directory: the launcher (`bin/janus.mjs`) has nowhere to put the log, so it runs the server attached instead of creating the path, and the server's own argument parsing reports the usage error above and exits 2 before anything is written.
+For a normal launch (not `--help`, `--version`, or `stop`), the `janus` command detaches the server into the background and returns the shell prompt as soon as the server is ready, redirecting all of its output to `.janissary/logs/server.log` instead of the terminal. `--help`, `--version`, and `stop` run attached, printing straight to the terminal (see their own sections). So does a launch whose `<project-dir>` is missing or is not a directory: the launcher (`bin/janus.mjs`) has nowhere to put the log, so it runs the server attached instead of creating the path, and the server's own argument parsing reports the usage error above and exits 2 before anything is written.
 
 The detached server itself boots the full application against its target directory (the current directory, or the resolved `<project-dir>` argument):
 
@@ -63,9 +63,9 @@ The detached server itself boots the full application against its target directo
 8. Unless `--no-open`: open the app in a Chrome app window (or the default browser if no system Chrome is found).
 9. Register signal handlers for graceful shutdown (SIGINT, SIGTERM), app window cleanup, and instance lock release on exit.
 
-The launcher watches `.janissary/log/server.log` for the `__JANUS_URL__` line written by the server it just started. The log is truncated before the server starts, so the only `__JANUS_URL__` line the launcher can see is the new server's. Once the new line appears, the launcher exits 0 and prints nothing to the terminal — except under `--no-open`, where it prints the new server's URL, since no window opens to carry the session visually. If the server process exits before that line appears, the launcher relays the tail of what that server wrote to the log to the terminal and exits with the server's own exit code. If neither happens within 20 seconds, the launcher kills the detached server, prints a timeout failure to the terminal, and exits 1.
+The launcher watches `.janissary/logs/server.log` for the `__JANUS_URL__` line written by the server it just started. The log is truncated before the server starts, so the only `__JANUS_URL__` line the launcher can see is the new server's. Once the new line appears, the launcher exits 0 and prints nothing to the terminal — except under `--no-open`, where it prints the new server's URL, since no window opens to carry the session visually. If the server process exits before that line appears, the launcher relays the tail of what that server wrote to the log to the terminal and exits with the server's own exit code. If neither happens within 20 seconds, the launcher kills the detached server, prints a timeout failure to the terminal, and exits 1.
 
-`.janissary/log/server.log` is truncated at the start of every launch, mirroring how the per-run state and workspace are cleared. It captures everything the server would otherwise have printed to stdout/stderr: the URL banner, the human-readable banner, non-fatal warnings (invalid config/agent-names/known-models files, extension load failures), and — on a startup failure — the failed-to-start banner.
+`.janissary/logs/server.log` is truncated at the start of every launch, mirroring how the per-run state and workspace are cleared. It captures everything the server would otherwise have printed to stdout/stderr: the URL banner, the human-readable banner, non-fatal warnings (invalid config/agent-names/known-models files, extension load failures), and — on a startup failure — the failed-to-start banner.
 
 Because the server is detached, Ctrl+C on the launcher no longer stops it (the launcher has already exited by the time a user could press it). Use `janus stop` to shut down a running instance.
 
@@ -96,7 +96,7 @@ The standard Codex configuration retains on-request approval and full-access san
 reason: it *is* the session. It is started by another janissary over ssh, and its stdin and stdout
 are the channel that janissary drives it over — so it is never detached and its output is never
 redirected to a log file. It takes no instance lock, starts no HTTP server, opens no window, writes
-no `.janissary/log/server.log`, and is not addressable by `janus stop`; it lives and dies with its
+no `.janissary/logs/server.log`, and is not addressable by `janus stop`; it lives and dies with its
 ssh session.
 
 With a directory argument it is rooted exactly there, with no upward walk; without one it walks up

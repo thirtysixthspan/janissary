@@ -99,7 +99,7 @@ const projectDir = resolveProjectDir(arguments_);
 // touches any state, so run it attached, where that message reaches the terminal, rather than
 // restating the check and its wording here.
 if (!isDirectory(projectDir)) runAttached();
-const logDir = path.join(projectDir, '.janissary', 'log');
+const logDir = path.join(projectDir, '.janissary', 'logs');
 mkdirSync(logDir, { recursive: true });
 const logPath = path.join(logDir, 'server.log');
 const logFd = openSync(logPath, 'w');

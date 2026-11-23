@@ -107,7 +107,7 @@ The other messages you can see:
 - `invalid project directory: <dir> is not a directory` for a path that doesn't exist or is a file. `janus` doesn't create it for you.
 - `unexpected argument: <dir>` for a second directory.
 
-Usage errors don't carry the `failed to start` banner described under [Troubleshooting](#troubleshooting), because nothing was started. A bad flag in a real directory can still touch that directory's `.janissary/log/server.log`, since the launcher opens the log before it runs the server. A missing or invalid directory can't, so the launcher prints that message directly.
+Usage errors don't carry the `failed to start` banner described under [Troubleshooting](#troubleshooting), because nothing was started. A bad flag in a real directory can still touch that directory's `.janissary/logs/server.log`, since the launcher opens the log before it runs the server. A missing or invalid directory can't, so the launcher prints that message directly.
 
 ## Where the app opens
 
@@ -115,7 +115,7 @@ By default `janus` opens the app in a frameless Chrome window with no tabs or ad
 
 If none of those browsers is installed, or the window can't be started, Janissary opens the URL in your default browser instead. It works the same way there, except that some sites that refuse to be embedded may not render in [page tabs](/user-documentation/tab-types/web-pages).
 
-`--no-open` opens nothing and prints the server's URL on its own line instead. The same URL is on the `__JANUS_URL__` line of `.janissary/log/server.log`. Open it in any browser, and stop the server with `janus stop`.
+`--no-open` opens nothing and prints the server's URL on its own line instead. The same URL is on the `__JANUS_URL__` line of `.janissary/logs/server.log`. Open it in any browser, and stop the server with `janus stop`.
 
 ## Stopping the app
 
@@ -155,7 +155,7 @@ Detached remote sessions are the exception. Every launch tries each eligible par
 
 ## Troubleshooting
 
-Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of every launch. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it.
+Since a normal launch doesn't print to the terminal, check `.janissary/logs/server.log` for anything the server would otherwise have shown — it's cleared at the start of every launch. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it.
 
 If startup fails, the message opens with the app name and version, as in `janissary 0.20.0 — failed to start: <reason>`, so any report you share says which build it came from. Four failures also say what to do next. Any other failure shows the underlying error's own message after the banner and nothing more. The four you're most likely to see:
 

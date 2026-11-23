@@ -36,6 +36,6 @@ Each line holds those three fields. The field named `agent` identifies the tab l
 
 <img class="agent-float left" src="/agents/ekrem-south-east.png" alt="" />
 
-The log is never cleared or compacted. Daily files accumulate under `.janissary/log/` until you remove them yourself. One file beside them behaves the opposite way: `server.log` is the app's own output, cleared at the start of every launch. If you are grepping `.janissary/log/` for why a launch failed, that is the one you want, and it is the one that empties itself; see [Troubleshooting](/user-documentation/getting-started/startup#troubleshooting).
+The log is never cleared or compacted. Daily files accumulate under `.janissary/log/` until you remove them yourself. The app's own output lives elsewhere, in `.janissary/logs/server.log`, and behaves the opposite way: it's cleared at the start of every launch. If you are grepping for why a launch failed, that's the file you want, and it's the one that empties itself; see [Troubleshooting](/user-documentation/getting-started/startup#troubleshooting).
 
 This is separate from each tab's own transcript, which lasts only as long as the tab. The log on this page is a flat, all-tabs record that outlives any single tab, kept even after that tab closes.
