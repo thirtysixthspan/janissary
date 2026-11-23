@@ -24,6 +24,11 @@ function positiveIntegerValue(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : fallback;
 }
 
+// Unlike `positiveIntegerValue`, `0` is meaningful here: it means keep nothing from earlier runs.
+function nonNegativeIntegerValue(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : fallback;
+}
+
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback;
 }
@@ -97,10 +102,15 @@ export function backfillNotificationAlerts(
   };
 }
 
-export function backfillMaxToolTurns(parsed: unknown, defaults: Config): Record<string, unknown> | undefined {
+const BACKFILLED_KEYS = ['maxToolTurns', 'logEnabled', 'logRetentionInDays'] as const;
+
+export function backfillMissingKeys(parsed: unknown, defaults: Config): Record<string, unknown> | undefined {
   const raw = configRecord(parsed);
-  if (!raw || Object.hasOwn(raw, 'maxToolTurns')) return;
-  return { ...raw, maxToolTurns: defaults.maxToolTurns };
+  if (!raw) return;
+  const missing = BACKFILLED_KEYS.filter((key) => !Object.hasOwn(raw, key));
+  if (missing.length === 0) return;
+  const additions = Object.fromEntries(missing.map((key): [string, unknown] => [key, defaults[key]]));
+  return { ...raw, ...additions };
 }
 
 export function decodeConfig(value: unknown, defaults: Config): Config {
@@ -113,6 +123,8 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     clipboardHistoryMaxEntries: positiveIntegerValue(record.clipboardHistoryMaxEntries, defaults.clipboardHistoryMaxEntries),
     sandboxWorkspaces: booleanValue(record.sandboxWorkspaces, defaults.sandboxWorkspaces),
     recordShellTabs: booleanValue(record.recordShellTabs, defaults.recordShellTabs),
+    logEnabled: booleanValue(record.logEnabled, defaults.logEnabled),
+    logRetentionInDays: nonNegativeIntegerValue(record.logRetentionInDays, defaults.logRetentionInDays),
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),
     theme: stringValue(record.theme, defaults.theme),
     osNotifications: booleanValue(record.osNotifications, defaults.osNotifications),
