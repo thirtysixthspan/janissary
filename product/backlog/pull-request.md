@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reconcile the connections spec's claim that an editor persona query's core row has an ordinary close control, which the read-only editor window does not provide.
-
-Existing Issue: product/specs/connection.md's editor-tab paragraph says a persona query's connection is closed through "that core row's ordinary control," but the editor's connections window renders no close control on any row now that onCloseRow and canCloseRow were removed. Severity: 4/10
-
-Existing Risk: 4/10 - A reader or user following the spec looks for a close control on the editor tab's core ACP row that does not exist, and either concludes the feature is broken or dismisses the session through an unrelated surface without realizing the window is deliberately read-only.
-
-Proposal Risk: 2/10 - The fix is a prose edit to one spec paragraph; the only residual risk is wording that still implies a control on a different surface, which a read of the editor panel and StatusPanels resolves.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "correct the connections spec's editor-row close-control claim". In product/specs/connection.md, edit only the editor-tab paragraph that begins "An editor tab carries the same connections button and window" so it states that the editor tab's connections window is read-only: it renders no close control for any row because onCloseRow and canCloseRow were removed from web/src/editor/EditorConnectionsPanel.tsx and web/src/editor/useEditorConnections.ts. State that a persona query's core session is closed through the `connections close acp:<role>:<provider/model>` command, or through the close control a core row has on surfaces that render one such as the connections tab, rather than through a control in the editor's own window. Keep the surrounding statements that no `<persona> (acp)` row is produced and there is no persona-specific close control. Verify the claim against web/src/shared/status-windows/StatusPanels.tsx, whose ConnectionRow renders a close control only when onCloseRow is supplied, and read web/src/editor/EditorConnectionsPanel.tsx to confirm the editor supplies none. Leave code, tests, and the pull request description untouched; the description was already corrected for this same issue and must stay byte-for-byte as the author wrote it. No new test is needed for prose.
-
-
 * Remove the pull request description's stale "six behavior specs" claim, which lists and changes seven spec files.
 
 Existing Issue: The pull request body says "The six behavior specs were reconciled with this routing" while parenthetically listing seven files (acp.md, acp-records.md, connection.md, connections-tab.md, editor-tab.md, monitoring.md, roles.md), and the aggregate diff changes all seven product/specs files; the original ready plan named six, with acp-records.md added later. Severity: 2/10
