@@ -12,6 +12,8 @@ This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks
 
 **Plan and task formatting:** use natural line breaks only — do not wrap lines at a fixed column width (per `AGENTS.md`).
 
+**Documentation scope.** User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A plan names no work under `documentation/user-documentation/` or `documentation/developer-documentation/`, not even as a follow-up candidate, and no phase asks the user about user or developer documentation. Specs under `./product/specs/` and in-application help under `help/` are not documentation in this sense and stay in a plan's scope. The one exception is a feature whose own title and description are about adding or updating user or developer documentation. Then documentation is the plan's primary focus, and its pages are ordinary scope, planned and questioned like any other.
+
 ## What you may and may not do
 
 ### Allowed — do it automatically, never ask
@@ -105,7 +107,6 @@ Work the product-decision tree using the mechanism described above. Ask the user
 - **Edge cases** — what happens on the empty state, a conflict, a cancel, an error, or an unexpected input.
 - **Preserved behavior** — when the feature touches an existing surface, ask exactly: "Which behaviors must continue, and what specifically must not happen?"
 - **Scope boundary** — what is explicitly *not* included in this version.
-- **Scope boundary for user-visible changes** — when the feature changes something the user sees or operates, ask how to record its documentation work. State in the question that the plan records the documentation work as a follow-up feature candidate: "User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan." Offer at least three concrete answers: record a follow-up feature candidate for the prose documentation page only; record candidates for both the prose documentation page and any in-app help page or key-binding row; or record the work in the report's `Open` items for a human to file, naming no page in the plan. Mark the recommended and lowest-cost answer per the question format, and never write a documentation page into this feature's plan.
 - **Naming/wording** — any user-visible text (labels, commands, messages) the plan needs to fix precisely.
 
 Skip a category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
@@ -147,7 +148,7 @@ Run the following tasks **separately and in order**, targeting the exact draft c
 
 Both tasks reuse the workspace this task prepared in its own Step 0. Pass the specific draft path to each task's plan-selection step; do not let other drafts change the target. The improvement tasks edit only this plan, which remains in `draft/` throughout both passes. Note any pre-existing unrelated changes when verifying each pass and leave them untouched.
 
-These are two task executions, not a combined review: reading the task files, adding a complexity rating, or making a general improvement pass does not complete either task. For each task, follow its own checklist, reread the resulting plan, and report its actual findings, including `Open` items. Preserve any product decisions from the feature text or the user's answers; carry new product or implementation questions into 2h rather than silently deciding them.
+These are two task executions, not a combined review: reading the task files, adding a complexity rating, or making a general improvement pass does not complete either task. For each task, follow its own checklist, reread the resulting plan, and report its actual findings, including `Open` items. Preserve any product decisions from the feature text or the user's answers; carry new product or implementation questions into 2h rather than silently deciding them. A documentation follow-up candidate that `improve-plan.md` reports under `Open` is not a question: leave it in that report and out of 2h, per the documentation scope above. When documentation is the feature's primary focus, `improve-plan.md`'s rule against naming a documentation page does not apply to this plan, and its documentation pages stay in it.
 
 Before starting 2h, verify both gates:
 
@@ -165,7 +166,7 @@ If either gate is unchecked, finish that task before continuing. If a task canno
 - [ ] You know what is out of scope.
 - [ ] You know the exact user-visible wording, if any.
 - [ ] If the feature has a UI, you know its placement, interaction, every state, and its key bindings.
-- [ ] Any user-visible change has its documentation boundary recorded: the plan records the documentation work as a follow-up feature candidate under "User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan.", and no page under either documentation tree appears in the plan.
+- [ ] The plan names no user or developer documentation work, follow-up candidates included, unless documentation is the feature's primary focus.
 
 If every box is checked and both improvement passes surfaced nothing new, the plan is complete. Otherwise, work one more decision-tree phase over: the unchecked items, plus any new questions the improvement passes raised — new and remaining decisions alike join the same tree. Unchecked items with no dependency are askable now; items whose answers hang on another open question wait until that question is answered, with no limit on questions. Ask them one at a time in the question format above. Target only the open items, and apply every answer to the draft, then re-read it and repeat this step. Continue until every box is checked and nothing surfaced remains unresolved; do not leave unresolved product or implementation decisions in the plan.
 
