@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request title that labels this feature implementation as a documentation change.
-
-Existing Issue: The pull request is titled "docs: publish the ai-personas role and ACP pipeline plans" while the diff implements the persona-format and ACP-pipeline feature across source, tests and specs, with the plan only moved from ready to complete. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer filtering by change type or release tooling treating the `docs` prefix as authoritative will classify a behavior-changing feature as documentation and ship it without the scrutiny a feature change gets.
-
-Proposal Risk: 1/10 - Retitling changes metadata only and leaves the branch, commits and description untouched, so there is no code path to regress.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "correct the pull request title to describe the feature". Retitle the pull request with a `feat` conventional-commit type that names the delivered behavior, for example "feat: specify AI personas by role and route persona queries through the core ACP pipeline", so the title agrees with the feature description already in the pull request body. Do not change the description text or any source file in this work item.
-
-
 * Correct the verification claim that an editor persona query can be closed through a core row Close control.
 
 Existing Issue: The description's How to verify step 3 and Verification step 3 offer "press the core row's Close control" as an alternative to `connections close`, but the editor connections panel no longer supplies onCloseRow or canCloseRow, so no row in that window renders a close control. Severity: 3/10
