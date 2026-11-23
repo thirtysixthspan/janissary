@@ -187,7 +187,7 @@ tab is enough on its own: a detached remote harness, whose PTY never reports an 
 recording when its tab goes. A PTY that later reuses the same session id (an attach bringing the tab
 back) starts a new recording file rather than appending to the earlier one.
 
-The recordings directory is **cleared at every launch**, matching `.janissary/captures/` — a run's recordings are bounded to that run.
+The recordings directory is **cleared at every launch**, so a run's recordings are bounded to that run. Capture files under `.janissary/captures/` are not cleared: they are kept across launches and swept by age instead (see [[harness]] § Screen capture).
 
 Harness, ssh and shell recordings share one directory, so telling them apart means reading a file's
 header `command` field or recognizing the tab label in its name. Two concurrent sessions to the same

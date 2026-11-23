@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as fs from 'node:fs';
+import path from 'node:path';
 import {
   initHarnessCaptureDirectory,
   ensureCaptureDirectory,
   writeCaptureFile,
-  clearCaptureDirectory,
+  reapHarnessCaptures,
 } from './file.js';
 
+const { reapFilesOlderThan } = vi.hoisted(() => ({
+  reapFilesOlderThan: vi.fn(),
+}));
+
 vi.mock('node:fs');
+vi.mock('../../state/reaper.js', () => ({ reapFilesOlderThan }));
 
 const mockFs = fs as Record<string, ReturnType<typeof vi.fn>>;
 
@@ -46,22 +52,33 @@ describe('harness-capture-file', () => {
     expect(file).not.toContain('a/b');
   });
 
-  it('clearCaptureDirectory removes the captures directory', () => {
-    mockFs.rmSync.mockImplementation(() => {});
+  it('reaps .txt files older than the retention window', async () => {
     initHarnessCaptureDirectory('/test/project');
-    clearCaptureDirectory();
-    expect(mockFs.rmSync).toHaveBeenCalled();
-    const call = mockFs.rmSync.mock.calls[0];
-    expect(call[0]).toContain('captures');
-    expect(call[1]).toHaveProperty('recursive', true);
-    expect(call[1]).toHaveProperty('force', true);
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapHarnessCaptures(launchedAt, 7);
+    expect(reapFilesOlderThan).toHaveBeenCalledOnce();
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'captures'),
+      '.txt',
+      launchedAt - 7 * 86_400_000,
+    );
   });
 
-  it('clearCaptureDirectory ignores removal errors', () => {
-    mockFs.rmSync.mockImplementation(() => {
-      throw new Error('permission denied');
-    });
+  it('uses launch as the cutoff when retention is zero', async () => {
     initHarnessCaptureDirectory('/test/project');
-    expect(() => clearCaptureDirectory()).not.toThrow();
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapHarnessCaptures(launchedAt, 0);
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'captures'),
+      '.txt',
+      launchedAt,
+    );
+  });
+
+  it('reaps nothing before a directory has been chosen', async () => {
+    vi.resetModules();
+    const fresh = await import('./file.js');
+    await expect(fresh.reapHarnessCaptures(Date.now(), 7)).resolves.toBeUndefined();
+    expect(reapFilesOlderThan).not.toHaveBeenCalled();
   });
 });

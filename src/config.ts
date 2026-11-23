@@ -51,8 +51,8 @@ export type Config = {
   // `product/specs/application-config.md`). Default true; the escape hatch for turning transcript
   // writing off entirely.
   logEnabled: boolean;
-  // How many days a harness or shell transcript is kept, with `0` keeping none from earlier runs
-  // (see `product/specs/application-config.md`).
+  // How many days a harness or shell transcript, or a harness capture file, is kept, with `0`
+  // keeping none from earlier runs (see `product/specs/application-config.md`).
   logRetentionInDays: number;
   // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
   // the screen, promoting them to a full-tab terminal mid-command (see `interactive/signals.ts`).

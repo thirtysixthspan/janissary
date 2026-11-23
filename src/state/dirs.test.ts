@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   initHarnessCaptureDirectory: vi.fn(),
-  clearCaptureDirectory: vi.fn(),
   initHarnessRecordingDirectory: vi.fn(),
   clearHarnessRecordingDirectory: vi.fn(),
   initHarnessTranscriptDirectory: vi.fn(),
@@ -23,7 +22,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../harness/capture/file.js', () => ({
   initHarnessCaptureDirectory: mocks.initHarnessCaptureDirectory,
-  clearCaptureDirectory: mocks.clearCaptureDirectory,
 }));
 vi.mock('../harness/recording-file.js', () => ({
   initHarnessRecordingDirectory: mocks.initHarnessRecordingDirectory,
@@ -114,12 +112,17 @@ describe('clearStateDirectories', () => {
   it('clears every entry with a clear on every launch', () => {
     clearStateDirectories();
 
-    expect(mocks.clearCaptureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearHarnessRecordingDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearBrowserLogDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearGitFailureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearWorkspaceDir).toHaveBeenCalledOnce();
     expect(mocks.clearRemoteFileCache).toHaveBeenCalledOnce();
+  });
+
+  it('never clears the harness capture directory', () => {
+    const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'harnessCapture');
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty('clear');
   });
 
   it('never clears the harness transcript directory', () => {
