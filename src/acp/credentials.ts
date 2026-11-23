@@ -4,9 +4,11 @@ import { prepareOpencodeDataHome } from '../sandbox/opencode-data.js';
 
 export function acpCredentials(cwd: string, workspaceDir?: string): { env: Record<string, string>; tmpDir?: string; dispose: () => void } {
   if (workspaceDir) return { env: {}, dispose: () => {} };
-  const runtime = path.join(cwd, '.janissary');
-  mkdirSync(runtime, { recursive: true, mode: 0o700 });
-  if (!lstatSync(runtime).isDirectory()) throw new Error('Unsafe ACP runtime directory.');
+  const runtime = path.join(cwd, '.janissary', 'acp');
+  for (const dir of [path.dirname(runtime), runtime]) {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    if (!lstatSync(dir).isDirectory()) throw new Error('Unsafe ACP runtime directory.');
+  }
   const directory = mkdtempSync(path.join(runtime, 'acp-'));
   const dispose = () => rmSync(directory, { recursive: true, force: true });
   try {

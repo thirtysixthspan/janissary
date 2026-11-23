@@ -405,7 +405,7 @@ Conversations remain separate ACP consumers, with their own model choices, works
 
 ### Authentication outside workspaces
 
-ACP sessions in ordinary shells receive the configured harness API tokens and a private copy of the saved ChatGPT login for OpenCode. The private login lasts for that ACP subprocess and is removed when it exits or fails to start. An explicit launch data-location setting takes precedence. Workspace sessions continue to share their workspace-owned login.
+ACP sessions in ordinary shells receive the configured harness API tokens and a private copy of the saved ChatGPT login for OpenCode. The private login lives in a per-session `acp-` scratch directory under the project's `.janissary/acp/`, so those directories no longer accumulate at the top level of `.janissary/`. The scratch directory is removed when the subprocess exits or fails to start, while the shared `acp/` subdirectory stays for later sessions. An explicit launch data-location setting takes precedence. Workspace sessions continue to share their workspace-owned login.
 
 ### Confinement
 
