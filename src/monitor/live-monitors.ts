@@ -44,6 +44,10 @@ export type MonitorSub = {
   // the owner tab's core role session, then cleared once that prompt is answered; a reset or a
   // failed first prompt puts it back so the next core session is primed again.
   firstPrompt: string;
+  // The core session that last answered this monitor's prompt. A different identity on a later
+  // answered result means another surface closed and reopened the shared role session, so the
+  // reply must be discarded and the new session re-primed on the next flush.
+  coreSession?: string;
   inFlight: boolean;
   // Incrementing generation for reporting-tab resets. A flush captures it at send time; a failed
   // result from an older generation is the close settling that flush, not a real failure.
@@ -124,6 +128,12 @@ export class LiveMonitors {
           return;
         }
         if (generation !== reg.resetGeneration) return;
+        if (reg.coreSession !== undefined && reg.coreSession !== result.session) {
+          reg.coreSession = result.session;
+          reg.firstPrompt = monitorFirstPrompt(reg.persona, reg.delimiter);
+          return;
+        }
+        reg.coreSession = result.session;
         reg.firstPrompt = '';
         recordReply(reg, this.managers, result.reply);
         const suggestion = parseSuggestion(result.reply);

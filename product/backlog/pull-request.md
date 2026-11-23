@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Re-prime a monitor's persona instructions when another surface closes its shared core role session.
-
-Existing Issue: A monitor clears its `firstPrompt` after the first answered flush and only re-primes on its own reporting-tab reset, so closing the tab's core role session with `connections close acp:<role>:<model>` while the monitor keeps running leaves later flushes on a fresh core session with no persona body, `[SUGGESTION]` reply format, or trust framing. Severity: 5/10
-
-Existing Risk: 5/10 - A user follows the pull request's own generic close path for a core row that a running monitor shares; the monitor then delivers unformatted suggestions that stop parsing, and its delimited monitored content reaches a fresh model without the instruction-hierarchy framing that tells it to treat that content as data.
-
-Proposal Risk: 3/10 - Tracking core session identity in the flush settlement path is contained and the existing reset, stop and failure tests guard it, but comparing session ids adds a new early-return branch that could discard a legitimate reply if core ever rotates identity mid-prompt.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "re-prime a monitor persona when its shared core session is replaced". In `src/monitor/live-monitors.ts`, add a field to `MonitorSub` that records the core session identity from an answered `promptResult` (`AcpPromptResult.session`, already a per-role identity from `AcpManager.sessionIdentity`), and on each later answered flush result compare the returned identity with the recorded one. When they differ, the shared core session was closed and re-opened by another surface — for example `connections close acp:<role>:<model>` in `src/connection/close.ts` or the core row's close control on the connections tab — so skip `recordReply`, `parseSuggestion` and `deliver`, restore `reg.firstPrompt = monitorFirstPrompt(reg.persona, reg.delimiter)`, and let the next flush re-prime the new session. Seed the recorded identity on the first answered result and leave the `resetGeneration`, `isCurrent` and `inFlight` handling untouched. In `src/monitor/manager.test.ts`, add a case that starts a monitor, settles the first flush with a success carrying one session identity, closes the core session through the fake ACP so the next prompt returns a different identity, flushes again, and asserts no stale suggestion was delivered and the next prompt contains the persona body, the `[SUGGESTION]` format and the trust-framing instructions. Keep the existing reset, stop, refusal and failed-flush tests passing untouched; without this, the documented close path quietly breaks a running monitor on that role.
-
-
 * Remove the stale monitor web-tools example from the ACP spec's permission paragraph.
 
 Existing Issue: `product/specs/acp.md` still says the shared ACP transport's permission denial is overridden only by "a separate consumer's own allowlist, such as a monitor's web tools, or an autonomous run", but this pull request removed monitor-owned sessions and their tools line, so a monitor has no allowlist of its own. Severity: 2/10

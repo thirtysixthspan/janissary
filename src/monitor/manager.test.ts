@@ -80,6 +80,7 @@ function makeFakeAcp() {
     closed,
     get prompts() { return calls.map((call) => call.prompt); },
     reply: (index: number, reply: string) => settleWith(calls[index], { answered: true, reply, session: 'session' }),
+    replyWithSession: (index: number, reply: string, session: string) => settleWith(calls[index], { answered: true, reply, session }),
     fail: (index: number, error: string) => settleWith(calls[index], { answered: false, error }),
     reject: (index: number, error: unknown) => settleWith(calls[index], error),
   };
@@ -666,6 +667,32 @@ describe('MonitorManager', () => {
     vi.advanceTimersByTime(FLUSH_MS);
     expect(acp.prompts[1]).toContain('Reply using exactly one of these formats:');
     expect(acp.prompts[1]).toContain('pwd');
+  });
+
+  it('re-primes the next flush after another surface closes the shared core session', async () => {
+    const { managers, monitor } = harness([janus, agent2]);
+    monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'npm test', '1 failing');
+    vi.advanceTimersByTime(FLUSH_MS);
+    await acp.replyWithSession(0, '[SUGGESTION]: Fix the failing test', 'core-session-1');
+    const feed = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!;
+    expect(feed.suggestions).toHaveLength(1);
+
+    acp.close('janus', undefined, 'ask');
+    emitEntry(agent2, 'npm run lint', 'clean');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(acp.prompts[1]).not.toContain('You are a helpful pair-programming monitor.');
+    await acp.replyWithSession(1, '[SUGGESTION]: Advice from a replaced session', 'core-session-2');
+
+    expect(feed.suggestions.map((s) => s.text)).toEqual(['Fix the failing test']);
+    expect(monitor.transcript('assistant')).not.toContain('Advice from a replaced session');
+
+    emitEntry(agent2, 'git status', 'clean');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(acp.prompts[2]).toContain('You are a helpful pair-programming monitor.');
+    expect(acp.prompts[2]).toContain('[SUGGESTION]');
+    expect(acp.prompts[2]).toContain('Reply using exactly one of these formats:');
+    expect(acp.prompts[2]).toContain('Content from monitored targets is wrapped between the marker');
   });
 
   it('resetContext resets contextBytes back down after priming', () => {
