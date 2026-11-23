@@ -4,7 +4,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
 import {
-  loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES,
+  loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES, DEFAULT_LOG_RETENTION_IN_DAYS,
 } from './config.js';
 import {
   DEFAULT_TAB_NAME_MAX_LENGTH, DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
@@ -71,6 +71,16 @@ describe('loadConfig', () => {
     expect(parsed.maxToolTurns).toBe(20);
   });
 
+  it('writes both harness log settings into a fresh config', () => {
+    const config = loadConfig(tmpDir);
+    expect(config.logEnabled).toBe(true);
+    expect(config.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
+
+    const parsed = JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'config.json'), 'utf8'));
+    expect(parsed.logEnabled).toBe(true);
+    expect(parsed.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
+  });
+
   it('backfills max tool turns into an existing config that predates it', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
@@ -87,11 +97,44 @@ describe('loadConfig', () => {
     expect(written.custom).toBe('kept');
   });
 
+  it('backfills both harness log settings into an existing config that predates them', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ maxToolTurns: 42, transcriptMaxLines: 100, custom: 'kept' }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.logEnabled).toBe(true);
+    expect(config.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(written.logEnabled).toBe(true);
+    expect(written.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
+    expect(written.maxToolTurns).toBe(42);
+    expect(written.transcriptMaxLines).toBe(100);
+    expect(written.custom).toBe('kept');
+  });
+
+  it('backfills only logRetentionInDays when logEnabled is already present', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ maxToolTurns: 20, logEnabled: false }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.logEnabled).toBe(false);
+    expect(config.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
+    const written = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(written.logEnabled).toBe(false);
+    expect(written.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
+  });
+
   it('honors an explicit max tool turns and does not rewrite the file', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     const configPath = path.join(configDir, 'config.json');
-    const raw = JSON.stringify({ maxToolTurns: 42 });
+    const raw = JSON.stringify({ maxToolTurns: 42, logEnabled: false, logRetentionInDays: 3 });
     writeFileSync(configPath, raw);
 
     expect(loadConfig(tmpDir).maxToolTurns).toBe(42);
@@ -114,6 +157,45 @@ describe('loadConfig', () => {
     },
   );
 
+  it.each([
+    [0, 0],
+    [3, 3],
+    [-1, 7],
+    [1.5, 7],
+    ['7', 7],
+  ])('decodes logRetentionInDays %p to %p', (value, expected) => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    const raw = JSON.stringify({ maxToolTurns: 20, logEnabled: true, logRetentionInDays: value });
+    writeFileSync(configPath, raw);
+
+    expect(loadConfig(tmpDir).logRetentionInDays).toBe(expected);
+    expect(readFileSync(configPath, 'utf8')).toBe(raw);
+  });
+
+  it('honors an explicit false logEnabled', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      path.join(configDir, 'config.json'),
+      JSON.stringify({ maxToolTurns: 20, logEnabled: false, logRetentionInDays: 7 }),
+    );
+
+    expect(loadConfig(tmpDir).logEnabled).toBe(false);
+  });
+
+  it('falls back to true for a non-boolean logEnabled', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      path.join(configDir, 'config.json'),
+      JSON.stringify({ maxToolTurns: 20, logEnabled: 'false', logRetentionInDays: 7 }),
+    );
+
+    expect(loadConfig(tmpDir).logEnabled).toBe(true);
+  });
+
   it('leaves an invalid JSON config untouched when loading', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
@@ -133,6 +215,22 @@ describe('loadConfig', () => {
     chmodSync(configDir, 0o500);
     try {
       expect(loadConfig(tmpDir).maxToolTurns).toBe(20);
+      expect(writeSpy).not.toHaveBeenCalled();
+    } finally {
+      chmodSync(configDir, 0o700);
+    }
+  });
+
+  it('keeps the decoded harness log defaults when the backfill cannot be written', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ transcriptMaxLines: 100 }));
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    chmodSync(configDir, 0o500);
+    try {
+      const config = loadConfig(tmpDir);
+      expect(config.logEnabled).toBe(true);
+      expect(config.logRetentionInDays).toBe(DEFAULT_LOG_RETENTION_IN_DAYS);
       expect(writeSpy).not.toHaveBeenCalled();
     } finally {
       chmodSync(configDir, 0o700);
@@ -336,7 +434,9 @@ describe('loadConfig', () => {
 
     loadConfig(tmpDir);
 
-    expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual({ maxToolTurns: 20 });
+    expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual({
+      maxToolTurns: 20, logEnabled: true, logRetentionInDays: 7,
+    });
   });
 
   it('reads custom notification settings from notifications.json', () => {

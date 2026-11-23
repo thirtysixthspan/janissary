@@ -22,7 +22,7 @@ This task **describes**. The code on the head branch is the ground truth: when t
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` on it. Run read-only `git` and `gh` commands. Read the pull request's merge status and CI checks with `pr-resolve-remote`, `pr-check-mergeable`, and `pr-wait-checks`. Delegate `ai/tasks/workspace/resolve-conflicts.md` and `ai/tasks/workspace/fix-build.md` to fresh subagents as Step 2 describes. Edit the pull request's own plan, and delete with `git rm` the fix plans the diff adds to `./product/plans/complete/`. Edit or create files in `./product/specs/`. Edit the applicable files in `help/`. Restore `./product/backlog/pull-request.md` to its skeleton. Commit and push those files to the pull request's own head branch. Rewrite the pull request's description with `gh pr edit --body-file`, as Step 9 describes.
+Read any file in the repo. Check out the pull request's head branch. Run Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` on it. Run read-only `git` and `gh` commands. Read the pull request's merge status and CI checks with `pr-resolve-remote`, `pr-check-mergeable`, and `pr-wait-checks`. Delegate `ai/tasks/workspace/resolve-conflicts.md` and `ai/tasks/workspace/fix-build.md` to fresh subagents as Step 2 describes. Edit the pull request's own plan, and delete with `git rm` the fix plans the diff adds to `./product/plans/complete/`. Edit or create files in `./product/specs/`. Edit the applicable files in `help/`. Restore `./product/backlog/pull-request.md` to its skeleton. Commit and push those files to the pull request's own head branch. Rewrite the pull request's description with `gh pr edit --body-file` and its title with `gh pr edit --title`, as Step 9 describes.
 
 ### Forbidden — no exceptions
 
@@ -30,7 +30,7 @@ Read any file in the repo. Check out the pull request's head branch. Run Steps 2
 2. **Working a pull request that is not `OPEN`, or an ambiguous target.** Report and stop; never substitute another pull request or branch.
 3. **Editing any source, test, or config file, or any file outside the Allowed list.** The code is what the text is measured against. Changing it would make the run a fix, and nothing here verifies a fix. The repairs Step 2 delegates are the only exception: each follows its own task's scope rules and proves its own build. `documentation/`, `README.md`, `AGENTS.md`, and `ai/guidelines/` are outside the list too. User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan, so a documentation update belongs to its own feature.
 4. **Deleting a plan that exists on `master`, a plan outside `./product/plans/complete/`, or `./product/backlog/pull-request.md`.** Only the fix plans this pull request adds are removed. The backlog file belongs on `master` with its leading comment and heading, and the branch's copy stays.
-5. **Editing the pull request's title, or its Additional test cases section.** The title has to match the commit subject under this repo's Conventional Commits rules, so changing one alone breaks the pair. The Additional test cases section belongs to [`test-pull-request.md`](test-pull-request.md), which dates it to the commit it tested.
+5. **Editing the pull request's Additional test cases section.** That section belongs to [`test-pull-request.md`](test-pull-request.md), which dates it to the commit it tested. The title is not protected: Step 9 refreshes it when the plan-phase title no longer describes the delivered work.
 6. **Posting to GitHub.** No `gh pr comment`, no `gh pr review`, no inline annotations. The description edit in Step 9 is the only write to GitHub this task makes itself.
 7. **Running the project's build, lint, test, or quality tooling, or starting the app.** No `npm run lint`, no `npm run typecheck`, no test run, no `npm run check`, no `$janissary/scripts/run.mjs check-diff`, no `pr-check-gate`, and no start task. This run changes no code, and every example it writes comes from reading the code. `pr-wait-checks` only reads GitHub's checks and runs nothing locally. The subagents Step 2 delegates run their own tasks' gates.
 8. **Recording a finding in any backlog.** Code that looks wrong is described as it is and listed in the report's `Divergences` line for a human to judge.
@@ -157,13 +157,15 @@ If the push is rejected because the remote branch advanced, run `git pull --reba
 
 ---
 
-## Step 9 — Update the description
+## Step 9 — Update the description and title
 
-This comes after the push, never before. The description is live on GitHub the moment it is edited, so an earlier edit could describe work that never reached the branch.
+This comes after the push, never before. The description and title are live on GitHub the moment they are edited, so an earlier edit could describe work that never reached the branch.
 
 This task is the single author of the full description. A plan-first pull request opens with only a short plan summary — no Behavior examples, Screenshots or How to verify — and this step writes the complete body from the final code, tests and specs on the branch. "Single author" means you write the whole sections; it is not exclusive editing: `work-pull-request-issue.md` keeps its surgical description-correction path and `test-pull-request.md` keeps its own **Additional test cases** section.
 
-1. Run `gh pr view <number> --json body` and take the current body.
+The title is this task's to refresh too. A plan-first pull request opens with the plan commit's subject, and that subject usually stops describing the change set once implementation lands; the title also becomes the commit subject when the pull request is squash-merged. Read the final code and write a Conventional Commit subject that describes the delivered work when the current one is stale. Leave an accurate title untouched. Add no AI attribution to it.
+
+1. Run `gh pr view <number> --json title,body` and take the current title and body.
 2. Author the full description against the code on the branch, in the author's structure:
    - Write all four sections — **What**, **Behavior examples**, **Screenshots**, and **How to verify** — using the section headings and order that [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md) defines for a full body. A plan-first pull request was opened by [`open-plan-pull-request.md`](../workspace/open-plan-pull-request.md) with only a short summary, so this is where those missing sections are authored. A **Replication steps** account inside **How to verify** comes from `fix-a-bug.md`. Keep the author's section headings and their order, and leave accurate prose exactly as the author wrote it. Do not merely correct sections that exist: add any section the plan-first summary lacked and write a full body that describes the delivered work.
    - Derive every claim from the final code, its tests, and the specs. The app is never started to produce one.
@@ -172,14 +174,16 @@ This task is the single author of the full description. A plan-first pull reques
    - Write the **Screenshots** section as the one-line reason no screenshot could be captured, not an image: a plan-first pull request skips screenshot work at creation and this task never starts the app. Do not leave a placeholder or invent a capture step.
    - Leave change-set statistics out of what you write. This is a guideline, not a hard rule. Don't state how many commits, files, or lines the pull request changes, and don't cite commit SHAs. GitHub already shows them, and a copy in the prose goes stale with the next push. When the body already states one, remove the claim rather than updating the number.
    - Leave the **Additional test cases** section byte-for-byte, from its heading up to the next heading of the same or a higher level or the end of the body. Leave everything that is already accurate exactly as the author wrote it.
-3. **When the body already matches the code,** skip the rest of this step.
-4. Otherwise write the full revised body to `./temp/pr-body.md` with the file-editing tool, and apply it:
+3. **When the body already matches the code,** leave it untouched; **when the title already describes the delivered work,** leave it untouched. Skip the rest of this step only when both match.
+4. If the body needs a rewrite, write the full revised body to `./temp/pr-body.md` with the file-editing tool, and apply it:
 
 ```bash
 gh pr edit <number> --body-file ./temp/pr-body.md
 ```
 
-Use the body file rather than an inline `--body` string, because multi-line markdown breaks on shell quoting. Never pass `--title`. `temp/` is gitignored, so the body file cannot reach a commit. If the edit fails, note the error for the report and go on.
+5. If the title needs a rewrite, apply it with `gh pr edit <number> --title "<Conventional Commit subject>"`. When both changed, pass `--title` and `--body-file` in one `gh pr edit`.
+
+The body always goes through a file rather than an inline `--body` string, because multi-line markdown breaks on shell quoting. `temp/` is gitignored, so the body file cannot reach a commit. If an edit fails, note the error for the report and go on.
 
 ---
 
@@ -203,6 +207,7 @@ Branch:       <head branch>
 Conflicts:    none | resolved by resolve-conflicts — <its adjustments line> | unresolved — <reason>
 CI build:     passing | none configured | fixed by fix-build — <its root cause line> | blocked — <reason>
 Description:  updated — <what changed> | unchanged | edit failed — <error>
+Title:        updated — <new title> | unchanged | edit failed — <error>
 Plan:         <plan> — <n> fix plans folded in and removed | updated | unchanged | none on this PR | several in the first commit, left as they are: <plans>
 Specs:        <files updated or created> | unchanged
 Help:         <rows corrected or added> | unchanged

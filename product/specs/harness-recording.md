@@ -40,13 +40,23 @@ launched into a sandboxed workspace (`-w`) still records its session normally.
 Entries are labeled with the subagent that produced them, so a subagent's work stays
 distinguishable from the parent's once the two are interleaved.
 
-The transcript file is `.janissary/harness-transcripts/<label>-<timestamp>.txt`, named on the same
+The transcript file is `.janissary/transcripts/harness/<label>-<timestamp>.txt`, named on the same
 scheme as captures and recordings. It is created **lazily, on the first entry** — a harness that
 never produces one leaves no empty file — appended to for the life of the tab, and never truncated.
 Closing the harness tab or quitting the application stops transcript collection and closes the file.
-The directory is **cleared at every launch**, matching
-`.janissary/recordings/`. It is separate from `.janissary/transcripts/`, which holds ordinary tabs'
-own logs.
+Transcripts survive a restart and quitting. Once per launch a background sweep that startup does not
+wait for deletes `.txt` files directly in the directory whose last modification is more than
+`logRetentionInDays` days before launch; a value of `0` deletes every file from earlier runs but never
+one from the current run. Subfolders and files of another type are never touched, and a file that
+cannot be read or deleted is skipped. Each harness tab gets its own file in that directory. The
+`.janissary/harness-transcripts/` directory earlier versions wrote is no longer used or cleared.
+
+With `"logEnabled": false` in `.janissary/config.json` (see [[application-config]]), no harness tab
+writes a transcript file, whether the tab is local or remote. Monitors still receive the tab's session
+transcript entries, so the in-memory stream is unchanged. `harness transcript <name>` reports
+`No transcript available for "<name>" yet.`, and the tab's transcript button does nothing. The setting
+is read when a harness tab opens, so a change applies to tabs opened after the next launch. The launch
+sweep still runs and still ages out files an earlier session wrote.
 
 A session record is not created the instant a harness starts; the binary writes it on its first turn,
 and the tab keeps looking until it appears. When none can be found, the tab silently keeps its

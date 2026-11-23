@@ -6,6 +6,7 @@ import { HarnessRuntime } from './runtime.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { createTranscriptSource } from './transcript/sources.js';
 import { notify } from '../notifications/index.js';
+import { getConfig } from '../config.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import type { E2EBrowserHandle } from '../browser/e2e-server.js';
 import type { Managers } from '../managers.js';
@@ -50,7 +51,8 @@ export type HarnessObserverOptions = {
 // plan), fed by the far side's own relayed bytes rather than this tab's — see
 // `src/remote/pty-session.ts`'s `onGateEvent`/`onBusyTransition` handlers for where the far side's
 // reports land locally instead. A recording failure is reported once in the notifications feed, for
-// the same reason an ssh tab's is: a silent gap would defeat the point of an audit recording.
+// the same reason an ssh tab's is: a silent gap would defeat the point of an audit recording. The
+// transcript tailer writes its file only when `logEnabled` is true; monitors still get its entries.
 export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime {
   const { managers, name, label, id, cwd, autoApprove, autoResume, channel } = options;
   const dims = managers.pty.spawnDimensions();
@@ -62,7 +64,7 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
   const workspaceDir = managers.tab.tabs.find((tab) => tab.label === label)?.workspaceDir;
   const source = channel ? managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now(), workspaceDir);
   const tailer = source
-    ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })
+    ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); }, getConfig().logEnabled)
     : undefined;
   return new HarnessRuntime(reader, recorder, tailer, capture?.autoApprover, capture?.autoResumer, options.browser);
 }

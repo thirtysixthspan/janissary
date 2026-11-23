@@ -3,7 +3,7 @@ import path from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
-import { backfillMaxToolTurns, configRecord, decodeConfig } from './config-decode.js';
+import { backfillMissingKeys, configRecord, decodeConfig } from './config-decode.js';
 import { DEFAULT_NOTIFICATION_CONFIG, loadNotificationConfig, saveNotificationConfig } from './notifications/config.js';
 import { DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH, DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES, DEFAULT_TAB_NAME_MAX_LENGTH } from './shared/config-defaults.js';
 import type { NotificationEventType } from './notifications/index.js';
@@ -47,6 +47,12 @@ export type Config = {
   // alone today — the name says what is off now, not what the gate may never widen to. Named-harness
   // and ssh tabs never reach that path and are recorded whatever this says.
   recordShellTabs: boolean;
+  // Whether harness transcript files are written at all (see `product/specs/application-config.md`).
+  // Default true; the escape hatch for turning transcript writing off entirely.
+  logEnabled: boolean;
+  // How many days a harness transcript is kept, with `0` keeping none from earlier runs (see
+  // `product/specs/application-config.md`).
+  logRetentionInDays: number;
   // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
   // the screen, promoting them to a full-tab terminal mid-command (see `interactive/signals.ts`).
   // Default true; with it off, shells are piped and only the name list (`interactive/index.ts`)
@@ -81,6 +87,7 @@ export type Config = {
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
 export const DEFAULT_MAX_TOOL_TURNS = 20;
+export const DEFAULT_LOG_RETENTION_IN_DAYS = 7;
 export const DEFAULT_SYNC_PATHS = ['product/backlog/', 'product/plans/'];
 export const DEFAULT_EXTERNAL_VIEWERS: Record<string, string> = { video: 'QuickTime Player' };
 
@@ -92,6 +99,8 @@ const DEFAULT_CONFIG: Config = {
   clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
   sandboxWorkspaces: true,
   recordShellTabs: true,
+  logEnabled: true,
+  logRetentionInDays: DEFAULT_LOG_RETENTION_IN_DAYS,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
   theme: DEFAULT_APP_THEME,
   notifications: DEFAULT_NOTIFICATION_CONFIG,
@@ -129,7 +138,7 @@ export function loadConfig(projectDirectory: string): Config {
     config = decodeConfig(parsed, DEFAULT_CONFIG);
     config.notifications = notifications;
     const raw = configRecord(parsed);
-    const backfilled = backfillMaxToolTurns(parsed, DEFAULT_CONFIG);
+    const backfilled = backfillMissingKeys(parsed, DEFAULT_CONFIG);
     if (backfilled || (raw && Object.hasOwn(raw, 'notifications'))) {
       const stripped: Record<string, unknown> = { ...(backfilled ?? raw) };
       delete stripped.notifications;

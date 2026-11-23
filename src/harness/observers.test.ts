@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { harnessRuntime } from './observers.js';
 import { HarnessScreenReader } from './screen.js';
 import { captureWiring } from './capture/wire.js';
 import { createTranscriptSource } from './transcript/sources.js';
+import { HarnessTranscriptTailer } from './transcript/tailer.js';
+import * as config from '../config.js';
 import type { Managers } from '../managers.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 
@@ -47,6 +49,11 @@ describe('harnessRuntime', () => {
     recorderMock.instances.length = 0;
     tailerMock.instances.length = 0;
     vi.mocked(captureWiring).mockClear();
+    vi.mocked(HarnessTranscriptTailer).mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('builds a real local screen reader and calls captureWiring for a local tab', () => {
@@ -100,5 +107,44 @@ describe('harnessRuntime', () => {
     });
     expect(() => runtime.dispose()).not.toThrow();
     expect(recorderMock.instances[0]?.dispose).toHaveBeenCalled();
+  });
+
+  it('passes logEnabled false to the transcript tailer', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    vi.mocked(createTranscriptSource).mockReturnValueOnce({ poll: () => [], resolved: () => false });
+    const managers = makeManagers();
+    const runtime = harnessRuntime({
+      managers, name: 'claude', label: 'claude', id: 'pty-1', cwd: '/repo', autoApprove: false, autoResume: false, channel: undefined,
+    });
+    try {
+      expect(vi.mocked(HarnessTranscriptTailer).mock.lastCall?.[3]).toBe(false);
+    } finally { runtime.dispose(); }
+  });
+
+  it('passes logEnabled true to the transcript tailer', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: true });
+    vi.mocked(createTranscriptSource).mockReturnValueOnce({ poll: () => [], resolved: () => false });
+    const managers = makeManagers();
+    const runtime = harnessRuntime({
+      managers, name: 'claude', label: 'claude', id: 'pty-1', cwd: '/repo', autoApprove: false, autoResume: false, channel: undefined,
+    });
+    try {
+      expect(vi.mocked(HarnessTranscriptTailer).mock.lastCall?.[3]).toBe(true);
+    } finally { runtime.dispose(); }
+  });
+
+  it('gates a remote tab\'s transcript file on logEnabled too', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    const managers = makeManagers('remote transcript source');
+    const runtime = harnessRuntime({
+      managers, name: 'claude', label: 'claude', id: 'r1', cwd: '/repo', autoApprove: false, autoResume: false,
+      channel: {} as unknown as RemoteChannel,
+    });
+    try {
+      expect(vi.mocked(HarnessTranscriptTailer).mock.lastCall?.[3]).toBe(false);
+    } finally { runtime.dispose(); }
   });
 });
