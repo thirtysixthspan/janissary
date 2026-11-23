@@ -24,6 +24,16 @@ There is no limit on the number of findings, and a minor one is recorded with a 
 
 When the description states a change-set statistic that is wrong, such as a commit, file, or line count or a commit SHA, the agent proposes removing the claim instead of correcting the number. A correct statistic isn't a finding on its own.
 
+Each `Behavior examples` transcript, `Screenshots` claim, and `Do`/`Expect` line in `How to verify` has to name the code path and line or test assertion that proves it. A claim with no anchor is a finding even when the claim itself reads as true. The agent records the finding without editing the description.
+
+## Documentation in a review
+
+Feature reviews leave user and developer documentation to the documentation workflow. A missing or stale page in either tree isn't a finding and never goes into the pull request backlog, even when the description mentions a user-visible change. Specs under `product/specs/` and in-app help under `help/` stay in scope, so a stale one is still a finding.
+
+Both documentation trees become the main scope only when the pull request's own plan and title are about adding or updating user or developer documentation. Then they're judged as carefully as code. What the description mentions doesn't move that line: a feature pull request that describes a user-visible change is still a feature pull request.
+
+When a recorded finding asks for a change in either documentation tree, the repair removes it from the pull request backlog, adds a ready item to `product/backlog/documentation.md`, and reports the work as out of scope rather than editing those pages.
+
 ## Where the findings go
 
 <img class="agent-float left" src="/agents/fariz-south-west.png" alt="" />
@@ -47,7 +57,7 @@ execute ./ai/tasks/feature/work-pull-request-issue.md 232 "correct the descripti
 This route is the same for all five points, security included. The repair needs an explicit number, `#number`, or pull request URL. A branch name doesn't work, and the agent won't guess a pull request from context. The text after it picks an entry by its title, a paraphrase, or a position such as "the second one".
 
 With no text after the number, the agent takes the first entry rated below 7/10. If you name an entry rated 7/10 or higher, it stops instead of picking another.
-The repair works on that pull request's branch, writes a fix plan, updates the specs and any help or documentation the change affects, and removes the resolved entry. When the last entry goes, the file goes back to its empty form: the leading comment and the `# pull-request` heading. Then it commits and pushes to the same branch and leaves the pull request open.
+The repair works on that pull request's branch, writes a fix plan, updates the specs and any help the change affects, and removes the resolved entry. A finding that asks for user or developer documentation is [refiled instead](#documentation-in-a-review). When the last entry goes, the file goes back to its empty form: the leading comment and the `# pull-request` heading. Then it commits and pushes to the same branch and leaves the pull request open.
 
 ## Reviews inside a feature build
 
