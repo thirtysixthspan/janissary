@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that a shell tab is marked not recording when its terminal is declined, since the mark is now set when the tab is opened.
-
-Existing Issue: The What section says the server-owned `recordingOff` flag is set "when a shell terminal is declined", but the repair for the provisioning-shell gap moved that mark to the moment the plugin tab is minted and made the runtime manager stop writing it, so the description names the wrong place and the wrong time for the one fact the shell's flag depends on. Severity: 4/10
-
-Existing Risk: 3/10 - A reviewer or later maintainer who trusts the description looks for the mark in the shell recording gate, finds none, and either concludes the provisioning shell still reads `recording` or reintroduces a second writer of the flag there.
-
-Proposal Risk: 1/10 - Only the description changes, so the remaining risk is a wording slip in the edited sentence, which a reader comparing it with the open path and its named test would catch at once.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2199 "correct the What section's claim that a shell tab's recordingOff mark is set when its shell terminal is declined". In the pull request body's What section, the paragraph that begins "The change touches both server and web" says `recordingOff` is "set when a harness or ssh tab is created (so a provisioning tab is already covered) and when a shell terminal is declined". Rewrite only that clause so it says a tab of a plugin whose declaration asks for `recordsTerminal` is marked by `openPluginTab` in `src/tab/openers.ts` when the tab is minted, before its first state broadcast and before any terminal is started, so a shell still provisioning its clone or connection is covered too, while `TerminalRuntimeManager.registerShellObservers` in `src/terminal-runtime/manager.ts` only withholds the runtime and never marks the tab. Read the current body with `gh pr view 2199 --json body`, change that clause alone, and apply the full body with `gh pr edit 2199 --body-file` pointing at a file written under `./temp/`, leaving every other paragraph, every `Proof:` line, and the four pinned screenshot links byte-for-byte unchanged. No code or test changes; the behavior is already pinned by `src/tab/manager.test.ts` "marks a recorded plugin's tab not recording from the moment it opens when logEnabled is false" and `src/terminal-runtime/manager.test.ts` "installs no shell runtime and leaves the tab unmarked when logEnabled is false", and verification is reading the edited body back and confirming both titles still match an `it(` in their files.
-
-
 * Bring the pull request description's launch-sweep wording and proofs up to date with the shared sweep refactor, which they still describe as four direct calls in boot with no test.
 
 Existing Issue: After the refactor that folded the launch sweeps into `startLaunchSweeps` and the day arithmetic into `reapFilesOlderThanDays`, the What section still says `reapHarnessRecordings` is started from `src/main.ts` beside the other sweeps reusing `reapFilesOlderThan`, never mentions that each directory is now swept on its own so one failure cannot stop the others, and three `Proof:` lines (Behavior example 1, How to verify step 5, and step 7) say the unawaited, `logEnabled`-independent start is untested and checked by hand only although `src/launch-sweeps.test.ts` now pins it. Severity: 3/10
