@@ -7,6 +7,7 @@
 
 * the <YYYY-MM-DD>.json logs stored in .janissary/log should be called activity logs and moved to .janissary/logs/activity/. then rename the spec title "Append-only Log" → "Activity Log", and TranscriptLogger → ActivityLogger. these logs should be reaped and gated by logEnabled and logRetentionInDays.
 
+* update server.log to be created for each run. logs should be named after the host name and a timestamp in the name, stored in ./janissary/logs/server/ and reaped like transcripts. host name should be `localhost` for the main machine and use the configured host name or the network name as a fallback.
 
 ## development
 
