@@ -295,30 +295,68 @@ describe('loadConfig', () => {
     expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
   });
 
-  // A config written before shell recording existed must keep recording: the key is an opt-out, not
-  // a new default, so a missing key resolving to anything else would silently stop writing every
-  // shell session on every project that already had a config file.
-  it('records shell tabs by default, including for a config that predates the key', () => {
-    const configDir = path.join(tmpDir, '.janissary');
-    mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }));
-
-    const config = loadConfig(tmpDir);
-
-    expect(config.recordShellTabs).toBe(true);
-  });
-
-  it('stops recording shell tabs when the key is turned off, and nothing else', () => {
+  // `recordShellTabs` was retired in favor of `logEnabled`: it is no longer read, and it is dropped
+  // from the file only when Janissary writes the file for another reason.
+  it('ignores a retired recordShellTabs key', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ recordShellTabs: false }));
 
     const config = loadConfig(tmpDir);
 
-    expect(config.recordShellTabs).toBe(false);
-    // Nothing else follows from it: harness and ssh tabs have no echo of their own and keep
-    // recording, so this key must not be readable as a recording switch in general.
-    expect(config.sandboxWorkspaces).toBe(true);
+    expect(config).not.toHaveProperty('recordShellTabs');
+    expect(config.logEnabled).toBe(true);
+  });
+
+  it('strips recordShellTabs when a backfill rewrites the file', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    const configPath = path.join(configDir, 'config.json');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(configPath, JSON.stringify({ recordShellTabs: false, tabNameMaxLength: 8 }));
+
+    loadConfig(tmpDir);
+
+    const written = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, unknown>;
+    expect(written).not.toHaveProperty('recordShellTabs');
+    expect(written.tabNameMaxLength).toBe(8);
+    expect(written.logEnabled).toBe(true);
+  });
+
+  it('strips recordShellTabs when updateConfig writes the file', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    const configPath = path.join(configDir, 'config.json');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(configPath, JSON.stringify({
+      recordShellTabs: false, maxToolTurns: 20, logEnabled: true, logRetentionInDays: 7,
+    }));
+    loadConfig(tmpDir);
+
+    expect(updateConfig({ syntaxTheme: 'nord' })).toBe(true);
+
+    const written = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, unknown>;
+    expect(written).not.toHaveProperty('recordShellTabs');
+    expect(written.syntaxTheme).toBe('nord');
+  });
+
+  it('does not rewrite a complete config just because it carries recordShellTabs', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    const configPath = path.join(configDir, 'config.json');
+    mkdirSync(configDir, { recursive: true });
+    const original = JSON.stringify({
+      recordShellTabs: false, maxToolTurns: 20, logEnabled: true, logRetentionInDays: 7,
+    });
+    writeFileSync(configPath, original);
+
+    loadConfig(tmpDir);
+
+    expect(readFileSync(configPath, 'utf8')).toBe(original);
+  });
+
+  it('writes no recordShellTabs key to a fresh config', () => {
+    loadConfig(tmpDir);
+
+    const written = JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'config.json'), 'utf8')) as Record<string, unknown>;
+    expect(written).not.toHaveProperty('recordShellTabs');
   });
 
   it('defaults the clipboard-history cap to 15, including for a config that predates it', () => {

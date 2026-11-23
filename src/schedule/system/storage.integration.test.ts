@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type * as Fs from 'node:fs';
 import { clearStateDirectories } from '../../state/dirs.js';
-import { initHarnessRecordingDirectory } from '../../harness/recording-file.js';
+import { initBrowserLogDirectory } from '../../browser/browser-log.js';
 import { catalogRunscripts } from './runscript-files.js';
 import { SystemScheduleStore } from './store.js';
 
@@ -178,8 +178,8 @@ describe('system schedule storage integration', () => {
       mkdirSync(scripts, { recursive: true });
       writeFileSync(path.join(scripts, 'deploy.rs'), 'echo one');
       for (let cycle = 0; cycle < 2; cycle += 1) {
-        initHarnessRecordingDirectory(root);
-        const perRun = path.join(root, '.janissary', 'recordings');
+        initBrowserLogDirectory(root);
+        const perRun = path.join(root, '.janissary', 'browser-logs');
         mkdirSync(perRun, { recursive: true });
         writeFileSync(path.join(perRun, 'sentinel'), 'remove');
         clearStateDirectories();

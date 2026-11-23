@@ -1,5 +1,5 @@
 import { initHarnessCaptureDirectory } from '../harness/capture/file.js';
-import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from '../harness/recording-file.js';
+import { initHarnessRecordingDirectory } from '../harness/recording-file.js';
 import { initHarnessTranscriptDirectory } from '../harness/transcript-file.js';
 import { initShellTranscriptDirectory } from '../shell/transcript/transcript-file.js';
 import { initBrowserLogDirectory, clearBrowserLogDirectory } from '../browser/browser-log.js';
@@ -31,9 +31,11 @@ export const STATE_DIRECTORY_ENTRIES = [
     init: (projectDir: string): void => { initHarnessCaptureDirectory(projectDir); },
   },
   {
+    // No `clear`, deliberately: recordings are kept for the `logRetentionInDays` window, so a fresh
+    // start must not sweep them. `reapHarnessRecordings`, started from `src/main.ts`, removes the old
+    // ones by age instead.
     name: 'harnessRecording',
     init: (projectDir: string): void => { initHarnessRecordingDirectory(projectDir); },
-    clear: (): void => { clearHarnessRecordingDirectory(); },
   },
   {
     // No `clear`, deliberately: transcripts are kept for the `logRetentionInDays` window, so a fresh

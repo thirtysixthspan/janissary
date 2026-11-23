@@ -28,4 +28,5 @@ export const tabFlagDisplay: Record<string, {
   browser: { icon: browserIcon, label: 'E2E browser' },
   browserInUse: { icon: browserIcon, label: 'E2E browser in use', className: 'tab-flag--active' },
   recording: { icon: recordingIcon, label: 'recording', pressable: true },
+  recordingOff: { icon: recordingIcon, label: 'not recording' },
 };

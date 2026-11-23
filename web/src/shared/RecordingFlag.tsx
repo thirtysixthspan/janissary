@@ -19,9 +19,13 @@ import { tabFlagDisplay } from './tab/flag-display';
 //
 // Every row that draws it renders this one component, so the shell plugin's row and the host's own
 // cannot come to differ over when the flag is lit or what it is called.
-export function RecordingFlag({ onOpen }: { onOpen?: () => void }) {
-  const display = tabFlagDisplay.recording;
-  if (!onOpen) {
+//
+// `off` is a tab that will never record, because `logEnabled` is false: the same plain span, named
+// "not recording" so it is not mistaken for a tab still waiting on its first output, and never
+// pressable whatever handler is supplied.
+export function RecordingFlag({ onOpen, off }: { onOpen?: () => void; off?: boolean }) {
+  const display = off ? tabFlagDisplay.recordingOff : tabFlagDisplay.recording;
+  if (!onOpen || off) {
     return (
       <span className="tab-flag tab-recording" role="img" aria-label={display.label} title={display.label}>
         <FontAwesomeIcon icon={display.icon} />

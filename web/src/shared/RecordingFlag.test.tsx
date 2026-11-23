@@ -49,6 +49,26 @@ describe('RecordingFlag', () => {
     expect(live.querySelector('[aria-label]')?.getAttribute('aria-label')).toBe('recording');
   });
 
+  // A tab that will never record says so, rather than reading like one still waiting on its output.
+  it('is a plain inert span labeled not recording when off, even with a handler', () => {
+    const onOpen = vi.fn();
+    const { container } = render(<RecordingFlag onOpen={onOpen} off />);
+
+    expect(container.querySelector('button')).toBeNull();
+    const flag = container.querySelector('.tab-recording');
+    expect(flag?.tagName).toBe('SPAN');
+    expect(flag).not.toHaveClass('tab-flag--active');
+    expect(flag?.getAttribute('title')).toBe('not recording');
+    expect(flag?.getAttribute('aria-label')).toBe('not recording');
+    expect(tabFlagDisplay.recordingOff?.icon).toBe(tabFlagDisplay.recording?.icon);
+  });
+
+  it('keeps the pre-output label when not off', () => {
+    const { container } = render(<RecordingFlag off={false} />);
+
+    expect(container.querySelector('.tab-recording')?.getAttribute('title')).toBe('recording');
+  });
+
   it('draws nothing that can be pressed when the caller supplies no handler', () => {
     const { container } = render(<RecordingFlag onOpen={undefined} />);
 

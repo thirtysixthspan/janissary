@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as fs from 'node:fs';
+import path from 'node:path';
 import {
   initHarnessRecordingDirectory,
   ensureRecordingDirectory,
   harnessRecordingDirectory,
   harnessRecordingPath,
-  clearHarnessRecordingDirectory,
+  reapHarnessRecordings,
 } from './recording-file.js';
 
+const { reapFilesOlderThan } = vi.hoisted(() => ({
+  reapFilesOlderThan: vi.fn(),
+}));
+
 vi.mock('node:fs');
+vi.mock('../state/reaper.js', () => ({ reapFilesOlderThan }));
 
 const mockFs = fs as Record<string, ReturnType<typeof vi.fn>>;
 
@@ -19,11 +25,11 @@ afterEach(() => {
 // `recordingDirectory` is module state with no reset, so this has to run before anything
 // initializes it. Vitest runs a file's blocks in declaration order, which is what makes that true.
 describe('harness-recording-file before a directory is initialized', () => {
-  // Without the guard the sweep would resolve `rmSync` against the process's working directory and
-  // delete a `recordings` directory out of whatever directory the app happened to start in.
-  it('clearHarnessRecordingDirectory removes nothing', () => {
-    clearHarnessRecordingDirectory();
-    expect(mockFs.rmSync).not.toHaveBeenCalled();
+  // Without the guard the sweep would resolve against the process's working directory and reap a
+  // `recordings` directory out of whatever directory the app happened to start in.
+  it('reaps nothing before a directory has been chosen', async () => {
+    await expect(reapHarnessRecordings(Date.now(), 7)).resolves.toBeUndefined();
+    expect(reapFilesOlderThan).not.toHaveBeenCalled();
   });
 
   // A reader of the directory — `play` searching it for a recording of a given name — has nothing to
@@ -66,20 +72,26 @@ describe('harness-recording-file', () => {
     expect(file).not.toContain('a/b');
   });
 
-  it('clearHarnessRecordingDirectory removes the recordings directory', () => {
-    mockFs.rmSync.mockImplementation(() => {});
+  it('reaps .cast files older than the retention window', async () => {
     initHarnessRecordingDirectory('/test/project');
-    clearHarnessRecordingDirectory();
-    expect(mockFs.rmSync).toHaveBeenCalled();
-    const call = mockFs.rmSync.mock.calls[0];
-    expect(call[0]).toContain('recordings');
-    expect(call[1]).toHaveProperty('recursive', true);
-    expect(call[1]).toHaveProperty('force', true);
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapHarnessRecordings(launchedAt, 7);
+    expect(reapFilesOlderThan).toHaveBeenCalledOnce();
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'recordings'),
+      '.cast',
+      launchedAt - 7 * 86_400_000,
+    );
   });
 
-  it('clearHarnessRecordingDirectory ignores removal errors', () => {
-    mockFs.rmSync.mockImplementation(() => { throw new Error('permission denied'); });
+  it('uses launch as the cutoff when retention is zero', async () => {
     initHarnessRecordingDirectory('/test/project');
-    expect(() => clearHarnessRecordingDirectory()).not.toThrow();
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapHarnessRecordings(launchedAt, 0);
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'recordings'),
+      '.cast',
+      launchedAt,
+    );
   });
 });

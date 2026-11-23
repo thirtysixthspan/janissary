@@ -9,6 +9,7 @@ import { harnessRuntime } from './observers.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import type { HarnessView } from '../tab/types.js';
 import { messageBus } from '../bus.js';
+import { getConfig } from '../config.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import { failHarnessSpawn, startRemoteTab } from './remote-launch.js';
@@ -36,6 +37,7 @@ export class HarnessTabSpawn {
     if (model !== undefined) harness.model = model;
     if (effort !== undefined) harness.effort = effort;
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir, groupName);
+    if (!getConfig().logEnabled) tab.recordingOff = true;
     tab.workspaceCancel = options.workspaceCancel;
     tab.offline = offline;
     tab.autoApprove = autoApprove;

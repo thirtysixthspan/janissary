@@ -52,15 +52,18 @@ export type HarnessObserverOptions = {
 // `src/remote/pty-session.ts`'s `onGateEvent`/`onBusyTransition` handlers for where the far side's
 // reports land locally instead. A recording failure is reported once in the notifications feed, for
 // the same reason an ssh tab's is: a silent gap would defeat the point of an audit recording. The
-// transcript tailer writes its file only when `logEnabled` is true; monitors still get its entries.
+// recorder and the transcript tailer's file both follow `logEnabled`: with it false no recorder is
+// built at all, and the tailer still feeds monitors without writing.
 export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime {
   const { managers, name, label, id, cwd, autoApprove, autoResume, channel } = options;
   const dims = managers.pty.spawnDimensions();
   const capture = channel ? undefined : captureWiring(managers, name, label, id, autoApprove, autoResume);
   const reader = channel ? undefined : new HarnessScreenReader(id, dims.cols, dims.rows, capture?.handler);
-  const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
-    notify(managers, 'harness-recording-failed', label);
-  }, rememberRecording(managers, label));
+  const recorder = getConfig().logEnabled
+    ? new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
+      notify(managers, 'harness-recording-failed', label);
+    }, rememberRecording(managers, label))
+    : undefined;
   const workspaceDir = managers.tab.tabs.find((tab) => tab.label === label)?.workspaceDir;
   const source = channel ? managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now(), workspaceDir);
   const tailer = source
@@ -74,13 +77,16 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
 // `ssh …` invocation, so a stray `.cast` names the host it came from. No transcript source and no
 // tailer: an ssh tab runs no harness binary and has no session record to tail, which is what keeps
 // `transcriptTailer(label)` undefined for it. A recording failure is reported once in the
-// notifications feed — a silent gap would defeat the point of an audit recording.
+// notifications feed — a silent gap would defeat the point of an audit recording. With `logEnabled`
+// false no recorder is built, and the screen reader runs alone.
 export function sshRuntime(managers: Managers, id: string, label: string, command: string): HarnessRuntime {
   const dims = managers.pty.spawnDimensions();
   const reader = new HarnessScreenReader(id, dims.cols, dims.rows);
-  const recorder = new HarnessRecorder(id, label, command, dims.cols, dims.rows, () => {
-    notify(managers, 'ssh-recording-failed', label);
-  }, rememberRecording(managers, label));
+  const recorder = getConfig().logEnabled
+    ? new HarnessRecorder(id, label, command, dims.cols, dims.rows, () => {
+      notify(managers, 'ssh-recording-failed', label);
+    }, rememberRecording(managers, label))
+    : undefined;
   return new HarnessRuntime(reader, recorder);
 }
 

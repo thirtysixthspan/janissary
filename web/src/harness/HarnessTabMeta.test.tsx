@@ -38,6 +38,16 @@ describe('HarnessTabMeta', () => {
     expect(screen.getByTitle('recording')).toHaveAttribute('aria-label', 'recording');
   });
 
+  it('draws the not-recording flag when the tab is not recording', () => {
+    render(<HarnessTabMeta cwd="~/project" hasRecorder recordingOff onOpenRecording={() => {}} />);
+
+    const flag = screen.getByTitle('not recording');
+    expect(flag.tagName).toBe('SPAN');
+    expect(flag).toHaveAttribute('aria-label', 'not recording');
+    expect(flag).not.toHaveClass('tab-flag--active');
+    expect(screen.queryByRole('button', { name: 'recording' })).toBeNull();
+  });
+
   it('renders no recording flag at all for a tab kind that never records', () => {
     render(<HarnessTabMeta cwd="~/project" />);
     expect(screen.queryByTitle('recording')).toBeNull();

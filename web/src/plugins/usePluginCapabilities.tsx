@@ -23,6 +23,7 @@ type PluginCapabilitiesOptions = Pick<
   | 'claimedChords'
   | 'dotColor'
   | 'recording'
+  | 'recordingOff'
   | 'transcript'
   | 'remoteCapabilities'
 > & {
@@ -42,6 +43,7 @@ export function usePluginCapabilities({
   claimedChords: requestedChords,
   dotColor,
   recording,
+  recordingOff,
   transcript,
   remoteCapabilities,
   onSplit,
@@ -92,11 +94,12 @@ export function usePluginCapabilities({
       claimedChords: chords,
       dotColor,
       recording,
+      recordingOff,
       transcript,
       remoteCapabilities,
     }),
     [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor,
-      recording, transcript, remoteCapabilities, tabState],
+      recording, recordingOff, transcript, remoteCapabilities, tabState],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

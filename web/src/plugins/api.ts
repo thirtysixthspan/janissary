@@ -315,8 +315,11 @@ export type TabPluginClientCapabilities = {
   // Open this tab's recording in the tab that plays it. Supplied together with `recording` and
   // absent without it, for the same reason: an inert flag is a flag with no button behind it.
   openRecording?(): void;
+  // Present when this tab will never record because `logEnabled` is false, so the recording flag
+  // reads "not recording". Additive: older hosts never send it, and the plugin API version is unchanged.
+  recordingOff?: true;
   // This tab's plain-text transcript, or absent before the transcript file has opened — and always
-  // absent under `recordShellTabs: false`, because the server never sets it then.
+  // absent under `logEnabled: false`, because the server never sets it then.
   transcript?: string;
   // Open this tab's transcript in an editor tab. Supplied together with `transcript` and absent
   // without it, for the same reason as `openRecording`.
@@ -349,6 +352,7 @@ export type PluginClientCapabilityOptions = {
   claimedChords?: readonly string[];
   dotColor?: string;
   recording?: string;
+  recordingOff?: true;
   transcript?: string;
   remoteCapabilities?: {
     remote?: RemoteTargetView;

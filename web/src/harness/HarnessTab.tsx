@@ -73,6 +73,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         onOpenDiffHere={workspacedTab ? intents.onOpenDiffHere : undefined}
         onOpenTranscript={intents.onOpenTranscript}
         hasRecorder
+        recordingOff={harness.recordingOff}
         onOpenRecording={intents.onOpenRecording}
         connectionsButton={connectionsButton}
         scheduleButton={scheduleButton}

@@ -821,6 +821,22 @@ describe('buildTabViews', () => {
       .toBe('/project/.janissary/recordings/devbox-2026.cast');
   });
 
+  it('mirrors recordingOff onto the harness view and the plugin view', () => {
+    const harnessTab = remoteTab('a');
+    harnessTab.recordingOff = true;
+    const pluginTab = makeTab('shell', '#fff');
+    pluginTab.view = 'plugin';
+    pluginTab.plugin = { id: 'shell', instanceKey: 'k', schemaVersion: 2, payload: {}, fileRefs: [] };
+    pluginTab.recordingOff = true;
+    const quiet = remoteTab('b');
+
+    const views = build([harnessTab, pluginTab, quiet], remoteManagers());
+
+    expect(views[0]!.harness?.recordingOff).toBe(true);
+    expect(views[1]!.plugin?.recordingOff).toBe(true);
+    expect(views[2]!.harness).not.toHaveProperty('recordingOff');
+  });
+
   it('carries a plugin tab\'s transcript on its envelope', () => {
     const tab = makeTab('shell', '#fff');
     tab.view = 'plugin';

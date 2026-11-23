@@ -40,6 +40,15 @@ describe('ShellTabMeta transcript button', () => {
     expect(screen.queryByRole('button', { name: 'Open transcript' })).toBeNull();
   });
 
+  it('draws the not-recording flag when the tab is not recording', () => {
+    render(<ShellTabMeta payload={payload} capabilities={capabilities({ recordingOff: true, openRecording: vi.fn() })} />);
+
+    const flag = screen.getByTitle('not recording');
+    expect(flag.tagName).toBe('SPAN');
+    expect(flag).toHaveAttribute('aria-label', 'not recording');
+    expect(screen.queryByRole('button', { name: 'recording' })).toBeNull();
+  });
+
   it('places the button after the diff button and before the connections button', () => {
     render(<ShellTabMeta payload={{ ...payload, workspace: true }} capabilities={capabilities({ openTranscript: vi.fn() })} />);
 

@@ -279,9 +279,8 @@ describe('TabManager queue', () => {
     expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
-  // A shell echoes what is typed back into the terminal, so its recording is the one recorded kind
-  // that can capture a password. A project that declines that gets no recorder, and therefore no
-  // recording flag on the tab either — the state a plugin tab is already in.
+  // Whether `logEnabled` lets the terminal record is the runtime manager's gate, so the tab manager
+  // hands every declared terminal to it.
   it('records a plugin\'s terminal by default, including for a project that set no config', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
@@ -292,20 +291,6 @@ describe('TabManager queue', () => {
     });
 
     expect(managers.terminalRuntime.registerShellObservers).toHaveBeenCalledTimes(1);
-  });
-
-  it('records nothing when the project turned shell recording off in its config', () => {
-    const { tm, managers } = makeTabManagerWithManagers();
-    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
-    projectConfig({ recordShellTabs: false });
-
-    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
-      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
-      return { title: 'shell', payload: {} };
-    });
-
-    expect(managers.terminalRuntime.registerShellObservers).not.toHaveBeenCalled();
-    expect(managers.shellTranscript.install).toHaveBeenCalledOnce();
   });
 
   it('writes no shell transcript when logEnabled is false', () => {
