@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   clearHarnessRecordingDirectory: vi.fn(),
   initHarnessTranscriptDirectory: vi.fn(),
   initShellTranscriptDirectory: vi.fn(),
-  clearShellTranscriptDirectory: vi.fn(),
   initBrowserLogDirectory: vi.fn(),
   clearBrowserLogDirectory: vi.fn(),
   initGitFailureDirectory: vi.fn(),
@@ -35,7 +34,6 @@ vi.mock('../harness/transcript-file.js', () => ({
 }));
 vi.mock('../shell/transcript/transcript-file.js', () => ({
   initShellTranscriptDirectory: mocks.initShellTranscriptDirectory,
-  clearShellTranscriptDirectory: mocks.clearShellTranscriptDirectory,
 }));
 vi.mock('../browser/browser-log.js', () => ({
   initBrowserLogDirectory: mocks.initBrowserLogDirectory,
@@ -118,7 +116,6 @@ describe('clearStateDirectories', () => {
 
     expect(mocks.clearCaptureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearHarnessRecordingDirectory).toHaveBeenCalledOnce();
-    expect(mocks.clearShellTranscriptDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearBrowserLogDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearGitFailureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearWorkspaceDir).toHaveBeenCalledOnce();
@@ -127,6 +124,12 @@ describe('clearStateDirectories', () => {
 
   it('never clears the harness transcript directory', () => {
     const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'harnessTranscript');
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty('clear');
+  });
+
+  it('never clears the shell transcript directory', () => {
+    const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'shellTranscript');
     expect(entry).toBeDefined();
     expect(entry).not.toHaveProperty('clear');
   });

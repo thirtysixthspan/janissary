@@ -240,14 +240,14 @@ export class TabManager extends TabTranscriptState {
   // written to disk because of a name appearing here. A project that turned shell recording off in
   // its config gets no recorder either, which is what leaves such a tab with no recording flag: a
   // plugin tab that never records needs no separate rule for "configured not to". The text transcript
-  // follows the recording's gate exactly.
+  // follows `logEnabled` instead of the recording's gate, so a tab without a recording can still keep
+  // one.
   recordTerminal(ptyId: string, label: string, pluginId: string): void {
     const declares = this.managers.plugins.declarations
       .find((declaration) => declaration.id === pluginId)?.recordsTerminal === true;
-    if (declares && getConfig().recordShellTabs) {
-      this.managers.terminalRuntime.registerShellObservers(ptyId, label);
-      this.managers.shellTranscript.install(ptyId, label);
-    }
+    if (!declares) return;
+    if (getConfig().recordShellTabs) this.managers.terminalRuntime.registerShellObservers(ptyId, label);
+    if (getConfig().logEnabled) this.managers.shellTranscript.install(ptyId, label);
   }
 
   killTerminal(ptyId: string): void {

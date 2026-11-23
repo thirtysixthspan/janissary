@@ -5,10 +5,15 @@ import {
   initShellTranscriptDirectory,
   ensureShellTranscriptDirectory,
   shellTranscriptPath,
-  clearShellTranscriptDirectory,
+  reapShellTranscripts,
 } from './transcript-file.js';
 
+const { reapFilesOlderThan } = vi.hoisted(() => ({
+  reapFilesOlderThan: vi.fn(),
+}));
+
 vi.mock('node:fs');
+vi.mock('../../state/reaper.js', () => ({ reapFilesOlderThan }));
 
 const mockFs = fs as Record<string, ReturnType<typeof vi.fn>>;
 
@@ -22,7 +27,7 @@ describe('shell-transcript-file', () => {
     initShellTranscriptDirectory('/test/project');
     ensureShellTranscriptDirectory();
     expect(mockFs.mkdirSync).toHaveBeenCalledWith(
-      path.join('/test/project', '.janissary', 'shell-transcripts'),
+      path.join('/test/project', '.janissary', 'transcripts', 'shell'),
       { recursive: true },
     );
   });
@@ -31,37 +36,38 @@ describe('shell-transcript-file', () => {
     initShellTranscriptDirectory('/test/project');
     const file = shellTranscriptPath('zsh', Date.UTC(2026, 6, 10, 18, 30, 5, 123));
     expect(file).toBe(path.join(
-      '/test/project', '.janissary', 'shell-transcripts', 'zsh-2026-07-10T18-30-05-123Z.txt',
+      '/test/project', '.janissary', 'transcripts', 'shell', 'zsh-2026-07-10T18-30-05-123Z.txt',
     ));
   });
-});
 
-describe('clearShellTranscriptDirectory', () => {
-  it('removes the directory recursively and tolerates a second clear', () => {
-    mockFs.rmSync.mockImplementation(() => {});
+  it('reaps .txt files older than the retention window', async () => {
     initShellTranscriptDirectory('/test/project');
-
-    clearShellTranscriptDirectory();
-    expect(mockFs.rmSync).toHaveBeenCalledWith(
-      path.join('/test/project', '.janissary', 'shell-transcripts'),
-      { recursive: true, force: true },
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapShellTranscripts(launchedAt, 7);
+    expect(reapFilesOlderThan).toHaveBeenCalledOnce();
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'transcripts', 'shell'),
+      '.txt',
+      launchedAt - 7 * 86_400_000,
     );
-
-    expect(() => { clearShellTranscriptDirectory(); }).not.toThrow();
   });
 
-  it('ignores a removal that throws, so a fresh launch is never blocked by a stale directory', () => {
-    mockFs.rmSync.mockImplementation(() => { throw new Error('directory busy'); });
+  it('uses launch as the cutoff when retention is zero', async () => {
     initShellTranscriptDirectory('/test/project');
-    expect(() => { clearShellTranscriptDirectory(); }).not.toThrow();
+    const launchedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
+    await reapShellTranscripts(launchedAt, 0);
+    expect(reapFilesOlderThan).toHaveBeenCalledWith(
+      path.join('/test/project', '.janissary', 'transcripts', 'shell'),
+      '.txt',
+      launchedAt,
+    );
   });
 
-  it('removes nothing before a directory has been chosen', async () => {
+  it('reaps nothing before a directory has been chosen', async () => {
     // The directory is module state, so a fresh import stands where a process before boot stands.
     vi.resetModules();
-    const freshFs = await import('node:fs');
     const fresh = await import('./transcript-file.js');
-    fresh.clearShellTranscriptDirectory();
-    expect(freshFs.rmSync).not.toHaveBeenCalled();
+    await expect(fresh.reapShellTranscripts(Date.now(), 7)).resolves.toBeUndefined();
+    expect(reapFilesOlderThan).not.toHaveBeenCalled();
   });
 });

@@ -57,7 +57,7 @@ function lockTranscriptDirectory(): void {
 
 beforeEach(() => {
   projectDir = mkdtempSync(path.join(tmpdir(), 'shell-transcript-manager-'));
-  transcriptsDir = path.join(projectDir, '.janissary', 'shell-transcripts');
+  transcriptsDir = path.join(projectDir, '.janissary', 'transcripts', 'shell');
   initShellTranscriptDirectory(projectDir);
   tabs = new Map();
   locked.length = 0;

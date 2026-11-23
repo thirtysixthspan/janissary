@@ -54,7 +54,7 @@ async function transcriptOf(input: string, cols = 80, rows = 24): Promise<string
 
 beforeEach(() => {
   projectDir = mkdtempSync(path.join(tmpdir(), 'shell-transcript-'));
-  transcriptsDir = path.join(projectDir, '.janissary', 'shell-transcripts');
+  transcriptsDir = path.join(projectDir, '.janissary', 'transcripts', 'shell');
   initShellTranscriptDirectory(projectDir);
   writer = undefined;
   locked.length = 0;
