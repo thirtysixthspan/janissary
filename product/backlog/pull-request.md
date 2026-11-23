@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's citation for the no-clear-at-launch verification step, which points at the logger test instead of the state-directory test.
-
-Existing Issue: How to verify edge case 9 cites `src/activity-log/logger.test.ts` for the "never clears the activity log directory" test, but that test exists only in `src/state/dirs.test.ts`, so the claim cannot be checked where the description sends the reader. Severity: 2/10
-
-Existing Risk: 2/10 - A reviewer follows the citation, finds no such case in the logger test, and either distrusts a correct claim or skips confirming that the activityLog registry entry has no clear function.
-
-Proposal Risk: 1/10 - The corrected citation points at the real assertion in the state-directory test; the only residual is that the test checks the registry entry's shape rather than exercising a launch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2201 "correct the no-clear verification citation in the pull request description". In the pull request body, change the Expect line of How to verify edge case 9 (No clear at launch) so the "never clears the activity log directory" assertion is attributed to src/state/dirs.test.ts rather than src/activity-log/logger.test.ts, keeping that line's src/state/dirs.ts and product/specs/activity-log.md anchors as they are. Read src/state/dirs.test.ts first to confirm the test's exact title, and leave every other Behavior example, screenshot note, and verification step byte-for-byte unchanged. No production code or test change belongs here: the registry entry in src/state/dirs.ts and its test already pin the no-clear behavior.
-
-
 * Update the completed activity-log plan's change-set statistics so they match the requirements, steps, and tests it now describes.
 
 Existing Issue: The plan's complexity line still says 24 requirements, 10 test scenarios, and ~35 added lines while the file lists 26 requirements and 17 named test scenarios, and the Implementation steps intro still says the work landed in four steps while five are listed. Severity: 2/10
