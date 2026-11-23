@@ -4,8 +4,6 @@
 
 ## development
 
-* acp-records (3/10) — 17 of 20 facts are correct and 3 missing, none wrong. No user doc or help page lists `Partial` as a terminal record status shown when a subagent hits the tool-loop limit, states the record answer `Subagent terminated.`, or explains startup recovery (open core records become `Closed`, open agent records become `Terminated` on next launch). Add `Partial` to the dimmed-status lists in `documentation/user-documentation/command-bar/connections.md` and `help/connections.md`; add `Subagent terminated.` to `documentation/user-documentation/advanced-agents/agent-command.md` and `help/subagent.md`; add a short startup-recovery sentence near the retention note in the connections page. Evidence: `product/specs/acp-records.md`, `src/acp-records/types.ts`, `src/acp-records/manager.ts`, `help/connections.md`.
-
 * application-commands (3/10) — 19 of 20 facts are correct and 1 missing. The exact refusal `Command is unavailable in this tab: <command>.` appears in neither doc surface, though `src/command/manager.ts` emits it when a system-initiated command such as the client's `resetAcp` → `ask-reset` reaches a tab where ACP is unavailable; it is distinct from the documented `Command is disabled: <command>.` Add one sentence and the string to the `ask reset` discussion in `documentation/user-documentation/advanced-agents/acp-agent.md` and to `help/ask.md`. Evidence: `product/specs/application-commands.md`, `src/command/manager.ts`, `documentation/user-documentation/advanced-agents/acp-agent.md`, `help/ask.md`.
 
 * clipboard-history (3/10) — 18 of 19 facts are correct and 1 missing. Neither `documentation/user-documentation/command-bar/clipboard.md` nor `help/clipboard.md` or `help/keys.md` says that `Ctrl+Shift+V` / `Cmd+Shift+V` suppress the browser's own "paste as plain text" and "paste and match style" shortcuts, a behavior verified in `web/src/overlay-plugins/registry.ts` and the spec. Add that edge case to the "Opening it" section of the clipboard page, with optional notes in `help/clipboard.md` and the chord row of `help/keys.md`. Evidence: `product/specs/clipboard-history.md`, `web/src/overlay-plugins/registry.ts`, `documentation/user-documentation/command-bar/clipboard.md`.
@@ -34,6 +32,7 @@
 
 ## resolved
 
+* acp-records — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md, documentation/user-documentation/advanced-agents/agent-command.md, help/subagent.md (removed 2026-11-23)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor-persona-query.md (removed 2026-11-23)
 * hosts-tab — documented in help/hosts.md, help/commands.md (removed 2026-11-23)
 * tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md, help/keys.md (removed 2026-11-23)
