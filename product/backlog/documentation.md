@@ -4,8 +4,6 @@
 
 ## development
 
-* conversations (3/10) — 20 of 21 facts are correct and 1 missing. Neither user-doc surface describes the warning for a conversation record written by a newer schema version: Janissary leaves it untouched, never lists or opens it, reports `conversation "<id>" unavailable: written by a newer schema version (vN)`, refuses to create under that id, and so cannot silently erase it on downgrade. Extend the "missing or unreadable" passage in `documentation/user-documentation/tab-types/conversations.md` with that case, and optionally add a line to `help/conversations.md`. Evidence: `product/specs/conversations.md`, `src/conversations/store.ts`, `src/conversations/store.test.ts`, `documentation/user-documentation/tab-types/conversations.md`.
-
 * file-exists (3/10) — 13 of 14 facts are correct and 1 missing. `help/file.md` documents `forbidden` for paths outside the workspace or secret paths and `missing` for absent paths, but never says which wins when the absent leaf sits behind a symlink that escapes the workspace: containment is judged from the nearest existing segment, so the answer is `forbidden`. Add a sentence to that effect in the "Listing and inspecting paths" paragraph of `help/file.md`; no new page is needed. Evidence: `product/specs/file-exists.md`, `src/file-exists/tab-exists.test.ts`, `src/file-exists/exists-core.ts`, `help/file.md`.
 
 * file-list-stat (3/10) — 12 of 15 facts are correct and 3 missing, none wrong. `help/file.md` does not say that `file list`/`file stat` answer `forbidden` for a symlink whose resolved target escapes the workspace or is secret, that an entry vanishing before it can be described still gets a zero-valued row, or that local and remote tabs apply the same path policy and print identical refusal wording. Add a short paragraph covering all three to the "Listing and inspecting paths" section; no new page or change to `help/commands.md` is needed. Evidence: `product/specs/file-list-stat.md`, `src/file-list/list-core.ts`, `src/file-stat/stat-core.ts`, `src/file-failure.ts`, `help/file.md`.
@@ -28,6 +26,7 @@
 
 ## resolved
 
+* conversations — documented in documentation/user-documentation/tab-types/conversations.md (removed 2026-11-23)
 * clipboard-history — documented in documentation/user-documentation/command-bar/clipboard.md, help/clipboard.md, help/keys.md (removed 2026-11-23)
 * application-commands — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md (removed 2026-11-23)
 * acp-records — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md, documentation/user-documentation/advanced-agents/agent-command.md, help/subagent.md (removed 2026-11-23)

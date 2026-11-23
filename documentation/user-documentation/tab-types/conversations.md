@@ -14,6 +14,8 @@ The list shows this project's conversations in order of most recent activity, ea
 
 Sending a query moves a conversation to the top. Renaming it or changing its model doesn't. A conversation you created but haven't asked anything yet shows in the list while the app runs, but it isn't saved, so it's gone after a restart. A saved conversation whose record is missing or unreadable doesn't appear.
 
+A record written by a newer version of Janissary gets its own warning: `warning: conversation "<id>" unavailable: written by a newer schema version (vN)`. Janissary leaves that record exactly as it was, leaves it out of the list, won't open it, and won't start a new conversation under the same id or overwrite the file. Dropping back to an older build therefore can't silently erase a conversation from a newer one. It stays unavailable until you run a build that understands its version.
+
 The first row is selected when the list opens, marked by a bar along its left edge that stays visible even when you hover another row. `↑` and `↓` move the selection without wrapping; `Home` and `End` select the first and last rows. Press `Enter` to open the selected conversation. With the mouse, click the same row twice: the first click selects it, and the next opens it. This also applies to a row already selected by the keyboard. Clicking a different row starts the count over, so you need two clicks on that row to open it. Opening a conversation focuses its existing tab if one is open.
 
 You can also open a conversation by its full title:
