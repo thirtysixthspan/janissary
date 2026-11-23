@@ -4,14 +4,13 @@
 
 ## development
 
-* subagent (3/10) — 17 of 20 facts are correct and 3 missing. `help/subagent.md` omits the ACP-caller refusal `Subagent: caller session is not available.`, a glossary of completion statuses (`completed`, `partial`, `failed`, `terminated`) including `partial` meaning the tool-loop limit and showing as `Partial` in the connections list, and the record answer `Subagent terminated.`. Add them to that page's Notes section and cross-reference `Partial` in `documentation/user-documentation/command-bar/connections.md`; `documentation/user-documentation/getting-started/configuration.md` already documents the `maxToolTurns` default. Evidence: `product/specs/subagent.md`, `src/subagent/launch.ts`, `src/subagent/primer.ts`, `src/agent/record-feed.ts`, `help/subagent.md`.
-
 ## deferred
 
 ## declined
 
 ## resolved
 
+* subagent — documented in help/subagent.md; record answer and connections `Partial` note were already resolved by an earlier commit (removed 2026-11-23)
 * state-directory — documented in help/hosts.md (removed 2026-11-23)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md, help/ssh.md, help/hosts.md (removed 2026-11-23)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-23)
