@@ -50,7 +50,7 @@ The first command that touches a database opens a connection that stays open, sh
 
 ## Browse a database instead
 
-To look through a database's tables rather than query them, open it in the [SQL database browser](/user-documentation/tab-types/sql-browser) with `sql <name>`. It filters, sorts, pages, and edits rows, and has its own SQL console. It works on the same databases `db` creates, and `db` keeps printing its own text tables exactly as before.
+To look through a database's tables rather than query them, open it in the [SQL database browser](/user-documentation/tab-types/sql-browser) with `sql database <name>`. It filters, sorts, pages, and edits rows, and has its own SQL console. It works on the same databases `db` creates, and `db` keeps printing its own text tables exactly as before.
 
 ## Databases persist across sessions
 

@@ -5,7 +5,7 @@
 The `sql` command opens a tab where you can look through one of your project's SQLite databases, filter and sort its tables, edit rows in place, and run your own statements:
 
 ```
-sql shop
+sql database shop
 ```
 
 It works on the same databases the [`db` command](/user-documentation/command-bar/database) creates and queries. `db` is still the way to make a database, and it still prints its own text tables into a transcript. The browser is for when you want to see what's there before you know what to ask.
@@ -14,21 +14,25 @@ It works on the same databases the [`db` command](/user-documentation/command-ba
 
 ## Open a database
 
-`sql <name>` opens that database's tab, or focuses it if it's already open. Each database gets one tab, named after it, so you can browse two side by side. Opening a tab again keeps its filters, search term, hidden columns, order, page, and exports.
+`sql database <name>` opens that database's tab, or focuses it if it's already open. Each database gets one tab, named after it, so you can browse two side by side. Opening a tab again keeps its filters, search term, hidden columns, order, page, and exports.
+
+`sql file <path>` opens a SQLite file at that path instead. Use an absolute path, or a relative path that Janissary resolves against the project directory. The value is taken verbatim, so interior spaces survive and a trailing `left` or `right` stays part of the path. A path-backed tab shows a read-only label with the file's basename in place of the database dropdown.
 
 Bare `sql` opens the database whose connection Janissary opened most recently. Any `db` command in any tab can open one, and so can opening a database in an SQL browser tab. Reaching a database that's already open doesn't move it up the order, and closing a connection takes that database out of the running. If no connection is open, bare `sql` opens the first database by name.
 
-Add `left` or `right` as the last word to dock the tab into that sidebar: `sql shop left`, or `sql left` for the current database. Capital letters work too, so `sql shop LEFT` docks as well. Bare `sql` brings the current database's tab back to the center, while `sql shop` leaves that tab wherever it is.
+Every tab opens in the centre. There's no dock word: keywords are lower case only and must be followed by whitespace. An old bare name, a `left` or `right` dock word, an upper-case keyword, or a keyword with no value prints a usage line and opens no tab.
 
 `sql` never creates a database. Use `db sqlite create <name>` for that. These are the replies you can get instead of a tab:
 
 | You type | You see |
 |---|---|
-| `sql nope` | `No database named "nope". Create it with: db sqlite create nope` |
+| `sql shop` | `Usage: sql [file <path>\|database <name>]` |
+| `sql shop left` | `Usage: sql [file <path>\|database <name>]` |
+| `sql file` | `Usage: sql [file <path>\|database <name>]` |
+| `sql database nope` | `No database named "nope". Create it with: db sqlite create nope` |
+| `sql database ../other` | `Invalid database name "../other".` |
+| `sql file missing.sqlite` | `No database file at "<path>".` |
 | `sql` with no databases at all | `No databases. Create one with: db sqlite create <name>` |
-| `sql ../other` | `Invalid database name "../other".` |
-
-Because `left` and `right` are read as dock words when they come last, in any capitalization, a database actually named `left` or `right` can't be opened by name.
 
 ## Pick a table
 
