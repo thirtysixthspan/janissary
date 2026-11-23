@@ -58,7 +58,7 @@
 | `help commands` | Print the alphabetical commands table |
 | `help keys` | List the key bindings |
 | `hist` | Open command history picker |
-| `hosts` | Open the Hosts tab of saved hosts; `hosts <name> <[user@]host[:port]> [path]` saves one |
+| `hosts` | Open or focus the Hosts tab of saved hosts |
 | `hosts add` | `hosts add <name> <[user@]host[:port]> [path]` saves a host |
 | `hosts list` | `hosts list` prints the saved hosts as JSON |
 | `hosts remove` | `hosts remove <name>` removes a saved host |

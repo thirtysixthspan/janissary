@@ -4,8 +4,6 @@
 
 ## development
 
-* hosts-tab (5/10) — 12 of 18 facts are correct, 5 missing and 1 wrong. `help/hosts.md` omits the no-match remove reply `No host named "<name>".`, case-insensitive verb matching, the exact `Usage: hosts add <name> <[user@]host[:port]> [path]` and `Usage: hosts remove <name>` strings, the list's Up/Down (no wrap), Home/End and Escape behavior, and the empty state `No saved hosts` with Refresh, New host and Split still available. The `hosts` row in `help/commands.md` wrongly claims `hosts <name> <[user@]host[:port]> [path]` saves a host, while shipped parsing treats the name as an unknown verb and refuses it; the real form is the separate `hosts add` row. Add the missing facts to `help/hosts.md` and fix that row. Evidence: `product/specs/hosts-tab.md`, `src/plugins/hosts/catalog-commands.ts`, `src/plugins/hosts/hosts-values.ts`, `web/src/plugins/hosts/HostList.tsx`, `help/hosts.md`, `help/commands.md`.
-
 * tab-completion (4/10) — 16 of 18 facts are correct and 2 missing, with no stale facts. Saved-host name completion is documented nowhere: Tab completes names from `hosts.json` at the `ssh` destination, after `hosts remove`, and after `on` in `shell`/`harness`/`agent`, case-insensitively with shared-prefix insertion and a personal-catalog fallback (`src/completion/hosts.ts`). The "After `file`" row of `documentation/user-documentation/command-bar/tab-completion.md` lists only `glob`, `grep` and `read`, but `src/completion/file-read.ts` shows `list`, `ls`, `stat`, `exists`, `head` and `tail` are also candidates; `head`/`tail` skip path completion after `-n` and the flag itself is never offered. Add both to that page and note them in the Tab row of `help/keys.md`. Evidence: `product/specs/tab-completion.md`, `src/completion/hosts.ts`, `src/completion/file-read.ts`, `documentation/user-documentation/command-bar/tab-completion.md`.
 
 * acp-records (3/10) — 17 of 20 facts are correct and 3 missing, none wrong. No user doc or help page lists `Partial` as a terminal record status shown when a subagent hits the tool-loop limit, states the record answer `Subagent terminated.`, or explains startup recovery (open core records become `Closed`, open agent records become `Terminated` on next launch). Add `Partial` to the dimmed-status lists in `documentation/user-documentation/command-bar/connections.md` and `help/connections.md`; add `Subagent terminated.` to `documentation/user-documentation/advanced-agents/agent-command.md` and `help/subagent.md`; add a short startup-recovery sentence near the retention note in the connections page. Evidence: `product/specs/acp-records.md`, `src/acp-records/types.ts`, `src/acp-records/manager.ts`, `help/connections.md`.
@@ -39,6 +37,7 @@
 ## resolved
 
 * editor-tab — documented in documentation/user-documentation/tab-types/editor-persona-query.md (removed 2026-11-23)
+* hosts-tab — documented in help/hosts.md, help/commands.md (removed 2026-11-23)
 * acp — documented in help/tell.md, help/ask.md, help/roles.md, documentation/user-documentation/advanced-agents/acp-agent.md, documentation/user-documentation/tab-types/roles.md (removed 2026-11-23)
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-11-23)
 * web-search — documented in help/web.md (removed 2026-11-23)
