@@ -212,6 +212,12 @@ These commands answer in one word instead of a verbose error line: `missing` for
 
 An absent final segment doesn't change a `forbidden` answer when an earlier segment is a symbolic link that resolves outside the workspace or to a secret location. Containment is judged from the nearest existing part of the path, so the missing leaf can't hide the escape. A plain absent path with no escaping link still answers `missing`.
 
+`file list` and `file stat` answer `forbidden` for a path whose symbolic link resolves outside the workspace or to a secret location, whether the target is a file, a directory, or a credential location under your home folder. A link that stays inside the workspace is fine. `file list` also leaves out any listed entry that resolves outside the workspace or to a secret location, so the listing can't show that target's size, time, or permissions.
+
+If an entry vanishes before its row can be built, `file list` still prints a row for it with size `0`, the `1970-01-01T00:00:00.000Z` timestamp, and `----------` permissions.
+
+Local and remote tabs apply the same path checks and print the same `forbidden` word, so they can't disagree about which paths are reachable.
+
 `file head <path> [-n <lines>]` and `file tail <path> [-n <lines>]` print the first or last N numbered lines of a file with the same numbering and line truncation as `file read`. `-n` defaults to 10 and accepts no value above 2000; a count larger than the file prints every line, and an empty file prints `(empty file)`. A directory target prints `notdir`. Other failures keep `file read`'s verbose lines naming the path as typed, such as `File not found: <path>.`, `Outside the workspace: <path>.`, `Secret file: <path>.`, `Not a text file: <path>.`, and `File too large (>5 MB): <path>.`
 
 Malformed arguments print `Usage: file list <path>` (also for `file ls`), `Usage: file stat <path>`, `Usage: file exists <path>`, `Usage: file head <path> [-n <lines>]`, or `Usage: file tail <path> [-n <lines>]`.
