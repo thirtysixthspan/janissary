@@ -4,8 +4,6 @@
 
 ## development
 
-* remote-server (3/10) — 19 of 20 facts are correct and 1 missing. The shipped `on <address>` clause resolves a bare saved-host name through the hosts catalog to its stored user, host, port and path, while any typed address containing `@` or `:` is used literally; completion offers saved names after `on` (`src/remote/saved-host.ts`, `src/completion/index.ts`). Neither user-doc surface says this, and `documentation/user-documentation/advanced-agents/remote-agents.md` currently suggests ports and jump hosts only as `~/.ssh/config` aliases. Add the saved-host route to that page's "Address forms" section and cross-reference `help/hosts.md`. Evidence: `product/specs/remote-server.md`, `src/remote/saved-host.ts`, `src/completion/index.ts`, `documentation/user-documentation/advanced-agents/remote-agents.md`.
-
 * ssh-tab (3/10) — 20 of 26 facts are correct and 6 missing, none wrong. The "SSH sessions" section of `documentation/user-documentation/advanced-agents/harness.md` omits that saved-host names match case-insensitively including hyphen-leading names, that an unusable hosts file falls through to a literal destination and reports its problem once in the feed while a valid personal catalog still matches a malformed project file, the saved-workdir rules (`~`/`~/` kept literal, relative from login dir, absolute as-is, `-t`, cd then login shell, failures reported), that a saved-host tab inherits the typing tab's group/color/cwd, that the typed line is recorded verbatim including a leading `/`, and that hosts-tab launches write no transcript line and return errors to the caller. Add those details there, mirroring to `help/ssh.md` and `help/hosts.md`. Evidence: `product/specs/ssh-tab.md`, `src/ssh-saved-host.ts`, `src/ssh-manager.ts`, `src/command/manager.test.ts`.
 
 * state-directory (3/10) — 16 of 20 facts are correct and 4 missing. `help/hosts.md` omits that a project `.janissary/hosts.json` holding `{}` explicitly means zero hosts, the exact unusable-file notice `Hosts file <path> is unusable: <problem>.`, the save refusal `Cannot save hosts: <path> is unusable — fix it by hand.` when the home file is unusable, and the concrete paths `~/.janissary/hosts.json` and `.janissary/hosts.json`. Add them to the Notes section; startup cleanup, the instance lock and system schedules are already accurate in `startup.md`, `scheduling.md` and the command table. Evidence: `product/specs/state-directory.md`, `src/plugins/hosts/hosts-file.ts`, `help/hosts.md`, `documentation/user-documentation/getting-started/startup.md`.
@@ -20,6 +18,7 @@
 
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-23)
 * pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md (removed 2026-11-23)
+* remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md, help/hosts.md (removed 2026-11-23)
 * file-list-stat — documented in help/file.md (removed 2026-11-23)
 * file-exists — documented in help/file.md (removed 2026-11-23)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md (removed 2026-11-23)

@@ -27,7 +27,11 @@ The address is a single token, `[user@]host[:path]`.
 
 Everything after the first colon is a path, never a port. A trailing `:2222` names a directory called `2222`.
 
-The clause takes no SSH options at all. No ports, no identity files, no jump hosts. Give a host that needs any of those a `Host` alias in your `~/.ssh/config` and name the alias instead:
+A bare name that matches a saved host resolves to that host's saved user, host, port, and path before the launch starts. A host saved as `Lab` pointing at `ops@lab.local:2222` with path `~/work` means `on Lab` runs there, with no `Host` alias needed just to carry the port. The match ignores case. When the saved host has no path, the remote finds its project root by walking up from the SSH login directory, the same as a typed host without a path. The [`hosts` command reference](/user-documentation/command-reference/hosts) covers saving hosts.
+
+An address you type with `@` or `:` is always used as written, so the saved hosts are never consulted. `on devbox:/srv/proj` keeps that path, and a trailing `:2222` is still a directory name. An unmatched name or an unusable hosts catalog falls back to a plain host name, which SSH resolves the way it always does. After `on`, completion offers saved host names for `shell`, `harness`, and `agent` commands.
+
+The typed address takes no SSH options at all. No ports, no identity files, no jump hosts. A saved host can carry a port; otherwise give a host that needs those options a `Host` alias in your `~/.ssh/config` and name the alias instead:
 
 ```
 harness claude on my-devbox
