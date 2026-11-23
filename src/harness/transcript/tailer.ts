@@ -15,7 +15,8 @@ const RESOLVE_DEADLINE_MS = 120_000;
 //
 // The `.janissary/transcripts/harness/` file is opened lazily on the first entry (a harness that
 // never produces one leaves no empty file) through a single long-lived append stream, exactly as
-// `HarnessRecorder` does.
+// `HarnessRecorder` does. With `persist` false (`logEnabled` off) that file is never opened at all,
+// but entries still accumulate in memory for monitors.
 export class HarnessTranscriptTailer {
   private timer: NodeJS.Timeout | undefined;
   private entries: string[] = [];
@@ -29,6 +30,7 @@ export class HarnessTranscriptTailer {
     private label: string,
     private source: TranscriptSource,
     private onUnavailable: () => void,
+    private readonly persist: boolean,
   ) {
     this.timer = setInterval(() => { this.tick(); }, POLL_INTERVAL_MS);
     this.timer.unref();
@@ -69,6 +71,7 @@ export class HarnessTranscriptTailer {
 
   private append(blocks: string[]): void {
     this.entries.push(...blocks);
+    if (!this.persist) return;
     if (!this.stream) this.open();
     this.stream?.write(blocks.map((block) => block + '\n\n').join(''));
   }

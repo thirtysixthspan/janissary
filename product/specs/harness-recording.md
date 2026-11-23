@@ -51,6 +51,13 @@ one from the current run. Subfolders and files of another type are never touched
 cannot be read or deleted is skipped. Each harness tab gets its own file in that directory. The
 `.janissary/harness-transcripts/` directory earlier versions wrote is no longer used or cleared.
 
+With `"logEnabled": false` in `.janissary/config.json` (see [[application-config]]), no harness tab
+writes a transcript file, whether the tab is local or remote. Monitors still receive the tab's session
+transcript entries, so the in-memory stream is unchanged. `harness transcript <name>` reports
+`No transcript available for "<name>" yet.`, and the tab's transcript button does nothing. The setting
+is read when a harness tab opens, so a change applies to tabs opened after the next launch. The launch
+sweep still runs and still ages out files an earlier session wrote.
+
 A session record is not created the instant a harness starts; the binary writes it on its first turn,
 and the tab keeps looking until it appears. When none can be found, the tab silently keeps its
 existing behavior — screen snapshots to monitors, no transcript file — and a single

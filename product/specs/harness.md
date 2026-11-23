@@ -989,12 +989,13 @@ case-sensitively), exactly as `harness capture` does.
 - No tab has the label — error: `No tab labeled "<name>".`
 - The tab exists but is not a harness tab — error: `"<name>" is not a harness tab.`
 - The tab is a harness tab whose transcript is not available — nothing has been extracted yet, the
-  session record could not be found, or it is an ssh tab, which never has one — error:
-  `No transcript available for "<name>" yet.`
+  session record could not be found, `logEnabled` is false in `.janissary/config.json`, or it is an
+  ssh tab, which never has one — error: `No transcript available for "<name>" yet.`
 
-Unlike a capture, the transcript is written continuously and automatically for the tab's whole life;
-the command only opens the file. It is a point-in-time open of the file as it stands, not a live
-view, so re-running it after more activity opens a newer version of the same growing file.
+Unlike a capture, the transcript is written continuously and automatically for the tab's whole life
+unless `logEnabled` is false; the command only opens the file. It is a point-in-time open of the
+file as it stands, not a live view, so re-running it after more activity opens a newer version of
+the same growing file.
 
 What the transcript carries that a capture cannot is **subagent** activity. When a harness dispatches
 a subagent, the terminal shows only a collapsed progress line, so the subagent's own prompts, tool
