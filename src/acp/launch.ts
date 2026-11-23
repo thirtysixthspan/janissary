@@ -21,7 +21,7 @@ export function acpLaunchFor(harness: PersonaHarness): AcpLaunch {
   if (harness.harness === 'opencode') {
     return {
       command: 'opencode',
-      args: ['acp'],
+      args: ['--standalone', 'acp'],
       env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: harness.model }) },
     };
   }
