@@ -2,8 +2,6 @@
 
 ## ready
 
-* every new harness tab should create a new file in .janissary/transcripts/harness/. The activity of the harness session should be continually appended to the file for the duration of the session. The harness transcript should persist for N number of days where N is determined by a new configuration flag in .janissary/config.json. A log reaper process that runs in the background on launch should be responsible for clearing out transcripts older than n days. harness transcripts should not be removed when the application is halted. harness transcripts should be tested and working with the harnesses for opencode, claude and codex. Prexisting code to save transcripts should be updated and used for the implementation of the current feature.
-
 ## development
 
 ## deferred
