@@ -2,8 +2,6 @@
 
 ## ready
 
-* the unread flag should not appear on a tab which an acp query is not yet resolved with a response. 
-
 * acp- directories are accumulating in `.janissary/`. move the location where these are maintained into a subdirectory `.janissary/`.    
 
 * assure that acp sessions run opencode in standalone mode.

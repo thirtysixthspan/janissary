@@ -6,10 +6,18 @@ import {
 import { capLog } from './log.js';
 import { makeTab } from '../index.js';
 import { messageBus } from '../../bus.js';
+import type { AcpPendingPrompt } from '../../acp/prompt-state.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+function pendingPrompt(overrides: Partial<AcpPendingPrompt> = {}): AcpPendingPrompt {
+  return {
+    finish: () => {}, abort: new AbortController(), prompt: 'hello', role: 'ask',
+    roleName: 'ask', commands: [], runningEntries: new Set(), ...overrides,
+  };
+}
 
 describe('markUnreadTab', () => {
   it('marks a background tab unread', () => {
@@ -49,6 +57,30 @@ describe('markUnreadTab', () => {
   it('ignores a label with no matching tab', () => {
     expect(() => markUnreadTab([makeTab('bob', 'red')], 'ghost', 'janus')).not.toThrow();
   });
+
+  it('does not badge a tab whose ACP query has not resolved, and badges it once the query settles', () => {
+    const tab = makeTab('bob', 'red');
+    tab.runtime = { busy: false, context: [], queue: [], acpRoles: { ask: { prompt: pendingPrompt() } } };
+
+    expect(markUnreadTab([tab], 'bob', 'janus')).toBe(false);
+    expect(tab.hasUnread).toBeUndefined();
+
+    delete tab.runtime.acpRoles?.ask?.prompt;
+
+    expect(markUnreadTab([tab], 'bob', 'janus')).toBe(true);
+    expect(tab.hasUnread).toBe(true);
+  });
+
+  it('suppresses the badge for an outstanding prompt on any ACP role', () => {
+    const tab = makeTab('bob', 'red');
+    tab.runtime = {
+      busy: false, context: [], queue: [],
+      acpRoles: { tell: { prompt: pendingPrompt({ role: 'tell' }) } },
+    };
+
+    expect(markUnreadTab([tab], 'bob', 'janus')).toBe(false);
+    expect(tab.hasUnread).toBeUndefined();
+  });
 });
 
 describe('isUnreadEligible', () => {
@@ -61,6 +93,19 @@ describe('isUnreadEligible', () => {
     expect(isUnreadEligible(docked, 'docked', 'janus', 'other')).toBe(false);
     expect(isUnreadEligible(plain, 'plain', 'plain', 'other')).toBe(false);
     expect(isUnreadEligible(plain, 'plain', 'janus', 'plain')).toBe(false);
+  });
+
+  it('refuses a tab waiting on an unresolved ACP query but allows a resolved one', () => {
+    const waiting = makeTab('waiting', 'red');
+    waiting.runtime = { busy: false, context: [], queue: [], acpRoles: { ask: { prompt: pendingPrompt() } } };
+    expect(isUnreadEligible(waiting, 'waiting', 'janus')).toBe(false);
+
+    const resolved = makeTab('resolved', 'red');
+    resolved.runtime = {
+      busy: false, context: [], queue: [], acpRoles: { ask: {} },
+      acpRecordIds: new Set(['record-1']),
+    };
+    expect(isUnreadEligible(resolved, 'resolved', 'janus')).toBe(true);
   });
 });
 
