@@ -84,7 +84,11 @@ export function updateRunningEntry(
 export function isUnreadEligible(
   tab: Tab, label: string, activeLabel: string | undefined, secondaryLabel?: string,
 ): boolean {
-  return !tab.dock && label !== activeLabel && label !== secondaryLabel;
+  // A tab still waiting on an ACP query is not asking for attention: its busy dot already says it is
+  // working. Streaming ACP output and tool steps must not badge it until the query resolves, so a
+  // prompt left set on any role is the one signal that suppresses the badge at raise time.
+  const awaitingAcp = Object.values(tab.runtime?.acpRoles ?? {}).some((state) => state?.prompt !== undefined);
+  return !tab.dock && !awaitingAcp && label !== activeLabel && label !== secondaryLabel;
 }
 
 // Raise the badge, and report whether this tab was eligible for it. The return value is what lets a
