@@ -2,7 +2,6 @@
 
 ## ready
 
-
 ## deferred
 
 ## declined
