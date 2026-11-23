@@ -29,10 +29,11 @@ Type `help s`, then press `Tab` to see matching help pages.
 | After `browser` | Browser subcommands; after `browser use` or `browser window close`, the current tab's open window IDs |
 | After `web` | `search` and `fetch`; after a search query, the flags not yet used, `basic` and `advanced` after `--depth`, `auto` and the provider names after `--provider`; after a fetch URL, the flags not yet used, `markdown`, `text`, and `html` after `--format`, `auto` and the provider names after `--provider` |
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may appear anywhere after its name |
+| The destination of `ssh`, the name after `hosts remove`, or the token after `on` in `shell`, `harness`, or `agent` | Saved host names, matched without regard to case |
 | After `syntax` or `search` | `theme` then theme names, or `transcript` |
 | After `help` | Markdown help page names, including `commands` and `keys` |
 | At the first name after `execute`, or a bare `edit` target | Project runscript names; a bare `edit` target also offers matching paths |
-| After `file` | `glob`, `grep`, and `read`; then the flags and paths for the chosen subcommand |
+| After `file` | `glob`, `grep`, `read`, `list`, `ls`, `stat`, `exists`, `head`, and `tail`; then the flags and paths for the chosen subcommand |
 | In a `files` command | Matching clause words before paths, tab labels and display titles, detail modes, sidebar sides, and open navigator labels |
 | Anywhere else | Filesystem paths relative to the tab's working directory |
 
@@ -43,6 +44,12 @@ At the first word, Tab offers enabled command names and aliases before matching 
 For `web search`, flags appear only once the query is on the line, so `web search -` on its own leaves the line unchanged. After the query, Tab offers the flags you haven't used: `--results`, `--max-chars`, `--depth`, and `--provider`. The query and the values of `--results` and `--max-chars` get no suggestions. After `--depth` you get `basic` and `advanced`; after `--provider`, `auto` and the provider names. Command names and flags match case-sensitively here too.
 
 For `web fetch`, flags appear only once the URL is on the line, so `web fetch -` leaves the line unchanged. After the URL, Tab offers the flags you haven't used: `--format`, `--timeout`, `--max-chars`, `--offset`, and `--provider`. The URL and the number values get no suggestions. After `--format` you get `markdown`, `text`, and `html`. After `--provider` you get `auto` and the provider names, `local` included, which `web search` never offers. A subcommand you turn off in the **Commands** tab isn't suggested, and neither are its flags, but the other one still is.
+
+## Complete saved host names
+
+Press `Tab` at an `ssh` destination, after `hosts remove`, or after the `on` clause in `shell`, `harness`, or `agent` to complete a saved host name. For example, `ssh dev` can fill in `ssh devbox`. Names match without regard to case, and a single match uses the spelling you saved. Several matches extend the prefix with the characters they share, keeping the case you typed.
+
+A host name completes only when it's a bare token and your cursor sits at its end. A name with `@` or `:`, a quoted token, or a cursor in the middle of a word keeps ordinary completion. `ssh` offers names only when the destination is the last thing on the line, so a trailing remote command keeps ordinary completion too. With no match, filesystem paths take over. A missing or unusable hosts file offers no names and reports nothing. If the project file is unusable but your personal catalog works, its names are offered; a usable project catalog wins otherwise.
 
 ## Complete paths and clauses
 
@@ -69,5 +76,7 @@ For `file read`, paths complete against the root the command reads from: your wo
 For `file glob`, Tab after `--` offers `--dirs`, `--hidden`, `--limit`, and `--path`. The word after `--path` completes directory names only. The pattern and the `--limit` value get nothing.
 
 For `file grep`, Tab after `--` offers the seven flags `--case-sensitive`, `--exclude`, `--include`, `--limit`, `--literal`, `--path`, and `--word`. After `--path`, it completes files and directories. The pattern, and the values after `--include`, `--exclude`, and `--limit`, get no suggestions. Flags are lowercase only, so a capitalized word starts the pattern instead.
+
+`file list`, `file ls`, `file stat`, and `file exists` complete paths. `file head` and `file tail` complete paths too, but nothing after `-n`, and `-n` itself is never offered. A subcommand you turn off in the **Commands** tab isn't suggested.
 
 On a remote tab, the `file` subcommands and their flags still complete, but no paths or directory names are offered.

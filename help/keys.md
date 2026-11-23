@@ -22,7 +22,7 @@
 | --- | ------ |
 | `←` / `→` | Move cursor in the input field |
 | `↑` / `↓` | Previous / next command in history |
-| `Tab` | Complete file paths; tab targets for `send` / `queue` / `close` / `schedule`; `tab` subcommands, targets, and pane/dock sides; connection strings; `browser` subcommands / window IDs; `monitor` personas, names, and targets; the `schedule system` grammar; `files` clauses and paths; runscript names; system schedule names; and help pages including `commands` and `keys` |
+| `Tab` | Complete file paths; saved host names at an `ssh` destination, after `hosts remove`, and after `on` in `shell` / `harness` / `agent`; `file` subcommands, flags, and paths; tab targets for `send` / `queue` / `close` / `schedule`; `tab` subcommands, targets, and pane/dock sides; connection strings; `browser` subcommands / window IDs; `monitor` personas, names, and targets; the `schedule system` grammar; `files` clauses and paths; runscript names; system schedule names; and help pages including `commands` and `keys` |
 | `Enter` | Execute the current command |
 | `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues); blocked when `queue` is disabled in the Commands tab |
 | `Cmd+F` | Search for a line in an editor buffer, a shell tab's transcript, or a PDF tab's document |
