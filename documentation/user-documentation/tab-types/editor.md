@@ -123,7 +123,7 @@ These shortcuts run in your browser, so pressing one doesn't wait on the server.
 
 ## Caret and scroll
 
-The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
+The blinking caret marks where text will be inserted, and is only visible while the editor tab holds keyboard focus — switching away hides it. It also goes out when focus leaves the editor for another field, such as the file's rename input, the buffer's find field, the command bar, or the other pane, and starts blinking again at the same spot once the editor takes focus back.
 
 Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view, and the whole line it lands on comes with it — never clipped at an edge, never left below the fold. Staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press. Once there is nothing left to scroll — the view is already at the start or end of the file — that same press moves a whole line instead. `PageUp`/`PageDown` always page through buffer lines rather than screen rows, so a page through heavily wrapped text covers more than one screen.
 

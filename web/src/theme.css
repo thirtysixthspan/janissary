@@ -886,6 +886,9 @@ button.tab-recording { cursor: pointer; }
   background: var(--accent); animation: editor-caret-blink 1s steps(1) infinite;
 }
 @keyframes editor-caret-blink { 50% { opacity: 0; } }
+/* The caret must not blink while the keyboard is elsewhere in the app (rename, find, command bar,
+   the other pane): the bar goes out until focus returns to the editor body, with no layout change. */
+.editor-body:not(:focus-within) .editor-caret::after { animation: none; opacity: 0; }
 /* Hidden always-focused textarea that captures keystrokes, paste, and IME composition. */
 .editor-textarea {
   position: absolute; left: 0; top: 0; width: 1px; height: 1px;
