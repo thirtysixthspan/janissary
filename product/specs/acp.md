@@ -399,7 +399,7 @@ Fatal errors are shown as `ACP: <message>` and forget the connection. Existing b
 
 ## Shared consumers
 
-Monitors, conversations, and editor persona queries remain separate ACP consumers, with their existing model choices, workspaces, permission policies, and lifecycle. They do not acquire the shell's tab session or enter its tool loop. See [[monitoring]], [[conversations]], and [[editor-tab]].
+Monitors and conversations remain separate ACP consumers, with their own model choices, workspaces, permission policies, and lifecycle; they do not acquire the shell's tab session or enter its tool loop. Editor persona queries instead run on the tab's core ACP pipeline under the persona's role, reusing that role's session rather than being a separate consumer with a lifecycle of their own. See [[monitoring]], [[conversations]], and [[editor-tab]].
 
 ### Authentication outside workspaces
 
