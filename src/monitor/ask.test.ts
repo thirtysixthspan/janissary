@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MonitorSub } from './live-monitors.js';
 import type { Managers } from '../managers.js';
 import type { MonitorContextEntry } from './context.js';
@@ -13,120 +13,129 @@ vi.mock('../notifications/index.js', () => ({
 
 import { askMonitor } from './ask.js';
 
-function makeReg(errorMessage: string) {
+type Call = Parameters<NonNullable<Managers['acp']['promptResult']>>;
+
+function makeReg() {
   return {
+    inline: true,
+    name: 'test-persona',
+    persona: { name: 'test-persona', role: 'tell', body: 'Watch for bugs.' },
+    firstPrompt: 'persona primer',
     inFlight: false,
     contextBytes: 0,
     contextText: [] as MonitorContextEntry[],
-    session: {
-      prompt: (_text: string, handlers: { onError: (msg: string) => void }) => {
-        handlers.onError(errorMessage);
-      },
-    },
   };
 }
 
+function setup() {
+  const pending = Promise.withResolvers<Awaited<ReturnType<Managers['acp']['promptResult']>>>();
+  const promptResult = vi.fn((..._args: Call) => pending.promise);
+  const finishRunning = vi.fn();
+  const startRunning = vi.fn();
+  const managers = {
+    acp: { promptResult },
+    tab: { startRunning, finishRunning },
+  } as unknown as Managers;
+  return { managers, promptResult, finishRunning, startRunning, settle: pending.resolve, fail: pending.reject };
+}
+
+beforeEach(() => { mocks.notify.mockClear(); });
+
 describe('askMonitor', () => {
-  it('calls onRespawn and finishRunning on session error', () => {
-    const onRespawn = vi.fn();
-    const finishRunning = vi.fn();
-    const reg = makeReg('test error');
-    const managers = {
-      tab: { startRunning: vi.fn(), finishRunning },
-    };
+  it('sends the question and persona primer through the core entry point under the persona role', async () => {
+    const reg = makeReg();
+    const { managers, promptResult, startRunning, settle } = setup();
 
-    askMonitor(
-      reg as unknown as MonitorSub,
-      'owner-tab',
-      'test-persona',
-      'test question',
-      managers as unknown as Managers,
-      onRespawn,
-    );
+    askMonitor(reg as unknown as MonitorSub, 'owner-tab', 'test-persona', 'test question', managers);
 
-    expect(managers.tab.startRunning).toHaveBeenCalledWith(
-      'owner-tab',
-      'monitor ask test-persona test question',
-      { background: expect.any(String) },
+    expect(reg.inFlight).toBe(true);
+    expect(startRunning).toHaveBeenCalledWith(
+      'owner-tab', 'monitor ask test-persona test question', { background: expect.any(String) },
     );
-    expect(finishRunning).toHaveBeenCalledWith(
+    expect(promptResult).toHaveBeenCalledExactlyOnceWith(
       'owner-tab',
-      'monitor test-persona: test error — restarting monitor session',
+      expect.stringContaining('test question'),
+      'tell',
+      { appendRefusalToTranscript: false },
+    );
+    const prompt = promptResult.mock.calls[0][1];
+    expect(prompt).toContain('persona primer');
+    expect(prompt).toContain('Answer directly; the suggestion format does not apply to this reply.');
+    expect(reg.contextText.map((entry) => entry.text)).toContain(prompt.replace('persona primer\n\n', ''));
+
+    settle({ answered: true, reply: 'Nothing suspicious so far.', session: 's1' });
+    await vi.waitFor(() => { expect(reg.inFlight).toBe(false); });
+  });
+
+  it('finishes the running entry with the reply and clears the primer for later prompts', async () => {
+    const reg = makeReg();
+    const { managers, finishRunning, settle } = setup();
+
+    askMonitor(reg as unknown as MonitorSub, 'owner-tab', 'test-persona', 'test question', managers);
+    settle({ answered: true, reply: 'Nothing suspicious so far.', session: 's1' });
+    await vi.waitFor(() => { expect(finishRunning).toHaveBeenCalled(); });
+
+    expect(finishRunning).toHaveBeenCalledExactlyOnceWith(
+      'owner-tab',
+      '💡 test-persona: Nothing suspicious so far.',
       { command: 'monitor ask test-persona test question' },
     );
-    expect(onRespawn).toHaveBeenCalledOnce();
+    expect(reg.firstPrompt).toBe('');
+    expect(reg.contextText.at(-1)).toEqual({ role: 'response', text: 'Nothing suspicious so far.' });
   });
 
-  it('finishes the running entry for an error that arrives after the monitor stopped, leaving the respawn to onRespawn', () => {
-    let fail: (message: string) => void = () => {};
-    const reg = {
-      inFlight: false,
-      contextBytes: 0,
-      contextText: [] as MonitorContextEntry[],
-      session: {
-        prompt: (_text: string, handlers: { onError: (msg: string) => void }) => { fail = handlers.onError; },
-      },
-    };
-    const onRespawn = vi.fn();
-    const finishRunning = vi.fn();
-    const managers = { tab: { startRunning: vi.fn(), finishRunning } };
+  it('uses the monitor error line for a core refusal without respawning anything', async () => {
+    const reg = makeReg();
+    const { managers, finishRunning, settle } = setup();
 
-    askMonitor(
-      reg as unknown as MonitorSub,
+    askMonitor(reg as unknown as MonitorSub, 'owner-tab', 'test-persona', 'test question', managers);
+    settle({ answered: false, error: 'ACP: a prompt is already running.' });
+    await vi.waitFor(() => { expect(finishRunning).toHaveBeenCalled(); });
+
+    expect(finishRunning).toHaveBeenCalledExactlyOnceWith(
       'owner-tab',
-      'test-persona',
-      'test question',
-      managers as unknown as Managers,
-      onRespawn,
-    );
-    expect(finishRunning).not.toHaveBeenCalled();
-
-    // The monitor is stopped here; its killed local session still reports the pending prompt's error.
-    fail('ACP connection closed');
-
-    expect(finishRunning).toHaveBeenCalledWith(
-      'owner-tab',
-      'monitor test-persona: ACP connection closed — restarting monitor session',
+      'monitor test-persona: ACP: a prompt is already running. — restarting monitor session',
       { command: 'monitor ask test-persona test question' },
     );
-    expect(onRespawn).toHaveBeenCalledOnce();
+    expect(reg.inFlight).toBe(false);
+    expect(reg.firstPrompt).toBe('persona primer');
   });
 
-  it('fires a rate-limited notification on a rate-limit-shaped error', () => {
-    mocks.notify.mockClear();
-    const reg = makeReg('429 too many requests');
-    const managers = {
-      tab: { startRunning: vi.fn(), finishRunning: vi.fn() },
-    };
+  it('fires a rate-limited notification on a rate-limit-shaped refusal', async () => {
+    const reg = makeReg();
+    const { managers, settle } = setup();
 
-    askMonitor(
-      reg as unknown as MonitorSub,
-      'owner-tab',
-      'test-persona',
-      'test question',
-      managers as unknown as Managers,
-      vi.fn(),
-    );
+    askMonitor(reg as unknown as MonitorSub, 'owner-tab', 'test-persona', 'test question', managers);
+    settle({ answered: false, error: '429 too many requests' });
+    await vi.waitFor(() => { expect(mocks.notify).toHaveBeenCalled(); });
 
-    expect(mocks.notify).toHaveBeenCalledWith(managers, 'rate-limited', 'owner-tab');
+    expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'rate-limited', 'owner-tab');
   });
 
-  it('does not fire a rate-limited notification on an unrelated error', () => {
-    mocks.notify.mockClear();
-    const reg = makeReg('connection refused');
-    const managers = {
-      tab: { startRunning: vi.fn(), finishRunning: vi.fn() },
-    };
+  it('does not fire a rate-limited notification on an unrelated refusal', async () => {
+    const reg = makeReg();
+    const { managers, settle } = setup();
 
-    askMonitor(
-      reg as unknown as MonitorSub,
-      'owner-tab',
-      'test-persona',
-      'test question',
-      managers as unknown as Managers,
-      vi.fn(),
-    );
+    askMonitor(reg as unknown as MonitorSub, 'owner-tab', 'test-persona', 'test question', managers);
+    settle({ answered: false, error: 'connection refused' });
+    await vi.waitFor(() => { expect(reg.inFlight).toBe(false); });
 
     expect(mocks.notify).not.toHaveBeenCalledWith(managers, 'rate-limited', 'owner-tab');
+  });
+
+  it('finishes the running entry for a rejected prompt', async () => {
+    const reg = makeReg();
+    const { managers, finishRunning, fail } = setup();
+
+    askMonitor(reg as unknown as MonitorSub, 'owner-tab', 'test-persona', 'test question', managers);
+    fail(new Error('spawn failed'));
+    await vi.waitFor(() => { expect(finishRunning).toHaveBeenCalled(); });
+
+    expect(finishRunning).toHaveBeenCalledExactlyOnceWith(
+      'owner-tab',
+      'monitor test-persona: spawn failed — restarting monitor session',
+      { command: 'monitor ask test-persona test question' },
+    );
+    expect(reg.inFlight).toBe(false);
   });
 });

@@ -24,6 +24,7 @@ import { notify } from '../notifications/index.js';
 import { openConnectionRecord } from '../controller/connection-records.js';
 import { recordConnectionName } from '../plugins/connections/shared.js';
 import { getConfig } from '../config.js';
+import { MonitorManager } from '../monitor/manager.js';
 
 const mock = vi.hoisted(() => ({ connect: vi.fn() }));
 vi.mock('./index.js', () => ({ connectAcp: mock.connect }));
@@ -90,6 +91,7 @@ function setup(
 
 afterEach(() => {
   for (const { root, managers } of projects) {
+    managers.monitor?.dispose();
     managers.acp.closeAll();
     managers.acpRecords.dispose();
     rmSync(root, { recursive: true, force: true });
@@ -957,5 +959,81 @@ describe('core ACP for plugin tabs', () => {
       );
     });
     managers.acp.closeAll();
+  });
+});
+
+// The monitor consumer shares the core role pipeline with ask and tell: its persona instructions
+// are prepended to the first prompt, but the connection, prompt gate and reply are core's.
+describe('core ACP role session serves monitors', () => {
+  function monitorSetup() {
+    const base = setup();
+    Object.assign(base.managers, {
+      harness: { latestScreenText: vi.fn(), transcriptTailer: vi.fn() },
+    });
+    base.managers.monitor = new MonitorManager(base.managers, 25);
+    return base;
+  }
+
+  it('sends a monitor flush through the owner tab\'s core role session', async () => {
+    const { managers, session, handlers } = monitorSetup();
+    const tab = managers.tab.byLabel('consumer')!;
+    expect(managers.monitor.start('consumer', 'security', [])).toBeNull();
+
+    messageBus.emit('transcript', {
+      type: 'entry:appended', tabLabel: 'consumer', tab,
+      entry: { input: 'cat .env', output: 'SECRET=1' },
+    });
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalled(); });
+    const prompt = session.prompt.mock.calls[0][0] as string;
+    expect(prompt).toContain('You are a security monitor.');
+    expect(prompt).toContain('[SUGGESTION]: <one short sentence>');
+    expect(prompt).toContain('cat .env');
+    expect(tab.runtime?.acpRoles?.ask?.prompt).toBeDefined();
+
+    handlers().onChunk('[SUGGESTION]: Rotate the secret');
+    handlers().onEnd('end_turn');
+    await vi.waitFor(() => {
+      expect(tab.log.some((entry) => entry.output?.includes('💡 security: Rotate the secret'))).toBe(true);
+    });
+  });
+
+  it('sends monitor ask through the same core role session', async () => {
+    const { managers, session, handlers } = monitorSetup();
+    const tab = managers.tab.byLabel('consumer')!;
+    expect(managers.monitor.start('consumer', 'security', [])).toBeNull();
+    expect(managers.monitor.ask('consumer', 'security', 'what did you see?')).toBeNull();
+
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalled(); });
+    const prompt = session.prompt.mock.calls[0][0] as string;
+    expect(prompt).toContain('You are a security monitor.');
+    expect(prompt).toContain('what did you see?');
+    expect(tab.runtime?.acpRoles?.ask?.prompt).toBeDefined();
+
+    handlers().onChunk('All quiet.');
+    handlers().onEnd('end_turn');
+    await vi.waitFor(() => {
+      expect(tab.log.some((entry) => entry.output?.includes('💡 security: All quiet.'))).toBe(true);
+    });
+  });
+
+  it('settles a monitor prompt colliding with an active core prompt with the refusal', async () => {
+    const { managers, session, handlers } = monitorSetup();
+    const tab = managers.tab.byLabel('consumer')!;
+    const active = managers.acp.promptResult('consumer', 'ask held', 'ask');
+    await vi.waitFor(() => { expect(session.prompt).toHaveBeenCalledOnce(); });
+    expect(managers.monitor.start('consumer', 'security', [])).toBeNull();
+
+    messageBus.emit('transcript', {
+      type: 'entry:appended', tabLabel: 'consumer', tab,
+      entry: { input: 'ls', output: 'x' },
+    });
+    await vi.waitFor(() => {
+      expect(tab.log.some((entry) => entry.output?.includes('monitor security: ACP: a prompt is already running.'))).toBe(true);
+    });
+    expect(session.prompt).toHaveBeenCalledOnce();
+
+    handlers().onChunk('held answer');
+    handlers().onEnd('end_turn');
+    await expect(active).resolves.toMatchObject({ answered: true, reply: 'held answer' });
   });
 });

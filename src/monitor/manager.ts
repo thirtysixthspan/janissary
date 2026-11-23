@@ -3,8 +3,8 @@ import { resolvePersonaRole } from '../acp/ask-role.js';
 import { loadPersona, type Persona } from '../personas.js';
 import { openMonitorTab, updateMonitorMeta } from './window.js';
 import { rateSuggestion } from './suggestions.js';
-import { createMonitorSession, primeMonitorSession } from './session.js';
-import { spawnMonitorSession } from './acp.js';
+import { monitorFirstPrompt } from './session.js';
+import { recordContext } from './context.js';
 import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
 import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries } from './feeds.js';
@@ -20,18 +20,14 @@ import { errorText } from '../error-text.js';
 
 export const MONITOR_FLUSH_MS = 30_000;
 
-// Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor is a
-// dedicated, tool-less ACP session primed with its persona; transcript entries from its
-// targets buffer up and flush as one prompt every 30s (never when the buffer is empty,
-// never while a previous prompt is still streaming). Suggestions route to the owner
-// tab's transcript (inline mode) or the persona's reporting tab (external mode).
+// Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor drives the owner tab's
+// core ACP role session with its persona's instructions on the first prompt; transcript entries
+// from its targets buffer up and flush as one prompt every 30s (never when the buffer is empty,
+// never while a previous prompt is still outstanding). Suggestions route to the owner tab's
+// transcript (inline mode) or the persona's reporting tab (external mode).
 export class MonitorManager extends LiveMonitors {
-  constructor(
-    managers: Managers,
-    spawn: typeof spawnMonitorSession = spawnMonitorSession,
-    private flushMs: number = MONITOR_FLUSH_MS,
-  ) {
-    super(managers, spawn);
+  constructor(managers: Managers, private flushMs: number = MONITOR_FLUSH_MS) {
+    super(managers);
   }
 
   // Start a monitor; returns an error message, or null on success. No targets = inline
@@ -59,14 +55,15 @@ export class MonitorManager extends LiveMonitors {
       return errorText(error);
     }
 
+    const delimiter = generateSessionDelimiter();
+    const firstPrompt = monitorFirstPrompt(persona, delimiter);
     const setup: MonitorSubSetup = {
-      owner, name, inline, persona, targets: resolved, buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter: generateSessionDelimiter(), inFlight: true, delivered: 0,
+      owner, name, inline, persona, targets: resolved, buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter, firstPrompt, inFlight: false, delivered: 0,
       contextBytes: 0, contextText: [],
       subs: [],
     };
-    const session = createMonitorSession(setup, this.managers, this.spawn);
-    const reg: MonitorSub = { ...setup, session, timer: setInterval(() => this.flush(key), this.flushMs) };
-    primeMonitorSession(reg);
+    const reg: MonitorSub = { ...setup, timer: setInterval(() => this.flush(key), this.flushMs) };
+    recordContext(reg, firstPrompt, 'input');
     this.subscribe(key, reg);
     reg.buffer.push(...seedFeedEntries(this.managers, this.managers.tab.tabs, resolved, reg));
     this.monitors.set(key, reg);
@@ -90,18 +87,17 @@ export class MonitorManager extends LiveMonitors {
     );
   }
 
-  // Query a running monitor's ACP session directly; the reply lands in the owner tab's
-  // transcript. Shares the `inFlight` slot with flushes, so a question never interleaves
-  // with a monitor-update prompt. Returns an error message, or null when the question is
-  // on its way.
+  // Query a running monitor through the owner tab's core role session; the reply lands in the
+  // owner tab's transcript. Shares the `inFlight` slot with flushes, so a question never
+  // interleaves with a monitor-update prompt. Returns an error message, or null when the question
+  // is on its way.
   // Keyed on the runtime name, the same key `stop` uses and the same one `start` registered under —
   // a monitor started under a name of its own cannot otherwise be addressed at all.
   ask(owner: string, name: string, question: string): string | null {
     const reg = this.monitors.get(`${owner}:${name}`);
     if (!reg) return `No "${name}" monitor running from this tab.`;
     if (reg.inFlight) return `The ${name} monitor is busy; try again in a moment.`;
-    const session = reg.session;
-    askMonitor(reg, owner, name, question, this.managers, () => this.respawn(reg, session));
+    askMonitor(reg, owner, name, question, this.managers);
     return null;
   }
 
@@ -111,7 +107,7 @@ export class MonitorManager extends LiveMonitors {
   }
 
   // Reset every monitor feeding `name`'s reporting tab to just its persona context.
-  resetContext(name: string): void { for (const reg of this.monitors.values()) if (!reg.inline && reg.name === name) this.respawn(reg); }
+  resetContext(name: string): void { for (const reg of this.monitors.values()) if (!reg.inline && reg.name === name) this.reset(reg); }
 
   // Open a point-in-time snapshot of `name`'s monitor context in an editor tab (see monitor-context).
   snapshotContext(name: string): void {
@@ -163,7 +159,8 @@ export class MonitorManager extends LiveMonitors {
     return [...this.monitors.values()].map((reg) => ({ name: reg.name, persona: reg.persona.name, targets: reg.targets, inline: reg.inline }));
   }
 
-  // Connections-panel rows for a tab's monitors (e.g. `monitor:security (opencode/…)`).
+  // Name-only connections-panel rows for a tab's monitors (e.g. `monitor:security`), the handles
+  // `connections close` uses to stop one. The model lives on the tab's core role row.
   connectionsFor(owner: string): ConnectionView[] {
     return monitorConnections(this.monitors.values(), owner);
   }
