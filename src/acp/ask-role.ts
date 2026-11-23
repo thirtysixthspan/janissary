@@ -85,7 +85,7 @@ export function resolvePersonaRole(
   if (!settings) throw new Error(`Unknown role "${role}" in persona "${personaName}".`);
   const entries = settings.entries;
   const enabled = entries.filter((entry) => isKnownModel(entry.harness, entry.model));
-  if (enabled.length === 0) throw new Error(noRoleModels(role as AcpRole));
+  if (enabled.length === 0) throw new Error(noRoleModels(role));
   return { settings, entries, enabled };
 }
 
