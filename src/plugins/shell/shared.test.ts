@@ -67,11 +67,6 @@ describe('shell shared contract', () => {
       { text: 'acp:tell:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'tell' } },
       { text: 'acp:review-bot:opencode', kind: 'acp', acpRef: { scope: 'tab', label: 'janus', role: 'review-bot' } },
       { text: 'monitor:activity (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'activity' } },
-      {
-        text: 'reviewer (acp)',
-        kind: 'acp',
-        acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
-      },
       { text: 'Agent: task.md', kind: 'acp', recordId: 'record-1' },
     ];
 
@@ -86,17 +81,16 @@ describe('shell shared contract', () => {
       { scope: 'tab', label: 'janus', role: 'tell' },
       { scope: 'tab', label: 'janus', role: 'review-bot' },
       { scope: 'monitor', name: 'activity' },
-      { scope: 'editor', label: 'notes', persona: 'reviewer' },
     ];
 
     for (const ref of refs) {
       expect(isShellPayload({ ...PAYLOAD, connections: [{ text: 'x', kind: 'acp', acpRef: ref }] })).toBe(true);
     }
-    // An editor-scoped reference with no persona is not a reference the protocol can express, so the
-    // copy must refuse it too rather than widening what the row may carry.
+    // An editor-scoped reference is not a reference the protocol can express, so the copy must
+    // refuse it too rather than widening what the row may carry.
     expect(isShellPayload({
       ...PAYLOAD,
-      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'editor', label: 'notes' } }],
+      connections: [{ text: 'x', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } }],
     })).toBe(false);
     expect(isShellPayload({
       ...PAYLOAD,

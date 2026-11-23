@@ -22,7 +22,6 @@ function api(overrides: Partial<EditorConnectionsApi> = {}): EditorConnectionsAp
   return {
     windows,
     connectionsButton: { hasContent: true, onClick: vi.fn(), onEnter: vi.fn(), onLeave: vi.fn() },
-    closeRow: vi.fn(),
     openAcpTranscript: vi.fn(),
     openRow: vi.fn(),
     ...overrides,
@@ -38,20 +37,18 @@ function makeTab(connections: TabView['connections']): TabView {
 }
 
 describe('EditorConnectionsPanel', () => {
-  it('keeps an editor-persona row snapshot-only and its snapshot and close controls separate', () => {
+  it('keeps a core ACP row openable with a separate transcript control and no close control', () => {
     const onOpenRow = vi.fn();
     const onOpenAcpTranscript = vi.fn();
-    const onCloseRow = vi.fn();
-    const row = { text: 'reviewer (acp)', kind: 'acp' as const, acpRef: { scope: 'editor' as const, label: 'notes', persona: 'reviewer' } };
-    render(<EditorConnectionsPanel tab={makeTab([row])} api={api({ openRow: onOpenRow, openAcpTranscript: onOpenAcpTranscript, closeRow: onCloseRow })} />);
+    const row = { text: 'acp:ask:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'notes', role: 'ask' as const } };
+    render(<EditorConnectionsPanel tab={makeTab([row])} api={api({ openRow: onOpenRow, openAcpTranscript: onOpenAcpTranscript })} />);
 
     fireEvent.click(document.querySelector('.panel-row-transcript')!);
-    fireEvent.click(document.querySelector('.panel-row-close')!);
     fireEvent.click(document.querySelector('.panel-row')!);
 
     expect(onOpenAcpTranscript).toHaveBeenCalledWith(row.acpRef);
-    expect(onCloseRow).toHaveBeenCalledWith(row, 0);
-    expect(onOpenRow).not.toHaveBeenCalled();
+    expect(onOpenRow).toHaveBeenCalledWith(row);
+    expect(document.querySelector('.panel-row-close')).toBeNull();
   });
 
   it('opens a record-id row by pointer', () => {
@@ -66,18 +63,11 @@ describe('EditorConnectionsPanel', () => {
     expect(document.querySelector('.panel-row-close')).toBeNull();
   });
 
-  it('renders a close control only on the persona row, not the record-id agent row', () => {
-    const onCloseRow = vi.fn();
-    const persona = {
-      text: 'reviewer (acp)', kind: 'acp' as const,
-      acpRef: { scope: 'editor' as const, label: 'notes', persona: 'reviewer' },
-    };
+  it('renders no close control on core or record-id rows', () => {
+    const core = { text: 'acp:ask:opencode', kind: 'acp' as const, acpRef: { scope: 'tab' as const, label: 'notes', role: 'ask' as const } };
     const agent = { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' };
-    render(<EditorConnectionsPanel tab={makeTab([persona, agent])} api={api({ closeRow: onCloseRow })} />);
+    render(<EditorConnectionsPanel tab={makeTab([core, agent])} api={api()} />);
 
-    const closes = document.querySelectorAll('.panel-row-close');
-    expect(closes).toHaveLength(1);
-    fireEvent.click(closes[0]!);
-    expect(onCloseRow).toHaveBeenCalledExactlyOnceWith(persona, 0);
+    expect(document.querySelectorAll('.panel-row-close')).toHaveLength(0);
   });
 });

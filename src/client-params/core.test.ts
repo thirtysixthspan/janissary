@@ -79,8 +79,7 @@ describe('core RPC params decoders', () => {
     expect(CORE_PARAMS.closeTab({ label: 'one', terminalExited: 'pty-1' })).toBe(true);
   });
 
-  it('accepts the editor scope of an ACP ref when both of its fields are present', () => {
-    expect(CORE_PARAMS.openAcpTranscript({ acpRef: { scope: 'editor', label: 'one', persona: 'critic' } })).toBe(true);
+  it('accepts the monitor scope of an ACP ref', () => {
     expect(CORE_PARAMS.openAcpTranscript({ acpRef: { scope: 'monitor', name: 'watch' } })).toBe(true);
   });
 

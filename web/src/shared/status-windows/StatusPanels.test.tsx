@@ -139,20 +139,20 @@ describe('StatusPanels', () => {
 
   it('renders a close control only on rows the predicate accepts', () => {
     const onCloseRow = vi.fn();
-    const persona = {
-      text: 'reviewer (acp)', kind: 'acp' as const,
-      acpRef: { scope: 'editor' as const, label: 'notes', persona: 'reviewer' },
+    const core = {
+      text: 'acp:ask:opencode', kind: 'acp' as const,
+      acpRef: { scope: 'tab' as const, label: 'notes', role: 'ask' as const },
     };
     const agent = { text: 'Agent: task.md', kind: 'acp' as const, recordId: 'record-1' };
     const { container } = renderPanels(
-      { connections: [persona, agent] },
-      { onCloseRow, canCloseRow: (row) => row.acpRef?.scope === 'editor' },
+      { connections: [core, agent] },
+      { onCloseRow, canCloseRow: (row) => row.acpRef?.scope === 'tab' },
     );
     const closes = container.querySelectorAll('.panel-row-close');
 
     expect(closes).toHaveLength(1);
     fireEvent.click(closes[0]!);
-    expect(onCloseRow).toHaveBeenCalledExactlyOnceWith(persona, 0);
+    expect(onCloseRow).toHaveBeenCalledExactlyOnceWith(core, 0);
   });
 
   it('renders the transcript button on a row with acpRef and calls onOpenAcpTranscript with it', () => {
@@ -177,12 +177,12 @@ describe('StatusPanels', () => {
     expect(container.querySelector('.panel-row-transcript')).not.toBeInTheDocument();
   });
 
-  it('renders the close button and the transcript button together on an editor-persona row', () => {
+  it('renders the close button and the transcript button together on a core ACP row', () => {
     const onCloseRow = vi.fn();
     const onOpenAcpTranscript = vi.fn();
-    const acpRef = { scope: 'editor' as const, label: 'notes', persona: 'reviewer' };
+    const acpRef = { scope: 'tab' as const, label: 'notes', role: 'ask' as const };
     const { container } = renderPanels(
-      { connections: [{ text: 'reviewer (acp)', kind: 'acp', acpRef }] },
+      { connections: [{ text: 'acp:ask:opencode', kind: 'acp', acpRef }] },
       { onCloseRow, onOpenAcpTranscript },
     );
     expect(container.querySelector('.panel-row-transcript')).toBeInTheDocument();
@@ -224,7 +224,6 @@ describe('StatusPanels', () => {
 
   it.each([
     ['monitor', { scope: 'monitor' as const, name: 'watch' }],
-    ['editor', { scope: 'editor' as const, label: 'notes', persona: 'reviewer' }],
   ])('leaves a %s-scoped ACP row non-openable', (_scope, acpRef) => {
     const onOpenRow = vi.fn();
     const { container } = renderPanels(

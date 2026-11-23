@@ -40,8 +40,7 @@ type ConnectionRowBase = {
   ownerName: string;
   orderingTimestamp: number;
   focusTarget?: string;
-  acpRef?: { scope: 'tab'; label: string; role: AcpRole } | { scope: 'monitor'; name: string }
-    | { scope: 'editor'; label: string; persona: string };
+  acpRef?: { scope: 'tab'; label: string; role: AcpRole } | { scope: 'monitor'; name: string };
 };
 
 export type LiveConnectionRow = ConnectionRowBase & {
@@ -133,8 +132,7 @@ function isWindow(value: unknown): value is ConnectionWindow {
 function isAcpRef(value: unknown): boolean {
   if (!object(value)) return false;
   if (value.scope === 'tab') return typeof value.label === 'string' && isAcpRole(value.role);
-  if (value.scope === 'monitor') return typeof value.name === 'string';
-  return value.scope === 'editor' && typeof value.label === 'string' && typeof value.persona === 'string';
+  return value.scope === 'monitor' && typeof value.name === 'string';
 }
 
 export function isConnectionRow(value: unknown): value is ConnectionRow {

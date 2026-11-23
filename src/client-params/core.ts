@@ -7,13 +7,11 @@ import {
 const DIRECTIONS = [-1, 1];
 const DOCKS = ['left', 'right', null];
 
-// `AcpRef` is a discriminated union of three arms, so the scope decides which fields are read.
+// `AcpRef` is a discriminated union of two arms, so the scope decides which fields are read.
 function isAcpRef(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value.scope === 'tab') return isString(value.label) && isOneOf(value.role, ACP_ROLES);
-  if (value.scope === 'monitor') return isString(value.name);
-  if (value.scope === 'editor') return isString(value.label) && isString(value.persona);
-  return false;
+  return value.scope === 'monitor' && isString(value.name);
 }
 
 // Keyed by the union so a method added to `CoreRpcCall` without a decoder fails the build, the same

@@ -101,8 +101,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'renameEditorFile':
     case 'commitEditorFile':
     case 'editorPersonas':
-    case 'editorSuggest':
-    case 'closeEditorConnection': {
+    case 'editorSuggest': {
       return dispatchEditorMessage(controller, message);
     }
     case 'reportLayout': { controller.reportLayout(message.params); break;

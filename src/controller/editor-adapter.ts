@@ -1,4 +1,3 @@
-import { closeConnection } from '../connection/close.js';
 import { editorSuggest, ownerLabel, type EditorSuggestParams, type EditorSuggestResult } from '../editor-suggest/handler.js';
 import { saveFile } from '../editor/save.js';
 import { renameEditorFile } from '../editor/rename.js';
@@ -19,7 +18,6 @@ export type EditorControllerAdapter = {
   projectFilesFallback(): { root: string; paths: string[] };
   editorPersonas(): string[];
   editorSuggest(params: EditorSuggestParams, callback: (result: EditorSuggestResult) => void): void;
-  closeEditorConnection(url: string, persona: string): void;
   editorPluginFailed(url: string, plugin: string, reason: string): void;
   renameEditorFile(url: string, name: string): void;
   commitEditorFile(url: string, message: string): void;
@@ -34,7 +32,6 @@ export function createEditorControllerAdapter(managers: Managers): EditorControl
     projectFilesFallback: () => ({ root: managers.tab.launchDir, paths: [] }),
     editorPersonas: () => listPersonas('editor'),
     editorSuggest: (params, callback) => editorSuggest(managers, params, callback),
-    closeEditorConnection: (url, persona) => closeConnection('acp', persona, managers, ownerLabel(managers, url), () => { /* no-op */ }),
     editorPluginFailed: (url, plugin, reason) => {
       notify(
         managers, 'plugin-failure', ownerLabel(managers, url),

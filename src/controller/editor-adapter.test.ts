@@ -94,16 +94,14 @@ describe('editorPluginFailed', () => {
 // can stand in for.
 function makeAdapterManagers(launchDir: string) {
   const base = makeManagers();
-  const editorAcp = { close: vi.fn(() => true) };
   const monitor = { stop: vi.fn(() => false) };
   const acp = { label: vi.fn(() => 'reviewer'), close: vi.fn(() => true) };
   const managers = Object.assign(base.managers, {
     tab: Object.assign(base.managers.tab, { launchDir }),
-    editorAcp,
     monitor,
     acp,
   }) as unknown as Managers;
-  return { managers, editorAcp, monitor, acp };
+  return { managers, monitor, acp };
 }
 
 describe('editor adapter wiring', () => {
@@ -128,16 +126,6 @@ describe('editor adapter wiring', () => {
   it('editorPersonas answers the editor persona list', () => {
     const { managers } = makeAdapterManagers('/test/project');
     expect(createEditorControllerAdapter(managers).editorPersonas()).toEqual(expect.any(Array));
-  });
-
-  // The persona's session is addressed by the tab that owns the editor, not by the url, so a url
-  // whose editor tab has since closed still has to land on a real connection rather than on nothing.
-  it("closeEditorConnection closes the persona connection under the editor tab's own label", () => {
-    const { managers, editorAcp } = makeAdapterManagers('/test/project');
-    expect(() => {
-      createEditorControllerAdapter(managers).closeEditorConnection(EDITOR_URL, 'reviewer');
-    }).not.toThrow();
-    expect(editorAcp.close).toHaveBeenCalledWith('notes.ts', 'reviewer');
   });
 
   it('renameEditorFile renames nothing and throws nothing for a url no open editor holds', () => {

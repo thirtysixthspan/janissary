@@ -85,6 +85,12 @@ describe('connections shared contract', () => {
     expect(isConnectionsPayload({ kind: 'list', rows: [empty] })).toBe(false);
   });
 
+  it('refuses an editor-scoped ACP ref, which the wire union no longer expresses', () => {
+    const editor = { ...live, kind: 'acp', acpRef: { scope: 'editor', label: 'owner', persona: 'reviewer' } };
+
+    expect(isConnectionsPayload({ kind: 'list', rows: [editor] })).toBe(false);
+  });
+
   it('accepts ask, tell and custom roles while preserving legacy role-less rows and sources', () => {
     const ask = {
       ...record, role: 'ask',

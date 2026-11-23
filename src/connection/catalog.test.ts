@@ -53,10 +53,6 @@ function populated(): Managers {
       connectionsFor: vi.fn(() => [{ text: 'monitor:security (opencode/x)', kind: 'acp', acpRef: { scope: 'monitor', name: 'security' } }]),
       stop: vi.fn((owner: string, name: string) => owner === 'main' && name === 'security'),
     },
-    editorAcp: {
-      connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } }]),
-      close: vi.fn((label: string, persona: string) => label === 'main' && persona === 'reviewer'),
-    },
     browser: { info: vi.fn(() => ({ ids: ['w1'], mode: 'headless' })), run: vi.fn(() => Promise.resolve('Closed connection browser:w1.')) },
     pty: {
       terminalsFor: vi.fn((label: string) => (label === 'main' ? ['claude'] : ['ssh'])),
@@ -88,7 +84,6 @@ describe('connectionCatalog', () => {
       ['acp:tell:opencode/tell', 'tab'],
       ['acp:review-bot:opencode/review', 'tab'],
       ['acp:security', 'tab'],
-      ['acp:reviewer', 'tab'],
       ['browser:w1', 'tab'],
       ['ssh:main', 'tab'],
       ['terminal:claude', 'tab'],
@@ -113,7 +108,6 @@ describe('connectionCatalog', () => {
     });
     expect(entries.find((e) => e.kind === 'browser')?.display).toBe('browser:w1 (headless)');
     expect(entries.find((e) => e.id === 'bastion')).toMatchObject({ display: 'ssh:host.example.com', detail: 'host.example.com' });
-    expect(entries.find((e) => e.id === 'reviewer')).toMatchObject({ display: 'reviewer (acp)', acpRef: { scope: 'editor', label: 'main', persona: 'reviewer' } });
   });
 
   it('gives an ssh tab its ssh entry and no terminal entry for the ssh session itself', () => {

@@ -22,10 +22,10 @@ function coreAcpTarget(id: string, root: string): { role: AcpRole; suffix?: stri
   return { role: 'ask', suffix: id };
 }
 
-// Editor personas and monitors keep priority over the role-qualified core-session aliases. The core
-// fallback accepts any ask id, so a session still connecting can still be closed.
+// Monitors keep priority over the role-qualified core-session aliases. The core fallback accepts any
+// ask id, so a session still connecting can still be closed.
 function closeAcp(managers: Managers, label: string, id: string, out: (text: string) => void): void {
-  if (managers.editorAcp.close(label, id) || managers.monitor.stop(label, id)) {
+  if (managers.monitor.stop(label, id)) {
     messageBus.emit('state', { type: 'dirty' });
     out(`Closed connection acp:${id}.`);
     return;

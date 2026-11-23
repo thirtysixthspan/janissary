@@ -20,7 +20,6 @@ export const EDITOR_PARAMS: Record<EditorRpcCall['method'], ParamsDecoder> = {
   resyncEditorTab: (p) => isString(p.url),
   editorPersonas: noParams,
   editorSuggest: (p) => isString(p.url) && isString(p.persona) && isString(p.content) && isString(p.prompt),
-  closeEditorConnection: (p) => isString(p.url) && isString(p.persona),
   editorPluginFailed: isEditorPluginFailedParams,
   renameEditorFile: (p) => isString(p.url) && isString(p.name),
   commitEditorFile: (p) => isString(p.url) && isString(p.message),

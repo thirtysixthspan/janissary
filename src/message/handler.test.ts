@@ -80,7 +80,6 @@ const makeController = () =>
     projectFilesFallback: vi.fn(() => ({ root: '/proj', paths: [] })),
     editorPersonas: vi.fn(() => []),
     editorSuggest: vi.fn(),
-    closeEditorConnection: vi.fn(),
     editorPluginFailed: vi.fn(),
   }) as unknown as Controller;
 
@@ -629,16 +628,6 @@ describe('handle', () => {
     });
     expect(controller.editorSuggest).toHaveBeenCalledWith({ url: 'file:///a.ts', persona: 'reviewer', content: 'x', prompt: 'improve' }, expect.any(Function));
     expect(replies).toEqual([{ t: 'rpc-reply', id: 46, result: { hunks: [] } }]);
-  });
-
-  it('routes closeEditorConnection through the controller façade and acknowledges', () => {
-    const controller = makeController();
-    const replies = dispatchCall(controller, 47, {
-      method: 'closeEditorConnection',
-      params: { url: 'file:///a.ts', persona: 'reviewer' },
-    });
-    expect(controller.closeEditorConnection).toHaveBeenCalledWith('file:///a.ts', 'reviewer');
-    expect(replies).toEqual([{ t: 'rpc-reply', id: 47, result: 'ok' }]);
   });
 
   it('routes an editor plugin failure report through the controller façade', () => {

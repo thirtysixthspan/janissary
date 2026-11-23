@@ -20,10 +20,9 @@ export type ConnectionEntry = {
   acpRef?: AcpRef;
 };
 
-// A monitor's close id is its runtime name, an editor persona's its persona name.
+// A monitor's close id is its runtime name.
 function acpId(ref: AcpRef): string {
   if (ref.scope === 'monitor') return ref.name;
-  if (ref.scope === 'editor') return ref.persona;
   return `${ref.role}:${ref.label}`;
 }
 
@@ -41,7 +40,7 @@ function acpEntries(managers: Managers, label: string): ConnectionEntry[] {
       acpRef: { scope: 'tab', label, role },
     });
   }
-  const rows: ConnectionView[] = [...managers.monitor.connectionsFor(label), ...managers.editorAcp.connectionsFor(label)];
+  const rows: ConnectionView[] = managers.monitor.connectionsFor(label);
   for (const row of rows) {
     if (row.acpRef) entries.push({ kind: 'acp', id: acpId(row.acpRef), display: row.text, scope: 'tab', acpRef: row.acpRef });
   }

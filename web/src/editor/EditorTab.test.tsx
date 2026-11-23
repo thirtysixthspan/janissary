@@ -1801,14 +1801,14 @@ describe('EditorTab', () => {
       expect(container.querySelector('.tab-connections')).toHaveClass('status-window-button-empty');
     });
 
-    it('shows the connections window with a persona row once tab.connections is non-empty', async () => {
+    it('shows the connections window with a core ACP row once tab.connections is non-empty', async () => {
       const { client } = makeClient();
       const view = makeView();
       const tab = makeTab({
         editor: view,
         connections: [{
-          text: 'reviewer (acp)', kind: 'acp',
-          acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+          text: 'acp:ask:opencode', kind: 'acp',
+          acpRef: { scope: 'tab', label: 'notes', role: 'ask' },
         }],
       });
       const { container } = await renderLoaded(client, view, tab);
@@ -1816,29 +1816,27 @@ describe('EditorTab', () => {
       expect(button).not.toHaveClass('status-window-button-empty');
 
       fireEvent.mouseEnter(button);
-      expect(container.querySelector('.panel-row.conn-acp')?.textContent).toContain('reviewer (acp)');
+      expect(container.querySelector('.panel-row.conn-acp')?.textContent).toContain('acp:ask:opencode');
     });
 
-    it('clicking a row\'s close control fires closeEditorConnection with the tab\'s url and persona', async () => {
+    it('renders no persona close control on the core ACP row', async () => {
       const { client } = makeClient();
       const view = makeView();
       const tab = makeTab({
         editor: view,
         connections: [{
-          text: 'reviewer (acp)', kind: 'acp',
-          acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' },
+          text: 'acp:ask:opencode', kind: 'acp',
+          acpRef: { scope: 'tab', label: 'notes', role: 'ask' },
         }],
       });
       const { container } = await renderLoaded(client, view, tab);
       const button = container.querySelector('.tab-connections')!;
       fireEvent.mouseEnter(button);
 
-      fireEvent.click(container.querySelector('.panel-row-close')!);
-
-      expect(client.send).toHaveBeenCalledWith({
-        method: 'closeEditorConnection',
-        params: { url: '/open/1', persona: 'reviewer' },
-      });
+      expect(container.querySelector('.panel-row-close')).toBeNull();
+      expect(client.send).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: 'closeEditorConnection' }),
+      );
     });
   });
 
