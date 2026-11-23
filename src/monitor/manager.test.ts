@@ -635,6 +635,20 @@ describe('MonitorManager', () => {
     expect(acp.prompts[1]).toContain('pwd');
   });
 
+  it('a flush failure settled by resetContext writes no spurious monitor error line', async () => {
+    const { appended, monitor } = harness([janus, agent2]);
+    monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+    monitor.resetContext('assistant');
+    await acp.fail(0, 'ACP session closed.');
+    expect(appended.some((a) => a.entry.output.includes('restarting monitor session'))).toBe(false);
+    emitEntry(agent2, 'pwd', '/tmp');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(acp.prompts[1]).toContain('[SUGGESTION]');
+    expect(acp.prompts[1]).toContain('pwd');
+  });
+
   it('resetContext resets contextBytes back down after priming', () => {
     const { managers, monitor } = harness([janus, agent2]);
     monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);

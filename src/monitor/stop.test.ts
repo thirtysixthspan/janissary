@@ -17,7 +17,7 @@ function makeMonitor(overrides: Partial<MonitorSub> = {}) {
     persona: { name: 'reviewer', harness: { harness: 'opencode', model: 'test', variant: 'test' }, body: '', tools: [] },
     targets: [target], buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(),
     editorSeen: new Map(), pageSeen: new Map(), delimiter: 'test-delimiter',
-    firstPrompt: 'persona primer', inFlight: false, delivered: 0,
+    firstPrompt: 'persona primer', inFlight: false, resetGeneration: 0, delivered: 0,
     contextBytes: 512, contextText: [], timer: setInterval(tick, 1000),
     subs: [{ unsubscribe: vi.fn() }, { unsubscribe: vi.fn() }],
     ...overrides,

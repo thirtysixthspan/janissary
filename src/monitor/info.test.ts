@@ -24,6 +24,7 @@ function makeSub(overrides: Partial<MonitorSub> = {}): MonitorSub {
     delimiter: 'test-delimiter',
     firstPrompt: 'Watch closely',
     inFlight: false,
+    resetGeneration: 0,
     delivered: 0,
     contextBytes: 0,
     contextText: [],

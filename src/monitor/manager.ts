@@ -58,7 +58,7 @@ export class MonitorManager extends LiveMonitors {
     const delimiter = generateSessionDelimiter();
     const firstPrompt = monitorFirstPrompt(persona, delimiter);
     const setup: MonitorSubSetup = {
-      owner, name, inline, persona, targets: resolved, buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter, firstPrompt, inFlight: false, delivered: 0,
+      owner, name, inline, persona, targets: resolved, buffer: [], harnessTranscriptSeen: new Map(), harnessSeen: new Map(), editorSeen: new Map(), pageSeen: new Map(), delimiter, firstPrompt, inFlight: false, resetGeneration: 0, delivered: 0,
       contextBytes: 0, contextText: [],
       subs: [],
     };

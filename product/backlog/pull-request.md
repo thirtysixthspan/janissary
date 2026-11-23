@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Handle the spurious monitor error line emitted when a reporting-tab reset closes a core session that still has a monitor flush in flight
-
-Existing Issue: Resetting a monitor's context calls `acp.close` on the owner tab's core role session, which settles any in-flight flush with an `ACP session closed.` refusal, and because `isCurrent` now checks only registration that result reaches `promptFailed` and appends `monitor <name>: ACP session closed. — restarting monitor session` to the owner transcript for an intentional user action. Severity: 5/10
-
-Existing Risk: 4/10 - A user who clicks the reset button while a model call is still running sees a false error implying the monitor died and restarted, which trains them to distrust the error line that genuine refusals and real failures now depend on.
-
-Proposal Risk: 2/10 - A reset-generation guard confines the suppression to the settlement caused by `reset`, but it must be scoped to the flush path so the ask path's pre-existing post-reset error reporting is not silently changed and real failures still surface.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "suppress the spurious monitor error line on a reporting-tab reset". In `src/monitor/live-monitors.ts`, give `MonitorSub` a small reset-generation counter (or an equivalent one-shot flag) that `reset` increments before calling `managers.acp.close`, and have the `flush` `promptResult().then` handlers capture the generation they started with so a failed result whose generation no longer matches still clears `inFlight` but skips `promptFailed` and its transcript append and rate-limit notification. Leave the `askMonitor` path in `src/monitor/ask.ts` unchanged so its existing post-reset behavior is preserved, and leave the genuine core-refusal path appending the monitor error line as the subplan requires. The `reset` method should keep closing the core session and regenerating `firstPrompt` so the next prompt starts a fresh, re-primed core session. Add a test in `src/monitor/manager.test.ts` that starts a monitor, triggers a flush, leaves that core call pending, calls `resetContext`, settles the pending call with an `ACP session closed.` failure, and asserts that no `restarting monitor session` line was appended while `inFlight` was released and the next flush re-sends the persona primer. Keep the existing reset, core-refusal, and rate-limit tests in `src/monitor/manager.test.ts` and `src/monitor/ask.test.ts` passing untouched.

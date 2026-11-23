@@ -45,6 +45,9 @@ export type MonitorSub = {
   // failed first prompt puts it back so the next core session is primed again.
   firstPrompt: string;
   inFlight: boolean;
+  // Incrementing generation for reporting-tab resets. A flush captures it at send time; a failed
+  // result from an older generation is the close settling that flush, not a real failure.
+  resetGeneration: number;
   delivered: number;
   // Running total of bytes sent/received on this monitor's core prompts, reset on an explicit reset.
   contextBytes: number;
@@ -86,6 +89,7 @@ export class LiveMonitors {
   // session; no monitor process is killed here.
   protected reset(reg: MonitorSub): void {
     if (!this.isCurrent(reg)) return;
+    reg.resetGeneration += 1;
     this.managers.acp.close(reg.owner, undefined, reg.persona.role);
     reg.contextBytes = 0;
     reg.contextText = [];
@@ -109,13 +113,14 @@ export class LiveMonitors {
     const framed = frameUpdatePrompt(batch, reg.delimiter);
     recordContext(reg, framed, 'input');
     const prompt = reg.firstPrompt ? `${reg.firstPrompt}\n\n${framed}` : framed;
+    const generation = reg.resetGeneration;
     reg.inFlight = true;
     void this.managers.acp.promptResult(reg.owner, prompt, reg.persona.role, { appendRefusalToTranscript: false }).then(
       (result) => {
         if (!this.isCurrent(reg)) return;
         reg.inFlight = false;
         if (!result.answered) {
-          this.promptFailed(reg, result.error);
+          if (generation === reg.resetGeneration) this.promptFailed(reg, result.error);
           return;
         }
         reg.firstPrompt = '';
@@ -126,7 +131,7 @@ export class LiveMonitors {
       (error: unknown) => {
         if (!this.isCurrent(reg)) return;
         reg.inFlight = false;
-        this.promptFailed(reg, errorText(error));
+        if (generation === reg.resetGeneration) this.promptFailed(reg, errorText(error));
       },
     );
   }
