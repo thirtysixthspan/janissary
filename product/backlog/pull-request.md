@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Ignore a monitor flush reply that settles after a reset instead of delivering a stale suggestion and dropping the re-primed first prompt.
-
-Existing Issue: LiveMonitors.flush guards failed results with `generation === reg.resetGeneration` but its success path has no such guard, so a reply landing after resetContext has closed the core session and re-set firstPrompt still clears firstPrompt, records the reply and delivers a suggestion. Severity: 6/10
-
-Existing Risk: 5/10 - A reset clicked as a flush completes shows a suggestion from the discarded context and leaves the next flush without the persona primer, so the fresh context silently loses its instructions until another reset.
-
-Proposal Risk: 2/10 - Adding the same generation check to the success branch only discards results the reset already invalidated, and the existing inFlight clearing and isCurrent checks stay intact for every other path.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2185 "ignore a stale monitor flush success after a reset". In src/monitor/live-monitors.ts, inside the `flush` promise's success handler, after the isCurrent check and clearing inFlight, compare the captured `generation` with `reg.resetGeneration` before any of `reg.firstPrompt = ''`, `recordReply`, `parseSuggestion` or `deliver`, returning early when they differ; leave the failure branch's existing suppression untouched. Add a test to src/monitor/manager.test.ts that settles a flush with a successful suggestion after resetContext and asserts no suggestion is delivered, the snapshot still contains the re-primed first prompt, and the next flush carries that primer. product/specs/monitoring.md already promises a late reply after reset is ignored and delivers no suggestion, so no spec edit is needed; keep its existing stop and reset tests passing.
-
-
 * Correct the pull request title that labels this feature implementation as a documentation change.
 
 Existing Issue: The pull request is titled "docs: publish the ai-personas role and ACP pipeline plans" while the diff implements the persona-format and ACP-pipeline feature across source, tests and specs, with the plan only moved from ready to complete. Severity: 3/10

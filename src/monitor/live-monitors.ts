@@ -123,6 +123,7 @@ export class LiveMonitors {
           if (generation === reg.resetGeneration) this.promptFailed(reg, result.error);
           return;
         }
+        if (generation !== reg.resetGeneration) return;
         reg.firstPrompt = '';
         recordReply(reg, this.managers, result.reply);
         const suggestion = parseSuggestion(result.reply);

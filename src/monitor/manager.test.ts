@@ -649,6 +649,25 @@ describe('MonitorManager', () => {
     expect(acp.prompts[1]).toContain('pwd');
   });
 
+  it('a flush reply arriving after resetContext is ignored and the next flush keeps the primer', async () => {
+    const { managers, monitor } = harness([janus, agent2]);
+    monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+    monitor.resetContext('assistant');
+    await acp.reply(0, '[SUGGESTION]: Stale advice from the old context');
+
+    const feed = managers.tab.tabs.find((t) => t.view === 'monitor')!.monitor!;
+    expect(feed.suggestions).toHaveLength(0);
+    expect(monitor.transcript('assistant')).not.toContain('Stale advice from the old context');
+    expect(monitor.transcript('assistant')).toContain('Reply using exactly one of these formats:');
+
+    emitEntry(agent2, 'pwd', '/tmp');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(acp.prompts[1]).toContain('Reply using exactly one of these formats:');
+    expect(acp.prompts[1]).toContain('pwd');
+  });
+
   it('resetContext resets contextBytes back down after priming', () => {
     const { managers, monitor } = harness([janus, agent2]);
     monitor.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
