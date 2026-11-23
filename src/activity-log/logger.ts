@@ -6,9 +6,12 @@ import type { Subscription } from '../bus.js';
 import { messageBus } from '../bus.js';
 import { getConfig } from '../config.js';
 import { errorText } from '../error-text.js';
+import { reapFilesOlderThan } from '../state/reaper.js';
 
 let logDir = '';
 let abandoned = false;
+
+const DAY_MS = 86_400_000;
 
 export class ActivityLogger {
   static get logDir(): string {
@@ -46,4 +49,9 @@ export class ActivityLogger {
   unsubscribe(): void {
     this.sub.unsubscribe();
   }
+}
+
+export async function reapActivityLogs(launchedAt: number, days: number): Promise<void> {
+  if (!logDir) return;
+  await reapFilesOlderThan(logDir, '.json', launchedAt - days * DAY_MS);
 }

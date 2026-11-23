@@ -99,7 +99,7 @@ export const STATE_DIRECTORY_ENTRIES = [
   },
   {
     // No `clear`, deliberately: activity logs are kept for the `logRetentionInDays` window, so a fresh
-    // start must not sweep them. `reapActivityLogs`, started from `src/main.ts`, removes the old
+    // start must not sweep them. `reapActivityLogs`, started from `src/launch-sweeps.ts`, removes the old
     // ones by age instead.
     name: 'activityLog',
     init: (projectDir: string): void => { new ActivityLogger(projectDir); },
