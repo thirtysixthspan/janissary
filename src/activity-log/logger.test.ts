@@ -223,7 +223,7 @@ describe('ActivityLogger', () => {
 
     const lines = stderrWrite.mock.calls.map(([chunk]) => String(chunk));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatch(/^activity log: write failed, not logging for the rest of this run: /);
+    expect(lines[0]).toMatch(/^activity log: write failed, not logging for the rest of this run: .+\n$/);
     expect(lines[0].endsWith('\n')).toBe(true);
     expect(lines.some((line) => line.includes('message bus:'))).toBe(false);
   });
