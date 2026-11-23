@@ -11,7 +11,7 @@ import { initWorkspaceDir, clearWorkspaceDir } from '../workspace/index.js';
 import { initRemoteFileCache, clearRemoteFileCache } from '../file-navigator/remote/file-cache.js';
 import { initRemoteSessionStore } from '../sessions/store.js';
 import { initNotificationRecord } from '../notifications/record.js';
-import { TranscriptLogger } from '../transcript/logger.js';
+import { ActivityLogger } from '../activity-log/logger.js';
 
 // The per-subsystem init/clear pairs of the state directory, in the order `boot()` established.
 // Everything that owns state under `.janissary/` has exactly one entry here, so wiring a new
@@ -98,8 +98,11 @@ export const STATE_DIRECTORY_ENTRIES = [
     init: (projectDir: string): void => { initNotificationRecord(projectDir); },
   },
   {
-    name: 'transcriptLog',
-    init: (projectDir: string): void => { new TranscriptLogger(projectDir); },
+    // No `clear`, deliberately: activity logs are kept for the `logRetentionInDays` window, so a fresh
+    // start must not sweep them. `reapActivityLogs`, started from `src/main.ts`, removes the old
+    // ones by age instead.
+    name: 'activityLog',
+    init: (projectDir: string): void => { new ActivityLogger(projectDir); },
   },
 ] as const satisfies readonly StateDirectoryEntry[];
 
@@ -109,7 +112,7 @@ export const STATE_DIRECTORY_ENTRIES = [
 export const KNOWN_STATE_DIRECTORY_KEYS = [
   'harnessCapture', 'harnessRecording', 'harnessTranscript', 'shellTranscript',
   'browserLog', 'gitFailureOutput', 'globalHistory', 'connections', 'profiles', 'workspace',
-  'remoteFileCache', 'remoteSessions', 'notificationRecord', 'transcriptLog',
+  'remoteFileCache', 'remoteSessions', 'notificationRecord', 'activityLog',
 ] as const;
 
 type RegisteredKey = (typeof STATE_DIRECTORY_ENTRIES)[number]['name'];

@@ -7,7 +7,7 @@ import type { RecordedNotification } from './queue.js';
 // each one is recorded and **never read back by the application**. The queue (see `queue.ts`) is
 // run-scoped precisely because this file is not: the record outlives the process, the queue does
 // not, and nothing rehydrates one from the other. It lives under `.janissary/logs/`, alongside the
-// other files that outlive a run. Modelled on `TranscriptLogger`, which writes newline-delimited
+// other files that outlive a run. Modelled on `ActivityLogger`, which writes newline-delimited
 // JSON the same way.
 
 let recordPath = '';
