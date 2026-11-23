@@ -89,7 +89,7 @@ describe('AcpManager — ask role fallback', () => {
 
     expect(askModels).toHaveBeenCalledWith('/project', 'ask');
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
-    expect(launched(0)).toMatchObject({ command: 'opencode', args: ['acp'] });
+    expect(launched(0)).toMatchObject({ command: 'opencode', args: ['--standalone', 'acp'] });
     expect(JSON.parse(launched(0).env!.OPENCODE_CONFIG_CONTENT)).toEqual({ model: OPENCODE.model, permission: 'deny' });
   });
 

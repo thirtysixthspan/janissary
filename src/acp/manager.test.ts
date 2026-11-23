@@ -813,7 +813,7 @@ describe('AcpManager — remote tabs', () => {
     expect(mocks.connectAcp).not.toHaveBeenCalled();
     expect(channel.attachAcp).toHaveBeenCalledOnce();
     expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'acp-open', command: 'opencode', args: ['acp'],
+      type: 'acp-open', command: 'opencode', args: ['--standalone', 'acp'],
     }));
     expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
     expect(channel.send).toHaveBeenCalledWith(expect.objectContaining({

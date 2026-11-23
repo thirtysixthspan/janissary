@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { acpLaunchFor, acpLaunchForEntry } from './launch.js';
 import { CODEX_DENY_ALL } from './internal-tools-test-fixture.js';
 
@@ -7,9 +7,23 @@ describe('acpLaunchFor', () => {
     expect(acpLaunchFor({ harness: 'opencode', model: 'google/gemini', variant: 'default' }))
       .toEqual({
         command: 'opencode',
-        args: ['acp'],
+        args: ['--standalone', 'acp'],
         env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: 'google/gemini' }) },
       });
+  });
+
+  it('keeps ambient opencode routing variables out of the launch environment', () => {
+    vi.stubEnv('OPENCODE_SESSION_ID', 'parent-session');
+    vi.stubEnv('OPENCODE_TERMINAL', 'parent-terminal');
+    vi.stubEnv('OPENCODE_PORT', '4096');
+    try {
+      const launch = acpLaunchFor({ harness: 'opencode', model: 'google/gemini', variant: 'default' });
+
+      expect(Object.keys(launch.env)).toEqual(['OPENCODE_CONFIG_CONTENT']);
+      expect(launch.env.OPENCODE_CONFIG_CONTENT).toBe(JSON.stringify({ model: 'google/gemini' }));
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('maps claude to its ACP adapter and model environment', () => {
@@ -27,7 +41,7 @@ describe('acpLaunchForEntry', () => {
     const launch = acpLaunchForEntry({ harness: 'opencode', model: 'opencode-go/deepseek-v4.1-flash', effort: 'medium' });
 
     expect(launch?.command).toBe('opencode');
-    expect(launch?.args).toEqual(['acp']);
+    expect(launch?.args).toEqual(['--standalone', 'acp']);
     expect(JSON.parse(launch?.env.OPENCODE_CONFIG_CONTENT ?? ''))
       .toEqual({ model: 'opencode-go/deepseek-v4.1-flash', permission: 'deny' });
   });
