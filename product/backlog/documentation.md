@@ -4,8 +4,6 @@
 
 ## development
 
-* acp (5/10) — 21 of 22 facts are correct and 1 is wrong. `help/tell.md` says the default tell role has "nineteen of the twenty native commands," but shipped `src/plugins/roles/default-roles.ts` grants tell 25 of the 26 entries in `NATIVE_ACP_COMMANDS`, and the grant lists in `help/ask.md`, `help/roles.md` and `documentation/user-documentation/advanced-agents/acp-agent.md` omit the five newer native commands `file list`, `file stat`, `file exists`, `file head` and `file tail`. Correct the count and add those five commands to each grant list; no new page is needed. Evidence: `product/specs/acp.md`, `src/plugins/roles/default-roles.ts`, `src/plugins/roles/shared.ts`, `help/tell.md`, `help/ask.md`, `help/roles.md`, `documentation/user-documentation/advanced-agents/acp-agent.md`.
-
 * agent-command (5/10) — 17 of 20 facts are correct, 2 missing and 1 wrong. `documentation/user-documentation/advanced-agents/agent-command.md` says the agent puts "exactly one command in a final fenced block," but shipped behavior runs every closed `janissary` block as one parallel batch and returns an `Output of <command>` result per command; the same stale phrasing also appears in `acp-agent.md` and `agent-questions.md` and should be checked there. The missing facts are the per-command step-cap message `ACP: step limit reached; command not run.` (maxToolTurns default 20) and the whole-line refusal `Agent: command not permitted: <command>.` for `subagent` inside an agent run regardless of grants. Fix the batch wording and add both messages to the existing agent-command page; `help/agent.md` needs no change. Evidence: `product/specs/agent-command.md`, `src/acp/command-protocol.ts`, `src/acp/loop.ts`, `src/agent/command-tools.ts`, `documentation/user-documentation/advanced-agents/agent-command.md`.
 
 * database (5/10) — 14 of 15 facts are correct and 1 is wrong. `documentation/user-documentation/command-bar/database.md` still tells users to open the SQL browser with `sql <name>`, while the shipped form is `sql database <name>`; the dedicated `documentation/user-documentation/tab-types/sql-browser.md` is more broadly stale with `sql <name>`, `sql shop left`, `sql left`, `sql shop LEFT` and a note that a database named left or right cannot be opened. Change the cross-reference in database.md and rewrite the "Open a database" section and error table in sql-browser.md using `help/sql.md` and `help/commands.md`, which are already correct. Evidence: `product/specs/database.md`, `src/plugins/sql/activate.ts`, `help/sql.md`, `documentation/user-documentation/command-bar/database.md`, `documentation/user-documentation/tab-types/sql-browser.md`.
@@ -46,6 +44,7 @@
 
 ## resolved
 
+* acp — documented in help/tell.md, help/ask.md, help/roles.md, documentation/user-documentation/advanced-agents/acp-agent.md, documentation/user-documentation/tab-types/roles.md (removed 2026-11-23)
 * web-search — documented in help/web.md (removed 2026-11-23)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md (removed 2026-11-23)
 * roles — documented in documentation/user-documentation/tab-types/roles.md (removed 2026-11-23)

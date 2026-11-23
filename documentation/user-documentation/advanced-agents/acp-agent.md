@@ -35,10 +35,14 @@ Once a model has replied, the session sticks with it. Later prompts in the tab g
 The connections window shows the model the session started with. That choice is separate from the models used by monitors, conversations, and editor queries.
 
 The `tell` command uses the matching `tell` role. With the built-in roles, ask can read a file from
-the workspace, find workspace files by path, find text inside workspace files, list and query databases, browse to a page and read its content, search the web, read a web page, and ask or approve a
-question. Tell starts with those same commands plus database create/delete, browser eval, writing and editing workspace files, and applying a patch that changes several files at once. If you
-add or remove a grant, the next prompt reads the updated role. A missing ask or tell role uses its
-built-in model and command defaults; an existing role with no grants has no native tools.
+the workspace, find workspace files by path, find text inside workspace files, list a folder with
+`file list`, describe a path with `file stat`, check whether a path exists with `file exists`, and
+read the first or last lines of a file with `file head` and `file tail`. Ask can also list and query
+databases, browse to a page and read its content, search the web, read a web page, and ask or approve
+a question. Tell starts with those same commands plus database create/delete, browser eval, writing
+and editing workspace files, and applying a patch that changes several files at once. If you add or
+remove a grant, the next prompt reads the updated role. A missing ask or tell role uses its built-in
+model and command defaults; an existing role with no grants has no native tools.
 
 The agent has no built-in tools of its own, such as a shell, file editing, or web search, so it can
 only run the native commands its role grants. It can still search the web through the granted
@@ -84,8 +88,12 @@ Closing the shell also closes its ask and tell sessions. Reset cancels a questio
 <img class="agent-float left" src="/agents/ekrem-south.png" alt="" />
 
 The agent can use the file, database, browser, question, and web tools granted to its role. By default, ask
-can read a file from the workspace, find workspace files by path, find text inside workspace files, list and query databases, open a page, read its content, search the web, read a web page, and ask or
-approve a question. Tell has those commands plus database create/delete, browser eval, writing and editing workspace files, and applying a multi-file patch. If the model
+can read a file from the workspace, find workspace files by path, find text inside workspace files,
+list a folder with `file list`, describe a path with `file stat`, check whether a path exists with
+`file exists`, and read the first or last lines of a file with `file head` and `file tail`. Ask can
+also list and query databases, open a page, read its content, search the web, read a web page, and
+ask or approve a question. Tell has those commands plus database create/delete, browser eval,
+writing and editing workspace files, and applying a multi-file patch. If the model
 tries a known command its role doesn't allow, it receives `Command not allowed for role "<role>": <subcommand>.` and can choose another action. The result of each allowed tool step goes back to the model,
 up to the `maxToolTurns` limit per prompt. That limit defaults to 20 and is set in `.janissary/config.json`; see
 [Configuration](/user-documentation/getting-started/configuration). If a prompt reaches that cap, the settled shell reply ends with a
