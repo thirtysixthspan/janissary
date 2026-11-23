@@ -35,7 +35,6 @@ vi.mock('../harness/capture/file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/assistant-now.txt'),
   initHarnessCaptureDirectory: vi.fn(),
   ensureCaptureDirectory: vi.fn(),
-  clearCaptureDirectory: vi.fn(),
 }));
 
 // Fake core ACP: captures every prompt the monitors send and lets each test settle it with a

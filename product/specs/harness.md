@@ -950,9 +950,14 @@ produces no new captures, so the latest capture reflects the screen as of roughl
 after its last burst of output.
 
 Running the command writes that latest capture to `.janissary/captures/<label>-<timestamp>.txt`
-in the project directory and opens it as a regular editor tab — each invocation writes a file and
-opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
-a run: the directory is cleared at the next launch.
+in the project directory and opens it as a regular editor tab. Each invocation writes a file and
+opens a new tab; the capture is a snapshot, not a live view. Capture files survive a restart: the
+launch sweep keeps each one for `logRetentionInDays` days from its last modification, so a capture
+from an earlier run stays linked from the notifications record until it ages out. A retention of
+`0` removes every capture last modified before launch, but never one written during the current
+run. The sweep runs once at launch in the background, whether or not log writing is enabled, and
+does not delay startup. It considers only regular `.txt` files directly inside the captures
+directory, so subdirectories, symbolic links, and files with other extensions are left alone.
 
 For a remote harness tab, the capture comes from the far side's own detection rather than locally
 streamed bytes (see [[remote-server]]), and how it is reached depends on the tab's connection state.
