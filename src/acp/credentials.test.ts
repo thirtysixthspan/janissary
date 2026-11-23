@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { acpCredentials } from './credentials.js';
 import { loadOpencodeOauth } from '../project/opencode-oauth.js';
@@ -36,11 +36,22 @@ describe('ACP private OAuth credentials', () => {
     expect(statSync(path.dirname(dataHome)).mode & 0o777).toBe(0o700);
     credentials.dispose();
     expect(existsSync(path.dirname(dataHome))).toBe(false);
+    expect(existsSync(path.join(root, '.janissary', 'acp'))).toBe(true);
     expect(() => credentials.dispose()).not.toThrow();
+  });
+
+  it('keeps the acp- scratch directories inside an owner-only acp subdirectory', () => {
+    const credentials = acpCredentials(root);
+    disposals.push(credentials.dispose);
+    const runtime = path.join(root, '.janissary', 'acp');
+    expect(credentials.tmpDir).toContain(path.join(runtime, 'acp-'));
+    expect(statSync(runtime).mode & 0o777).toBe(0o700);
+    expect(readdirSync(path.join(root, '.janissary')).some((name) => name.startsWith('acp-'))).toBe(false);
   });
 
   it('leaves workspace credential provisioning to its owner', () => {
     expect(acpCredentials(root, root).env).toEqual({});
+    expect(existsSync(path.join(root, '.janissary'))).toBe(false);
   });
 
   it('preserves the ambient data location when there is no saved login', () => {
@@ -48,8 +59,17 @@ describe('ACP private OAuth credentials', () => {
     const credentials = acpCredentials(root);
     disposals.push(credentials.dispose);
     expect(credentials.env).toEqual({});
-    expect(credentials.tmpDir).toContain(path.join(root, '.janissary', 'acp-'));
+    expect(credentials.tmpDir).toContain(path.join(root, '.janissary', 'acp', 'acp-'));
     expect(existsSync(credentials.tmpDir!)).toBe(true);
+  });
+
+  it('refuses a symlinked acp subdirectory before allocating scratch storage', () => {
+    const target = path.join(root, 'target');
+    mkdirSync(target);
+    mkdirSync(path.join(root, '.janissary'));
+    symlinkSync(target, path.join(root, '.janissary', 'acp'));
+    expect(() => acpCredentials(root)).toThrow('Unsafe ACP runtime directory.');
+    expect(readdirSync(target)).toEqual([]);
   });
 
   it('refuses symlinked runtime storage', () => {

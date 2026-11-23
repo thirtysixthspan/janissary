@@ -1051,7 +1051,7 @@ describe('connectAcp — credentials', () => {
     expect(sandboxCalls.envs.at(-1)?.GH_TOKEN).not.toBe('gh-file');
     expect(sandboxCalls.options.at(-1)?.tokens).toBeUndefined();
     expect(sandboxCalls.options.at(-1)?.workspaceDir).toBe(os.tmpdir());
-    expect(sandboxCalls.options.at(-1)?.tmpDir).toContain(path.join(os.tmpdir(), '.janissary', 'acp-'));
+    expect(sandboxCalls.options.at(-1)?.tmpDir).toContain(path.join(os.tmpdir(), '.janissary', 'acp', 'acp-'));
   });
 
   it('lets the launch\'s own environment override a credential variable', () => {
