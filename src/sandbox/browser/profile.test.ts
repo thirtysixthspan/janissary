@@ -155,7 +155,7 @@ describe('BROWSER_SANDBOX_PROFILE', () => {
   // What the old recursive root carve-in exposed, named one file at a time.
   it.each([
     ['the project token store', `${STATE}/project-tokens.json`],
-    ['the server log holding the live session token', `${STATE}/log/server.log`],
+    ['the server log holding the live session token', `${STATE}/logs/server.log`],
     ['another tab\'s workspace clone', `${STATE}/workspace/other-tab/src/secret.ts`],
     ['the state directory itself', `${STATE}/anything`],
   ])('denies %s', (_name, target) => {

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -41,5 +41,25 @@ describe('janus launcher project directory', () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toContain(`invalid project directory: ${missing} is not a directory\n${USAGE_HINT}`);
     expect(existsSync(missing)).toBe(false);
+  });
+});
+
+describe('janus launcher server log location', () => {
+  let scratch;
+
+  beforeEach(() => { scratch = mkdtempSync(path.join(os.tmpdir(), 'janus-launcher-')); });
+  afterEach(() => { rmSync(scratch, { recursive: true, force: true }); });
+
+  it('writes the server log to .janissary/logs, not .janissary/log', () => {
+    // An unknown flag makes the server exit 2 before it initializes state, so the launcher's
+    // relay of the log tail is the only output and no activity log is created beside it.
+    const result = launch('--bogus', scratch);
+    const newLog = path.join(scratch, '.janissary', 'logs', 'server.log');
+    const oldLog = path.join(scratch, '.janissary', 'log', 'server.log');
+
+    expect(result.status).toBe(2);
+    expect(existsSync(newLog)).toBe(true);
+    expect(readFileSync(newLog, 'utf8')).toContain("Unknown option '--bogus'");
+    expect(existsSync(oldLog)).toBe(false);
   });
 });
