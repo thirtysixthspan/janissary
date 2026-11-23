@@ -4,8 +4,6 @@
 
 ## development
 
-* harness (3/10) — 19 of 20 facts are correct and 1 missing. The "New harness dialog" section of `documentation/user-documentation/advanced-agents/harness.md` explains that typing filters models, Tab completes and a blank field uses the default, but never says that non-blank text is accepted only when it is exactly an enabled model id of the chosen harness, that any other text disables Create and makes Return refuse to submit, that with the dropdown open Escape closes only the dropdown and Return accepts the highlighted row without launching, or that the field is disabled when the harness has no enabled models. Add those rules there and mirror a short note in `help/harness.md`. Evidence: `product/specs/harness.md`, `documentation/user-documentation/advanced-agents/harness.md`, `help/harness.md`.
-
 * pull-request-review (3/10) — 17 of 19 facts are correct and 2 missing. `documentation/user-documentation/workflows/pull-request-review.md` never says that the description-fidelity check verifies each Behavior example, Screenshots claim and Do/Expect line names the code path or test assertion proving it, recording a finding without editing the description when no anchor exists. It also lacks the documentation-scope rule: user and developer docs are out of scope for a feature review, specs and help stay in scope, those trees become primary only when the PR's own plan and title are about documentation, and a recorded doc finding is refiled as a ready item in `product/backlog/documentation.md` and reported out of scope. Add both to that page. Evidence: `product/specs/pull-request-review.md`, `ai/tasks/feature/review-pull-request.md`, `ai/tasks/feature/work-pull-request-issue.md`, `documentation/user-documentation/workflows/pull-request-review.md`.
 
 * remote-server (3/10) — 19 of 20 facts are correct and 1 missing. The shipped `on <address>` clause resolves a bare saved-host name through the hosts catalog to its stored user, host, port and path, while any typed address containing `@` or `:` is used literally; completion offers saved names after `on` (`src/remote/saved-host.ts`, `src/completion/index.ts`). Neither user-doc surface says this, and `documentation/user-documentation/advanced-agents/remote-agents.md` currently suggests ports and jump hosts only as `~/.ssh/config` aliases. Add the saved-host route to that page's "Address forms" section and cross-reference `help/hosts.md`. Evidence: `product/specs/remote-server.md`, `src/remote/saved-host.ts`, `src/completion/index.ts`, `documentation/user-documentation/advanced-agents/remote-agents.md`.
@@ -22,6 +20,7 @@
 
 ## resolved
 
+* harness — documented in documentation/user-documentation/advanced-agents/harness.md, help/harness.md (removed 2026-11-23)
 * file-list-stat — documented in help/file.md (removed 2026-11-23)
 * file-exists — documented in help/file.md (removed 2026-11-23)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md (removed 2026-11-23)

@@ -28,4 +28,6 @@ Launch `claude`, `opencode`, or `codex` with optional settings. Workspace, brows
 
 The `--model` value must be enabled in the current catalog. Use `models` to review or refresh that catalog; a disabled or unknown model is refused with `Unknown model "<model>" for harness "<name>" — add it to known-models.json.`
 
+In the New harness dialog, the **Model** field accepts only a blank field for the default or an enabled model id of the selected harness. Other text disables **Create**, and Return does not launch. With the dropdown open, `Escape` closes only the dropdown and `Return` accepts the highlighted row; the field is disabled when the harness has no enabled models.
+
 `--auto-resume` is supported only by `opencode` and `codex`. Passing it to another harness is refused with `--auto-resume is only supported for the opencode and codex harnesses.`
