@@ -4,8 +4,6 @@
 
 ## development
 
-* application-commands (3/10) — 19 of 20 facts are correct and 1 missing. The exact refusal `Command is unavailable in this tab: <command>.` appears in neither doc surface, though `src/command/manager.ts` emits it when a system-initiated command such as the client's `resetAcp` → `ask-reset` reaches a tab where ACP is unavailable; it is distinct from the documented `Command is disabled: <command>.` Add one sentence and the string to the `ask reset` discussion in `documentation/user-documentation/advanced-agents/acp-agent.md` and to `help/ask.md`. Evidence: `product/specs/application-commands.md`, `src/command/manager.ts`, `documentation/user-documentation/advanced-agents/acp-agent.md`, `help/ask.md`.
-
 * clipboard-history (3/10) — 18 of 19 facts are correct and 1 missing. Neither `documentation/user-documentation/command-bar/clipboard.md` nor `help/clipboard.md` or `help/keys.md` says that `Ctrl+Shift+V` / `Cmd+Shift+V` suppress the browser's own "paste as plain text" and "paste and match style" shortcuts, a behavior verified in `web/src/overlay-plugins/registry.ts` and the spec. Add that edge case to the "Opening it" section of the clipboard page, with optional notes in `help/clipboard.md` and the chord row of `help/keys.md`. Evidence: `product/specs/clipboard-history.md`, `web/src/overlay-plugins/registry.ts`, `documentation/user-documentation/command-bar/clipboard.md`.
 
 * conversations (3/10) — 20 of 21 facts are correct and 1 missing. Neither user-doc surface describes the warning for a conversation record written by a newer schema version: Janissary leaves it untouched, never lists or opens it, reports `conversation "<id>" unavailable: written by a newer schema version (vN)`, refuses to create under that id, and so cannot silently erase it on downgrade. Extend the "missing or unreadable" passage in `documentation/user-documentation/tab-types/conversations.md` with that case, and optionally add a line to `help/conversations.md`. Evidence: `product/specs/conversations.md`, `src/conversations/store.ts`, `src/conversations/store.test.ts`, `documentation/user-documentation/tab-types/conversations.md`.
@@ -32,6 +30,7 @@
 
 ## resolved
 
+* application-commands — documented in documentation/user-documentation/advanced-agents/acp-agent.md, help/ask.md (removed 2026-11-23)
 * acp-records — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md, documentation/user-documentation/advanced-agents/agent-command.md, help/subagent.md (removed 2026-11-23)
 * editor-tab — documented in documentation/user-documentation/tab-types/editor-persona-query.md (removed 2026-11-23)
 * hosts-tab — documented in help/hosts.md, help/commands.md (removed 2026-11-23)
