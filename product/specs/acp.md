@@ -1,6 +1,6 @@
 # ACP
 
-ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a settled Markdown reply beneath the typed line. Live activity belongs to the connection tab, not an in-tab response panel. Any tab plugin can request the scoped core API without owning a terminal. Harness tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
+ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a settled Markdown reply beneath the typed line. Live activity belongs to the connection tab, not an in-tab response panel. Any tab plugin can request the scoped core API without owning a terminal. Harness tabs have no ACP command or prose route. Monitors and conversations retain their separate sessions over the shared protocol transport; editor persona queries instead run on the tab's core ACP pipeline under the persona's role, reusing that role's session rather than holding one of their own (see [[editor-tab]]).
 
 ## Availability and plugin API
 

@@ -6,7 +6,7 @@ The backend automatically retains project-scoped records for every core tab ACP 
 
 Each accepted begin creates a fresh UUID, independent of the transient ACP session identity or agent run id. Sources distinguish core ACP from agent runs. Both supply a nonempty model, original owner label, and copied owner display name. An agent additionally supplies a nonempty run id and task path. An agent run launched for a subagent also carries the subagent's canonical role name, which must be nonempty when present and is stored exactly as supplied; an ordinary agent run carries no such name. A core session on a remote tab, or an agent run executing on a remote host, also supplies that host, so the record keeps it after its tab closes; a local source supplies none, and a supplied host must be nonempty. Invalid metadata, including an empty or non-string subagent role, throws `Invalid ACP record source.` without creating a record.
 
-Owner metadata is a snapshot. Closing a tab or reusing its label cannot replace the retained owner name. Records contain only tracked ACP and agent history; conversations, monitors, editor persona sessions, and other connection kinds are not recorded here.
+Owner metadata is a snapshot. Closing a tab or reusing its label cannot replace the retained owner name. Records contain only tracked ACP and agent history; conversations, monitors, and other connection kinds are not recorded here. Editor persona queries run on the core pipeline under the persona's role and get core records like any other core session (see [[editor-tab]]).
 
 ### Live feed ownership
 

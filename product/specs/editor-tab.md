@@ -739,27 +739,23 @@ primed with the editor's current buffer content exactly as it
 stands at that moment — including any unsaved edits, and excluding the query text itself, since it
 was never part of the buffer — plus the request text.
 
-The first request to a given persona in an editor tab opens a connection to that persona, which
-stays open for the rest of that tab's life; every later request to the same persona in that same
-tab reuses the same connection rather than starting a fresh one, and the persona's replies can draw
-on what it said earlier in the tab, the same as a multi-turn conversation. As with any multi-turn
-conversation, the persona's full instructions are only needed once: only the first request on a
-connection includes them, while every later request on that same connection sends just the current
-buffer content and the new request text. A request to a different persona in the same tab opens its
-own separate connection alongside it. These connections appear in the tab's connections window (see
-[[connection]]) and are closed automatically when the editor tab itself is closed, or manually from
-the connections window at any point — closing a connection and firing a new request to that persona
-starts over with a fresh connection, primed again from the top.
+An editor persona query goes through the tab's core ACP pipeline under the persona's role, so it
+uses that role's session, grants and primer rather than opening anything of its own. No connection
+is created for the persona. A persona sharing a role with an earlier query continues that role's
+conversation in the tab; a persona with a different role uses that role's own core session. The
+persona body, the hunk format for the reply, the current buffer content and the request line are all
+sent on every request, including the first. A second query fired while that role already has a
+prompt running doesn't queue or cancel it: it surfaces `ACP: a prompt is already running.` through
+the `<persona>: <message>` notification while the active prompt carries on untouched.
 
-A persona connection whose agent fails to start or exits on its own is dropped at once, the same as
-a manual close: it disappears from the connections window, its recorded exchange is discarded, and
-the next request to that persona in the tab opens a fresh connection, primed again from the top,
-rather than waiting forever on the dead one. The loss is reported through the same notification as a
-failed request (`<persona>: <message>`, for example `reviewer: ACP agent exited.`). A request in
-flight when the agent dies fails with that message. A loss between requests, after the last one
-succeeded, posts that notification once on its own. A loss during a request that has already failed
-for another reason is not reported a second time. A request that merely fails, without its agent
-dying, leaves the connection open (`EditorAcpManager` in `src/editor/acp-manager.ts`).
+With no persona-owned session, there is nothing for the editor to drop when an agent fails to start
+or exits: no `<persona> (acp)` connection row disappears and no per-persona exchange is discarded.
+A query that fails, including one whose agent dies mid-request, reports through the same
+`<persona>: <message>` notification as any other failed query. A fatal loss ends the role's core
+session, so the next query under that role starts fresh; a failure that leaves the session viable
+leaves it open for later queries. There is no separate notification for a persona agent that dies
+between requests, since the editor holds no session for that persona. The role's core connection
+row closes through the ordinary connections controls (see [[connection]]).
 
 The persona may propose one or more edits anywhere in the file, not only at the request line's own
 location. Every proposed change previews inline at once, directly in the buffer at the position it
