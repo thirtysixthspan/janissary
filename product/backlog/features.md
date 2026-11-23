@@ -2,6 +2,8 @@
 
 ## ready
 
+* captures recorded into .janissary/captures should not be cleared on application start or launch, instead they should be reaped on the schedule set by the existing configuration parameter.
+
 ## development
 
 ## deferred
