@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TAB_PLUGIN_API_VERSION } from '@shared/plugins/api';
-import type { TabPluginState } from './api';
+import type { PluginClientCapabilityOptions, TabPluginState } from './api';
 import type { JanusClient } from '../shared/ws/ws';
 import { createPluginHost } from './host';
 import { createPluginClientCapabilities } from './plugin-client-capabilities';
 
-function setup(tabState?: TabPluginState) {
+function setup(tabState?: TabPluginState, overrides: Partial<PluginClientCapabilityOptions> = {}) {
   const send = vi.fn();
   const capabilities = createPluginClientCapabilities({
     host: createPluginHost(),
@@ -16,6 +16,7 @@ function setup(tabState?: TabPluginState) {
     dock: null,
     onClose: vi.fn(),
     tabState,
+    ...overrides,
   });
   return { capabilities, send };
 }
@@ -80,6 +81,34 @@ describe('openConnection capability', () => {
 
     expect(setup(tabState).capabilities.tabState).toBe(tabState);
     expect(TAB_PLUGIN_API_VERSION).toBe(3);
+  });
+});
+
+// The flag is its own fact rather than a recording state, so it rides beside `recording` and never
+// decides whether the row gets an opener.
+describe('recordingOff capability', () => {
+  const cast = '/tmp/.janissary/recordings/shell-1.cast';
+
+  it('leaves recordingOff out when the tab will record', () => {
+    const { capabilities } = setup();
+
+    expect(capabilities).not.toHaveProperty('recordingOff');
+  });
+
+  it('carries recordingOff beside a recording without changing its opener', () => {
+    const { capabilities } = setup(undefined, { recording: cast, recordingOff: true });
+
+    expect(capabilities.recordingOff).toBe(true);
+    expect(capabilities.recording).toBe(cast);
+    expect(capabilities.openRecording).toBeTypeOf('function');
+  });
+
+  it('never supplies openRecording because of recordingOff', () => {
+    const { capabilities } = setup(undefined, { recordingOff: true });
+
+    expect(capabilities.recordingOff).toBe(true);
+    expect(capabilities).not.toHaveProperty('recording');
+    expect(capabilities).not.toHaveProperty('openRecording');
   });
 });
 
