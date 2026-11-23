@@ -1,13 +1,11 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { harnessArtifactFilename } from './artifact-name.js';
-import { reapFilesOlderThan } from '../state/reaper.js';
+import { reapFilesOlderThanDays } from '../state/retention.js';
 
 // Recordings are kept across launches and quitting; `reapHarnessRecordings`, started from
 // `src/main.ts`, deletes those last modified more than `logRetentionInDays` days before launch.
 let recordingDirectory = '';
-
-const DAY_MS = 86_400_000;
 
 export function initHarnessRecordingDirectory(projectDirectory: string): void {
   recordingDirectory = path.join(projectDirectory, '.janissary', 'recordings');
@@ -31,7 +29,5 @@ export function harnessRecordingPath(label: string, startedAt: number): string {
 }
 
 export async function reapHarnessRecordings(launchedAt: number, days: number): Promise<void> {
-  if (!recordingDirectory) return;
-  // The cutoff is `days` days before launch, so only files last modified earlier than that are reaped.
-  await reapFilesOlderThan(recordingDirectory, '.cast', launchedAt - days * DAY_MS);
+  await reapFilesOlderThanDays(recordingDirectory, '.cast', launchedAt, days);
 }

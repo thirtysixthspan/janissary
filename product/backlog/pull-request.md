@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Share the days-to-cutoff launch sweep wrapper instead of adding a fourth copy of it for recordings, which is technical debt this diff introduces.
-
-Existing Issue: `reapHarnessRecordings` is a line-for-line copy of `reapHarnessCaptures`, `reapHarnessTranscripts`, and `reapShellTranscripts`, each with its own module-private `DAY_MS` and the same empty-directory guard and cutoff arithmetic, and the boot sequence now starts the four through four near-identical unawaited lines. Severity: 2/10
-
-Existing Risk: 3/10 - A future change to the retention rule (the cutoff arithmetic, a minimum floor, or the swallowing rejection handler) lands in some copies and not others, so recordings, captures, and transcripts silently age out on different rules despite sharing one config key.
-
-Proposal Risk: 1/10 - One shared helper owns the rule, so the only remaining hazard is a wrapper test that mocks the reaper module partially and misses the new export, which fails loudly rather than silently.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2199 "share the days-to-cutoff launch sweep wrapper across recordings, captures, and transcripts". In `src/state/reaper.ts`, add `reapFilesOlderThanDays(directory, extension, launchedAt, days)` that returns when `directory` is empty and otherwise calls `reapFilesOlderThan(directory, extension, launchedAt - days * 86_400_000)`, with the single `DAY_MS`. Make `reapHarnessRecordings` in `src/harness/recording-file.ts`, `reapHarnessCaptures` in `src/harness/capture/file.ts`, `reapHarnessTranscripts` in `src/harness/transcript-file.ts`, and `reapShellTranscripts` in `src/shell/transcript/transcript-file.ts` delegate to it and drop their own `DAY_MS`. Optionally fold the four calls in `src/main.ts` `boot` into one `startLaunchSweeps(config.logRetentionInDays)` beside them, still unawaited with a swallowing `.catch` per sweep so one failure cannot stop another. Move the cutoff arithmetic assertions (seven days, and zero meaning launch) into `src/state/reaper.test.ts`, and update `src/harness/recording-file.test.ts`, `src/harness/capture/file.test.ts`, and the two transcript-file tests to mock `reapFilesOlderThanDays` and assert the directory, extension, `launchedAt`, and `days` each passes, keeping their "reaps nothing before a directory has been chosen" cases. `src/state/reaper.test.ts`'s existing cases must keep passing untouched.
-
-
 * Pin the not-recording fact's path from the tab envelope to the drawn flag on both the plugin row and the harness row, which is untested plumbing this diff introduces.
 
 Existing Issue: The client plumbing that carries `recordingOff` (`web/src/plugins/PluginBody.tsx` into `usePluginCapabilities`'s `Pick` list and memo dependencies, then `createPluginClientCapabilities`, and `web/src/harness/HarnessTab.tsx` into `HarnessTabMeta`) has no test, because the new tests render `ShellTabMeta` and `HarnessTabMeta` with the value already supplied, while `recording`'s equivalent path is pinned by `web/src/plugins/DockedPluginBody.test.tsx` "hands a docked plugin the recording its envelope carries". Severity: 3/10
