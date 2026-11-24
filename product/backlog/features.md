@@ -2,8 +2,6 @@
 
 ## ready
 
-* update server.log to be created for each run. logs should be named after the host name and a timestamp in the name, stored in ./janissary/logs/server/ and reaped like transcripts. host name should be `localhost` for the main machine and use the configured host name or the network name as a fallback.
-
 ## development
 
 ## deferred
