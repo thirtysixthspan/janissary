@@ -143,7 +143,7 @@ Execute the start task with `./temp/test-pull-request/` as the scratch root, rea
 Write **one** driver under the scratch root that runs every runnable step that is not `session-ending` in order: description steps, then plan steps, then generated steps. A driver is a module with a default export; the runner hands it the page, the DOM readers from `scripts/e2e/inspect.mjs`, `out`, `shot`, and `record`. Wrap each step in its own try/catch so one failure does not end the batch, and write each step's id, result, expected text, and observed text into `record` under the step's id. Run it through the installation's runner:
 
 ```bash
-$janissary/scripts/run.mjs e2e-driver ./temp/test-pull-request/steps.mjs --log <project-dir>/.janissary/log/server.log --scratch ./temp/test-pull-request/ --out steps
+$janissary/scripts/run.mjs e2e-driver ./temp/test-pull-request/steps.mjs --log <project-dir>/.janissary/logs/server/latest.log --scratch ./temp/test-pull-request/ --out steps
 ```
 
 The runner reads the address off the app's own log, so the session token is never written down, and it writes `record` to `./temp/test-pull-request/steps.json` whether the driver returns or throws.

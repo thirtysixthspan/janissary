@@ -193,7 +193,7 @@ The remaining features are proven to work in three layers. The fast check after 
 
    ```bash
    $janissary/scripts/run.mjs e2e-driver ./temp/remove-an-existing-feature/verify.mjs \
-     --log <project-dir>/.janissary/log/server.log --scratch ./temp/remove-an-existing-feature --out verify
+     --log <project-dir>/.janissary/logs/server/latest.log --scratch ./temp/remove-an-existing-feature --out verify
    ```
 
    The **Janissary, specifically** section of `$janissary/ai/tasks/workspace/start-application.md` documents the driver's arguments and helpers. Put every observation the verdict depends on into `record`. Unlike `fix-a-bug.md`, which keeps its driver outside the scratch root to rerun it, this run drives each instance once, so the driver goes when the stop task clears the root. For a tool rather than a web app, run each detached feature's commands from the scratch working directory against this checkout's built output.
