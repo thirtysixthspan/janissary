@@ -10,6 +10,8 @@
 
 ## development
 
+* Persist the orchestrator's recorded state to a file. build-a-complex-feature.md Step 6.2 asks the orchestrator to keep the full text of every backlog entry and the head SHA in context before repairs. Across dozens of fresh subagents that is fragile. Have the task write them to ./temp/ (entry text, head SHA, classification) and read from there.
+
 ## deferred
 
 
