@@ -39,4 +39,11 @@ describe('pidBelongsToCurrentUser', () => {
     execFile.mockImplementation(() => '   \n');
     expect(pidBelongsToCurrentUser(4242)).toBe(false);
   });
+
+  // A sandbox that denies the process-table query must not call the owner foreign: an unavailable
+  // owner keeps the instance lock held instead of admitting a second launch.
+  it.skipIf(uid === undefined)('reports an unreadable process table as unavailable', () => {
+    execFile.mockImplementation(() => { throw Object.assign(new Error('EPERM'), { code: 'EPERM' }); });
+    expect(pidBelongsToCurrentUser(4242)).toBeUndefined();
+  });
 });

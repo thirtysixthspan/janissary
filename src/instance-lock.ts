@@ -32,7 +32,8 @@ export function isPidAlive(pid: number): boolean {
  * the probe for the detached janus this account started as well as for a foreign process. When the
  * probe is denied, the process table's owner decides. A pid owned by this account is live; one owned
  * by another account is not the instance the lock names and stays stale, so the lock can still be
- * taken over without deleting the file by hand.
+ * taken over without deleting the file by hand. A process table this sandbox also denies cannot
+ * name another owner, so the lock stays held and `janus stop` can still signal the pid.
  *
  * Asking the owner rather than recording an account marker beside the pid keeps the lock file a bare
  * pid and keeps the lock's deliberate cross-account behavior. A project directory shared between two
@@ -47,7 +48,9 @@ export function isOwnInstanceAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM' && pidBelongsToCurrentUser(pid);
+    // Only a positive foreign-owner answer makes a denied probe stale. An unreadable owner fails
+    // closed: the lock is held and `janus stop` still signals the pid it names.
+    return (error as NodeJS.ErrnoException).code === 'EPERM' && pidBelongsToCurrentUser(pid) !== false;
   }
 }
 
