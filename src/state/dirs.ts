@@ -2,6 +2,7 @@ import { initHarnessCaptureDirectory } from '../harness/capture/file.js';
 import { initHarnessRecordingDirectory } from '../harness/recording-file.js';
 import { initHarnessTranscriptDirectory } from '../harness/transcript-file.js';
 import { initShellTranscriptDirectory } from '../shell/transcript/transcript-file.js';
+import { initServerLogDirectory } from '../server-log/directory.js';
 import { initBrowserLogDirectory, clearBrowserLogDirectory } from '../browser/browser-log.js';
 import { initGitFailureDirectory, clearGitFailureDirectory } from '../git/failure-output.js';
 import { initGlobalHistory } from '../global-history.js';
@@ -50,6 +51,13 @@ export const STATE_DIRECTORY_ENTRIES = [
     // ones by age instead.
     name: 'shellTranscript',
     init: (projectDir: string): void => { initShellTranscriptDirectory(projectDir); },
+  },
+  {
+    // No `clear`, deliberately: server logs are kept for the `logRetentionInDays` window with a
+    // one-hour floor, so a fresh start must not sweep them. `reapServerLogs`, started from
+    // `src/launch-sweeps.ts`, removes the old ones by age instead.
+    name: 'serverLog',
+    init: (projectDir: string): void => { initServerLogDirectory(projectDir); },
   },
   {
     name: 'browserLog',
@@ -110,7 +118,7 @@ export const STATE_DIRECTORY_ENTRIES = [
 // completeness assignment below, and a key whose entry has been dropped fails symmetrically —
 // the compiler names both.
 export const KNOWN_STATE_DIRECTORY_KEYS = [
-  'harnessCapture', 'harnessRecording', 'harnessTranscript', 'shellTranscript',
+  'harnessCapture', 'harnessRecording', 'harnessTranscript', 'shellTranscript', 'serverLog',
   'browserLog', 'gitFailureOutput', 'globalHistory', 'connections', 'profiles', 'workspace',
   'remoteFileCache', 'remoteSessions', 'notificationRecord', 'activityLog',
 ] as const;
