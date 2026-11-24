@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Correct the sweep-scope verification step that expects the latest link to stay on the seeded log
-
-Existing Issue: Plan Verification step 6 says the seeded latest.log symlink is unchanged after a successful launch, but the launcher repoints it to the new run's log once that run is ready. Severity: 3/10
-
-Existing Risk: 4/10 - A tester following the step literally records a sweep defect against a correct launcher, hiding the real sweep checks among a false failure.
-
-Proposal Risk: 2/10 - Correcting the sentence leaves every sweep assertion intact and states the link contract the launcher actually delivers.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2203 "Correct the sweep-scope verification step that expects the latest link to stay on the seeded log". Step P6 (plan, complete/server-log-per-run.md Verification step 6), verbatim: "Sweep scope with logging off. In a scratch project with `{"logEnabled": false, "logRetentionInDays": 0}`, create `logs/server/old.log` backdated two hours, a fresh `logs/server/current.log`, `logs/server/notes.txt`, `logs/server/nested/old.log`, and an old `latest.log` symlink to `current.log`; in the parent `logs` directory create `notifications.json` and the old `server.log`. Launch and let the background sweep run. `old.log` is gone; `current.log`, the symlink, the nested and non-`.log` files, and the files outside `logs/server/` are unchanged, and startup does not wait for the sweep." Reproduce with that seed under `<scratch>/cases/P6` and run `node bin/janus.mjs --no-open <scratch>/cases/P6`. Expected as written: the seeded symlink unchanged. Observed: old.log was swept, current.log, notes.txt, nested/old.log, notifications.json and the legacy server.log were byte-for-byte unchanged, and startup returned in 443 ms, but latest.log was still a symlink whose target had moved from `current.log` to `localhost-2026-11-24T05-42-53-945Z.log`, the new run's log. The true value is supplied by product/specs/cli.md "The launcher repoints it only after the new server's `__JANUS_URL__` line appears" and by the plan test "keeps latest.log on the earlier run until the new server prints its readiness marker", both of which make the move correct after readiness. The step should read: "In a scratch project with `{"logEnabled": false, "logRetentionInDays": 0}`, create `logs/server/old.log` backdated two hours, a fresh `logs/server/current.log`, `logs/server/notes.txt`, `logs/server/nested/old.log`, and a `latest.log` symlink to `current.log`; in the parent `logs` directory create `notifications.json` and the old `server.log`. Launch and let the background sweep run. Expect `old.log` is gone; `current.log`, the nested and non-`.log` files, and the files outside `logs/server/` are unchanged; `latest.log` is still a symlink but now names the new run's `localhost-<stamp>.log` because the launcher repoints it after readiness; startup does not wait for the sweep."
-
 * Point the base-branch testing instructions at the latest log instead of the removed shared server log
 
 Existing Issue: The base-branch start and stop tasks and sandbox manual name `.janissary/log/server.log` as the launcher log and the driver's `--log` source, a path this branch no longer writes. Severity: 4/10
