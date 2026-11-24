@@ -68,18 +68,18 @@ The launcher used to truncate a single `.janissary/logs/server.log` at every lau
 5. The reaper never deletes a symbolic link, because it considers only regular files: `src/state/reaper.ts:16` `if (!entry.isFile() || !entry.name.endsWith(extension)) continue;`, pinned by `src/state/reaper.test.ts` "keeps symbolic links and their targets".
 6. A launch refused by the instance lock throws before the server is ready, so the launcher's exit path relays it: `src/instance-lock.ts:82` `throw alreadyRunning(file, pid);`, whose message begins `another janus instance is already running in this directory`.
 7. The launcher reads from offset `0` of the fresh per-run file: `bin/janus.mjs:123` `await awaitReady(logPath, 0, child)` and `:133` `readLogSince(logPath, 0)`. A freshly created per-run file is empty, so no earlier run's bytes are scanned.
-8. The state-directory test mocks every registered init module and asserts each is called: `src/state/dirs.test.ts:75` `it('inits every registered subsystem in registry order'`, and pins the key list at `src/state/dirs.test.ts:99` `it('covers exactly the keys the registry is pinned against'`.
+8. The state-directory test mocks every registered init module and asserts each is called: `src/state/dirs.test.ts:79` `it('inits every registered subsystem in registry order'`, and pins the key list at `src/state/dirs.test.ts:104` `it('covers exactly the keys the registry is pinned against'`.
 9. The browser sandbox denies the whole project state directory, so a log under `.janissary/logs/server/` stays denied with no profile change: `src/sandbox/browser/profile.ts:60` "`<root>/.janissary`, denied rather than allowed".
 
 ## Existing functionality
 
 1. The generic age-based reaper over one directory's direct `*.<ext>` files: `src/state/reaper.ts:7` `reapFilesOlderThan`.
 2. The init-records-a-directory, reap-wraps-the-reaper module shape to mirror: `src/shell/transcript/transcript-file.ts:11` `initShellTranscriptDirectory` and `reapShellTranscripts`. Its day arithmetic (`src/state/retention.ts:5` `reapFilesOlderThanDays`) is not reused, because the server-log cutoff adds the one-hour floor.
-3. The launch sweep list the transcript, capture, and recording reapers are registered in: `src/launch-sweeps.ts:6` `const SWEEPS = [...]`.
+3. The launch sweep list the transcript, capture, and recording reapers are registered in: `src/launch-sweeps.ts:8` `const SWEEPS = [...]`.
 4. The launch sweep start, after config loads: `src/main.ts:80` `startLaunchSweeps(Date.now(), config.logRetentionInDays);`.
 5. The label-plus-ISO-timestamp filename shape shared by per-tab artifacts: `src/harness/artifact-name.ts:8` `harnessArtifactFilename`.
 6. The precedent for a launcher-side `.mjs` helper with its test under `scripts/`: `bin/read-log-since.mjs` `export function readLogSince(logPath, offset)`, tested by `scripts/read-log-since.test.mjs`.
-7. The "never clears" registry test to copy: `src/state/dirs.test.ts:137` `it('never clears the shell transcript directory'`.
+7. The "never clears" registry test to copy: `src/state/dirs.test.ts:142` `it('never clears the shell transcript directory'`.
 8. The `vi.mock` of the reaper for wrapper tests: `src/shell/transcript/transcript-file.test.ts` `vi.mock('../../state/reaper.js', () => ({ reapFilesOlderThan }));`.
 9. The atomic temporary-file-plus-rename pattern, including unique naming and best-effort cleanup: `src/atomic-write.ts:8` `atomicWriteFile`.
 10. The exclusive-create-with-`EEXIST`-retry precedent for a launcher-side file: `src/pid-lock-file.ts:12` `writeFileSync(file, String(process.pid), { flag: 'wx' })` and its `:16` `EEXIST` branch.
