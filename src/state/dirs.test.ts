@@ -59,15 +59,15 @@ vi.mock('../file-navigator/remote/file-cache.js', () => ({
 vi.mock('../notifications/record.js', () => ({
   initNotificationRecord: mocks.initNotificationRecord,
 }));
-vi.mock('../transcript/logger.js', () => ({
-  TranscriptLogger: vi.fn(),
+vi.mock('../activity-log/logger.js', () => ({
+  ActivityLogger: vi.fn(),
 }));
 
 import {
   initStateDirectories, clearStateDirectories,
   STATE_DIRECTORY_ENTRIES, STATE_DIRECTORY_ORDER_IS_COMPLETE,
 } from './dirs.js';
-import * as loggerModule from '../transcript/logger.js';
+import * as loggerModule from '../activity-log/logger.js';
 
 const OPTIONS = { projectDir: '/project', packageRoot: '/package-root' };
 
@@ -86,7 +86,7 @@ describe('initStateDirectories', () => {
     expect(mocks.initWorkspaceDir).toHaveBeenCalledWith('/project');
     expect(mocks.initRemoteFileCache).toHaveBeenCalledWith('/project');
     expect(mocks.initNotificationRecord).toHaveBeenCalledWith('/project');
-    expect(loggerModule.TranscriptLogger).toHaveBeenCalledWith('/project');
+    expect(loggerModule.ActivityLogger).toHaveBeenCalledWith('/project');
   });
 
   // The profiles init needs the package root; everything else only takes the project dir.
@@ -136,6 +136,12 @@ describe('clearStateDirectories', () => {
 
   it('never clears the shell transcript directory', () => {
     const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'shellTranscript');
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty('clear');
+  });
+
+  it('never clears the activity log directory', () => {
+    const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'activityLog');
     expect(entry).toBeDefined();
     expect(entry).not.toHaveProperty('clear');
   });

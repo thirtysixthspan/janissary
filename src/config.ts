@@ -37,12 +37,13 @@ export type Config = {
   // Isolate workspaced tabs (`shell --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
-  // Whether harness and shell transcript files, and harness, ssh, and shell recordings under
-  // `.janissary/recordings/`, are written at all (see `product/specs/application-config.md`). Default
-  // true; the escape hatch for turning transcript and recording writing off entirely.
+  // Whether harness and shell transcript files, activity logs under `.janissary/logs/activity/`, and
+  // harness, ssh, and shell recordings under `.janissary/recordings/` are written at all (see
+  // `product/specs/application-config.md`). Default true; the escape hatch for turning transcript,
+  // activity-log, and recording writing off entirely.
   logEnabled: boolean;
-  // How many days a harness or shell transcript, a harness capture file, or a recording is kept, with `0`
-  // keeping none from earlier runs (see `product/specs/application-config.md`).
+  // How many days a harness or shell transcript, a harness capture file, a recording, or an activity
+  // log is kept, with `0` keeping none from earlier runs (see `product/specs/application-config.md`).
   logRetentionInDays: number;
   // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
   // the screen, promoting them to a full-tab terminal mid-command (see `interactive/signals.ts`).

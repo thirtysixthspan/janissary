@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
-import { TranscriptLogger } from './logger.js';
+import { ActivityLogger } from './logger.js';
 import { messageBus } from '../bus.js';
+import * as config from '../config.js';
 import { getDateStr, getTimeStr as getTimeString } from '../datetime.js';
 import type { LogEntry, Tab } from '../tab/types.js';
 
@@ -21,14 +22,14 @@ const appendedEvent = (label = 'janus', entry: LogEntry = defaultEntry) => ({
 
 // `logDir` is module state with no reset, so the guard below can only be observed before anything
 // configures it. Vitest runs a file's blocks in declaration order, which is what makes that true.
-describe('TranscriptLogger before a directory is configured', () => {
+describe('ActivityLogger before a directory is configured', () => {
   it('writes nothing, rather than resolving the path against the working directory', () => {
     const empty = mkdtempSync(path.join(tmpdir(), 'logger-unset-'));
     const previous = process.cwd();
     process.chdir(empty);
     try {
-      expect(TranscriptLogger.logDir).toBe('');
-      expect(() => TranscriptLogger.append({ timestamp: '00:00:00.000', agent: 'janus', text: 'hello' }))
+      expect(ActivityLogger.logDir).toBe('');
+      expect(() => ActivityLogger.append({ timestamp: '00:00:00.000', agent: 'janus', text: 'hello' }))
         .not.toThrow();
     } finally {
       process.chdir(previous);
@@ -40,7 +41,7 @@ describe('TranscriptLogger before a directory is configured', () => {
 
 describe('logger I/O', () => {
   let tmpDir: string;
-  let loggers: TranscriptLogger[];
+  let loggers: ActivityLogger[];
 
   beforeEach(() => {
     tmpDir = mkdtempSync(path.join(tmpdir(), 'logger-test-'));
@@ -52,28 +53,30 @@ describe('logger I/O', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  const createLogger = (): TranscriptLogger => {
-    const logger = new TranscriptLogger(tmpDir);
+  const createLogger = (): ActivityLogger => {
+    const logger = new ActivityLogger(tmpDir);
     loggers.push(logger);
     return logger;
   };
 
-  it('creates the log directory on init', () => {
+  it('creates no directory until the first entry is written', () => {
     createLogger();
-    expect(existsSync(path.join(tmpDir, '.janissary', 'log'))).toBe(true);
+    expect(existsSync(path.join(tmpDir, '.janissary', 'logs', 'activity'))).toBe(false);
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+    expect(existsSync(path.join(tmpDir, '.janissary', 'logs', 'activity'))).toBe(true);
   });
 
   it('logDir returns the log directory path', () => {
     createLogger();
-    expect(TranscriptLogger.logDir).toBe(path.join(tmpDir, '.janissary', 'log'));
+    expect(ActivityLogger.logDir).toBe(path.join(tmpDir, '.janissary', 'logs', 'activity'));
   });
 
   it('appends a JSON line to today\'s log file', () => {
     createLogger();
-    TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
-    TranscriptLogger.append({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+    ActivityLogger.append({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
 
-    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'logs', 'activity', `${getDateStr()}.json`);
     expect(existsSync(logPath)).toBe(true);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
@@ -81,22 +84,29 @@ describe('logger I/O', () => {
     expect(JSON.parse(lines[1])).toEqual({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
   });
 
+  it('writes nothing under .janissary/log', () => {
+    createLogger();
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+
+    expect(existsSync(path.join(tmpDir, '.janissary', 'log'))).toBe(false);
+  });
+
   it('appends to an existing log file', () => {
     createLogger();
-    TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'first' });
-    TranscriptLogger.append({ timestamp: '22:55:21.000', agent: 'janus', text: 'second' });
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'first' });
+    ActivityLogger.append({ timestamp: '22:55:21.000', agent: 'janus', text: 'second' });
 
-    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'logs', 'activity', `${getDateStr()}.json`);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
   });
 
   it('writes valid JSON on each line', () => {
     createLogger();
-    TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'line1' });
-    TranscriptLogger.append({ timestamp: '22:55:21.000', agent: 'bilal', text: 'line2' });
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'line1' });
+    ActivityLogger.append({ timestamp: '22:55:21.000', agent: 'bilal', text: 'line2' });
 
-    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'logs', 'activity', `${getDateStr()}.json`);
     const content = readFileSync(logPath, 'utf8').trim();
     for (const line of content.split('\n')) {
       expect(() => JSON.parse(line)).not.toThrow();
@@ -105,9 +115,9 @@ describe('logger I/O', () => {
 
   it('handles empty text', () => {
     createLogger();
-    TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: '' });
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: '' });
 
-    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'logs', 'activity', `${getDateStr()}.json`);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).text).toBe('');
@@ -116,9 +126,9 @@ describe('logger I/O', () => {
   it('handles special characters in text', () => {
     createLogger();
     const text = 'line1\nline2\twith\ttabs\u{2603}';
-    TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text });
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text });
 
-    const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
+    const logPath = path.join(tmpDir, '.janissary', 'logs', 'activity', `${getDateStr()}.json`);
     const lines = readFileSync(logPath, 'utf8').trim().split('\n');
     expect(JSON.parse(lines[0]).text).toBe(text);
   });
@@ -129,9 +139,9 @@ describe('logger I/O', () => {
   });
 });
 
-describe('TranscriptLogger', () => {
+describe('ActivityLogger', () => {
   let tmpDir: string;
-  let loggers: TranscriptLogger[];
+  let loggers: ActivityLogger[];
 
   beforeEach(() => {
     tmpDir = mkdtempSync(path.join(tmpdir(), 'logger-bus-test-'));
@@ -146,8 +156,8 @@ describe('TranscriptLogger', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  const createLogger = (): TranscriptLogger => {
-    const logger = new TranscriptLogger(tmpDir);
+  const createLogger = (): ActivityLogger => {
+    const logger = new ActivityLogger(tmpDir);
     loggers.push(logger);
     return logger;
   };
@@ -175,5 +185,46 @@ describe('TranscriptLogger', () => {
     const logger = createLogger();
     logger.unsubscribe();
     expect(() => messageBus.emit('transcript', appendedEvent())).not.toThrow();
+  });
+
+  it('writes no entry and creates no directory when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    createLogger();
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+
+    expect(existsSync(path.join(tmpDir, '.janissary', 'logs', 'activity'))).toBe(false);
+  });
+
+  it('still delivers entries to other subscribers when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    createLogger();
+    const listener = vi.fn();
+    const sub = messageBus.on('transcript', 'entry:appended', listener);
+    try {
+      const failures = messageBus.emit('transcript', appendedEvent());
+      expect(listener).toHaveBeenCalledOnce();
+      expect(failures).toEqual([]);
+    } finally {
+      sub.unsubscribe();
+    }
+  });
+
+  it('prints one stderr line and stops writing after a failed write', () => {
+    const regularFile = path.join(tmpDir, 'not-a-directory');
+    writeFileSync(regularFile, 'x');
+    const logger = new ActivityLogger(regularFile);
+    loggers.push(logger);
+    const stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    ActivityLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
+    ActivityLogger.append({ timestamp: '22:55:21.000', agent: 'janus', text: 'again' });
+
+    const lines = stderrWrite.mock.calls.map(([chunk]) => String(chunk));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^activity log: write failed, not logging for the rest of this run: .+\n$/);
+    expect(lines[0].endsWith('\n')).toBe(true);
+    expect(lines.some((line) => line.includes('message bus:'))).toBe(false);
   });
 });

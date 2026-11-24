@@ -7,7 +7,7 @@ import { seedRootTab, seedTestTab } from './tab/root-tab-test-fixture.js';
 import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
 import { messageBus } from './bus.js';
-import { TranscriptLogger } from './transcript/logger.js';
+import { ActivityLogger } from './activity-log/logger.js';
 import { abbreviatePath } from './paths.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import * as config from './config.js';
@@ -326,20 +326,20 @@ describe('Controller', () => {
     expect(isExited).toBe(true);
   });
 
-  it('records transcript content in the append-only log', () => {
-    const tl = new TranscriptLogger(mkdtempSync(path.join(tmpdir(), 'janus-log-')));
+  it('records transcript content in the activity log', () => {
+    const al = new ActivityLogger(mkdtempSync(path.join(tmpdir(), 'janus-log-')));
     try {
       const { c } = makeController();
       c.dispatch('help');
-      const files = readdirSync(TranscriptLogger.logDir).filter((f) => f.endsWith('.json'));
+      const files = readdirSync(ActivityLogger.logDir).filter((f) => f.endsWith('.json'));
       expect(files.length).toBe(1);
-      const entries = readFileSync(path.join(TranscriptLogger.logDir, files[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+      const entries = readFileSync(path.join(ActivityLogger.logDir, files[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
       // The command input and its output are logged as separate entries, each timestamped HH:MM:SS.mmm.
       expect(entries.some((entry) => entry.agent === 'janus' && entry.text === 'help')).toBe(true);
       expect(entries.length).toBeGreaterThanOrEqual(2);
       expect(entries.every((entry) => /^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(entry.timestamp))).toBe(true);
     } finally {
-      tl.unsubscribe();
+      al.unsubscribe();
     }
   });
 

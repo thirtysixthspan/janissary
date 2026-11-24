@@ -14,7 +14,7 @@ import { dispatchAcpFrame } from './serve-acp-frames.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
-// and writes nothing to `.janissary/log/`. Its capability surface is deliberately closed — it will
+// and writes nothing to `.janissary/logs/activity/`. Its capability surface is deliberately closed — it will
 // not open tabs, serve files, run anything outside the workspace it provisions, or accept a frame
 // outside the union.
 
