@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { existsSync, mkdirSync, openSync, statSync } from 'node:fs';
 import { readLogSince } from './read-log-since.mjs';
-import { serverLogFilename } from './server-log.mjs';
+import { pointLatestLog, serverLogFilename } from './server-log.mjs';
 
 // Janissary runs as a local web app: this launcher boots the Node server (which opens the
 // browser to a token-gated localhost URL). `stop`/`init`/`--help`/`--version` run attached,
@@ -122,6 +122,10 @@ const child = spawn(command, commandArguments, { detached: true, stdio: ['ignore
 try {
   const url = await awaitReady(logPath, 0, child);
   child.unref();
+  const reason = pointLatestLog(logDir, path.basename(logPath));
+  if (reason !== undefined) {
+    process.stderr.write(`warning: could not update ${path.join(logDir, 'latest.log')}: ${reason}\n`);
+  }
   if (arguments_.includes('--no-open')) process.stdout.write(`${url}\n`);
   process.exit(0);
 } catch (error) {
