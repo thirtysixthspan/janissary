@@ -6,6 +6,8 @@
 
 *  Resolve the Step 8 / Step 9 ordering contradiction in build-a-complex-feature.md. Step 8 ("Review and resolve the full pull request") is numbered before Step 9 ("Update the pull request"), but Step 9 says to delegate the update "before the full-PR review", Step 8 opens with "After the canonical plan and PR description match the completed feature", and the preamble says update, then review. I had to infer from three signals and run the update first. Renumber the sections or rewrite the precondition so there is one unambiguous order.
 
+* Fix stale cross-subplan references in decompose-plan.md. Step 3 writes dependencies as product/plans/ready/server-log-per-run-N-*.md, but Step 6 promotes each subplan to complete/ as it lands. By subplan 4, those paths dangled, and I had to warn each subsequent implementation and spec subagent manually. Use stable filenames or final complete/ paths for dependency references, and have improve-plan.md Step 3 check forward references with promotion in mind.
+
 ## development
 
 ## deferred
