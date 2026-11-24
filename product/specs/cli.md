@@ -79,6 +79,7 @@ Shutdown is triggered by any of:
 - SIGINT or SIGTERM
 - The `quit` command from a connected client
 - Closing the last browser window or tab (all WebSocket clients disconnect and none reconnect during the one-second grace period)
+- A stop request left in the instance's own `.janissary/` by `janus stop` when the sandbox denies signals to detached processes
 
 A window releases its own connection as it goes away rather than leaving the browser to tear the socket down incidentally, so the disconnect that triggers shutdown is prompt and does not vary with how a given browser unloads a page.
 
@@ -86,7 +87,7 @@ When the last client disconnects, the server waits one second before beginning s
 
 ### Stopping a running instance
 
-`janus stop [<project-dir>]` runs attached, printing straight to the terminal. It reads the instance lock (`.janissary/lock`) for the target directory (current directory by default) and, if the recorded process ID is alive, sends it SIGTERM — triggering the same graceful shutdown sequence above. A process owned by the current user counts as alive even when a sandbox denies the signal probe or the process-table owner query. If no lock file exists for that directory, the lock file does not record a valid process ID, or the recorded process is no longer alive — or is alive but is positively shown to belong to another account, and so is not the instance the lock names — it prints `no running janus instance for <dir>` and exits 0 (there being nothing to stop is not an error).
+`janus stop [<project-dir>]` runs attached, printing straight to the terminal. It reads the instance lock (`.janissary/lock`) for the target directory (current directory by default) and, if the recorded process ID is alive, sends it SIGTERM — triggering the same graceful shutdown sequence above. When the sandbox denies that signal with `EPERM`, stop instead writes a stop request to `.janissary/stop-request` under the target directory, holding the recorded process ID. The running server checks that file every 200 ms, removes it, and takes its own graceful shutdown path only when it names that server's process ID; a request naming any other process is removed and ignored. Because the request lives under the target directory and carries the pid, one project's stop cannot end another's server. A new launch clears any leftover request before it boots, and no network route, token, or bind address is involved. A process owned by the current user counts as alive even when a sandbox denies the signal probe or the process-table owner query. If no lock file exists for that directory, the lock file does not record a valid process ID, or the recorded process is no longer alive — or is alive but is positively shown to belong to another account, and so is not the instance the lock names — it prints `no running janus instance for <dir>` and exits 0 (there being nothing to stop is not an error). A signal failure other than `EPERM` still fails with the usual failed-to-start banner.
 
 ### Scaffolding a new project
 

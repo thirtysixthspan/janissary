@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { stopInstance } from './stop-instance.js';
+import { stopRequestPath } from './stop-request.js';
 import { pidBelongsToCurrentUser } from './process-owner.js';
 
 vi.mock('./process-owner.js', () => ({ pidBelongsToCurrentUser: vi.fn() }));
@@ -52,6 +53,7 @@ describe('stopInstance', () => {
 
     expect(writeSpy).toHaveBeenCalledWith(`no running janus instance for ${projectDir}\n`);
     expect(kill).not.toHaveBeenCalledWith(999_999, 'SIGTERM');
+    expect(existsSync(stopRequestPath(projectDir))).toBe(false);
     kill.mockRestore();
     writeSpy.mockRestore();
   });
@@ -101,5 +103,39 @@ describe('stopInstance', () => {
 
     expect(writeSpy).toHaveBeenCalledWith(`no running janus instance for ${projectDir}\n`);
     writeSpy.mockRestore();
+  });
+
+  // The sandbox denies the SIGTERM itself: leaving a request lets the live server end itself
+  // instead of exiting 1 with `kill EPERM` while the app keeps answering.
+  it('leaves a stop request naming the locked pid when SIGTERM is denied with EPERM', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), '424242');
+    vi.mocked(pidBelongsToCurrentUser).mockReturnValue(undefined);
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => {
+      throw Object.assign(new Error('EPERM'), { code: 'EPERM' });
+    });
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    stopInstance(projectDir);
+
+    expect(kill).toHaveBeenCalledWith(424_242, 'SIGTERM');
+    expect(readFileSync(stopRequestPath(projectDir), 'utf8')).toBe('424242\n');
+    expect(writeSpy).not.toHaveBeenCalled();
+    kill.mockRestore();
+    writeSpy.mockRestore();
+  });
+
+  it('rethrows a signal failure other than EPERM without leaving a stop request', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), '424242');
+    const kill = vi.spyOn(process, 'kill')
+      .mockImplementationOnce(() => true)
+      .mockImplementationOnce(() => { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); });
+
+    expect(() => stopInstance(projectDir)).toThrow('EACCES');
+    expect(existsSync(stopRequestPath(projectDir))).toBe(false);
+    kill.mockRestore();
   });
 });
