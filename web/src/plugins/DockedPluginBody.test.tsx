@@ -42,7 +42,7 @@ function registerCountingPlugin(id: string, mounts: () => void) {
     payload: unknown;
     capabilities: {
       active: boolean; dock: 'left' | 'right' | null;
-      recording?: string; openRecording?: () => void;
+      recording?: string; openRecording?: () => void; recordingOff?: true;
       transcript?: string; openTranscript?: () => void;
     };
   }) => {
@@ -54,6 +54,7 @@ function registerCountingPlugin(id: string, mounts: () => void) {
         data-dock={String(capabilities.dock)}
         data-recording={capabilities.recording ?? ''}
         data-can-open-recording={String(capabilities.openRecording !== undefined)}
+        data-recording-off={'recordingOff' in capabilities ? String(capabilities.recordingOff) : 'absent'}
         data-transcript={capabilities.transcript ?? ''}
         data-can-open-transcript={String(capabilities.openTranscript !== undefined)}
       >
@@ -233,6 +234,32 @@ describe('a plugin tab docked into a sidebar', () => {
     const body = screen.getByTestId('fixture-body');
     expect(body).toHaveAttribute('data-recording', '/tmp/.janissary/recordings/devbox-2026.cast');
     expect(body).toHaveAttribute('data-can-open-recording', 'true');
+  });
+
+  // A shell tab opened under logEnabled false draws "not recording" only if the fact survives every
+  // hop from the envelope to the plugin, so this reads it where the plugin does.
+  it('hands a docked plugin recordingOff when its envelope carries it', async () => {
+    registerCountingPlugin('fixture', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tab = pluginTab('devbox', 'fixture');
+    tab.plugin!.recordingOff = true;
+
+    render(<Sidebar side="left" tabs={[tab]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    const body = screen.getByTestId('fixture-body');
+    expect(body).toHaveAttribute('data-recording-off', 'true');
+    expect(body).toHaveAttribute('data-can-open-recording', 'false');
+  });
+
+  it('omits recordingOff when its envelope does not', async () => {
+    registerCountingPlugin('fixture', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+
+    render(<Sidebar side="left" tabs={[pluginTab('fixture', 'fixture')]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    expect(screen.getByTestId('fixture-body')).toHaveAttribute('data-recording-off', 'absent');
   });
 
   // The same envelope read is what lets a docked shell's Open transcript button open its transcript.

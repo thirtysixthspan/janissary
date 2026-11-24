@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import type { HarnessRuntime } from '../harness/runtime.js';
 import { TerminalRuntimeManager } from './manager.js';
+import * as config from '../config.js';
 
 const RECORDING = '/project/.janissary/recordings/shell.cast';
 
@@ -12,6 +13,7 @@ describe('TerminalRuntimeManager', () => {
   afterEach(() => {
     manager?.dispose();
     messageBus.clear();
+    vi.restoreAllMocks();
   });
 
   it('finds a live shell recording through the shell tab terminal id', () => {
@@ -27,6 +29,37 @@ describe('TerminalRuntimeManager', () => {
 
     expect(manager.liveRecordingPathOf('shell')).toBe(RECORDING);
     expect(managers.pty.terminalIdFor).toHaveBeenCalledWith('shell');
+  });
+
+  it('installs no shell runtime and leaves the tab unmarked when logEnabled is false', () => {
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), logEnabled: false });
+    const tab: { label: string; recordingOff?: true } = { label: 'shell' };
+    const managers = {
+      tab: { byLabel: vi.fn(() => tab) },
+      pty: { spawnDimensions: () => ({ cols: 80, rows: 24 }) },
+    } as unknown as Managers;
+    manager = new TerminalRuntimeManager(managers);
+
+    manager.registerShellObservers('pty-shell', 'shell');
+
+    // The opener marks the tab when it is minted; the runtime manager only withholds the recorder.
+    expect(manager.get('pty-shell')).toBeUndefined();
+    expect(tab.recordingOff).toBeUndefined();
+  });
+
+  it('installs a shell runtime when logEnabled is true', () => {
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), logEnabled: true });
+    const tab: { label: string; recordingOff?: true } = { label: 'shell' };
+    const managers = {
+      tab: { byLabel: vi.fn(() => tab) },
+      pty: { spawnDimensions: () => ({ cols: 80, rows: 24 }) },
+    } as unknown as Managers;
+    manager = new TerminalRuntimeManager(managers);
+
+    manager.registerShellObservers('pty-shell', 'shell');
+
+    expect(manager.get('pty-shell')?.recorder).toBeDefined();
+    expect(tab.recordingOff).toBeUndefined();
   });
 
   it('forwards terminal colors to the runtime recorder', () => {

@@ -12,6 +12,7 @@ import { readHostsFile } from '../plugins/hosts/hosts-file.js';
 import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
+import * as config from '../config.js';
 import type { Managers } from '../managers.js';
 import { BUNDLED_MODEL_CATALOG, type ModelCatalog } from '../models/catalog-file.js';
 import type { Tab } from '../tab/types.js';
@@ -1130,6 +1131,24 @@ describe('HarnessManager workspace provisioning', () => {
     expect(manager.run('harness claude -w')).toBeUndefined();
     expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: '', status: 'provisioning' });
     expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('marks a harness tab not recording from creation when logEnabled is false', () => {
+    const spy = vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), logEnabled: false });
+    try {
+      const { managers, tabs } = pendingWorkspaceLaunch();
+      const manager = new HarnessManager(managers);
+      expect(manager.run('harness claude -w')).toBeUndefined();
+      expect(tabs.at(-1)!.harness).toMatchObject({ status: 'provisioning' });
+      expect(tabs.at(-1)!.recordingOff).toBe(true);
+    } finally { spy.mockRestore(); }
+  });
+
+  it('leaves a harness tab unmarked when logEnabled is true', () => {
+    const { managers, tabs } = pendingWorkspaceLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w')).toBeUndefined();
+    expect(tabs.at(-1)!.recordingOff).toBeUndefined();
   });
 
   it('spawns the PTY and marks the tab running once the clone resolves', async () => {

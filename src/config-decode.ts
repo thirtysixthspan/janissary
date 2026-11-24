@@ -122,7 +122,6 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     activeTabNameMaxLength: numberValue(record.activeTabNameMaxLength, defaults.activeTabNameMaxLength),
     clipboardHistoryMaxEntries: positiveIntegerValue(record.clipboardHistoryMaxEntries, defaults.clipboardHistoryMaxEntries),
     sandboxWorkspaces: booleanValue(record.sandboxWorkspaces, defaults.sandboxWorkspaces),
-    recordShellTabs: booleanValue(record.recordShellTabs, defaults.recordShellTabs),
     logEnabled: booleanValue(record.logEnabled, defaults.logEnabled),
     logRetentionInDays: nonNegativeIntegerValue(record.logRetentionInDays, defaults.logRetentionInDays),
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),

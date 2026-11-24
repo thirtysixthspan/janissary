@@ -30,6 +30,11 @@ abstract recordTerminal(ptyId: string, label: string, pluginId: string): void;
     this.managers.workspace.retain(directory);
   }
 
+  recordsTerminals(pluginId: string): boolean {
+    return this.managers.plugins.declarations
+      .find((declaration) => declaration.id === pluginId)?.recordsTerminal === true;
+  }
+
   openPluginTab(
     pluginId: string, labelPrefix: string, instanceKey: string, schemaVersion: number,
     sourceLabel: string, factory: (resources: TabPluginResources) => TabPluginPayload,

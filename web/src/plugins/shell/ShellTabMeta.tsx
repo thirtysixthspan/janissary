@@ -44,7 +44,7 @@ export function ShellTabMeta({ payload, capabilities }: {
         )}
         <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
-          <RecordingFlag onOpen={capabilities.openRecording} />
+          <RecordingFlag onOpen={capabilities.openRecording} off={capabilities.recordingOff} />
           {capabilities.remote !== undefined && capabilities.remoteSession !== undefined && (
             <ConnectionPlug state={capabilities.remoteSession.state} />
           )}

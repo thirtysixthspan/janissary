@@ -70,28 +70,26 @@ shape but run no harness.
 
 Named-harness tabs opened through `harness <name>`, **ssh tabs** (`ssh <destination>`, see
 [[ssh-tab]]) and **shell tabs** (`zsh` and the launch shell, see [[shell-tab]]) are recorded. Recording
-is automatic for all three: there is no flag, command, or setting, and every session records from
-spawn to exit.
+is automatic for all three: there is no flag or command, and every session records from spawn to exit
+unless recording is turned off in the project's config (below).
 
 A shell tab is a plugin tab rather than a harness tab and reaches its recorder by a different path —
 the host starts the terminal on the plugin's behalf and attaches a recorder once the tab has a label —
 but everything else is identical: the same file format, the same directory, the same naming, the same
 lazy creation, and the same notification on failure.
 
-Shell recording can be declined. A project whose `.janissary/config.json` sets `"recordShellTabs":
-false` records no shell tab: no file is written and the tab draws no recording flag, which is the
-state a shell tab is already in. It defaults to on, so a project that has not expressed a preference
-records shell tabs the same way it records the other two. It no longer turns off the shell tab's
-plain-text transcript, which is separate and follows `logEnabled` instead (see [[shell-tab]] § Text
-transcript); that transcript is neither a recording nor the harness session transcript this spec describes.
+Recording can be turned off. A project whose `.janissary/config.json` sets `"logEnabled": false` (see
+[[application-config]]) records no harness tab, local or remote, no ssh tab, and no shell tab: no file
+is written, no recording-failed notification can arise, and each such tab's flag reads **not
+recording** (below). The same setting turns off harness and shell transcript files, so with it false
+none of the three kinds writes anything to disk; a harness tab still reads its screen, approves and
+resumes, and feeds monitors exactly as before. It defaults to on. The setting is read when a tab is
+opened, and the config is loaded once per launch, so a change applies from the next launch.
 
-The setting gates **every plugin terminal that asked to be recorded** — any plugin whose declaration
-carries `recordsTerminal` — because that is the one place the decision is made, and the shell plugin is
-the only one that asks, so today it reads as shell tabs alone. A named-harness or ssh tab does not reach
-that path at all and is recorded whatever it says; neither echoes its input, so neither has the exposure
-this setting answers. Were another bundled or third-party plugin to ask for its terminals to be
-recorded, `"recordShellTabs": false` would decline that one too — the name says what is off today
-rather than promising the gate can never widen.
+The shell-only `recordShellTabs` key that earlier versions read is retired: a config that still carries
+it is read as if it did not, and the key is dropped from the file the next time Janissary writes the
+config for another reason. A project that had set it to `false` with `logEnabled` on records shell
+tabs again.
 
 What is **not** recorded is a PTY started with `!`: `!vim`, `!htop`, and the other interactive
 programs it runs full-tab on a shell tab are not recorded and get no server-side screen reader either.
@@ -109,6 +107,14 @@ The flag is drawn **plain and inert until the tab has produced output**, which i
 first exists, and **green and pressable from that moment on**. A harness tab launched with `--workspace`
 therefore shows the flag plain while its clone is still being made, and the same flag green once the
 session starts. Shell tabs have the same recording flag for their owned terminal.
+
+A tab opened while `"logEnabled": false` is set will never record, and its flag says so: the same film
+icon, plain and never green, with the tooltip and accessible name **not recording** instead of
+**recording**. It cannot be pressed or focused, and it reads that way for the tab's whole life —
+including while a `--workspace` or remote harness tab is still being set up, before any session runs,
+and while a shell tab is still having its workspace clone made or its remote connection opened,
+before its shell starts.
+A tab that will record but has produced no output yet keeps the plain **recording** flag.
 
 The flag **outlives the session**. A harness tab stays open after its process ends, and its flag stays
 green and still opens the recording, because the file is on disk and only the recorder stopped. For a
@@ -187,7 +193,7 @@ tab is enough on its own: a detached remote harness, whose PTY never reports an 
 recording when its tab goes. A PTY that later reuses the same session id (an attach bringing the tab
 back) starts a new recording file rather than appending to the earlier one.
 
-The recordings directory is **cleared at every launch**, so a run's recordings are bounded to that run. Capture files under `.janissary/captures/` are not cleared: they are kept across launches and swept by age instead (see [[harness]] § Screen capture).
+Recordings are **kept across launches and quitting**: neither starting nor stopping the application removes one. Once per launch a background sweep that startup does not wait for deletes the `.cast` files directly in the recordings directory whose last modification is more than `logRetentionInDays` days before launch (see [[application-config]]), including a `.cast` some other tool put there. A value of `0` deletes every recording from earlier runs, but no sweep ever deletes a recording last modified at or after launch, so a recording made during the current run is kept until a later launch ages it out. Subdirectories, symbolic links, and files of any other type are never touched, and a file that cannot be read or deleted is skipped. The sweep runs whether `logEnabled` is true or false. Because recordings from earlier runs are kept, `play <name>` resolves to the newest recording of that name from any run. Capture files under `.janissary/captures/` are kept and swept by age the same way (see [[harness]] § Screen capture).
 
 Harness, ssh and shell recordings share one directory, so telling them apart means reading a file's
 header `command` field or recognizing the tab label in its name. Two concurrent sessions to the same

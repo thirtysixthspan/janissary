@@ -37,21 +37,11 @@ export type Config = {
   // Isolate workspaced tabs (`shell --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
-  // Record shell tabs' sessions to asciicast files under `.janissary/recordings/`, as harness and ssh
-  // tabs are recorded (see `harness-recording.md`). Default true. The escape hatch is not only that
-  // it writes what the shell printed to disk: a shell echoes every character typed back into the
-  // terminal, and that echo is part of the recorded output, so a password entered at a `sudo` or
-  // `psql` prompt lands in the file where the same secret in a harness or ssh tab would not.
-  //
-  // It gates every plugin terminal whose declaration asked to be recorded, which is the shell plugin's
-  // alone today — the name says what is off now, not what the gate may never widen to. Named-harness
-  // and ssh tabs never reach that path and are recorded whatever this says.
-  recordShellTabs: boolean;
-  // Whether harness and shell transcript files are written at all (see
-  // `product/specs/application-config.md`). Default true; the escape hatch for turning transcript
-  // writing off entirely.
+  // Whether harness and shell transcript files, and harness, ssh, and shell recordings under
+  // `.janissary/recordings/`, are written at all (see `product/specs/application-config.md`). Default
+  // true; the escape hatch for turning transcript and recording writing off entirely.
   logEnabled: boolean;
-  // How many days a harness or shell transcript, or a harness capture file, is kept, with `0`
+  // How many days a harness or shell transcript, a harness capture file, or a recording is kept, with `0`
   // keeping none from earlier runs (see `product/specs/application-config.md`).
   logRetentionInDays: number;
   // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
@@ -99,7 +89,6 @@ const DEFAULT_CONFIG: Config = {
   activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
   clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
   sandboxWorkspaces: true,
-  recordShellTabs: true,
   logEnabled: true,
   logRetentionInDays: DEFAULT_LOG_RETENTION_IN_DAYS,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
@@ -143,6 +132,7 @@ export function loadConfig(projectDirectory: string): Config {
     if (backfilled || (raw && Object.hasOwn(raw, 'notifications'))) {
       const stripped: Record<string, unknown> = { ...(backfilled ?? raw) };
       delete stripped.notifications;
+      delete stripped.recordShellTabs;
       try {
         atomicWriteFile(configPath, JSON.stringify(stripped, undefined, 2) + '\n');
       } catch {
@@ -176,7 +166,8 @@ export function updateConfig(partial: Partial<Config>): boolean {
     const parsed: unknown = existsSync(storedConfigPath) ? JSON.parse(readFileSync(storedConfigPath, 'utf8')) : {};
     const raw = configRecord(parsed);
     if (!raw) return false;
-    const merged = { ...raw, ...partial };
+    const merged: Record<string, unknown> = { ...raw, ...partial };
+    delete merged.recordShellTabs;
     const next = decodeConfig({ ...config, ...partial }, DEFAULT_CONFIG);
     next.notifications = config.notifications;
     atomicWriteFile(storedConfigPath, JSON.stringify(merged, undefined, 2) + '\n');

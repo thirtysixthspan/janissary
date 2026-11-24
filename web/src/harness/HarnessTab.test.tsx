@@ -382,6 +382,26 @@ describe('HarnessTab', () => {
       .toBeTruthy();
   });
 
+  // `HarnessTabMeta.test.tsx` pins the flag once it is handed the fact. This drives it from the view,
+  // so a harness tab opened under logEnabled false can't lose it on the way to the row.
+  it('draws the not-recording flag for a harness view carrying recordingOff', () => {
+    const { getByTitle, queryByRole, queryByTitle } = render(
+      <HarnessTab harness={makeHarness({ recordingOff: true })} client={mockClient} label="claude" />,
+    );
+    const flag = getByTitle('not recording');
+    expect(flag).toHaveAttribute('aria-label', 'not recording');
+    expect(queryByRole('button', { name: 'recording' })).toBeNull();
+    expect(queryByTitle('recording')).toBeNull();
+  });
+
+  it('keeps the recording flag for a harness view without recordingOff', () => {
+    const { getByTitle, queryByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+    );
+    expect(getByTitle('recording')).toHaveAttribute('aria-label', 'recording');
+    expect(queryByTitle('not recording')).toBeNull();
+  });
+
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
     const { getByRole } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={['workspaced']} />,

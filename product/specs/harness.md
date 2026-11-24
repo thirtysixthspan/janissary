@@ -1025,7 +1025,8 @@ so in the transcript the command was typed into.
 A harness tab's **recording** flag opens its own recording without naming it, and is drawn plain until
 the session has produced output — so a `-w` tab shows it while its workspace is still cloning — and
 green and pressable from then on, including after the session has exited and the tab is still open.
-See [[harness-recording]] § The recording flag.
+With `"logEnabled": false` the tab never records, and its flag reads **not recording** from the moment
+the tab is created, plain and never pressable. See [[harness-recording]] § The recording flag.
 
 ## Monitoring
 

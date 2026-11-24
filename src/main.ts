@@ -9,9 +9,7 @@ import { scaffoldProject } from './project/init.js';
 import { runRemoteServer } from './remote/serve-start.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
 import { loadConfig } from './config.js';
-import { reapHarnessCaptures } from './harness/capture/file.js';
-import { reapHarnessTranscripts } from './harness/transcript-file.js';
-import { reapShellTranscripts } from './shell/transcript/transcript-file.js';
+import { startLaunchSweeps } from './launch-sweeps.js';
 import { loadAgentNames } from './agent/names.js';
 import { loadProjectTokens } from './project/tokens.js';
 import { loadGitIdentity } from './git/identity.js';
@@ -79,9 +77,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadGitIdentity(cwd);
   clearStateDirectories();
   // The launch sweep runs in the background; boot never waits for it.
-  void reapHarnessCaptures(Date.now(), config.logRetentionInDays).catch(() => {});
-  void reapHarnessTranscripts(Date.now(), config.logRetentionInDays).catch(() => {});
-  void reapShellTranscripts(Date.now(), config.logRetentionInDays).catch(() => {});
+  startLaunchSweeps(Date.now(), config.logRetentionInDays);
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   if (!existsSync(path.join(webDir, 'index.html'))) {

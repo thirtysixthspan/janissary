@@ -24,6 +24,7 @@ export function createPluginClientCapabilities(
     claimedChords = [],
     dotColor,
     recording,
+    recordingOff,
     transcript,
     remoteCapabilities,
   } = options;
@@ -93,6 +94,7 @@ export function createPluginClientCapabilities(
       recording,
       openRecording: () => { client.send({ method: 'openRecordingFor', params: { label } }); },
     }),
+    ...(recordingOff === true && { recordingOff }),
     ...(transcript !== undefined && {
       transcript,
       openTranscript: () => { client.send({ method: 'openTranscriptFileFor', params: { label } }); },

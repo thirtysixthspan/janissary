@@ -9,6 +9,7 @@ import { readHostsFile } from './plugins/hosts/hosts-file.js';
 import { notify } from './notifications/index.js';
 import type { HarnessView } from './tab/types.js';
 import { messageBus } from './bus.js';
+import { getConfig } from './config.js';
 import type { Managers } from './managers.js';
 
 // Owns the `ssh <destination> [options…]` command: launching a real `ssh` session as a
@@ -64,6 +65,7 @@ export class SshManager {
     if (hostName !== undefined) harness.hostName = hostName;
     if (options.length > 0) harness.sshOptions = options;
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness);
+    if (!getConfig().logEnabled) tab.recordingOff = true;
     this.managers.tab.insertTabInGroup(tab);
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
     const id = this.managers.pty.spawn(label, 'ssh', command, cwd);

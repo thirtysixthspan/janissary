@@ -9,6 +9,7 @@ import type { Tab } from './tab/types.js';
 import { wireControllerEvents } from './controller/events.js';
 import { messageBus } from './bus.js';
 import { notify } from './notifications/index.js';
+import * as config from './config.js';
 
 const dirs = vi.hoisted(() => ({ home: '' }));
 vi.mock('node:os', async (importOriginal) => {
@@ -77,6 +78,25 @@ describe('SshManager.run', () => {
     expect(tabs.at(-1)?.harness).toEqual(expect.objectContaining({
       name: 'ssh', destination: 'host', sshOptions: ['-p', '2222'],
     }));
+  });
+
+  it('marks an ssh tab not recording when logEnabled is false', () => {
+    const spy = vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), logEnabled: false });
+    try {
+      const { managers, tabs } = makeManagers();
+
+      new SshManager(managers).run('ssh host');
+
+      expect(tabs.at(-1)?.recordingOff).toBe(true);
+    } finally { spy.mockRestore(); }
+  });
+
+  it('leaves an ssh tab unmarked when logEnabled is true', () => {
+    const { managers, tabs } = makeManagers();
+
+    new SshManager(managers).run('ssh host');
+
+    expect(tabs.at(-1)?.recordingOff).toBeUndefined();
   });
 
   it('omits sshOptions entirely when the invocation carries none', () => {

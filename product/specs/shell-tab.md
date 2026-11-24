@@ -295,8 +295,9 @@ flag gives way to the workspace mark and the button comes back.
 It also carries the **recording** flag — a film icon, drawn before the workspace mark — which reports
 that this shell's session is being recorded and opens the recording when pressed. It is drawn plain
 and inert until the shell has printed something, green and pressable from that moment on, and stays
-green and pressable once the recording has stopped, so a partial recording is still reachable. See
-[[harness-recording]] § The recording flag.
+green and pressable once the recording has stopped, so a partial recording is still reachable. With
+`"logEnabled": false` the shell never records, and its flag reads **not recording** from the moment the
+tab opens, plain and never pressable. See [[harness-recording]] § The recording flag.
 
 It also draws an **Open transcript** button — the clipboard icon, with the tooltip and accessible name
 `Open transcript` — once the shell's text transcript file has opened, which in practice is as the
@@ -502,16 +503,18 @@ user close: closing the managed tab only hides it and does not restart its shell
 
 ## Session recording
 
-Every shell tab's session is recorded automatically, with no command, flag, or setting to turn it on
-or off, from the moment zsh starts to the moment it exits. The launch shell — `janus`, the tab every
-launch opens first — records on the same terms as any other shell tab. A project that sets
-`"recordShellTabs": false` in `.janissary/config.json` records no shell tab at all: no file is written
-and the tab draws no recording flag. Nothing else changes — the shell, its terminal and every other
-tab are unaffected, and a named-harness or ssh tab is still recorded (see [[harness-recording]]).
+Every shell tab's session is recorded automatically, with no command or flag to turn it on or off,
+from the moment zsh starts to the moment it exits. The launch shell — `janus`, the tab every launch
+opens first — records on the same terms as any other shell tab. A project that sets
+`"logEnabled": false` in `.janissary/config.json` records no shell tab at all, and no harness or ssh
+tab either: no file is written and the tab's recording flag reads **not recording** from the moment
+the tab opens, including while its workspace clone or remote connection is still being made. The shell and its
+terminal are otherwise unaffected (see [[harness-recording]] § Scope). The retired `recordShellTabs`
+key is no longer read.
 
 The recording is a playable asciicast file under `.janissary/recordings/`, named after the tab's label
 and the time it started, and governed by the same rules as a harness or ssh recording: it is created
-lazily on the first output, captures output and resizes only, is cleared at every launch, and can be played back with `play <label>` or opened by pressing the
+lazily on the first output, captures output and resizes only, is kept across launches until the launch sweep ages it out after `logRetentionInDays` days, and can be played back with `play <label>` or opened by pressing the
 tab's recording flag. See [[harness-recording]].
 
 **What is written is what the terminal printed, and — because zsh echoes it — what was typed.** No
@@ -522,7 +525,7 @@ the recording — a secret typed as `export TOKEN=…` included. A password type
 echo off (`sudo`, `ssh`, `psql`) prints nothing, so nothing of it is recorded. This is a
 real difference from a harness or ssh tab, where nothing you type is echoed. The mitigations are the
 ones every recording here has: the file is written under the project's own `.janissary/recordings/`,
-never served over the network or handed to a browser client, and cleared at the next fresh launch.
+never served over the network or handed to a browser client, and deleted by the launch sweep once it is older than `logRetentionInDays` days. `"logEnabled": false` stops recording altogether.
 
 If the recording cannot be written — an unwritable directory, say — the shell is unaffected, recording
 simply stops, and a single `shell recording failed` line appears in the notifications feed for that
@@ -541,9 +544,8 @@ transcript** button (see § The metadata row).
 
 **Which shells keep one.** Every shell whose plugin asked for its terminals to be recorded: the launch
 `janus` shell, every `shell` tab, remote shells and their siblings. A PTY started with `!` from another
-tab keeps none, as its plugin did not ask (see [[harness-recording]] § What is **not** recorded). Unlike
-the recording, the transcript is not gated by `recordShellTabs`: with `"recordShellTabs": false` a tab
-still writes its transcript, but no recording. `"logEnabled": false` turns off the text transcript.
+tab keeps none, as its plugin did not ask (see [[harness-recording]] § What is **not** recorded).
+`"logEnabled": false` turns off the text transcript, and the recording with it.
 
 **The file.** It is named `<label>-<timestamp>.txt`: the tab's label, sanitized for a filename, and the
 ISO time it started with `:` and `.` replaced by `-`. A tab's `.txt` and its `.cast` recording are named

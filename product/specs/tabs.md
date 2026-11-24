@@ -169,7 +169,7 @@ tab kind whose session is recorded — harness, ssh, and shell tabs, and no othe
 `harness-recording.md` § The recording flag).
 They appear in that order, with the recording icon **first**, so the browser icon sits to the right of the others. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "Auto-resume" or "Auto-resuming",
-"E2E browser", "recording"). More flags of the
+"E2E browser", "recording" or "not recording"). More flags of the
 same kind are expected in the future. The workspaced flag is drawn in the same green as the
 browser-in-use flag. While a tab's workspace is still being provisioned, a transient provisioning
 indicator takes the workspaced flag's place, and the workspaced flag replaces it once provisioning
@@ -179,7 +179,9 @@ The recording flag is the only flag in the row that is also a control, and the o
 the others. It is plain and inert until the tab's session has produced output — which for a `-w` tab
 means while its workspace is still cloning — and green and pressable from that moment on, opening the
 tab's recording in an asciicast player tab. It stays green and pressable after the session has ended,
-because the file is on disk and only the recorder stopped.
+because the file is on disk and only the recorder stopped. A tab opened while `"logEnabled": false`
+is set never records, so its flag is the same plain, inert film icon with the tooltip "not recording"
+for the tab's whole life and never turns green (see `harness-recording.md` § The recording flag).
 
 The auto-permitting flag has two looks too. Until auto-approval has cleared a permission prompt in
 the tab, it is the plain bolt with the "Auto-permitting" tooltip. Once it approves its first prompt,

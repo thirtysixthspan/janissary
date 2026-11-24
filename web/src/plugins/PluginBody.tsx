@@ -159,6 +159,7 @@ export function PluginBody({
       claimedChords: plugin.chords,
       dotColor,
       recording: plugin.recording,
+      recordingOff: plugin.recordingOff,
       transcript: plugin.transcript,
       remoteCapabilities,
   });

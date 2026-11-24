@@ -55,6 +55,14 @@ export function buildManagedTabView(
 
 type DeclaredViewFields = Partial<Pick<TabPluginDeclaration, 'chords' | 'hostsCommandBar' | 'capabilities'>>;
 
+// The tab's recording facts as a view carries them, each omitted rather than sent empty or false.
+function recordingFields(tab: Tab): { recording?: string; recordingOff?: true } {
+  return {
+    ...(tab.recording !== undefined && { recording: tab.recording }),
+    ...(tab.recordingOff === true && { recordingOff: true }),
+  };
+}
+
 // The declaration facts a plugin tab's view carries. Each is omitted rather than sent empty or false,
 // so a plugin that claims nothing costs no bytes on every state broadcast, and so the client can tell
 // "claims none" from "the host did not say".
@@ -104,8 +112,8 @@ export function buildTabView(
   const provisioning = provisioningFlag(tab, remoteProvisioning, workspaceProvisioning);
   // The tab's own record of its recording, which is set once and read here. Deliberately not looked
   // up from the recorder: that is released when the PTY exits, and the tab — and the file — outlive
-  // it. Absent until the session has produced its first output.
-  const recording = tab.recording;
+  // it. Absent until the session has produced its first output. `recordingOff` rides beside it.
+  const recorded = recordingFields(tab);
   // Likewise read from the tab rather than the transcript writer, which is released when the PTY
   // exits while the tab and its file outlive it.
   const transcript = tab.transcript;
@@ -115,15 +123,15 @@ export function buildTabView(
     id: tab.plugin.id,
     schemaVersion: tab.plugin.schemaVersion,
     payload: tab.plugin.payload,
-    ...(recording !== undefined && { recording }),
+    ...recorded,
     ...(transcript !== undefined && { transcript }),
     ...declaredFields(declarationOf?.(tab.plugin.id)),
   } : undefined;
   // The harness-view payload is the tab's own, spread rather than rebuilt, so this one field is
   // mirrored onto it wherever a harness or ssh tab's row looks for the rest of its facts.
-  const harness = tab.harness && (recording === undefined
+  const harness = tab.harness && (Object.keys(recorded).length === 0
     ? tab.harness
-    : { ...tab.harness, recording });
+    : { ...tab.harness, ...recorded });
   const editor = tab.editor ? {
     ...tab.editor, path: shorten(tab.editor.path),
     ...(revealBlocked !== undefined && { revealBlocked }),

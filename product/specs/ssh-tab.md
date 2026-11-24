@@ -120,8 +120,9 @@ open ssh tab.
 
 ## Session recording
 
-Every ssh session is recorded, automatically, from spawn to exit — there is no flag, command, or
-setting to turn it on or off. The recording is a playable asciicast file under
+Every ssh session is recorded, automatically, from spawn to exit — there is no flag or command to turn
+it on or off, and only `"logEnabled": false` in the project's config stops it, in which case the tab's
+recording flag reads **not recording** (see [[harness-recording]] § Scope). The recording is a playable asciicast file under
 `.janissary/recordings/`, named after the tab label and the start time, alongside harness recordings
 and governed by the same rules (see [[harness-recording]]).
 
@@ -130,7 +131,7 @@ remote `sudo` password typed into an ssh tab does not land on disk. Terminal res
 playback reflows the way the session did.
 
 The file is created **lazily, on the first output** — a session that never connects leaves no empty
-file — and closed when the ssh process exits. Recordings are **cleared at every launch**, so a run's recordings are bounded to that run.
+file — and closed when the ssh process exits. Recordings are kept across launches and aged out by the launch sweep after `logRetentionInDays` days (see [[harness-recording]]).
 
 `play <file>` opens an asciicast tab playing that session's recording, following it while
 the session is still running; see [[harness-recording]] § Retrieval for what the player offers. The

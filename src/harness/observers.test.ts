@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { harnessRuntime } from './observers.js';
+import { harnessRuntime, sshRuntime } from './observers.js';
 import { HarnessScreenReader } from './screen.js';
 import { captureWiring } from './capture/wire.js';
 import { createTranscriptSource } from './transcript/sources.js';
@@ -132,6 +132,61 @@ describe('harnessRuntime', () => {
     });
     try {
       expect(vi.mocked(HarnessTranscriptTailer).mock.lastCall?.[3]).toBe(true);
+    } finally { runtime.dispose(); }
+  });
+
+  it('builds no recorder for a harness tab when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    vi.mocked(createTranscriptSource).mockReturnValueOnce({ poll: () => [], resolved: () => false });
+    const managers = makeManagers();
+    const runtime = harnessRuntime({
+      managers, name: 'claude', label: 'claude', id: 'pty-1', cwd: '/repo', autoApprove: false, autoResume: false, channel: undefined,
+    });
+    try {
+      expect(recorderMock.instances).toHaveLength(0);
+      expect(runtime.recorder).toBeUndefined();
+      expect(runtime.reader).toBeInstanceOf(HarnessScreenReader);
+      expect(captureWiring).toHaveBeenCalledOnce();
+      expect(tailerMock.instances).toHaveLength(1);
+    } finally { runtime.dispose(); }
+  });
+
+  it('builds no recorder for a remote harness tab when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    const managers = makeManagers('remote transcript source');
+    const runtime = harnessRuntime({
+      managers, name: 'claude', label: 'claude', id: 'r1', cwd: '/repo', autoApprove: false, autoResume: false,
+      channel: {} as unknown as RemoteChannel,
+    });
+    try {
+      expect(recorderMock.instances).toHaveLength(0);
+      expect(tailerMock.instances).toHaveLength(1);
+    } finally { runtime.dispose(); }
+  });
+
+  it('builds a recorder for a harness tab when logEnabled is true', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: true });
+    const managers = makeManagers();
+    const runtime = harnessRuntime({
+      managers, name: 'claude', label: 'claude', id: 'pty-1', cwd: '/repo', autoApprove: false, autoResume: false, channel: undefined,
+    });
+    try {
+      expect(recorderMock.instances).toHaveLength(1);
+      expect(runtime.recorder).toBe(recorderMock.instances[0]);
+    } finally { runtime.dispose(); }
+  });
+
+  it('builds no recorder for an ssh tab when logEnabled is false', () => {
+    const defaults = config.getConfig();
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...defaults, logEnabled: false });
+    const runtime = sshRuntime(makeManagers(), 'pty-ssh', 'devbox', 'ssh devbox');
+    try {
+      expect(recorderMock.instances).toHaveLength(0);
+      expect(runtime.recorder).toBeUndefined();
+      expect(runtime.reader).toBeInstanceOf(HarnessScreenReader);
     } finally { runtime.dispose(); }
   });
 

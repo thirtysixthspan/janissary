@@ -11,6 +11,7 @@ import { tabRuntime } from './runtime.js';
 import type { LaunchNameRow } from '../launch-name/check.js';
 import { terminalConfinement, type TabClone } from './terminal-workspace.js';
 import { requestedTabGroup } from './group-placement.js';
+import { getConfig } from '../config.js';
 
 // What a host-owned launch fixes about a plugin tab before its factory runs: the label, the
 // directory it starts in, and the workspace clone it owns from the first moment.
@@ -38,6 +39,7 @@ interface OpenTarget {
   adoptTerminal(ptyId: string, label: string): void;
   killTerminal(ptyId: string): void;
   recordTerminal(ptyId: string, label: string, pluginId: string): void;
+  recordsTerminals(pluginId: string): boolean;
   retainWorkspace(directory: string): void;
 }
 
@@ -155,6 +157,7 @@ export function openPluginTab(
     );
     if (minted !== undefined) {
       if (preset?.remote !== undefined) minted.remote = preset.remote;
+      if (!getConfig().logEnabled && target.recordsTerminals(pluginId)) minted.recordingOff = true;
       // The directory the terminal really started in, not the source's: a plugin may start it
       // elsewhere, as a shell does when its source has left the project, and the source's directory
       // would otherwise stand until zsh's first report, which never comes for an unmounted shell.

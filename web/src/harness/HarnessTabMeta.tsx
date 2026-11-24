@@ -21,6 +21,8 @@ type Properties = {
   // Set for the tab kinds that record at all — a harness or an ssh tab — even before the session has
   // produced a file. An tab leaves it unset and shows no recording flag at all.
   hasRecorder?: boolean;
+  // Set when the tab will never record because `logEnabled` is false: the flag reads "not recording".
+  recordingOff?: boolean;
   // Set only once this tab has a recording, and then it opens it — the same arrangement the
   // transcript button uses, so one absent handler means "there is nothing here to open yet".
   onOpenRecording?: () => void;
@@ -47,7 +49,7 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 
 export function HarnessTabMeta({
   cwd, cwdDisplay, flags, model, effort, remote, connectionInFlags, onOpenFileNavigator, onLaunchShellHere, onOpenTranscript,
-  onOpenDiffHere, hasRecorder, onOpenRecording,
+  onOpenDiffHere, hasRecorder, recordingOff, onOpenRecording,
   launchTitle, launchDisabled,
   connectionsButton, scheduleButton, onSplit, remoteSession,
 }: Properties) {
@@ -68,7 +70,7 @@ export function HarnessTabMeta({
         {/* The recording flag is not one of `flags`: it is the host's own fact about this tab's PTY,
             and it is drawn for the tab kinds that record at all — a harness or ssh tab even before it
             has a file, a plugin tab never. */}
-        {hasRecorder && <RecordingFlag onOpen={onOpenRecording} />}
+        {hasRecorder && <RecordingFlag onOpen={onOpenRecording} off={recordingOff} />}
         {(flags ?? []).map((flag) => {
           const display = tabFlagDisplay[flag];
           if (!display) return null;

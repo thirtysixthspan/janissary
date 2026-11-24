@@ -71,6 +71,8 @@ export type HarnessView = {
   // This tab's asciicast recording, mirrored from `Tab.recording` so the harness-view payload is the
   // whole of what its row renders. Absent until the session has produced output.
   recording?: string;
+  // Mirrored from `Tab.recordingOff`: this tab will never record, so its flag reads "not recording".
+  recordingOff?: true;
   // Set only on an ssh tab: the non-destination tokens of the original `ssh …` invocation.
   sshOptions?: string[];
   // Set only when a `-w` launch's workspace clone fails; the tab closes shortly after.
@@ -365,6 +367,10 @@ export type Tab = {
   // is released when the PTY exits, and the file outlives it: the tab stays open after its process
   // ends, and its recording is still worth replaying. Written once, by the observer that opened it.
   recording?: string;
+  // Set on a tab of a recording kind (harness, ssh, shell) opened while `logEnabled` is false: no
+  // recorder is ever built for it. Set when the tab is created, so a provisioning tab already says so:
+  // by its spawner for a harness or ssh tab, and by `openPluginTab` for a recorded plugin tab.
+  recordingOff?: true;
   // The absolute path of this tab's text transcript, set by the writer that opened it on the shell's
   // first output. Remembered on the tab for the same reason as `recording`: the writer is released
   // when the PTY exits, while the tab and the file outlive it. A reinstall under a reattached id

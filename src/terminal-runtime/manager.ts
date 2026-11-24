@@ -5,6 +5,7 @@ import { HarnessRuntimes } from '../harness/runtime-registry.js';
 import { liveRecordingOf } from '../harness/runtime-access.js';
 import type { TerminalColors } from '../harness/terminal-colors.js';
 import { SHELL_PROGRAM } from '../plugins/shell/shared.js';
+import { getConfig } from '../config.js';
 
 export class TerminalRuntimeManager {
   private readonly runtimes = new HarnessRuntimes();
@@ -31,7 +32,10 @@ export class TerminalRuntimeManager {
     this.install(id, label, sshRuntime(this.managers, id, label, command));
   }
 
+  // The shell recording gate: with `logEnabled` false no runtime is installed for the terminal. The
+  // tab is marked as never recording by `openPluginTab` when it is minted, not here.
   registerShellObservers(id: string, label: string): void {
+    if (!getConfig().logEnabled) return;
     this.install(id, label, shellRuntime(this.managers, id, label, SHELL_PROGRAM));
   }
 
