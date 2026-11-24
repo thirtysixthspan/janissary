@@ -2,6 +2,8 @@
 
 ## ready
 
+* check-diff is not actually concurrent, and it hides all failure output. scripts/check-diff.mjs:91-104 calls execFileSync inside Promise executors, so each command blocks the event loop and they run sequentially despite the header claiming concurrency. Worse, every tool uses stdio: 'pipe' and the catch blocks discard the error, so a failing check prints only ✗ with no diagnostics — --seq doesn't help either. Use execFile/spawn with real promises, forward child output (at least on failure), and include the exit code and command in the summary.
+
 ## development
 
 ## deferred
