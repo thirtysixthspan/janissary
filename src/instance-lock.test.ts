@@ -4,11 +4,14 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { acquireLock, releaseLock, readLockPid, isPidAlive, isOwnInstanceAlive } from './instance-lock.js';
+import { pidBelongsToCurrentUser } from './process-owner.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof fs>();
   return { ...actual, readFileSync: vi.fn(actual.readFileSync) };
 });
+
+vi.mock('./process-owner.js', () => ({ pidBelongsToCurrentUser: vi.fn() }));
 
 let projectDir: string;
 
@@ -29,8 +32,17 @@ it('treats a pid it can signal as our own instance', () => {
   try { expect(isOwnInstanceAlive(123)).toBe(true); } finally { kill.mockRestore(); }
 });
 
+// A sandbox can deny the signal probe for a detached janus this account started, so the pid's owner
+// is what decides whether the live process is still the instance the lock names.
+it('treats a denied probe of a pid owned by this account as our own instance', () => {
+  const kill = vi.spyOn(process, 'kill').mockImplementation(() => { throw Object.assign(new Error('EPERM'), { code: 'EPERM' }); });
+  vi.mocked(pidBelongsToCurrentUser).mockReturnValue(true);
+  try { expect(isOwnInstanceAlive(4242)).toBe(true); } finally { kill.mockRestore(); }
+});
+
 beforeEach(() => {
   projectDir = mkdtempSync(path.join(tmpdir(), 'instance-lock-test-'));
+  vi.mocked(pidBelongsToCurrentUser).mockReturnValue(false);
 });
 
 describe('acquireLock', () => {
@@ -50,6 +62,21 @@ describe('acquireLock', () => {
     acquireLock(projectDir);
     const file = path.join(projectDir, '.janissary', 'lock');
     expect(() => acquireLock(projectDir)).toThrow(`delete ${file} to clear the lock`);
+  });
+
+  // The bug this fixes: a denied probe of a live owned pid used to hand the lock to a second launch,
+  // which then repointed latest.log at its own run.
+  it('refuses a second launch whose live pid probes EPERM but belongs to this account', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'lock');
+    writeFileSync(file, '424242');
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => { throw Object.assign(new Error('EPERM'), { code: 'EPERM' }); });
+    vi.mocked(pidBelongsToCurrentUser).mockReturnValue(true);
+    try {
+      expect(() => acquireLock(projectDir)).toThrow(/already running in this directory \(pid 424242\)/);
+    } finally { kill.mockRestore(); }
+    expect(readFileSync(file, 'utf8')).toBe('424242');
   });
 
   // A pid recycled by a process belonging to another account: live, but not the janus this lock
