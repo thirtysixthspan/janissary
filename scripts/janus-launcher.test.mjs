@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -50,16 +50,25 @@ describe('janus launcher server log location', () => {
   beforeEach(() => { scratch = mkdtempSync(path.join(os.tmpdir(), 'janus-launcher-')); });
   afterEach(() => { rmSync(scratch, { recursive: true, force: true }); });
 
-  it('writes the server log to .janissary/logs, not .janissary/log', () => {
+  it("writes a failed launch's log under .janissary/logs/server and relays its tail", () => {
+    const legacy = path.join(scratch, '.janissary', 'logs', 'server.log');
+    const sentinel = 'legacy server.log must stay untouched\n';
+    mkdirSync(path.dirname(legacy), { recursive: true });
+    writeFileSync(legacy, sentinel);
+
     // An unknown flag makes the server exit 2 before it initializes state, so the launcher's
     // relay of the log tail is the only output and no activity log is created beside it.
     const result = launch('--bogus', scratch);
-    const newLog = path.join(scratch, '.janissary', 'logs', 'server.log');
-    const oldLog = path.join(scratch, '.janissary', 'log', 'server.log');
+    const serverDir = path.join(scratch, '.janissary', 'logs', 'server');
 
     expect(result.status).toBe(2);
-    expect(existsSync(newLog)).toBe(true);
-    expect(readFileSync(newLog, 'utf8')).toContain("Unknown option '--bogus'");
-    expect(existsSync(oldLog)).toBe(false);
+    expect(result.stderr).toContain("Unknown option '--bogus'");
+    const logs = readdirSync(serverDir);
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatch(/^localhost-.*\.log$/);
+    expect(readFileSync(path.join(serverDir, logs[0]), 'utf8')).toContain("Unknown option '--bogus'");
+    expect(readFileSync(legacy, 'utf8')).toBe(sentinel);
+    expect(existsSync(path.join(scratch, '.janissary', 'log', 'server.log'))).toBe(false);
+    expect(existsSync(path.join(serverDir, 'latest.log'))).toBe(false);
   });
 });
