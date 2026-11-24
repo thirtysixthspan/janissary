@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { existsSync, fstatSync, mkdirSync, openSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, statSync } from 'node:fs';
 import { readLogSince } from './read-log-since.mjs';
+import { pointLatestLog, serverLogFilename } from './server-log.mjs';
 
 // Janissary runs as a local web app: this launcher boots the Node server (which opens the
 // browser to a token-gated localhost URL). `stop`/`init`/`--help`/`--version` run attached,
@@ -99,22 +100,37 @@ const projectDir = resolveProjectDir(arguments_);
 // touches any state, so run it attached, where that message reaches the terminal, rather than
 // restating the check and its wording here.
 if (!isDirectory(projectDir)) runAttached();
-const logDir = path.join(projectDir, '.janissary', 'logs');
+const logDir = path.join(projectDir, '.janissary', 'logs', 'server');
 mkdirSync(logDir, { recursive: true });
-const logPath = path.join(logDir, 'server.log');
-const logFd = openSync(logPath, 'w');
-const logStart = fstatSync(logFd).size;
+let timestamp = Date.now();
+let logPath;
+let logFd;
+let opened = false;
+while (!opened) {
+  logPath = path.join(logDir, serverLogFilename(timestamp));
+  try {
+    logFd = openSync(logPath, 'wx');
+    opened = true;
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    timestamp += 1;
+  }
+}
 
 const child = spawn(command, commandArguments, { detached: true, stdio: ['ignore', logFd, logFd] });
 
 try {
-  const url = await awaitReady(logPath, logStart, child);
+  const url = await awaitReady(logPath, 0, child);
   child.unref();
+  const reason = pointLatestLog(logDir, path.basename(logPath));
+  if (reason !== undefined) {
+    process.stderr.write(`warning: could not update ${path.join(logDir, 'latest.log')}: ${reason}\n`);
+  }
   if (arguments_.includes('--no-open')) process.stdout.write(`${url}\n`);
   process.exit(0);
 } catch (error) {
   if (error.type === 'exit') {
-    process.stderr.write(tail(readLogSince(logPath, logStart)));
+    process.stderr.write(tail(readLogSince(logPath, 0)));
     process.exit(error.code ?? 1);
   }
   try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* already gone */ } }

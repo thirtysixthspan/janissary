@@ -5,6 +5,7 @@ import { makeToken } from './security.js';
 import { initStateDirectories, clearStateDirectories } from './state/dirs.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
+import { clearStopRequest, watchStopRequest } from './stop-request.js';
 import { scaffoldProject } from './project/init.js';
 import { runRemoteServer } from './remote/serve-start.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
@@ -69,6 +70,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   }
 
   acquireLock(cwd);
+  clearStopRequest(cwd);
   lockedDir = cwd;
   initStateDirectories({ projectDir: cwd, packageRoot: path.join(import.meta.dirname, '..') });
   const config = loadConfig(cwd);
@@ -93,8 +95,9 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   const stop = () => { server.shutdown(); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+  const stopWatching = watchStopRequest(cwd, stop);
   // Close the app window whenever the process exits (quit/exit, Ctrl+C, or normal shutdown).
-  process.on('exit', killApp);
+  process.on('exit', () => { stopWatching(); killApp(); });
 }
 
 // Run when executed directly (node dist/main.js or tsx src/main.ts).

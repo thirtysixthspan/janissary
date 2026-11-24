@@ -175,7 +175,7 @@ Screenshots come from the e2e browser Janissary attaches to a tab launched with 
 
 ```bash
 $janissary/scripts/run.mjs e2e-driver ./temp/pr-screenshots-drivers/feature.mjs \
-  --log <project-dir>/.janissary/log/server.log --scratch ./temp/pr-screenshots --out feature
+  --log <project-dir>/.janissary/logs/server/latest.log --scratch ./temp/pr-screenshots --out feature
 ```
 
 Open every image with the Read tool and confirm it actually shows the feature — a blank page, a login screen, or an error toast is a failed shot: fix the driver and rerun, or drop that shot and say why in the PR body.

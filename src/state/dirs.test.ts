@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   initHarnessRecordingDirectory: vi.fn(),
   initHarnessTranscriptDirectory: vi.fn(),
   initShellTranscriptDirectory: vi.fn(),
+  initServerLogDirectory: vi.fn(),
   initBrowserLogDirectory: vi.fn(),
   clearBrowserLogDirectory: vi.fn(),
   initGitFailureDirectory: vi.fn(),
@@ -30,6 +31,9 @@ vi.mock('../harness/transcript-file.js', () => ({
 }));
 vi.mock('../shell/transcript/transcript-file.js', () => ({
   initShellTranscriptDirectory: mocks.initShellTranscriptDirectory,
+}));
+vi.mock('../server-log/directory.js', () => ({
+  initServerLogDirectory: mocks.initServerLogDirectory,
 }));
 vi.mock('../browser/browser-log.js', () => ({
   initBrowserLogDirectory: mocks.initBrowserLogDirectory,
@@ -79,6 +83,7 @@ describe('initStateDirectories', () => {
     expect(mocks.initHarnessRecordingDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initHarnessTranscriptDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initShellTranscriptDirectory).toHaveBeenCalledWith('/project');
+    expect(mocks.initServerLogDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initBrowserLogDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initGitFailureDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initGlobalHistory).not.toHaveBeenCalledWith('/project');
@@ -98,7 +103,7 @@ describe('initStateDirectories', () => {
 
   it('covers exactly the keys the registry is pinned against', () => {
     expect(STATE_DIRECTORY_ORDER_IS_COMPLETE).toBe(true);
-    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(14);
+    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(15);
   });
 });
 
@@ -136,6 +141,12 @@ describe('clearStateDirectories', () => {
 
   it('never clears the shell transcript directory', () => {
     const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'shellTranscript');
+    expect(entry).toBeDefined();
+    expect(entry).not.toHaveProperty('clear');
+  });
+
+  it('never clears the server log directory', () => {
+    const entry = STATE_DIRECTORY_ENTRIES.find((item) => item.name === 'serverLog');
     expect(entry).toBeDefined();
     expect(entry).not.toHaveProperty('clear');
   });

@@ -132,7 +132,7 @@ If the start fails for an environment cause (a sandbox denial, a held port, a mi
 
 ```bash
 $janissary/scripts/run.mjs e2e-driver ./temp/fix-a-bug-drivers/verify.mjs \
-  --log <project-dir>/.janissary/log/server.log --scratch ./temp/fix-a-bug --out verify
+  --log <project-dir>/.janissary/logs/server/latest.log --scratch ./temp/fix-a-bug --out verify
 ```
 
 The **Janissary, specifically** section of `$janissary/ai/tasks/workspace/start-application.md` documents the driver's arguments and helpers (`runCommand`, `tabSummary`, `shot`, `record`, and the rest) and the DOM traps a driver has to avoid. If Step 1 reproduced the bug live, rerun that same driver. It watched the failure once, and now it should see the correct behavior. Otherwise write a driver that performs the replication steps from Step 1 through the UI and records what it observes. Put every observation the verdict depends on into `record`, so the runner writes it to `./temp/fix-a-bug/verify.json` even if the driver throws.

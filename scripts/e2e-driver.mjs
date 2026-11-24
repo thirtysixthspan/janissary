@@ -1,7 +1,7 @@
 // Runs one driver against the running app, in one browser connection, and keeps its evidence whatever
 // the driver does. This is the entry point a spec-testing run drives the app through:
 //
-//   ./scripts/run.mjs e2e-driver <driver.mjs> --log <project-dir>/.janissary/logs/server.log \
+//   ./scripts/run.mjs e2e-driver <driver.mjs> --log <project-dir>/.janissary/logs/server/latest.log \
 //     --scratch ./temp/find-bugs --out viewer
 //
 // The driver is a module with a default export taking `{ page, record, out, shot, press, runCommand,

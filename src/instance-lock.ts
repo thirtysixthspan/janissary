@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { clearIfStale, createPidFile, parseLockPid, readPidFile } from './pid-lock-file.js';
+import { pidBelongsToCurrentUser } from './process-owner.js';
 
 /**
  * Does some process hold this pid, whoever owns it?
@@ -24,30 +25,32 @@ export function isPidAlive(pid: number): boolean {
 }
 
 /**
- * Is this pid a process *this user* could signal — the only way a recorded pid can still be the
- * janus instance that recorded it?
+ * Is this pid still the janus instance this account recorded in the lock?
  *
- * `acquireLock` writes `process.pid` and reads it back, so the lock never asks "does some process
- * hold this pid" but "is my earlier janus still running". Pids get recycled, and a recycled pid
- * owned by another account is by construction not that instance: answering `alive` there would leave
- * `janus` refusing to start in the directory with nothing to offer but a lock file to delete by
- * hand. `janus stop` asks the same question for the same reason, and would additionally throw on the
- * SIGTERM it has no permission to deliver.
+ * A successful signal probe says yes. ESRCH and every other failure say no, so a dead pid stays
+ * stale. EPERM alone no longer says no: a sandbox that permits signalling only descendants denies
+ * the probe for the detached janus this account started as well as for a foreign process. When the
+ * probe is denied, the process table's owner decides. A pid owned by this account is live; one owned
+ * by another account is not the instance the lock names and stays stale, so the lock can still be
+ * taken over without deleting the file by hand. A process table this sandbox also denies cannot
+ * name another owner, so the lock stays held and `janus stop` can still signal the pid.
  *
- * The permission probe is the whole test, which keeps this portable and leaves the lock file a bare
- * pid. What it costs is a project directory shared between two accounts, where one user's janus no
- * longer blocks the other's — rarer than a recycled pid, and it fails toward starting rather than
- * toward a lock nobody can clear. That admitted second writer is deliberate and accounted for
- * downstream: the remote-sessions store keys its record file per account (`remote-sessions.<hash>.json`),
- * so each writer names its own file and a load merges the directory's files into one list, with
- * nothing left that can be renamed out from under the other.
+ * Asking the owner rather than recording an account marker beside the pid keeps the lock file a bare
+ * pid and keeps the lock's deliberate cross-account behavior. A project directory shared between two
+ * accounts still lets one user's janus run alongside the other's, which fails toward starting rather
+ * than toward a lock nobody can clear; the remote-sessions store keys its record file per account
+ * (`remote-sessions.<hash>.json`), so each writer names its own file and a load merges the directory's
+ * files into one list. `janus stop` asks the same question, so it finds an owned instance whose probe
+ * is denied instead of reporting that nothing is running.
  */
 export function isOwnInstanceAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // Only a positive foreign-owner answer makes a denied probe stale. An unreadable owner fails
+    // closed: the lock is held and `janus stop` still signals the pid it names.
+    return (error as NodeJS.ErrnoException).code === 'EPERM' && pidBelongsToCurrentUser(pid) !== false;
   }
 }
 
