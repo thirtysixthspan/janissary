@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Point the base-branch testing instructions at the latest log instead of the removed shared server log
-
-Existing Issue: The base-branch start and stop tasks and sandbox manual name `.janissary/log/server.log` as the launcher log and the driver's `--log` source, a path this branch no longer writes. Severity: 4/10
-
-Existing Risk: 5/10 - A tester who follows the base-branch recipe against this branch cannot read the app address from that file and reports a start failure for a launcher that works.
-
-Proposal Risk: 2/10 - Naming the stable link instead leaves the rest of the recipe untouched and matches the per-run logs the launcher actually writes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2203 "Point the base-branch testing instructions at the latest log instead of the removed shared server log". Read the base copies with `git show origin/master:ai/tasks/workspace/start-application.md`, `git show origin/master:ai/tasks/workspace/stop-application.md` and `git show origin/master:ai/guidelines/sandbox-e2e-browser.md`; they tell the reader that the launcher redirects output to `<project-dir>/.janissary/log/server.log`, that the `__JANUS_URL__` line can be read from it, and show `--log ./temp/find-bugs/work/.janissary/log/server.log` in the driver example. Against this branch that file is never created: the launcher writes `<project-dir>/.janissary/logs/server/localhost-<stamp>.log` and repoints `<project-dir>/.janissary/logs/server/latest.log` after readiness. The step should read: "Start the app with `node bin/janus.mjs --no-open <project-dir>`, read the `__JANUS_URL__` line and the address from `<project-dir>/.janissary/logs/server/latest.log`, and pass `--log <project-dir>/.janissary/logs/server/latest.log` to the e2e driver; the per-run logs are `localhost-<stamp>.log` beside it and a legacy `.janissary/logs/server.log` is left untouched." The true value is supplied by product/specs/cli.md "Each launch's `.janissary/logs/server/localhost-<stamp>.log` captures everything the server would otherwise have printed to stdout/stderr" and ".janissary/logs/server/latest.log is a symbolic link to the current run's log". The PR head's ai/tasks/workspace/start-application.md and stop-application.md already carry this wording, so the correction belongs in the base-branch copies a tester is required to read and in any How to verify text that still names the removed path.
