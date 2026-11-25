@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that the script is already long enough to need the 200-line exemption.
-
-Existing Issue: The description says the script is now long enough that `scripts/**/*.mjs` is exempt from the 200-line rule, but `scripts/check-diff.mjs` is 158 lines and the exemption was added so the file may grow past 200, not because it already has. Severity: 2/10
-
-Existing Risk: 2/10 - A reader takes the exemption as justified by the current size and strips it once the file is trimmed, or assumes the rule is relaxed for other scripts for the same reason.
-
-Proposal Risk: 1/10 - The description states the exemption and its forward-looking rationale without the false size claim, so no behavior changes and the proof is unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2209 "remove the description's claim that check-diff is already long enough for the line-limit exemption". In the pull request body's "What" section, rewrite the final sentence of that section so it says the runner is exempted from `max-lines` so it may grow past 200 lines, with the matching note in `ai/guidelines/code-guidelines.md` and the observable behavior described in `product/specs/testing.md`. Do not change `eslint.config.mjs`, `ai/guidelines/code-guidelines.md`, `scripts/check-diff.mjs`, or `product/specs/testing.md`: the exemption itself is intended and correct. The existing verification step that checks `max-lines` is off for `scripts/check-diff.mjs` and still `error` with `max: 200` for `src/commands.ts` remains the proof, so re-read the edited paragraph against those files to confirm no other claim drifts.
-
-
 * Reconcile the completed plan's "no guard flag is needed" design decision with the settled guard the implementation uses.
 
 Existing Issue: The plan's Design decisions state that a promise settles once so a later `resolve` is a no-op and no guard flag is needed, while `runCheck` in `scripts/check-diff.mjs` carries a `settled` flag that returns early before printing because `settle` calls `printFailure` before `resolve`. Severity: 2/10
