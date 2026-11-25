@@ -2,8 +2,6 @@
 
 ## ready
 
-* Give review-pull-request.md an explicit scope parameter. Step 2 auto-discovers the own plan and treats every other added plan in complete/ as a fix plan; all five subplan reviews needed overrides to suppress that discovery and narrow to one commit. A scope: commit <sha> | aggregate argument would remove the override prose.
-
 * check-diff is not actually concurrent, and it hides all failure output. scripts/check-diff.mjs:91-104 calls execFileSync inside Promise executors, so each command blocks the event loop and they run sequentially despite the header claiming concurrency. Worse, every tool uses stdio: 'pipe' and the catch blocks discard the error, so a failing check prints only ✗ with no diagnostics — --seq doesn't help either. Use execFile/spawn with real promises, forward child output (at least on failure), and include the exit code and command in the summary.
 
 *  Resolve the Step 8 / Step 9 ordering contradiction in build-a-complex-feature.md. Step 8 ("Review and resolve the full pull request") is numbered before Step 9 ("Update the pull request"), but Step 9 says to delegate the update "before the full-PR review", Step 8 opens with "After the canonical plan and PR description match the completed feature", and the preamble says update, then review. I had to infer from three signals and run the update first. Renumber the sections or rewrite the precondition so there is one unambiguous order.
