@@ -14,10 +14,8 @@ const args = process.argv.slice(3);
 
 if (!name) {
   const { readdirSync } = await import('node:fs');
-  const scripts = readdirSync(scriptsDir)
-    .filter((f) => f !== 'run.mjs')
-    .map((f) => f.replace(/\.(mjs|sh)$/, ''))
-    .toSorted((a, b) => a.localeCompare(b));
+  const { runnableScriptNames } = await import('./script-listing.mjs');
+  const scripts = runnableScriptNames(readdirSync(scriptsDir, { withFileTypes: true }));
   console.log('Available scripts:\n' + scripts.map((s) => `  ${s}`).join('\n'));
   process.exit(0);
 }
