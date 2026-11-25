@@ -126,7 +126,8 @@ describe('the review-pull-request scope argument', () => {
     expect(text).toContain(rightSide);
     expect(text).toContain('`git show`, `git grep`, `git status`');
     expect(text).toContain("Read an added or modified file at that commit with `git show '<sha>:<path>'`.");
-    expect(text).toContain("Run the Deleted and Renamed reference checks, and the search for callers and consumers, against it with `git grep '<pattern>' '<sha>'`.");
+    expect(text).toContain("Run the Deleted and Renamed reference checks, and the search for callers and consumers, against it with `git grep -e '<pattern>' '<sha>' --`. The pattern always follows `-e`, so a pattern that starts with `-` is searched for rather than read as an option.");
+    expect(text).not.toContain("`git grep '<pattern>' '<sha>'`");
     expect(text).toContain('In a range scope, put `<head>` in place of `<sha>` in both commands.');
     expect(text).toContain('read the same file at `HEAD` to confirm no later commit has already resolved it, and drop the candidate if one has');
     expect(text).toContain('Neither command switches the checkout, so the working tree and branch stay exactly as Step 1 left them.');

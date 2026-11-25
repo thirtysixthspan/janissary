@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Pass the scoped review's reference-search pattern to git grep behind -e, so a pattern that starts with a dash is searched for rather than read as an option.
-
-Existing Issue: Step 3 of the review task tells commit and range reviews to search with `git grep '<pattern>' '<sha>'`, placing the pattern first with no `-e`, so a pattern that begins with `-`, such as a command-line flag whose callers are being traced, is parsed as a `git grep` option and either fails as an unknown option or silently changes what is searched, as `-v`, `-l`, or `-w` would. Severity: 2/10
-
-Existing Risk: 3/10 - Tracing a changed flag through this CLI-heavy codebase is a routine reference search, and when it errors or inverts the match the scoped review can miss a caller it was told to check or record a finding from misread output.
-
-Proposal Risk: 1/10 - With the pattern after `-e` and the revision closed by `--`, git reads the pattern only as a pattern, leaving just the ordinary chance that a reviewer picks a poor search term.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "pass the scoped review's git grep pattern with -e so a dash-led pattern is never read as an option". In `ai/tasks/feature/review-pull-request.md`, in the Step 3 paragraph that begins "This step's commands are written with `origin/master...HEAD`", change `git grep '<pattern>' '<sha>'` to `git grep -e '<pattern>' '<sha>' --` and add one sentence saying the pattern always follows `-e`, so a pattern that starts with `-` is searched for rather than read as an option. Keep that paragraph on its one line so the description's line anchors into the file hold, keep "In a range scope, put `<head>` in place of `<sha>` in both commands.", and leave the Allowed list as it is. In `scripts/review-pull-request-scope.test.mjs`, update the `git grep` literal the `reads commit and range scopes at the scope's end commit without switching the checkout` test asserts to the new form and add an assertion that the old `git grep '<pattern>' '<sha>'` text is gone; leave every other assertion unchanged. If the test edit shifts any line the pull request description cites in that file, re-derive it with `grep -n` at the branch head and correct only that anchor. Verify by reading the paragraph as a commit-scoped reviewer tracing the callers of a `--ignore-scripts` flag and confirming the command you would build passes the flag as a pattern.
-
-
 * Make the review report's closing note keep the no-plan Promise: form available to aggregate reviews instead of telling every aggregate review to take the first form.
 
 Existing Issue: The note after Step 7's report template says that in `aggregate` scope the `Promise:`, `Coverage:`, and `Findings:` lines "take their first forms", but the `Promise:` line's second form, "none in the PR — used the PR body and commit subjects", is also an aggregate form, so read literally the note rules out the form an aggregate review of a pull request with no own plan must use, against Step 2 item 6 and the plan's requirement that aggregate report lines read as they did before. Severity: 2/10
