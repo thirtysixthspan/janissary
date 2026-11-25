@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the review task's scope validation cover its own unknown-keyword check, closing a functionality gap where the step's opening sentence excludes the case its first check handles.
-
-Existing Issue: Step 1 item 5 of the review task applies its fallback checks only "for a `commit` or `range` request", yet its first check is for a keyword that is neither, so read literally an unknown keyword such as `scope: subplan 1a2b3c4` falls outside every rule and is assigned no effective scope. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewing agent that reads the gate literally stops or improvises a scope for an unknown keyword instead of falling back to aggregate as the plan, the spec, and the description all promise.
-
-Proposal Risk: 1/10 - The wording becomes self-consistent; an agent that still mishandled an unknown keyword would show it in the report's `Scope:` line, which is where a reader would catch it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "make Step 1 item 5's opening sentence cover unknown scope keywords". In ai/tasks/feature/review-pull-request.md Step 1 item 5 ("Validate the scope"), reword the opening so the ordered checks run for every request other than `aggregate`, for example "An `aggregate` request needs no check. For any other request, apply these checks in order and stop at the first that applies.", leaving the seven checks, their order, and the fall-back-to-aggregate rule unchanged. Do not change Step 0 item 4. scripts/review-pull-request-scope.test.mjs does not pin this sentence today; add an assertion for the new opening so it cannot drift back to a commit-or-range-only gate, and keep its existing assertions and scripts/pr-description-statistics-guideline.test.mjs passing.
-
-
 * Anchor the pull request description's unanchored behavior examples and its empty-scope verification step to the task text that proves them, correcting a description fidelity gap.
 
 Existing Issue: The description's Before/After transcript and its fallback sentence under Behavior examples, and How to verify edge case 6 ("An empty scope is a clean review"), name no line or test assertion, while every other Do/Expect step does. Severity: 2/10

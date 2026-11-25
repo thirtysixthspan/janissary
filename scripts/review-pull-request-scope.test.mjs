@@ -75,6 +75,16 @@ describe('the review-pull-request scope argument', () => {
     expect(text.indexOf(baseCheck)).toBeLessThan(text.indexOf(ancestorCheck));
   });
 
+  it('validates every requested scope other than aggregate, including an unknown keyword', () => {
+    const text = read(REVIEW);
+    const opening = 'An `aggregate` request needs no check. For any other request, apply these checks in order and stop at the first that applies.';
+    const keywordCheck = '1. The keyword is not `commit`, `range`, or `aggregate`.';
+    expect(text).toContain(opening);
+    expect(text).not.toContain('For a `commit` or `range` request');
+    expect(text.indexOf(keywordCheck)).toBeGreaterThan(-1);
+    expect(text.indexOf(opening)).toBeLessThan(text.indexOf(keywordCheck));
+  });
+
   it('leaves no description-only shortcut in the focused review cycle', () => {
     expect(read(COMPLEX)).not.toContain('If every recorded entry was description-only');
   });

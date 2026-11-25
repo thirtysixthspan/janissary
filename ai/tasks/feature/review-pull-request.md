@@ -58,7 +58,7 @@ State the pull request you are reviewing and how you identified it, in one sente
 2. Run `git pull --rebase` to bring the checked-out branch up to date through the upstream `gh pr checkout` configured.
 3. Confirm `git branch --show-current` is the head branch recorded in Step 0. If the checkout or pull cannot complete, report the error and stop rather than reviewing another branch.
 4. Confirm the working tree is clean with `git status`. This matters more than usual: the commit in Step 5 stages everything with `git add -A`, so any stray file present now would be silently swept into this review's commit. If the tree is not clean, STOP and report what is there.
-5. **Validate the scope.** An `aggregate` request needs no check. For a `commit` or `range` request, apply these checks in order and stop at the first that applies. Each one falls back to `aggregate` scope rather than stopping the review:
+5. **Validate the scope.** An `aggregate` request needs no check. For any other request, apply these checks in order and stop at the first that applies. Each one falls back to `aggregate` scope rather than stopping the review:
    1. The keyword is not `commit`, `range`, or `aggregate`.
    2. `commit` has no SHA after it.
    3. `range` does not give both a base and a head in the form `<base>..<head>`.
