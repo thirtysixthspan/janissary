@@ -12,7 +12,7 @@ Janissary supports the work you're already doing rather than prescribing a workf
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-You can launch an autonomous task from a shell tab's command bar without giving up the shell. The task runs independently and returns its status and response there. Add `in a tab` to open a monitor for its activity; the monitor has no command bar or terminal. A harness tab works differently: its full-terminal view takes the place of the app command bar and transcript, so you type directly into the harness. Shell tabs keep both a terminal and their own command bar. By default they also save terminal text to a separate transcript file; a project's `recordShellTabs` setting turns off both recordings and transcripts.
+You can launch an autonomous task from a shell tab's command bar without giving up the shell. The task runs independently and returns its status and response there. Add `in a tab` to open a monitor for its activity; the monitor has no command bar or terminal. A harness tab works differently: its full-terminal view takes the place of the app command bar and transcript, so you type directly into the harness. Shell tabs keep both a terminal and their own command bar. By default they also save terminal text to a separate transcript file; setting `logEnabled` to `false` in `.janissary/config.json` turns off both recordings and transcripts.
 
 ## Agent orchestration
 
