@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle commit-scoped focused reviews that flag work a later subplan delivers, so the complex-feature workflow stops repairing that work ahead of its own subplan.
-
-Existing Issue: A focused review in commit scope reads no subplan and applies no "Out of scope" drop rule, yet Step 6 of the complex-feature workflow works every entry it records, so behavior the decomposition deliberately assigned to a later subplan gets recorded as a gap or debt and repaired inside the earlier subplan's cycle, such as the old symbol an additive three-step transition keeps until its third subplan. Severity: 5/10
-
-Existing Risk: 5/10 - A repair implements a later subplan's work out of order, and that subplan's build then finds its plan no longer matches the code and stops on the scope-mismatch blocker Step 4 requires, halting the staged build mid-feature.
-
-Proposal Risk: 3/10 - The orchestrator may misread a genuine gap as later work and decline it, though the Step 8 aggregate review still reads the full plan and its out-of-scope list and gets a chance to catch what was wrongly declined.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "keep commit-scoped focused reviews from driving repairs of work a later subplan delivers". In `ai/tasks/feature/build-a-complex-feature.md` Step 6, after item 1's `Scope:` confirmation and before item 3's repairs, have the orchestrator compare each recorded entry with the later subplans' requirements and out-of-scope lists. It already holds the subplan order and the requirement-to-subplan coverage map. It removes any entry whose proposal delivers behavior a later subplan owns, commits and pushes that backlog change before recording the PR head SHA in item 2, and names each removed entry and its owning subplan in its report. Item 3 then works the remaining entries. Keep the review itself plan-free in `ai/tasks/feature/review-pull-request.md`, as the pull request's own plan settled ("commit and range read no plan"). Leave the `scope: commit <implementation commit SHA>` and `scope: range <recorded head SHA>..<current PR head SHA>` argument text unchanged. Prefer folding the step into item 2 so the "skip to item 6" and "repeat items 2 through 4" references stay valid, and update both if a new item is added instead. Update the "Staged reviews for complex features" paragraph of `product/specs/pull-request-review.md` to say a focused finding that belongs to a later subplan is declined rather than worked. Add an assertion to `scripts/review-pull-request-scope.test.mjs` that pins the new wording. Its existing assertions, including "is passed by the complex-feature workflow instead of override prose" and "blocks a focused or resolution review that did not run in its requested scope", must keep passing unchanged. No test can exercise the orchestrator's judgment, so verify by reading Step 6 end to end against the additive three-step transition rule in `ai/tasks/planning/decompose-plan.md`.
-
-
 * Handle commit and range scopes that end before the checked-out branch head, so the review reads surrounding code at the commit it is judging.
 
 Existing Issue: Step 3 tells the reviewer to open each modified file at `HEAD` and to grep for remaining references to deleted or renamed paths, which matched the diff's right side when every review diffed `origin/master...HEAD`, but a commit or range scope can now end at a commit older than `HEAD`, so its hunks are read against later code. Severity: 3/10

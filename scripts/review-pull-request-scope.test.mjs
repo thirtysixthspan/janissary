@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 // as lowercase hexadecimal before any git command and quoted when placed in one, that a range base
 // lies on the pull request or at its merge base, that every non-aggregate request is validated,
 // an unknown keyword included, and that the workflow's Step 6 has no description-only shortcut.
+// Last, they pin that Step 6 declines a finding a later subplan delivers, and publishes that
+// decline, before it records the resolution range's base, while the review itself stays plan-free.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
@@ -94,5 +96,20 @@ describe('the review-pull-request scope argument', () => {
 
   it('leaves no description-only shortcut in the focused review cycle', () => {
     expect(read(COMPLEX)).not.toContain('If every recorded entry was description-only');
+  });
+
+  it('declines focused findings that a later subplan delivers before any repair', () => {
+    const text = read(COMPLEX);
+    const decline = 'Remove each entry whose proposal delivers behavior a later subplan owns';
+    const publish = 'commit only `./product/backlog/pull-request.md` with a Conventional Commit subject and push it to the PR head';
+    const record = 'Otherwise record the PR head SHA before any repair starts.';
+    expect(text).toContain("the current subplan's `Out of scope` list, the `Requirements` of every subplan after it");
+    expect(text).toContain('no later subplan exists and no entry is declined');
+    expect(text).toContain('3. Work every remaining entry before any further review runs.');
+    expect(text).toContain('Declined:   <each focused or resolution finding declined in Step 6');
+    expect(text.indexOf(decline)).toBeGreaterThan(-1);
+    expect(text.indexOf(decline)).toBeLessThan(text.indexOf(publish));
+    expect(text.indexOf(publish)).toBeLessThan(text.indexOf(record));
+    expect(read(REVIEW)).not.toContain('later subplan');
   });
 });
