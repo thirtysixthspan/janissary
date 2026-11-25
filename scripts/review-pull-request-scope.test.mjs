@@ -5,7 +5,11 @@ import { describe, expect, it } from 'vitest';
 // The review task takes an optional scope argument, and its callers name a scope instead of
 // overriding the review's steps in prose. These assertions pin that every scope keeps the review's
 // safeguards, that a bare invocation still reviews the whole pull request, and that the
-// complex-feature workflow passes scopes rather than override prose. Nothing else.
+// complex-feature workflow passes scopes rather than override prose. They also pin that a focused
+// or resolution review reporting any other scope blocks that workflow, that scope SHAs are checked
+// as lowercase hexadecimal before any git command and quoted when placed in one, that a range base
+// lies on the pull request or at its merge base, that every non-aggregate request is validated,
+// an unknown keyword included, and that the workflow's Step 6 has no description-only shortcut.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
