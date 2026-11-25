@@ -3,6 +3,7 @@
 ## File Size
 
 - JavaScript/TypeScript files should be limited to **200 lines of code**.
+- Files under `scripts/` are exempt from this limit: they are one-off tooling, not application code.
 - When a file exceeds this limit, the **only** acceptable way to shrink it is to
   **extract some of its code into another file** (a new, focused module) and import it
   back. Move a cohesive group of related logic out, don't shave lines off in place.

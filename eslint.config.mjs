@@ -116,6 +116,11 @@ export default ts.config(
     files: ['**/*.test.ts', '**/*.test.tsx'],
     rules: { 'max-lines': 'off' },
   },
+  // Scripts are one-off tooling, not application code; the application line limit doesn't apply.
+  {
+    files: ['scripts/**/*.mjs'],
+    rules: { 'max-lines': 'off' },
+  },
   // Import extension discipline. `src/` is NodeNext: relative imports must carry `.js` (and
   // `.json`), never `.ts`/`.tsx`. `web/` uses bundler resolution: relative TS imports are
   // extensionless, while stylesheet imports keep their extension.
