@@ -2,11 +2,11 @@
 
 <img class="agent-float" src="/agents/ekrem-south.png" alt="" />
 
-Set app-wide preferences in `.janissary/config.json` in the directory you launch Janissary from. Notification toggles and per-type alerts live in a separate `.janissary/notifications.json` file (see [Notification settings](#notification-settings)); the app creates both with defaults on first launch. For example, turn off shell recordings and keep more clipboard entries:
+Set app-wide preferences in `.janissary/config.json` in the directory you launch Janissary from. Notification toggles and per-type alerts live in a separate `.janissary/notifications.json` file (see [Notification settings](#notification-settings)); the app creates both with defaults on first launch. For example, turn off activity logs and recordings and keep more clipboard entries:
 
 ```json
 {
-  "recordShellTabs": false,
+  "logEnabled": false,
   "clipboardHistoryMaxEntries": 40
 }
 ```
@@ -25,7 +25,8 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `activeTabNameMaxLength` | `50` | Display limit for the focused tab name, including the final ellipsis. |
 | `clipboardHistoryMaxEntries` | `15` | Clipboard-history entries kept in the popup. It must be a whole number above zero and no larger than `9007199254740991`; anything else resets to `15`. The list never holds more than this many entries, and the oldest drop first. See [Clipboard history](/user-documentation/command-bar/clipboard). |
 | `sandboxWorkspaces` | `true` | Confines workspaced shell and harness tabs to their workspace clone with the macOS sandbox. |
-| `recordShellTabs` | `true` | Saves shell recordings and text transcripts. Shell recordings include characters echoed by the shell, so secrets typed on a command line can be recorded. See [Shell transcripts](/user-documentation/command-bar/shell#read-a-shell-sessions-transcript). |
+| `logEnabled` | `true` | Writes activity logs under `.janissary/logs/activity/`, shell and harness text transcripts, and harness, ssh, and shell recordings. With `false`, none are written and no activity log directory is created. Shell recordings include characters echoed by the shell, so secrets typed on a command line can be recorded; turn this off to keep them off disk. See [Activity log](/user-documentation/getting-started/activity-log). |
+| `logRetentionInDays` | `7` | Days of activity logs, transcripts, recordings, and captures kept by the sweep at launch. `0` keeps none from earlier launches; negative, fractional, and non-number values fall back to `7`. The sweep reads the value at launch, so a change takes effect the next time you start the app. See [Activity log](/user-documentation/getting-started/activity-log). |
 | `syntaxTheme` | `"github-dark"` | Syntax highlighting for every editor and diff tab. Set it with [`syntax theme`](/user-documentation/command-bar/commands#syntax-theme). |
 | `theme` | `"dark"` | Colors for the app window. Pick one of six built-in themes; individual colors can't be changed. Set it with [`theme`](/user-documentation/command-bar/commands#theme). |
 | `osNotifications` | `true` | Allows each type's configured desktop banner when the browser has permission. Janissary does not request permission. |
@@ -58,12 +59,12 @@ The `osNotifications`, `terminalBell`, and cue-volume settings stay in `config.j
 
 <img class="agent-float" src="/agents/yusuf-south-west.png" alt="" />
 
-Edit `.janissary/config.json` as JSON. A setting with the wrong type falls back to its default while valid neighboring settings still apply. Numeric limits such as `transcriptMaxLines` and tab-name lengths accept any number. `clipboardHistoryMaxEntries` must be a whole number above zero and no larger than `9007199254740991`; text, zero, negatives, fractions, and larger numbers all reset it to `15`. `maxToolTurns` follows the same rule: it must be a whole number above zero, and text, zero, negatives, and fractions reset it to `20`. Bell volumes outside `0` through `1`, or values that are not numbers, use `0.8`. Removed `terminalBellMuteSuccess`, `terminalBellMuteWarning`, and `terminalBellMuteError` keys are ignored; set a notification type's `sound` to `none` in `notifications.json` to silence its cue instead.
+Edit `.janissary/config.json` as JSON. A setting with the wrong type falls back to its default while valid neighboring settings still apply. Numeric limits such as `transcriptMaxLines` and tab-name lengths accept any number. `clipboardHistoryMaxEntries` must be a whole number above zero and no larger than `9007199254740991`; text, zero, negatives, fractions, and larger numbers all reset it to `15`. `maxToolTurns` follows the same rule: it must be a whole number above zero, and text, zero, negatives, and fractions reset it to `20`. Bell volumes outside `0` through `1`, or values that are not numbers, use `0.8`. Removed `terminalBellMuteSuccess`, `terminalBellMuteWarning`, and `terminalBellMuteError` keys are ignored; set a notification type's `sound` to `none` in `notifications.json` to silence its cue instead. `logEnabled` must be a boolean; text and numbers fall back to `true`. `logRetentionInDays` accepts whole numbers including `0`; negatives, fractions, and text fall back to `7`.
 
-Janissary fills in missing defaults when it starts. It adds a missing `maxToolTurns` key with its default of `20`, and writes any missing notification toggles or alert types into `notifications.json` while leaving your other settings and existing alert entries as they are. A config file that already has `maxToolTurns`, and a notification file that already lists every type, are not rewritten. If a write fails, you see no warning and the defaults still apply for that session.
+Janissary fills in missing defaults when it starts. It adds missing `maxToolTurns`, `logEnabled`, and `logRetentionInDays` keys with their defaults of `20`, `true`, and `7`, and writes any missing notification toggles or alert types into `notifications.json` while leaving your other settings and existing alert entries as they are. A config file that already has all three keys, and a notification file that already lists every type, are not rewritten. If a write fails, you see no warning and the defaults still apply for that session.
 
 `syncPaths` must be an array of strings, and every value in `externalViewers` must be a string. If either whole value is malformed, its default is used. Invalid entries in `pluginSettings` are dropped individually; a plugin setting must be a JSON object. In the search entry, any toggle that isn't exactly `true` counts as off, so one bad value doesn't affect the other two.
 
 If the file is not valid JSON, Janissary prints `warning: .janissary/config.json is invalid JSON — using defaults (file left untouched)`, uses defaults for that session, and leaves the file untouched so you can repair it. The same applies to `notifications.json`, with that filename in the warning. Runtime changes to `theme`, `syntaxTheme`, and plugin preferences save the config file while preserving its other settings. A theme change is applied only after the save succeeds; if saving fails, the previous theme stays active. A failed plugin preference save does not show a warning in the UI.
 
-You can change `theme` and `syntaxTheme` with their commands. The `clipboardHistoryMaxEntries`, `sandboxWorkspaces`, `recordShellTabs`, `syncPaths`, viewer, and plugin settings are edited in `config.json` directly; notification settings are edited in `notifications.json`.
+You can change `theme` and `syntaxTheme` with their commands. The `clipboardHistoryMaxEntries`, `sandboxWorkspaces`, `logEnabled`, `logRetentionInDays`, `syncPaths`, viewer, and plugin settings are edited in `config.json` directly; notification settings are edited in `notifications.json`.
