@@ -24,6 +24,16 @@ Canvas encoding is stubbed the same way: `toDataURL()` returns a minimal PNG dat
 
 Every pull request against `master` runs four checks in `.github/workflows/ci.yml`, each a separate job that installs dependencies with `npm ci` first. `typescript` runs `npm run typecheck`, `lint` runs `npm run lint`, `tests` runs `npm run test`, and `build` runs `npm run build`, the production server and web build. The build job catches a broken Vite config, asset plugin, or alias that typecheck and tests don't exercise. `scripts/ci-workflow.test.mjs` fails when any of the four jobs or its command goes missing.
 
+### Diff-scoped check runner
+
+The diff-scoped check picks its checks from the changed paths: lint for lintable files, typecheck for `src/` or `web/`, server tests for `src/` or `scripts/`, web tests for `web/`, and the help tests for changed help Markdown. A check the diff does not need never runs. On a clean tree it prints `check:diff: no changes`; when files changed but no check applies, it prints `check:diff: no checks apply to the changed files`. Both exit 0.
+
+Otherwise it prints one start line naming the checks in run order, such as `check:diff: running lint, tsc, test:server`. By default it starts all selected checks concurrently. Passing checks stay silent. Each failing check prints one block when it finishes, under a header such as `--- tsc ✗ exit 2: npm run typecheck:diff ---`. The block combines stdout and stderr in arrival order and shows up to the last 200 lines, with a `(… N earlier lines omitted)` marker when lines were dropped. Empty or whitespace-only output appears as `(no output)`.
+
+The summary starts with a blank line, prints one line per check in run order, and ends with `total: Nms`. A passing line reads `lint ✓ (812ms)`. A failing line names the cause and the command to rerun, such as `tsc ✗ (4210ms) exit 2: npm run typecheck:diff`. A check killed by a signal reports that signal, such as `exit SIGKILL`. A check that fails to start reports the startup error, such as `could not start (spawn npm ENOENT)`. The lint check's command is shown as `$janissary/scripts/run.mjs lint-files`. The start line, failure blocks, and summary go to stdout. A run with selected checks exits 0 if all pass and 1 if any fails.
+
+With `--seq` the checks run one at a time and the run stops at the first failure. That failure's block prints before the summary, and every check after it is reported as `<name> - skipped` without a timing. The rerun commands are the npm invocations a user would type, such as `npm run typecheck:diff` or `npm run test:server -- src/commands.test.ts`.
+
 ### Diff-scoped help tests
 
 When a Markdown file under `help/` changes, the diff-scoped check runs `src/commands.test.ts` in the server project. That test reads the command table and help pages directly, so it covers help changes that Vitest's changed-source dependency detection cannot associate with a test file.
