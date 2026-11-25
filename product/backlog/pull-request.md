@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Validate the review's scope argument as plain commit identifiers before any git command receives it, closing a security gap in the new argument.
-
-Existing Issue: Step 0 item 4 of the review task records the scope's raw value exactly as given, and Step 1 item 5 then places that value into `git rev-parse --verify <sha>^{commit}` and later into `git diff` with no format check, so any shell metacharacters in the argument reach the shell. Severity: 3/10
-
-Existing Risk: 3/10 - A malformed or hostile scope value, for example one a caller copied out of branch content, becomes part of a shell command run by an agent that holds push access to the branch, although today's callers only pass SHAs they read from git.
-
-Proposal Risk: 1/10 - Only values shaped like hexadecimal object names reach git; a caller that wanted a ref name such as a branch now falls back to aggregate, which the report's `Scope:` line makes visible.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "validate scope SHAs as hexadecimal before running git on them". In ai/tasks/feature/review-pull-request.md Step 1 item 5 ("Validate the scope"), add a check ahead of the `git rev-parse --verify` check: the commit SHA, and each end of a range, must consist only of 4 to 40 hexadecimal characters, and any other value falls back to aggregate and is recorded for Step 7 without ever being placed in a command; renumber the checks that follow. In the same item, say that each SHA placed in a command is quoted. Add "a value that is not a commit identifier" to the fallback examples in the "Review and recording" section of product/specs/pull-request-review.md. Pin the new check's wording in scripts/review-pull-request-scope.test.mjs beside its existing assertions, which must keep passing along with scripts/pr-description-statistics-guideline.test.mjs. The PR target passed to `gh pr view` has the same unvalidated shape but predates this pull request and stays out of this change.
-
-
 * Require a range scope's base to lie on the pull request, closing a functionality gap that lets a range review judge master's commits as the pull request's own.
 
 Existing Issue: Step 1 item 5 of the review task checks that a range's head is in `origin/master..HEAD` and that its base is an ancestor of its head, but never checks where the base is, so a base on master older than the merge base passes and `git diff <base>..<head>` then includes master commits the pull request did not make. Severity: 3/10

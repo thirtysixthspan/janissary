@@ -52,6 +52,15 @@ describe('the review-pull-request scope argument', () => {
     expect(text).toContain('read the implementation commit SHA with `git rev-parse HEAD`');
   });
 
+  it('checks scope SHAs as hexadecimal before any git command receives them', () => {
+    const text = read(REVIEW);
+    const hexCheck = 'is not 4 to 40 lowercase hexadecimal characters (`0` to `9` and `a` to `f`)';
+    expect(text).toContain(hexCheck);
+    expect(text).toContain('A value that fails this check is never placed in any command');
+    expect(text).toContain('Every SHA placed in a command, in these checks and in Step 3, is wrapped in single quotes');
+    expect(text.indexOf(hexCheck)).toBeLessThan(text.indexOf('`git rev-parse --verify <sha>^{commit}` fails'));
+  });
+
   it('leaves no description-only shortcut in the focused review cycle', () => {
     expect(read(COMPLEX)).not.toContain('If every recorded entry was description-only');
   });

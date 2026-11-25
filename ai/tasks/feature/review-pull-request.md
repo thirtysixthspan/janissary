@@ -62,10 +62,13 @@ State the pull request you are reviewing and how you identified it, in one sente
    1. The keyword is not `commit`, `range`, or `aggregate`.
    2. `commit` has no SHA after it.
    3. `range` does not give both a base and a head in the form `<base>..<head>`.
-   4. `git rev-parse --verify <sha>^{commit}` fails for the commit SHA or for either end of the range.
-   5. For `commit`: the commit is not in `origin/master..HEAD`, meaning `git merge-base --is-ancestor <sha> HEAD` fails or `git merge-base --is-ancestor <sha> origin/master` succeeds.
-   6. For `range`: the head is not in `origin/master..HEAD`, checked the same way.
-   7. For `range`: `git merge-base --is-ancestor <base> <head>` fails.
+   4. The commit SHA, or either end of the range, is not 4 to 40 lowercase hexadecimal characters (`0` to `9` and `a` to `f`). Judge this by reading the value, never by running a command on it. A value that fails this check is never placed in any command; it is only recorded for Step 7.
+   5. `git rev-parse --verify <sha>^{commit}` fails for the commit SHA or for either end of the range.
+   6. For `commit`: the commit is not in `origin/master..HEAD`, meaning `git merge-base --is-ancestor <sha> HEAD` fails or `git merge-base --is-ancestor <sha> origin/master` succeeds.
+   7. For `range`: the head is not in `origin/master..HEAD`, checked the same way.
+   8. For `range`: `git merge-base --is-ancestor <base> <head>` fails.
+
+   Every SHA placed in a command, in these checks and in Step 3, is wrapped in single quotes, for example `git rev-parse --verify '<sha>^{commit}'`.
 
    Record the effective scope for the rest of the task. On a fallback, also record the raw value you ignored, for Step 7's report.
 
