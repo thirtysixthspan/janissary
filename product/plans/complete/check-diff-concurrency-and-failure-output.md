@@ -4,12 +4,12 @@
 
 ## Goal
 
-`check-diff` is the development loop every agent and contributor runs after each change, and its header promises concurrent lint, typecheck, and test runs. Today it delivers neither concurrency nor diagnostics. Feature text: "check-diff is not actually concurrent, and it hides all failure output. scripts/check-diff.mjs:91-104 calls execFileSync inside Promise executors, so each command blocks the event loop and they run sequentially despite the header claiming concurrency. Worse, every tool uses stdio: 'pipe' and the catch blocks discard the error, so a failing check prints only ✗ with no diagnostics — --seq doesn't help either." This change makes the checks really run concurrently, makes a failing check say what failed and why, and makes `--seq` stop at the first failure as its header promises.
+`check-diff` runs the applicable lint, typecheck, and test commands concurrently so contributors can get feedback sooner. It reports each failure with the reason, output, and command to rerun. `--seq` stops at the first failure for debugging.
 
 ## Requirements
 
-1. In the default mode, every selected check is started before any of them finishes, so the total wall time is clearly less than the sum of the per-check times. Feature text: "Use execFile/spawn with real promises".
-2. A failing check's full combined stdout and stderr is printed after that check finishes. User answer: "Failures only — buffer each check's stdout+stderr; when it finishes, print its full output under a header only if it failed".
+1. In the default mode, the runner starts every selected check without waiting for another to finish. Feature text: "Use execFile/spawn with real promises".
+2. A failing check prints its combined stdout and stderr after it finishes, with the display capped at the last 200 lines. User answers: "Failures only — buffer each check's stdout+stderr; when it finishes, print its full output under a header only if it failed" and "Last 200 lines — print the tail with a `(… N earlier lines omitted)` marker".
 3. A passing check's output is not printed. User answer: "so a green run stays as quiet as today".
 4. The summary prints one line per check. User answer: "One line per check".
 5. A passing check's summary line reads `<name> ✓ (<ms>ms)`, e.g. `lint ✓ (812ms)`. User answer, chosen preview: "lint ✓ (812ms)".
@@ -23,9 +23,9 @@
 13. With `--seq`, the run stops at the first failing check and prints that check's output. User answer: "stop at the first failure, printing that check's output".
 14. With `--seq`, every check after the first failure is not run, and its summary line reads `<name> - skipped` with no timing. User answer, chosen preview: "test:server - skipped".
 15. When files changed but no check applies to them, the run prints `check:diff: no checks apply to the changed files` and exits 0. User answer: "Print `check:diff: no checks apply to the changed files` and exit 0".
-16. The checks that run are still chosen by the changed paths exactly as today: `lint` for lintable files, `tsc` for `src/` or `web/`, `test:server` for `src/` or `scripts/`, `test:web` for `web/`, `test:help` for help markdown. A check the diff does not need must not run. User answer: "Keep: which checks run for which changed paths … Must not: run a check the diff doesn't need".
+16. Changed paths select the checks. Lintable paths select `lint`, `src/` or `web/` select `tsc`, `src/` or `scripts/` select `test:server`, `web/` selects `test:web`, and help Markdown selects `test:help`. User answer: "Keep: which checks run for which changed paths … Must not: run a check the diff doesn't need".
 17. A clean working tree still prints `check:diff: no changes` and exits 0. User answer: "`check:diff: no changes` + exit 0 on a clean tree".
-18. The run exits 0 only when every check passed. User answer: "exit 0 iff all pass, else 1".
+18. A run with selected checks exits 0 when every check passed. User answer: "exit 0 iff all pass, else 1".
 19. The run exits 1 when any check failed, including a check killed by a signal or one that could not start; it must never exit 0 when any check failed. User answer: "Must not: … exit 0 on any failure"; "Overall run exits 1".
 20. The summary still ends with a `total: <ms>ms` line. User answer: "per-check ms and `total:` line".
 21. `scripts/**/*.mjs` files are exempt from the `max-lines` lint rule. User answer: "scripts should not need to follow file length rule"; "Exempt scripts/ in config".
@@ -33,16 +33,16 @@
 
 ## Design decisions
 
-- Replace the blocking `execFileSync` calls with asynchronous child processes awaited as real promises (feature text).
-- Each check runs through `child_process.spawn` with stdout and stderr piped and appended to one buffer in arrival order. Its promise resolves on the child's `close` event with the exit code and signal, or on its `error` event with the spawn error, and never rejects. Whichever of the two events fires first settles the promise; a `close` that follows an `error` is ignored, so a check that could not start is always reported as `could not start`. `settle` prints the failure block before it resolves, so a `settled` flag is required: without it the later `close` would call `settle` again and print that block a second time, even though the second `resolve` would be a no-op. The elapsed time runs from the spawn call to that settling event. This keeps the two streams in order and has no size cap, unlike `execFile`'s default `maxBuffer` (user answer: "spawn + one buffer"). The whole output is held in memory and trimmed to its last 200 lines only when printed; check output is at most a few megabytes, so this is fine. If a check ever produces output large enough to matter, the upgrade path is to keep only a rolling window of the last 200 lines plus a dropped-line count.
-- Each check's output is buffered, not streamed, so concurrent checks never interleave lines; it is printed as one block only when the check fails (user answer: "Failures only").
+- The runner launches checks with asynchronous `spawn` calls and awaits their promises together in default mode.
+- `runCheck` appends each child's stdout and stderr to one buffer in arrival order. The first `close` or `error` determines its outcome and elapsed time. `settle` prints the failure block before resolving, so the `settled` flag suppresses the `close` that can follow a spawn `error`. This keeps the startup error as the only report for that check. The complete buffer stays in memory and the 200-line cap applies when printing (user answer: "spawn + one buffer").
+- Each failing check prints one contiguous block as soon as it settles. Passing checks keep their buffered output hidden (user answer: "Failures only").
 - A check's display command is its executable and arguments joined with spaces, which already gives the npm forms in Requirement 8. Only the `lint` check carries an explicit display string, `$janissary/scripts/run.mjs lint-files`, because what it spawns is `node` with an absolute path (Requirement 7).
 - check-diff adds no SIGINT or SIGTERM handling. Ctrl-C in a terminal reaches the whole foreground process group, and a signal sent only to check-diff may leave its checks running (user answer: "Leave to the OS").
-- `--seq` keeps its documented meaning, "sequential (fail-fast) for debugging" (`scripts/check-diff.mjs:6`), and the code is changed to honor the fail-fast half (user answer: "Sequential + fail-fast").
-- The final exit status is set through `process.exitCode`, not `process.exit()`, so a long failure block written to a piped stdout is fully flushed before the process ends. Node writes to pipes asynchronously on POSIX, and `process.exit()` can cut that output short. The existing early `process.exit(0)` on a clean tree (`scripts/check-diff.mjs:22`) prints one short line and stays as it is.
+- `--seq` awaits each check before starting the next and skips the remaining checks after the first failure (user answer: "Sequential + fail-fast").
+- The runner sets `process.exitCode` after the summary so a long failure block can flush to piped stdout before the process ends. The clean-tree and no-applicable-checks paths print one line and exit 0 immediately.
 - All logic stays in `scripts/check-diff.mjs` as a top-level script with no exports (user answer: "No tests, one file").
-- `scripts/**/*.mjs` is exempted from `max-lines` in `eslint.config.mjs`, so the single file may grow past 200 lines (user answer: "Exempt scripts/ in config"). This rests on Assumption 5.
-- No automated tests are added; the behavior is confirmed by the manual checks in Verification (user answer: "No tests, one file").
+- `scripts/**/*.mjs` is exempt from `max-lines` in `eslint.config.mjs` so the runner can grow past 200 lines. The code guidelines record the exemption and the testing spec describes the runner's output (user answer: "Exempt scripts/ in config").
+- Verification uses the manual checks below (user answer: "No tests, one file").
 
 ## Preserved behavior
 
@@ -50,39 +50,33 @@ None found. The behaviors the user named as preserved (check selection, the clea
 
 ## Assumptions
 
-1. The concurrent path runs each tool's synchronous `run()` inside a `new Promise` executor, so the tools run one after another: `scripts/check-diff.mjs:91` "`const promises = tools.map(`" and `scripts/check-diff.mjs:97` "`tool.run();`".
-2. Every tool pipes its output and the catch discards the error: `scripts/check-diff.mjs:43` "`stdio: 'pipe', encoding: 'utf8'`" and `scripts/check-diff.mjs:98` "`} catch {`".
-3. The `--seq` path also discards the error: `scripts/check-diff.mjs:85` "`} catch {`".
-4. No existing test exercises `scripts/check-diff.mjs`; tests for `scripts/` run in the server vitest project: `vitest.config.ts:14` "`include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs']`".
-5. The `max-lines` rule is set in the config block that applies to every linted file, scripts included: `eslint.config.mjs:62` "`'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }]`".
-6. The code guidelines state the 200-line limit for all JavaScript/TypeScript files: `ai/guidelines/code-guidelines.md:5` "JavaScript/TypeScript files should be limited to **200 lines of code**."
+1. Check selection uses the current working tree. `scripts/changed-files.mjs:15` runs `git diff HEAD`, and line 16 includes untracked, non-ignored files.
+2. The wrapper reports the typecheck process's actual exit code. `package.json:45` defines `typecheck:diff` as incremental TypeScript checks, and `scripts/check-diff.mjs:119` formats the received code as `exit <code>`.
+3. The server Vitest project includes script tests. `vitest.config.ts:14` lists `scripts/**/*.test.mjs`.
+4. The default ESLint limit is 200 lines. `eslint.config.mjs:62` sets `max-lines` before the script override at lines 119–123.
 
 ## Existing functionality
 
 1. Changed-file detection: `scripts/changed-files.mjs:8` "`export function changedFiles()`".
-2. Script-relative path resolution for the lint helper: `scripts/check-diff.mjs:14` "`const LINT_FILES = scriptPath('lint-files.mjs');`".
-3. Help-markdown change detection: `scripts/check-diff.mjs:32` "`const touchesHelp = hasHelpMarkdownChanges(files);`".
+2. Script-relative path resolution for the lint helper: `scripts/check-diff.mjs:15` "`const LINT_FILES = scriptPath('lint-files.mjs');`".
+3. Help-markdown change detection: `scripts/check-diff.mjs:33` "`const touchesHelp = hasHelpMarkdownChanges(files);`".
 4. Precedent for a per-path override that switches `max-lines` off: `eslint.config.mjs:116-117` "`files: ['**/*.test.ts', '**/*.test.tsx'],`" / "`rules: { 'max-lines': 'off' },`".
 
 ## Implementation steps
 
-1. **Exempt scripts from the line limit.** In `eslint.config.mjs`, add a config block for `scripts/**/*.mjs` that turns `max-lines` off, modeled on the test-file override at `eslint.config.mjs:115-118`. In `ai/guidelines/code-guidelines.md`, add one bullet under `## File Size` saying that files under `scripts/` are exempt from the limit. Build command: `$janissary/scripts/run.mjs check-diff`.
+1. **Exempt scripts from the line limit.** The config block in `eslint.config.mjs` turns `max-lines` off for `scripts/**/*.mjs`. The File Size section of `ai/guidelines/code-guidelines.md` records the exemption. Build command: `$janissary/scripts/run.mjs check-diff`.
 
-2. **Rewrite check-diff's runner and output.** All changes are in `scripts/check-diff.mjs`; build command: `$janissary/scripts/run.mjs check-diff`.
-   - Keep the change classification at `scripts/check-diff.mjs:19-35` and the conditions that push each check exactly as they are (Requirement 16).
-   - Replace each check's `run` closure with data: a name and the executable and arguments to spawn (`node` with the `LINT_FILES` path for lint, `npm` with its arguments for the others). The lint check also carries its display string (see Design decisions).
-   - Add a function that runs one check through `spawn` as described in Design decisions and resolves with its outcome: passed, exited non-zero with a code, killed by a signal, or failed to start with an error message, plus the buffered output and elapsed milliseconds.
-   - Add formatting for the cause text (`exit <code>`, `exit <SIGNAL>`, `could not start (<message>)`), the summary line for each outcome including `<name> - skipped` (Requirements 5, 6, 9, 10, 14), and the failure block: header, the omitted-lines marker when the output is over 200 lines, then the last 200 lines, or `(no output)` when nothing was captured (UI design 3, 6, 7). Lines are counted by splitting the buffered output on newlines after dropping one trailing newline, so output ending in a newline does not gain an empty last line; output that is empty or only whitespace counts as no output.
-   - When the tool list is empty, print `check:diff: no checks apply to the changed files` and exit 0 (Requirement 15). Leave the clean-tree path at `scripts/check-diff.mjs:20-23` unchanged (Requirement 17).
-   - Otherwise print the start line naming the checks in run order (UI design 5).
-   - Default mode: start every check at once, print each failing check's block when its promise settles, and await them all (Requirements 1, 2, 3).
-   - `--seq` mode: run checks one at a time, print the block of the first failure, and record every later check as skipped without spawning it (Requirements 12–14).
-   - Print a blank line, one summary line per check in run order, then `total: <ms>ms`, all on stdout (Requirements 4, 20; UI design 9). Set `process.exitCode` to 1 if any check failed and 0 otherwise, replacing the `process.exit(anyFailed ? 1 : 0)` at `scripts/check-diff.mjs:116` (Requirements 18, 19; see Design decisions).
-   - Update the header comment at `scripts/check-diff.mjs:2-6` so it describes the real behavior: concurrent by default, buffered output printed for failures, `--seq` sequential and fail-fast.
+2. **Run and report checks.** `scripts/check-diff.mjs` uses the existing path tests and describes each selected check with a name, executable, arguments, and rerun command. Build command: `$janissary/scripts/run.mjs check-diff`.
+   - The runner exits early for a clean tree or a diff with no applicable checks. Otherwise it prints a start line listing the checks in run order.
+   - `runCheck` spawns the child and records elapsed time, captured output, and the outcome. Its guard prevents a second report if a spawn error is followed by `close`.
+   - `printFailure` writes the header and up to the last 200 lines, with a marker when earlier lines were omitted. Line counting drops one trailing newline. Empty or whitespace-only output renders as `(no output)`.
+   - Default mode starts all selected checks and awaits them together. `--seq` starts one at a time and records the checks after the first failure as skipped.
+   - `summaryLine` formats each result in run order. The summary begins after a blank line and ends with `total: <ms>ms`. The runner sets `process.exitCode` to 1 if any check failed and 0 otherwise.
+3. **Describe the runner.** `product/specs/testing.md` records check selection, output, exit status, and fail-fast behavior. The PR description explains that the line-limit exemption gives the runner room to grow and points to the guideline and spec. Build command: `$janissary/scripts/run.mjs check-diff`.
 
 ## UI design
 
-1. The surface is the terminal output of `check-diff`: today a blank line, then one `name ✓|✗ (Nms)` entry per check on a single line, then `total: Nms` (`scripts/check-diff.mjs:108-112`).
+1. The terminal output starts with the selected checks and ends with one summary line per check followed by `total: Nms` (`scripts/check-diff.mjs:127–158`).
 2. Placement: a failing check's output block is printed the moment that check finishes, so an early failure shows while slower checks still run. The summary is printed last, after a blank line. User answer: "As each fails".
 3. Layout of a failure block: a header line `--- <name> ✗ <cause>: <command> ---`, where `<cause>` is the same `exit <code>`, `exit <SIGNAL>`, or `could not start (<message>)` text the summary uses, followed by the check's captured output. User answer, chosen preview: "--- tsc ✗ exit 2: npm run typecheck:diff ---".
 4. In `--seq` mode the single failing check's block is printed the same way, before the summary.
@@ -92,7 +86,7 @@ None found. The behaviors the user named as preserved (check selection, the clea
 8. Visual consistency: all output is plain text with no colour codes added by check-diff, matching today's summary and the plain `lint-files:` messages in `scripts/lint-files.mjs`. check-diff does not set `FORCE_COLOR` or any other colour switch for its checks. User answer: "Plain text".
 9. Streams: the start line, every failure block, and the summary are all written to stdout, so one capture keeps them in order. User answer: "All to stdout".
 10. Interaction, keyboard, and accessibility: unchanged. check-diff is still a one-shot command started with `$janissary/scripts/run.mjs check-diff` (optionally `--seq`); it adds no flags, prompts, or key bindings. Each failing or skipped line spells out its status in text beside the mark (`exit 2`, `could not start`, `skipped`), so the ✗ and - marks are never the only signal.
-11. A full failing run in the default mode looks like this:
+11. A default run with a typecheck exit code of 2 looks like this, with the npm prelude omitted:
 
         check:diff: running lint, tsc, test:server
         --- tsc ✗ exit 2: npm run typecheck:diff ---
@@ -116,14 +110,14 @@ None found. The behaviors the user named as preserved (check selection, the clea
 
 ## Tests
 
-No automated tests are added. The user chose "No tests, one file": `scripts/check-diff.mjs` stays a top-level script with no exports, so there is no unit to import, and no end-to-end test is written. Every requirement is confirmed instead by the manual checks in Verification.
+No automated tests were added. The manual checks in Verification cover the runner's output and exit status, including a startup error that produces a single failure block.
 
 ## Out of scope
 
 Per the user's scope answer ("Minimal fix"):
 
 - Per-check timeouts.
-- A cap on how many checks run in parallel. At most five checks exist, so all of them start at once; ESLint and vitest already spread their own work across cores. If CPU contention ever makes the concurrent run slower than `--seq`, the upgrade path is a small fixed limit on running checks.
+- A cap on how many checks run in parallel. The runner starts all selected checks, up to five.
 - New, removed, or renamed checks.
 - Changes to `scripts/lint-files.mjs`, `scripts/changed-files.mjs`, or the npm scripts check-diff calls (`typecheck:diff`, `test:diff:server`, `test:diff:web`, `test:server`).
 - A new spec file under `product/specs/`.
@@ -134,10 +128,11 @@ Per the user's scope answer ("Minimal fix"):
 ## Verification
 
 1. `$janissary/scripts/run.mjs check-diff`
-2. Because this change edits `scripts/check-diff.mjs` itself, run the edited copy with `./scripts/run.mjs check-diff` for the manual checks below, per `AGENTS.md` "Running scripts".
-3. **Concurrency and a green run.** With only the plan's changes in the tree (they touch `scripts/`), run `./scripts/run.mjs check-diff`. Expect `check:diff: running lint, test:server`, no check output, a blank line, `lint ✓ (…ms)` and `test:server ✓ (…ms)` on separate lines, and a `total:` clearly below the sum of the two times. A total at or above the sum means the checks still run sequentially.
-4. **Failure output.** Add a type error to any file under `src/` (for example, a reference to an undeclared name), run `./scripts/run.mjs check-diff`, and expect a `--- tsc ✗ exit 2: npm run typecheck:diff ---` block holding the tsc error printed before the summary, a `tsc ✗ (…ms) exit 2: npm run typecheck:diff` summary line, and exit status 1 (`echo $?`). A bare `tsc ✗` with no block, or exit status 0, is a failure. Revert the type error.
-5. **Fail-fast `--seq`.** With the same type error, run `./scripts/run.mjs check-diff --seq`. Expect the tsc block, `tsc ✗ …`, and `test:server - skipped`; the server tests must not run (no vitest process, and the total is short). Revert the type error.
-6. **Could not start.** Make a directory holding only symlinks to `node` and `git` (git is needed to list the changed files), run `env PATH=<that directory> ./scripts/run.mjs check-diff` with a `src/` change in the tree, and expect each npm-backed check to read `… ✗ (…ms) could not start (spawn npm ENOENT): npm run …`, with a `(no output)` block, and exit status 1.
-7. **No checks apply.** Run this after the implementation is committed (stashing it instead would also stash the edited `scripts/check-diff.mjs`). With an otherwise clean tree, create an untracked `product/plans/draft/tmp-note.md`, and run `./scripts/run.mjs check-diff`. Expect exactly `check:diff: no checks apply to the changed files` and exit status 0. Delete the file. With a clean tree, expect `check:diff: no changes` and exit status 0.
-8. **Line limit.** Run `npx eslint --print-config scripts/check-diff.mjs` and confirm its `max-lines` entry is off (`0` or `"off"`), then run `npx eslint --print-config src/commands.ts` and confirm `max-lines` is still `error` with `max: 200`. A `src/` file with `max-lines` off means the override's glob is too broad.
+2. Run the manual checks from a clean checkout of the feature branch with dependencies installed. Use `./scripts/run.mjs check-diff` to exercise this checkout's runner.
+3. **Concurrent and sequential passes.** Create `scripts/__check_diff_probe.mjs` with `console.log('probe');`. Run `./scripts/run.mjs check-diff` and then `./scripts/run.mjs check-diff --seq`. Both list `lint, test:server`, print separate `✓` lines and a total, and exit 0 with the child output hidden. The concurrent run overlaps the checks. Remove the probe.
+4. **Failure output.** Create `src/__check_diff_probe.ts` containing `export const probe: number = 'x';`. Run `./scripts/run.mjs check-diff`. Expect `error TS2322` inside the `tsc` block, the same child exit code and `npm run typecheck:diff` in the header and summary, and wrapper exit status 1. The compiler exit code can vary with incremental state.
+5. **Fail-fast `--seq`.** Keep the type probe and run `./scripts/run.mjs check-diff --seq`. Expect the `tsc` failure block and `test:server - skipped` with no duration. The wrapper exits 1. Remove the probe.
+6. **Could not start.** Recreate the probe with `export const probe: number = 1;`. Use a scratch `PATH` with symlinks to `node` and `git` and run `env PATH=<that directory> ./scripts/run.mjs check-diff`. Expect one block per unavailable npm-backed check with `could not start (spawn npm ENOENT)` and `(no output)`. The wrapper exits 1. Remove the probe and scratch directory.
+7. **Signals and long output.** Follow the PR description's scratch command steps. A child killed by `SIGKILL` reports `exit SIGKILL` with `(no output)`. A child that prints 250 lines numbered 0 through 249 before exiting nonzero reports `(… 50 earlier lines omitted)` followed by lines 50 through 249. Both runs exit 1.
+8. **No checks apply.** Create an untracked `product/plans/draft/tmp-note.md` and run `./scripts/run.mjs check-diff`. Expect exactly `check:diff: no checks apply to the changed files` and exit status 0. Remove the file and rerun. Expect exactly `check:diff: no changes` and exit status 0.
+9. **Line limit.** Run `npx eslint --print-config scripts/check-diff.mjs` and `npx eslint --print-config src/commands.ts`. The script's `max-lines` severity is 0. The source file's severity is 2 with `max: 200`.
