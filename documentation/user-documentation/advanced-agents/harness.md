@@ -104,6 +104,8 @@ Two cases change the rule for a label you typed. The reserved name `system` is a
 
 Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, an **Auto-resume** toggle, a **Model** search field, and an **Effort** dropdown. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **Auto-resume** starts checked for opencode and codex and is unavailable for claude. **E2E browser** starts checked and stays available for every harness.
 
+The **Effort** dropdown offers a default plus `low`, `medium`, `high`, `xhigh`, and `max`; the default adds no `--effort` flag.
+
 In the **Model** field you type to filter the selected harness's enabled models. `Tab` completes the one match, or fills the longest common prefix when several match. Click a row in the dropdown to pick it. A blank field uses the harness's default model, and its dropdown lists the models your roles use most. Any other text must be exactly an enabled model id of the selected harness. Text that isn't disables **Create**, and Return won't launch the harness. With the dropdown open, `Escape` closes only the dropdown and `Return` accepts the highlighted row without launching; with no row highlighted, `Return` follows the normal **Create** path. The field is disabled when the harness has no enabled models, so its default model stays in place.
 
 ![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, auto-resume, model, and effort.](/screenshots/harness-launch-dialog.png)
@@ -161,6 +163,8 @@ All three permission menus are selection menus rather than yes/no questions, so 
 - **claude** — the highlighted `❯ 1. Yes`, whatever else the gate offers. Its later "Yes, and don't ask again" and "Yes, and switch to auto mode" options are never the one taken.
 - **codex** — the app recognizes the approval overlay and confirms its highlighted one-time approval choice, never a persistent allowlist option.
 - **opencode** — the app recognizes the `△ Permission required` panel and confirms `Allow once`, the option it starts on. `Allow always` is never the one taken. The panel is still recognized with opencode's own sidebar open beside it, however narrow that leaves the prompt.
+
+Sometimes a gate comes straight back and the approval keystroke doesn't clear it. After you approve the same gate three times in a row, auto-approve stops answering that gate and posts `Auto-approve could not clear the permission prompt; standing down` once, with a link to the screen it couldn't get past. A different prompt, or a screen with no gate, starts the count over. Standing down never turns the auto-permitting flag green.
 
 Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the launch posts a security warning to the [notifications](/user-documentation/tab-types/notifications) feed: prompts will be approved unattended against your real files, with no sandbox confining the harness.
 

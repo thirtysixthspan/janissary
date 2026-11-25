@@ -30,4 +30,6 @@ The `--model` value must be enabled in the current catalog. Use `models` to revi
 
 In the New harness dialog, the **Model** field accepts only a blank field for the default or an enabled model id of the selected harness. Other text disables **Create**, and Return does not launch. With the dropdown open, `Escape` closes only the dropdown and `Return` accepts the highlighted row; the field is disabled when the harness has no enabled models.
 
+The **Effort** dropdown in the dialog offers a default, which adds no `--effort` flag, plus `low`, `medium`, `high`, `xhigh`, and `max`.
+
 `--auto-resume` is supported only by `opencode` and `codex`. Passing it to another harness is refused with `--auto-resume is only supported for the opencode and codex harnesses.`
