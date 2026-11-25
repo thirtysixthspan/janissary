@@ -49,7 +49,7 @@
     "lint:diff": "node scripts/lint-files.mjs",
     "check:diff": "node scripts/check-diff.mjs",
     "security": "npm run security:secrets && npm run security:deps",
-    "security:secrets": "gitleaks detect --no-banner --redact",
+    "security:secrets": "node scripts/security-secrets.mjs",
     "security:deps": "npm audit --omit=dev",
     "security:sast": "opengrep scan --config p/javascript --config p/typescript --config p/nodejs src/ web/src/"
   },
