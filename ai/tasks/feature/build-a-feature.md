@@ -111,7 +111,7 @@ Record the PR number, URL, and head branch it reports. Steps 8 and 9 work on tha
 
 ## Step 8 — Review and resolve the pull request
 
-Review the PR you just opened and resolve every finding before finishing. Delegate each review and each repair to a fresh subagent, giving it the recorded PR number and the completed plan path, so the code is judged without the context that wrote it. Run them one at a time; never run dependent steps concurrently.
+Review the PR you just opened and resolve every finding before finishing. Delegate each review and each repair to a fresh subagent, so the code is judged without the context that wrote it. Give each review only the recorded PR number; it finds the completed plan from the PR's first commit. Give each repair the recorded PR number and the completed plan path. Run them one at a time; never run dependent steps concurrently.
 
 1. Delegate `ai/tasks/feature/review-pull-request.md` to a fresh subagent with the recorded PR number. It reviews the full PR against the completed plan and records its findings in `./product/backlog/pull-request.md` on the PR branch. Preserve every rule of that task.
 2. Read `./product/backlog/pull-request.md` on the PR branch. Resolve every entry in file order, one at a time, by delegating `ai/tasks/feature/work-pull-request-issue.md` to a fresh subagent with the recorded PR number and an entry selector. Finish and verify publication of each repair before selecting the next. Preserve that task's tests, scope, and branch safeguards; override only its complexity-7 cutoff so recorded review work is not abandoned for its rating.

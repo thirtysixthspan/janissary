@@ -4,6 +4,8 @@ Your job: take a pull request that is **already open**, check out its head branc
 
 This task **reviews and records**. It never fixes what it finds, never edits source code, never edits the pull request's description, and never merges or closes anything. Every finding is addressed in a separate invocation of `execute ./ai/tasks/feature/work-pull-request-issue.md`, with the explicit PR number and an optional backlog-entry selector to update the reviewed pull request's branch and leave it open. This applies to all five dimensions, including security; never route a proposal to another task or replace its implementation plan with a human-only handoff.
 
+Invocation: `execute ./ai/tasks/feature/review-pull-request.md <target> [scope: commit <sha> | scope: range <base>..<head> | scope: aggregate]`. For example, `execute ./ai/tasks/feature/review-pull-request.md 232 scope: commit 1a2b3c4` reviews only that commit of PR 232. The scope is optional and defaults to `aggregate`, the full pull request, which is what an invocation with only a target has always reviewed. `commit` reviews one commit's diff against its parent, and `range` reviews the diff from `<base>` to `<head>`. Every rule under "What you may and may not do" applies in every scope.
+
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, backlog entries, or commit messages. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
@@ -22,7 +24,7 @@ This task **reviews and records**. It never fixes what it finds, never edits sou
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git show`, `git status`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
+Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git show`, `git status`, `git rev-parse`, `git merge-base`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
 
 ### Forbidden — no exceptions
 
@@ -44,6 +46,7 @@ Read any file in the repo. Check out the pull request's head branch. Run read-on
 1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/feature/review-pull-request.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
 2. **Otherwise, recognize the pull request from context.** Run `gh pr view --json state,number,headRefName,url` with no argument — it resolves the pull request for the branch currently checked out. If that finds nothing, run `gh pr list --state open --json number,title,headRefName,url` and take the pull request only when **exactly one** is open. With zero or more than one, report the candidates and stop.
 3. Run `gh pr view <target> --json state,number,headRefName,url` and record the number, head branch, and URL for the rest of the task. If the lookup fails or the state is not `OPEN`, stop as required above.
+4. **Read the scope.** The target is always the first value, and a `scope:` argument never names a pull request. If a `scope:` argument follows the target, record the requested scope and its raw value exactly as given. With no `scope:` argument, the requested scope is `aggregate`. Do not resolve any SHA here; that waits for the checkout in Step 1.
 
 State the pull request you are reviewing and how you identified it, in one sentence.
 
@@ -55,6 +58,16 @@ State the pull request you are reviewing and how you identified it, in one sente
 2. Run `git pull --rebase` to bring the checked-out branch up to date through the upstream `gh pr checkout` configured.
 3. Confirm `git branch --show-current` is the head branch recorded in Step 0. If the checkout or pull cannot complete, report the error and stop rather than reviewing another branch.
 4. Confirm the working tree is clean with `git status`. This matters more than usual: the commit in Step 5 stages everything with `git add -A`, so any stray file present now would be silently swept into this review's commit. If the tree is not clean, STOP and report what is there.
+5. **Validate the scope.** An `aggregate` request needs no check. For a `commit` or `range` request, apply these checks in order and stop at the first that applies. Each one falls back to `aggregate` scope rather than stopping the review:
+   1. The keyword is not `commit`, `range`, or `aggregate`.
+   2. `commit` has no SHA after it.
+   3. `range` does not give both a base and a head in the form `<base>..<head>`.
+   4. `git rev-parse --verify <sha>^{commit}` fails for the commit SHA or for either end of the range.
+   5. For `commit`: the commit is not in `origin/master..HEAD`, meaning `git merge-base --is-ancestor <sha> HEAD` fails or `git merge-base --is-ancestor <sha> origin/master` succeeds.
+   6. For `range`: the head is not in `origin/master..HEAD`, checked the same way.
+   7. For `range`: `git merge-base --is-ancestor <base> <head>` fails.
+
+   Record the effective scope for the rest of the task. On a fallback, also record the raw value you ignored, for Step 7's report.
 
 **Nothing else follows the checkout.** Do not install dependencies and do not execute any step of `ai/tasks/workspace/prepare-workspace.md`. This review never builds, lints, tests, or runs the app. Getting the branch ready to build belongs to the later `work-pull-request-issue.md` invocation that implements a finding.
 
@@ -64,9 +77,11 @@ The rule buys more than the minutes it saves: because no install runs, a reviewe
 
 ## Step 2 — Read what the pull request promises
 
+**This step runs only in `aggregate` scope.** In `commit` and `range` scopes, skip it entirely: read no plan, collect no fix plans, and build no promise list. Go straight to Step 3.
+
 Three of the five dimensions in Step 3 are meaningless until you know what was promised, so read this before reading a line of the diff. Promises come from three places: the pull request's own plan, the fix plans its repairs added, and its description.
 
-1. **Find the own plan.** When the invocation names a plan, as `build-a-feature.md` and `build-a-complex-feature.md` do, that plan is the own plan and you can skip the lookup below. Otherwise run `git log --reverse --format=%H origin/master..HEAD` and take its first line, which is the branch's first commit. Run `git show --name-status --format= <sha> -- product/plans/complete/` on it. When that commit adds (`A`) or moves in (`R`) exactly one plan, that plan is the pull request's own plan. A feature pull request carries one. `ai/tasks/feature/build-a-feature.md` moves it into `./product/plans/complete/`, and `ai/tasks/work-an-issue.md` writes it there directly. When the first commit adds no plan, or more than one, there is no own plan.
+1. **Find the own plan.** Run `git log --reverse --format=%H origin/master..HEAD` and take its first line, which is the branch's first commit. Run `git show --name-status --format= <sha> -- product/plans/complete/` on it. When that commit adds (`A`) or moves in (`R`) exactly one plan, that plan is the pull request's own plan. A feature pull request carries one. `ai/tasks/feature/build-a-feature.md` moves it into `./product/plans/complete/`, and `ai/tasks/work-an-issue.md` writes it there directly. When the first commit adds no plan, or more than one, there is no own plan.
 2. **Find the fix plans.** Run `git diff origin/master...HEAD --name-status`. Every `A` line under `product/plans/complete/` other than the own plan is a fix plan. `work-pull-request-issue.md` writes one for each repair, and each one promises that its repair did what it says.
 3. Read the own plan and every fix plan **in full**.
 4. Run `gh pr view <number> --json title,body` and read the description.
@@ -92,7 +107,17 @@ This step is reconnaissance. Write nothing yet.
 
 ## Step 3 — Review every changed line and every promise
 
-This review covers the whole pull request. Every line the diff adds, changes, or removes is read and judged, and every promise from Step 2 is traced to the code that keeps it. The work runs in four passes: list the changes, review each file, walk the promises, and confirm coverage. `git diff origin/master...HEAD`, with three dots, is the authoritative diff throughout.
+This review covers everything in its scope. Every line the scope's diff adds, changes, or removes is read and judged, and in `aggregate` scope every promise from Step 2 is traced to the code that keeps it. The work runs in four passes: list the changes, review each file, walk the promises, and confirm coverage.
+
+The authoritative diff depends on the effective scope from Step 1:
+
+- **`aggregate`:** `git diff origin/master...HEAD`, with three dots, the whole pull request.
+- **`commit`:** `git diff <sha>^ <sha>`, the commit against its first parent.
+- **`range`:** `git diff <base>..<head>`, everything after `<base>` up to and including `<head>`.
+
+This step's commands are written with `origin/master...HEAD`. In `commit` and `range` scopes, substitute the scope's diff for it in every command. The file-status rules below apply to that diff unchanged.
+
+**In `commit` and `range` scopes, skip the promise passes.** There is no promise list, so skip "Walk the promises" and the promise half of "Confirm coverage". Judge only three of the five dimensions: functionality gaps, technical debt, and security. Description fidelity and plan fidelity run only in `aggregate` scope. These scopes read no plan, so the functionality-gap rule about a plan's "Out of scope" section has nothing to apply to.
 
 ### List the changes
 
@@ -108,7 +133,7 @@ Take the files one at a time. Read each one's whole diff with `git diff origin/m
 - **Renamed:** review the content change like a modification, and `grep` for references to the old path.
 - **Binary,** such as a screenshot: confirm it's referenced where the pull request says it is. If your tools can open it, confirm it shows what the description claims.
 
-Judge every changed line under all five dimensions below. A line counts as reviewed once you have judged it, not once you have scrolled past it.
+Judge every changed line under every dimension below that the scope runs: all five in `aggregate` scope, three in `commit` and `range` scopes. A line counts as reviewed once you have judged it, not once you have scrolled past it.
 
 Follow each change past the edge of the diff. Check the callers of a changed function, the consumers of a changed contract, and the specs and help pages that describe the changed behavior. A spec or help page the diff leaves stale is a finding even though the diff never touched it. User and developer documentation is owned by `update-documentation.md`, not by a feature PR or plan. A missing or stale page under `documentation/user-documentation/` or `documentation/developer-documentation/` is not a finding on a feature pull request and must not be added to the backlog. The exception is a pull request whose own plan and title are about adding or updating user or developer documentation. Then those trees become the primary scope and are judged as carefully as code. The distinction is about what the pull request is, not what its description mentions. A feature PR that describes a user-visible change does not become a documentation PR.
 
@@ -122,11 +147,11 @@ Go through Step 2's list item by item. For each one, find the code, test, spec, 
 
 ### Confirm coverage
 
-Before you write anything, compare what you reviewed with both lists. Every file from the change list must be done, and every promise must be checked. A gap means going back to finish it, not moving on. Step 7's report gives both counts.
+Before you write anything, compare what you reviewed with both lists. Every file from the change list must be done, and every promise must be checked. A gap means going back to finish it, not moving on. Step 7's report gives both counts. In `commit` and `range` scopes, only the change list exists, and the report gives only the file count. A scope whose diff holds no changes has nothing to review. That is a clean outcome, not a fallback: record nothing and report the clean variant.
 
 ### The five dimensions
 
-Form candidate findings under each of these five headings. Each is a question, with the evidence that answers it:
+Form candidate findings under each of these five headings. In `commit` and `range` scopes, form them under the last three only. Each is a question, with the evidence that answers it:
 
 - **Description fidelity.** Does the description describe what the diff actually does? Check every description claim on Step 2's list. Findings: claims the implementation does not support, behavior the diff adds that the description never mentions, stated limitations that are no longer true, and verification steps whose expected result the code would not produce. Also check that each **Behavior examples** transcript, **Screenshots** claim, and **Do**/**Expect** line in **How to verify** names the code path and line or test assertion that proves it; one that names no anchor is a finding, because the claim cannot be checked against the code, even when the claim itself reads as true. Record that finding without editing the description yourself. When the description states a change-set statistic that is wrong, such as a commit, file, or line count or a commit SHA, the proposal removes the claim rather than correcting it. A correct statistic is not a finding on its own.
 - **Plan fidelity.** Does the diff deliver every plan promise on Step 2's list, and deliver it correctly? The promise walk above is where you answer this. Walk the preserved-behavior entries explicitly — check each negative assertion against the diff, and record a finding when a test pins behavior the plan's own requirements forbid. Findings: an item the diff does not deliver, an item implemented in a way the plan's own design decisions rule out, and a fix plan whose repair does not do what the plan says or was undone by a later change. Specs and docs conflict and vanish as easily as code, so check them as carefully.
@@ -246,6 +271,15 @@ $janissary/scripts/run.mjs pr-commit "chore(backlog): record pull request review
   "Reviewed all 12 changed files and 31 promise items in #232 across description fidelity, plan fidelity, functionality gaps, technical debt, and security. Recorded 4 findings in product/backlog/pull-request.md; 2 candidates were dropped as duplicates of existing entries."
 ```
 
+In `commit` and `range` scopes, keep the subject. The body names the scope and the three dimensions it judged, and gives no promise count:
+
+```bash
+$janissary/scripts/run.mjs pr-commit "chore(backlog): record pull request review findings" \
+  "Reviewed all 5 changed files in commit 1a2b3c4 of #232 across functionality gaps, technical debt, and security. Recorded 1 finding in product/backlog/pull-request.md; no candidates were dropped as duplicates."
+```
+
+For a range, write `in range 1a2b3c4..5d6e7f8 of #232` in place of `in commit 1a2b3c4 of #232`.
+
 Then push through the upstream `gh pr checkout` configured, substituting the literal branch name — each Bash call is a fresh shell, so nothing persists between them:
 
 ```bash
@@ -273,13 +307,16 @@ Give the user a short report in this exact shape:
 ```
 PR:             <url> (#<number>)
 Branch:         <head branch>
-Promise:        <own plan path> and <n> fix plans | none in the PR — used the PR body and commit subjects
-Coverage:       <n>/<n> changed files reviewed, <n>/<n> promise items checked
-Findings:       description <n>, plan <n>, functionality <n>, debt <n>, security <n>   (recorded this run, after dedupe)
+Scope:          aggregate | commit <short-sha> | range <base>..<head> | aggregate — requested "<value>" ignored
+Promise:        <own plan path> and <n> fix plans | none in the PR — used the PR body and commit subjects | none — commit and range scopes check no promises
+Coverage:       <n>/<n> changed files reviewed, <n>/<n> promise items checked | <n>/<n> changed files reviewed
+Findings:       description <n>, plan <n>, functionality <n>, debt <n>, security <n> | description not in scope, plan not in scope, functionality <n>, debt <n>, security <n>   (recorded this run, after dedupe)
 Duplicates:     <n> candidate(s) dropped as already present in product/backlog/pull-request.md
 Recorded:       <short-sha> pushed to <branch> | clean — nothing recorded | nothing new — all <n> finding(s) already recorded | push failed (see above)
 Not checked:    no build, lint, or test tooling was run — a branch that does not compile would still review clean here
 Status:         open (not merged)
 ```
+
+In `aggregate` scope, including a fallback, the `Promise:`, `Coverage:`, and `Findings:` lines take their first forms. In `commit` and `range` scopes they take the forms that name no promises. A scope whose diff holds no changes reports `Coverage: 0/0 changed files reviewed` and the clean `Recorded:` variant.
 
 Keep it brief. Done.
