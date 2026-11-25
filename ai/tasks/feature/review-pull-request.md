@@ -321,6 +321,6 @@ Not checked:    no build, lint, or test tooling was run — a branch that does n
 Status:         open (not merged)
 ```
 
-In `aggregate` scope, including a fallback, the `Promise:`, `Coverage:`, and `Findings:` lines take their first forms. In `commit` and `range` scopes they take the forms that name no promises. A scope whose diff holds no changes reports `Coverage: 0/0 changed files reviewed` and the clean `Recorded:` variant.
+In `aggregate` scope, including a fallback, the `Promise:`, `Coverage:`, and `Findings:` lines take the forms that check promises: `Promise:` reads `<own plan path> and <n> fix plans`, or `none in the PR — used the PR body and commit subjects` when Step 2 item 6 found no own plan, and `Coverage:` and `Findings:` take their first forms. In `commit` and `range` scopes they take the forms that name no promises. A scope whose diff holds no changes reports `Coverage: 0/0 changed files reviewed` and the clean `Recorded:` variant.
 
 Keep it brief. Done.

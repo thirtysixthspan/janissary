@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 // an unknown keyword included, and that the workflow's Step 6 has no description-only shortcut.
 // Last, they pin that Step 6 declines a finding a later subplan delivers or the plan puts out of scope
 // for the feature, publishing that decline before it records the range base; the review stays plan-free.
-// And they pin that commit and range scopes read code at their end commit, never switching checkout.
+// And they pin that commit and range scopes read code at their end commit, never switching checkout, and that an aggregate report keeps the no-plan Promise: form.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
@@ -133,5 +133,14 @@ describe('the review-pull-request scope argument', () => {
     expect(text).toContain('Neither command switches the checkout, so the working tree and branch stay exactly as Step 1 left them.');
     expect(text.indexOf('- **`range`:** `git diff <base>..<head>`')).toBeLessThan(text.indexOf(rightSide));
     expect(text.indexOf(rightSide)).toBeLessThan(text.indexOf('### Review each file'));
+  });
+
+  it('keeps the no-plan Promise: form available to aggregate reviews', () => {
+    const text = read(REVIEW);
+    const note = 'lines take the forms that check promises: `Promise:` reads `<own plan path> and <n> fix plans`, or `none in the PR — used the PR body and commit subjects` when Step 2 item 6 found no own plan, and `Coverage:` and `Findings:` take their first forms.';
+    expect(text).toContain(note);
+    expect(text).not.toContain('and `Findings:` lines take their first forms');
+    expect(text.indexOf('Promise:        <own plan path> and <n> fix plans')).toBeGreaterThan(-1);
+    expect(text.indexOf('Promise:        <own plan path> and <n> fix plans')).toBeLessThan(text.indexOf(note));
   });
 });
