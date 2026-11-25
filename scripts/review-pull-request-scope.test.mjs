@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 // an unknown keyword included, and that the workflow's Step 6 has no description-only shortcut.
 // Last, they pin that Step 6 declines a finding a later subplan delivers, and publishes that
 // decline, before it records the resolution range's base, while the review itself stays plan-free.
+// And they pin that commit and range scopes read code at their end commit, never switching checkout.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
@@ -111,5 +112,19 @@ describe('the review-pull-request scope argument', () => {
     expect(text.indexOf(decline)).toBeLessThan(text.indexOf(publish));
     expect(text.indexOf(publish)).toBeLessThan(text.indexOf(record));
     expect(read(REVIEW)).not.toContain('later subplan');
+  });
+
+  it("reads commit and range scopes at the scope's end commit without switching the checkout", () => {
+    const text = read(REVIEW);
+    const rightSide = "In those scopes the diff's right side is `<sha>` or `<head>`, which may be older than `HEAD`";
+    expect(text).toContain(rightSide);
+    expect(text).toContain('`git show`, `git grep`, `git status`');
+    expect(text).toContain("Read an added or modified file at that commit with `git show '<sha>:<path>'`.");
+    expect(text).toContain("Run the Deleted and Renamed reference checks, and the search for callers and consumers, against it with `git grep '<pattern>' '<sha>'`.");
+    expect(text).toContain('In a range scope, put `<head>` in place of `<sha>` in both commands.');
+    expect(text).toContain('read the same file at `HEAD` to confirm no later commit has already resolved it, and drop the candidate if one has');
+    expect(text).toContain('Neither command switches the checkout, so the working tree and branch stay exactly as Step 1 left them.');
+    expect(text.indexOf('- **`range`:** `git diff <base>..<head>`')).toBeLessThan(text.indexOf(rightSide));
+    expect(text.indexOf(rightSide)).toBeLessThan(text.indexOf('### Review each file'));
   });
 });

@@ -24,7 +24,7 @@ Invocation: `execute ./ai/tasks/feature/review-pull-request.md <target> [scope: 
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git show`, `git status`, `git rev-parse`, `git merge-base`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
+Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git show`, `git grep`, `git status`, `git rev-parse`, `git merge-base`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
 
 ### Forbidden — no exceptions
 
@@ -119,7 +119,7 @@ The authoritative diff depends on the effective scope from Step 1:
 - **`commit`:** `git diff <sha>^ <sha>`, the commit against its first parent.
 - **`range`:** `git diff <base>..<head>`, everything after `<base>` up to and including `<head>`.
 
-This step's commands are written with `origin/master...HEAD`. In `commit` and `range` scopes, substitute the scope's diff for it in every command. The file-status rules below apply to that diff unchanged.
+This step's commands are written with `origin/master...HEAD`. In `commit` and `range` scopes, substitute the scope's diff for it in every command. The file-status rules below apply to that diff unchanged. In those scopes the diff's right side is `<sha>` or `<head>`, which may be older than `HEAD`, so wherever the rules below open a file at `HEAD` or `grep` for references, read that commit instead. Read an added or modified file at that commit with `git show '<sha>:<path>'`. Run the Deleted and Renamed reference checks, and the search for callers and consumers, against it with `git grep '<pattern>' '<sha>'`. In a range scope, put `<head>` in place of `<sha>` in both commands. Before recording a candidate, read the same file at `HEAD` to confirm no later commit has already resolved it, and drop the candidate if one has. Neither command switches the checkout, so the working tree and branch stay exactly as Step 1 left them.
 
 **In `commit` and `range` scopes, skip the promise passes.** There is no promise list, so skip "Walk the promises" and the promise half of "Confirm coverage". Judge only three of the five dimensions: functionality gaps, technical debt, and security. Description fidelity and plan fidelity run only in `aggregate` scope. These scopes read no plan, so the functionality-gap rule about a plan's "Out of scope" section has nothing to apply to.
 
@@ -165,7 +165,7 @@ Form candidate findings under each of these five headings. In `commit` and `rang
 
 **There is no cap on the number of findings.** A pull request's diff is bounded, so completeness is achievable, and a review that silently dropped findings would be worse than a long file. Record every finding that survives the drop rules below. Don't stop once the list feels long enough. Don't merge distinct defects to shorten it. And don't drop a genuine finding because it's minor. A minor finding gets a low severity score, which is what the score is for. When one defect recurs in several files and a single change fixes all of them, one entry may cover them all. That entry names every affected file and never says "and similar files".
 
-A candidate is dropped for one of five reasons. It might be wrong once you read the surrounding code. The plan might have deferred it on purpose. It might be pre-existing debt the diff only touches. It might already be in the backlog (Step 4). Or no proposal you can write brings its `Proposal Risk` materially below its `Existing Risk` (see the scales in Step 4). Don't pad the list either. **Finding nothing is a valid outcome.** If coverage is complete and the pull request matches its description and its plan with no gap, no debt, and no security issue, say so and don't invent work.
+A candidate is dropped for one of five reasons. It might be wrong once you read the surrounding code, or, in `commit` and `range` scopes, already resolved at `HEAD` by a later commit. The plan might have deferred it on purpose. It might be pre-existing debt the diff only touches. It might already be in the backlog (Step 4). Or no proposal you can write brings its `Proposal Risk` materially below its `Existing Risk` (see the scales in Step 4). Don't pad the list either. **Finding nothing is a valid outcome.** If coverage is complete and the pull request matches its description and its plan with no gap, no debt, and no security issue, say so and don't invent work.
 
 References to other tasks in these dimensions supply detection criteria only. Do not execute them or import their remediation routing. In particular, a security finding still gets a concrete implementation and verification proposal for `work-pull-request-issue.md`; it is not handed off to `improve-security.md` or deferred merely because it concerns security. The review itself performs no remediation.
 

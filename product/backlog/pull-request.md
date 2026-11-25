@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Handle commit and range scopes that end before the checked-out branch head, so the review reads surrounding code at the commit it is judging.
-
-Existing Issue: Step 3 tells the reviewer to open each modified file at `HEAD` and to grep for remaining references to deleted or renamed paths, which matched the diff's right side when every review diffed `origin/master...HEAD`, but a commit or range scope can now end at a commit older than `HEAD`, so its hunks are read against later code. Severity: 3/10
-
-Existing Risk: 3/10 - A commit-scoped review of an earlier commit records findings that later commits already fixed, or misses ones the later code masks, and a repair run is then spent on an entry that no longer applies.
-
-Proposal Risk: 1/10 - The reviewer reads two trees instead of one, and the remaining hazard is a candidate dropped as already fixed at `HEAD` when it still mattered, which a later aggregate review would still see.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "read commit and range scopes' surrounding code at the scope's head commit". In `ai/tasks/feature/review-pull-request.md` Step 3, after the paragraph that substitutes the scope's diff into every command, add that in `commit` and `range` scopes the diff's right side is `<sha>` or `<head>`, which may be older than `HEAD`. The reviewer reads an added or modified file at that commit with `git show '<sha>:<path>'` and runs the Deleted and Renamed reference checks against that commit with `git grep '<pattern>' '<sha>'`. Before recording a candidate, the reviewer reads the same file at `HEAD` to confirm no later commit has already resolved it, and drops the candidate if one has. Add `git grep` to the Allowed list's read-only git commands. The single-quote rule in Step 1 item 5 already names Step 3, so these new commands fall under it unchanged. Leave the Step 1 item 5 checks, the per-scope diff list, and every Forbidden rule untouched. Add an assertion to `scripts/review-pull-request-scope.test.mjs` that pins the new sentence. Every existing assertion in that file, including "keeps the %s rule" and "checks scope SHAs as hexadecimal before any git command receives them", and `scripts/pr-description-statistics-guideline.test.mjs` must keep passing unchanged. The pull request description cites lines of this file by number, so re-derive those anchors with `grep -n` after the edit and correct any that moved.
