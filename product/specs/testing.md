@@ -20,6 +20,10 @@ Media playback is stubbed the same way: `play()` resolves to a settled promise, 
 
 Canvas encoding is stubbed the same way: `toDataURL()` returns a minimal PNG data URL, so an image or video save keeps its intent payload valid and jsdom's unimplemented-canvas-encoder warning stays out of test output. Tests that assert the actual encoded bytes supply their own override.
 
+### Pull request CI
+
+Every pull request against `master` runs four checks in `.github/workflows/ci.yml`, each a separate job that installs dependencies with `npm ci` first. `typescript` runs `npm run typecheck`, `lint` runs `npm run lint`, `tests` runs `npm run test`, and `build` runs `npm run build`, the production server and web build. The build job catches a broken Vite config, asset plugin, or alias that typecheck and tests don't exercise. `scripts/ci-workflow.test.mjs` fails when any of the four jobs or its command goes missing.
+
 ### Diff-scoped help tests
 
 When a Markdown file under `help/` changes, the diff-scoped check runs `src/commands.test.ts` in the server project. That test reads the command table and help pages directly, so it covers help changes that Vitest's changed-source dependency detection cannot associate with a test file.
