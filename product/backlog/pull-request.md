@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description so it states that resolution reviews no longer check each repaired finding against its entry, and drop its claim that the removed entry record existed only to feed the old Step 6.4 shortcut.
-
-Existing Issue: The description says the old Step 6.4 shortcut is gone "along with the entry recording that only existed to feed it", while master's Step 6 item 2 said that record was "the only place the resolution review can find what was promised", and nowhere does the description say that resolution reviews no longer confirm each finding was resolved as its entry proposed, which is the largest behavioral loss in the change. Severity: 5/10
-
-Existing Risk: 5/10 - A reviewer approving from the description believes focused cycles still verify that each repair resolved its finding, so a repair that removes its entry without fixing the defect now passes every focused cycle unnoticed until the aggregate review, and nobody weighed that trade when approving.
-
-Proposal Risk: 2/10 - The description then names the trade the plan settled on, so it remains a deliberate gap in the focused cycle, now visible to the reviewer who must accept it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "state in the description that resolution reviews no longer check each finding against its entry, and correct the entry-record claim". In the pull request body's "The callers change to match." paragraph, replace "along with the entry recording that only existed to feed it" with wording that says Step 6 item 2 no longer records each entry's full text or classifies it, because the resolution review no longer reads the entries and the old Step 6.4 was the only other reader, and add one sentence saying a resolution review now reviews only the repair commits for regressions and new defects, without confirming each finding was resolved as its entry proposed, so an unresolved finding is next caught by the Step 8 full review. Anchor the new sentence to Step 6 item 4 of `ai/tasks/feature/build-a-complex-feature.md` and to the "In `commit` and `range` scopes, skip the promise passes" paragraph of `ai/tasks/feature/review-pull-request.md`, re-deriving each line number with `grep -n` at the branch head, and to the "A resolution review always follows" sentence of `product/specs/pull-request-review.md`. Change no other paragraph or the title, cite no change-set statistics or commit SHAs, and diff the old and new bodies to confirm only those edits landed. Edit no playbook, spec, script, or test.
-
-
 * Update the review task's opening paragraph and Step 3 heading so they no longer say every review covers the whole pull request, every promise, and all five dimensions, removing technical debt the new scopes leave behind.
 
 Existing Issue: The opening paragraph of `review-pull-request.md` still tells every run to "review all of it", including every promise in the plan, fix plans, and description, and to judge across five dimensions, and the Step 3 heading still reads "Review every changed line and every promise", while commit and range scopes now review one diff, read no promises, and judge three dimensions. Severity: 3/10
