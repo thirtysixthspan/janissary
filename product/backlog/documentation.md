@@ -2,8 +2,6 @@
 
 ## ready
 
-* database (5/10) — Of 18 facts, 17 are correct, none are missing and 1 is wrong. The `db` row of `help/commands.md` says the command opens the database tab, but `src/commands/db.ts` runs `db sqlite …` in the current tab's transcript through `src/database/manager.ts`, and bare `db` prints `Usage: db sqlite <create|delete|query|list> [name] [query]` from `src/database/parsing.ts`; opening a browser tab is what `sql database <name>` and `sql file <path>` do. `help/db.md` and `documentation/user-documentation/command-bar/database.md` already describe the command correctly. Fix only the `db` row in `help/commands.md`. Ground truth is `product/specs/database.md`, `src/commands/db.ts`, `src/database/parsing.ts`, `src/database/index.ts`, `src/database/manager.ts` and `src/plugins/sql/open-tab.ts`.
-
 * file-head-tail (3/10) — Of 17 facts, 14 are correct, 3 are missing and none are wrong. `help/file.md` documents `file head <path> [-n <lines>]` and `file tail <path> [-n <lines>]`, the `-n` default of 10 and cap of 2000, `notdir` for a directory and the verbose failures, but omits three edge cases. A symlink whose target is a directory answers `notdir`, a symlink to a regular file is read like the file itself, and path policy runs before the directory answer so an out-of-workspace or secret target never becomes `notdir`. Add these to the `file head`/`file tail` paragraph under 'Listing and inspecting paths' in `help/file.md`, the correct destination because no user-documentation page covers these subcommands in detail. Ground truth is `product/specs/file-head-tail.md`, `src/file-head-tail/command.ts`, `src/file-head-tail/head-tail-core.ts`, `src/file-read/policy.ts` and `src/file-failure.ts`.
 
 * harness (3/10) — Of 33 facts, 31 are correct, 2 are missing and none are wrong. After three consecutive identical permission prompts the app stops re-answering and posts `Auto-approve could not clear the permission prompt; standing down` once with its own capture link, which appears in neither user-doc surface. The New harness dialog's **Effort** dropdown offers a default plus `low`, `medium`, `high`, `xhigh` and `max` per `src/harness/effort-levels.ts`, but `documentation/user-documentation/advanced-agents/harness.md` names the dropdown without listing the choices and `help/harness.md` is silent. Add a stand-down sentence to the auto-approve section and the level list to the dialog section of `documentation/user-documentation/advanced-agents/harness.md`, optionally mirroring the levels in `help/harness.md`. Ground truth is `product/specs/harness.md`, `src/harness/auto-approve.ts`, `src/harness/effort-levels.ts` and `src/harness/command-parse.ts`.
@@ -46,6 +44,7 @@
 
 ## resolved
 
+* database — documented in help/commands.md (removed 2026-11-25)
 * connections-tab — documented in documentation/user-documentation/command-bar/connections.md, help/connections.md (removed 2026-11-25)
 * commands-tab — already resolved by the application-commands fix in documentation/user-documentation/tab-types/commands.md (removed 2026-11-25)
 * cli — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-11-25)
