@@ -47,6 +47,7 @@ describe('the review-pull-request scope argument', () => {
     const text = read(COMPLEX);
     expect(text).toContain('confirm its `Scope:` line reads `commit <short-sha>`');
     expect(text).toContain('confirm its `Scope:` line reads `range <base>..<head>`');
+    expect(text).toContain('with that `<base>` a prefix of the recorded head SHA and that `<head>` a prefix of the current PR head SHA');
     expect(text).toContain('Any other value, including `aggregate — requested "<value>" ignored`');
     expect(text).toContain('work none of its entries');
     expect(text).toContain('read the implementation commit SHA with `git rev-parse HEAD`');
