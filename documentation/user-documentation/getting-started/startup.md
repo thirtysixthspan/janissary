@@ -115,7 +115,7 @@ By default `janus` opens the app in a frameless Chrome window with no tabs or ad
 
 If none of those browsers is installed, or the window can't be started, Janissary opens the URL in your default browser instead. It works the same way there, except that some sites that refuse to be embedded may not render in [page tabs](/user-documentation/tab-types/web-pages).
 
-`--no-open` opens nothing and prints the server's URL on its own line instead. The same URL is on the `__JANUS_URL__` line of `.janissary/logs/server/latest.log`, a link to the current run's log. Open it in any browser, and stop the server with `janus stop`.
+`--no-open` opens nothing and prints the server's URL on its own line instead. The same URL is on the `__JANUS_URL__` line of `.janissary/logs/server/latest.log`, a link to the current run's log. The launcher repoints that link only after the server reports its URL, and the change is atomic, so the name always resolves to a log. Open it in any browser, and stop the server with `janus stop`.
 
 ## Stopping the app
 
@@ -134,6 +134,8 @@ It shuts down the instance running against the current directory. Pass a directo
 ```
 
 `janus stop` runs attached and prints straight to the terminal. It signals the running server to shut down gracefully, closing every open browser window before it exits. When it finds an instance it prints nothing. If nothing is running there, it prints `no running janus instance for <dir>` and exits without error. There being nothing to stop isn't a failure.
+
+If the sandbox won't let `janus stop` signal the server, it leaves the server's process ID in `.janissary/stop-request` instead. The server checks that file every 200 ms and shuts down when it finds its own process ID there. A request naming a different process is removed and ignored, so stopping one project can't stop another.
 
 Three other things shut the server down the same way:
 
@@ -156,6 +158,8 @@ Detached remote sessions are the exception. Every launch tries each eligible par
 ## Troubleshooting
 
 Since a normal launch doesn't print to the terminal, read `.janissary/logs/server/latest.log` for anything the server would otherwise have shown. That path is a link to the current run's log, named `localhost-<timestamp>.log`; each launch writes its own file, and older files stay until the launch sweep removes them by age. A launch that fails or is refused before the server is ready never repoints the link, so its own `localhost-<timestamp>.log` holds the failure. When the server exits before reporting ready, the tail of that file, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you don't have to go looking for it.
+
+If the link can't be updated, `janus` prints `warning: could not update <project-dir>/.janissary/logs/server/latest.log: <reason>` once and still starts the app. Here `<project-dir>` is the absolute path to your project. `<reason>` is the error, or `not a symbolic link` when a regular file or directory is using that name. Whatever was at the path is left as it was.
 
 If startup fails, the message opens with the app name and version, as in `janissary 0.20.0 — failed to start: <reason>`, so any report you share says which build it came from. Four failures also say what to do next. Any other failure shows the underlying error's own message after the banner and nothing more. The four you're most likely to see:
 
