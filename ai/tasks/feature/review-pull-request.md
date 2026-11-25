@@ -1,6 +1,6 @@
 # Review an Open Pull Request
 
-Your job: take a pull request that is **already open**, check out its head branch, and review all of it. That means every line its diff adds, changes, or removes, and every promise it makes in its plan, in the fix plans its repairs added, and in its description. Judge them across five dimensions: whether the description matches the implementation, how faithfully the implementation delivers the plan, what functionality it is missing, what technical debt it introduces, and what security issues it introduces. Every genuine finding is recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch, committed and pushed, with the pull request **left open**. There is no limit on how many findings a review records.
+Your job: take a pull request that is **already open**, check out its head branch, and review it in the scope its invocation names. The default `aggregate` scope reviews all of it. That means every line its diff adds, changes, or removes, and every promise it makes in its plan, in the fix plans its repairs added, and in its description. In `aggregate` scope, judge them across five dimensions: whether the description matches the implementation, how faithfully the implementation delivers the plan, what functionality it is missing, what technical debt it introduces, and what security issues it introduces. A `commit` or `range` scope reviews only its own diff, reads no promises, and judges three of those dimensions: functionality gaps, technical debt, and security. Every genuine finding is recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch, committed and pushed, with the pull request **left open**. There is no limit on how many findings a review records.
 
 This task **reviews and records**. It never fixes what it finds, never edits source code, never edits the pull request's description, and never merges or closes anything. Every finding is addressed in a separate invocation of `execute ./ai/tasks/feature/work-pull-request-issue.md`, with the explicit PR number and an optional backlog-entry selector to update the reviewed pull request's branch and leave it open. This applies to all five dimensions, including security; never route a proposal to another task or replace its implementation plan with a human-only handoff.
 
@@ -109,7 +109,7 @@ This step is reconnaissance. Write nothing yet.
 
 ---
 
-## Step 3 — Review every changed line and every promise
+## Step 3 — Review every changed line in scope and, in `aggregate` scope, every promise
 
 This review covers everything in its scope. Every line the scope's diff adds, changes, or removes is read and judged, and in `aggregate` scope every promise from Step 2 is traced to the code that keeps it. The work runs in four passes: list the changes, review each file, walk the promises, and confirm coverage.
 

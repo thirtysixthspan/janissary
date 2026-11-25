@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the review task's opening paragraph and Step 3 heading so they no longer say every review covers the whole pull request, every promise, and all five dimensions, removing technical debt the new scopes leave behind.
-
-Existing Issue: The opening paragraph of `review-pull-request.md` still tells every run to "review all of it", including every promise in the plan, fix plans, and description, and to judge across five dimensions, and the Step 3 heading still reads "Review every changed line and every promise", while commit and range scopes now review one diff, read no promises, and judge three dimensions. Severity: 3/10
-
-Existing Risk: 3/10 - A commit- or range-scoped review agent reads the unconditional opening first and may build a promise list or judge description and plan fidelity anyway, recording out-of-scope findings that the complex-feature cycle then works as repairs.
-
-Proposal Risk: 1/10 - The opening and heading then agree with the invocation paragraph and Step 3's scope rules, so a remaining conflict would show only as a reader finding two statements that disagree, which the scope test can be extended to catch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "make the review task's opening paragraph and Step 3 heading scope-aware". In `ai/tasks/feature/review-pull-request.md`, reword the first paragraph so the full-pull-request coverage and five dimensions are described as the default `aggregate` scope, with one clause saying `commit` and `range` scopes review only their diff across functionality gaps, technical debt, and security, and leave the rest of that paragraph, the invocation paragraph, and every rule under "What you may and may not do" unchanged. Retitle the Step 3 heading so it no longer promises every promise unconditionally, for example "Review every changed line in scope and, in aggregate scope, every promise". Keep the sentence "the proposal removes the claim rather than correcting it" byte-for-byte, since `scripts/pr-description-statistics-guideline.test.mjs` pins it, and keep every literal that `scripts/review-pull-request-scope.test.mjs` asserts. The edit moves no line if it stays one-for-one, but if any line shifts, re-derive the pull request description's line anchors into this file with `grep -n` and correct them in the same repair. Verify with `$janissary/scripts/run.mjs check-diff` and by reading the opening paragraph, the invocation paragraph, and Step 3's opening together to confirm they agree.
-
-
 * Update the new scope test's header comment so it describes every behavior the file pins instead of ending with "Nothing else.", removing technical debt the later assertions introduced.
 
 Existing Issue: The header comment of `scripts/review-pull-request-scope.test.mjs` says the file pins only the safeguards, the bare-invocation default, and the absence of override prose, and closes with "Nothing else.", while the file also pins the `Scope:` report check, the hexadecimal SHA check, the range-base check, the unknown-keyword gate, and the missing description-only shortcut. Severity: 2/10
