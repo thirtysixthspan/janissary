@@ -88,7 +88,7 @@ The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt` on the m
 
 Be careful with secrets. A secret you type on a command line, such as `export TOKEN=…`, ends up in the file. A password typed at a prompt that hides your typing, like `sudo` or `ssh`, doesn't. The file never leaves your machine.
 
-Transcripts are cleared at every launch. To turn them off, set `"recordShellTabs": false` in `.janissary/config.json` and restart. That turns off the shell recording too. See [app configuration](/user-documentation/getting-started/configuration) for the other settings.
+Transcripts and recordings stay on disk across launches and are swept by age at startup. To stop writing them, set `"logEnabled": false` in `.janissary/config.json` and restart. That also stops activity logs and turns off recording in harness and ssh tabs. See [app configuration](/user-documentation/getting-started/configuration) for `logRetentionInDays` and the other settings.
 
 The transcript file has no size cap. It stops for the rest of the session, keeping the rows already saved, in three cases: its folder can't be written, more than 4 MiB is waiting to reach disk, or output arrives faster than it can be transcribed. The unfinished row isn't saved after a failure. The notifications feed then shows `shell transcript failed`, once per open tab however many times it fails, and the shell and its recording keep running. The button still opens whatever was saved before the failure.
 
@@ -96,9 +96,9 @@ A single unbroken line longer than 1000 terminal rows keeps only the row it ends
 
 ## Play a shell recording
 
-Each shell session is recorded automatically unless the project sets `"recordShellTabs": false` in `.janissary/config.json`. Press the film icon in the metadata row to open the recording while the shell is running or after recording stops. You can also run `play <label>` to open the newest recording for that shell, or open its `.cast` file from the file navigator. See [Recording player](/user-documentation/tab-types/recording-player) for playback controls.
+Each shell session is recorded automatically unless the project sets `"logEnabled": false` in `.janissary/config.json`. Press the film icon in the metadata row to open the recording while the shell is running or after recording stops. You can also run `play <label>` to open the newest recording for that shell, or open its `.cast` file from the file navigator. See [Recording player](/user-documentation/tab-types/recording-player) for playback controls.
 
-The recording captures terminal output and resizes, not keystrokes as input. But zsh echoes command lines and interactive programs often echo what you type, so those characters are recorded too. A secret typed at a command prompt can appear in the recording. A password entered at a prompt that hides typing is not echoed and is not recorded. Files stay under `.janissary/recordings/` on the machine running Janissary and are cleared at a fresh launch. If writing fails, the shell keeps running, the notifications feed shows `shell recording failed`, and the film icon still opens any partial recording.
+The recording captures terminal output and resizes, not keystrokes as input. But zsh echoes command lines and interactive programs often echo what you type, so those characters are recorded too. A secret typed at a command prompt can appear in the recording. A password entered at a prompt that hides typing is not echoed and is not recorded. Files stay under `.janissary/recordings/` on the machine running Janissary and are swept by age at startup. If writing fails, the shell keeps running, the notifications feed shows `shell recording failed`, and the film icon still opens any partial recording.
 
 ## Query ACP from a shell
 

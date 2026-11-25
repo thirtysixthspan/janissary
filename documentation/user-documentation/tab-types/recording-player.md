@@ -109,14 +109,17 @@ its metadata line.
 ## Turning shell recording off
 
 Shell tabs are recorded like the other recorded tabs: a file under `.janissary/recordings/`, and a film
-flag in the tab's metadata row that opens the recording. To record no shell tab in a project, set this
+flag in the tab's metadata row that opens the recording. To record no tab in a project, set this
 in its `.janissary/config.json`:
 
 ```json
-{ "recordShellTabs": false }
+{ "logEnabled": false }
 ```
 
-No shell file is written and no shell tab draws the flag. Named `harness` and `ssh` tabs are unaffected
-by this setting and keep recording. No keystrokes are stored as input events, but any text a program
-displays is part of its output. The setting is on unless a project turns it off. It also turns off the
-shell tab's [text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript).
+No recording file is written for shell, harness, or ssh tabs, and each tab's recording flag reads
+`not recording`. No activity log entries are written either. No keystrokes are stored as input events,
+but any text a program displays is part of its output. The setting is on unless a project turns it off.
+It also turns off the shell tab's
+[text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript). See
+[app configuration](/user-documentation/getting-started/configuration) for `logRetentionInDays`, which
+controls how long older files are kept.
