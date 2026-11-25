@@ -14,12 +14,13 @@ Open the Hosts tab, a single table of saved hosts that can be opened as ssh sess
 
 **Use cases**
 
-- Open or focus the one Hosts tab; opening it again refreshes the rows already on screen.
-- See the hosts in effect, with a blank user or path shown as an empty cell and the destination shown as `host` or `host:port`. An empty catalog shows `No saved hosts` instead of column headings; Refresh, New host and Split still work.
-- Click a row twice, or select it and press Enter, to open an ssh tab for that host.
+- Open or focus the one Hosts tab. Running `hosts` again refreshes its rows in place. Coming back to the tab after hiding it re-reads the catalog; opening it the first time doesn't.
+- See the hosts in a table with **Name**, **User**, **Destination** and **Path** columns in that order. Rows follow name order ignoring case and keep the spelling you saved. A blank user or path leaves its cell empty, and the destination reads `host` or `host:port`. Long cells end in an ellipsis; the two controls at the right stay fully visible. An empty catalog shows `No saved hosts` with no column headings, while Refresh, New host and Split still work.
+- Hover a row for its full `[user@]host[:port]` on one line, with the saved path on the next line when it has one.
+- Click a row twice, or select it and press Enter, to open an ssh tab for that host. A row highlighted with the keyboard still takes two clicks to open with the mouse.
 - Move the highlight with `Up` and `Down`, which stop at the first and last row without wrapping. `Home` and `End` jump to those ends, and `Escape` leaves the list unchanged.
 - Create a host with the New host button beside Refresh, or press Cmd+N / Ctrl+N while the list has focus.
-- Edit or delete a host with the pencil or trash control at the right of its row.
+- Edit or delete a host with the pencil or trash control at the right of its row. Screen readers name them `Edit host <name>` and `Delete host <name>`.
 - Save a host with an optional user, port and remote working directory; adding an existing name updates it.
 - Remove a saved host by name, ignoring case.
 
@@ -35,6 +36,8 @@ Open the Hosts tab, a single table of saved hosts that can be opened as ssh sess
 **Host form and deletion**
 
 The New host form has Name, User, Destination and Path fields in that order; User and Path are optional and Destination expects `host[:port]`. An edit starts with the row's values and is titled `Edit host <name>`. Name is focused when the form opens, Tab moves through the fields and buttons and wraps at the ends, and Enter in a field saves. Cancel or Escape closes without saving. A refused save keeps the form open with its values and shows the reason; while the request is in flight Save is disabled and Cancel and Escape are ignored. On success the saved name is highlighted in the list, even after a rename that moves it.
+
+Saving under a name that's already present edits that entry, and changing only its case renames it. A name that collides with a different host is refused with `Host "<name>" already exists.` A save or delete whose original host has disappeared is refused with `No host named "<name>".` A reply the tab can't understand leaves the form open and shows `Could not save host.`
 
 Deleting asks `Delete host <name>?` first. Cancel, `n` or Escape backs out; the Delete button stays disabled and the dialog stays open while the request is in flight, so repeated confirmation cannot delete twice. A failed delete leaves the row in place.
 
