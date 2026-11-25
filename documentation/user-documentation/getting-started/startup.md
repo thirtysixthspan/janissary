@@ -13,7 +13,7 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-Every launch opens the visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. It also starts one hidden `system` shell in the same directory without a workspace. Use `tab focus system` to reveal it; closing it hides it again. Type `shell` in `janus`'s command bar to open another shell tab. Each launch starts fresh, with the previous session's logs, recordings, and workspace clones cleared. Remote sessions you left parked, other than ones holding only an `agent` run, are reattached (see [Starting fresh](#starting-fresh) below).
+Every launch opens the visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. It also starts one hidden `system` shell in the same directory without a workspace. Use `tab focus system` to reveal it; closing it hides it again. Type `shell` in `janus`'s command bar to open another shell tab. Each launch clears the previous session's browser logs, Git-failure output, workspace clones, and remote file cache. Remote sessions you left parked, other than ones holding only an `agent` run, are reattached (see [Starting fresh](#starting-fresh) below).
 
 If the required `janus` shell can't be started, the app doesn't start: the launch fails with `could not open the launch shell` and the reason. If only the hidden `system` shell fails, Janissary continues starting and posts `System shell could not start: <reason>.` in Notifications.
 
@@ -107,7 +107,7 @@ The other messages you can see:
 - `invalid project directory: <dir> is not a directory` for a path that doesn't exist or is a file. `janus` doesn't create it for you.
 - `unexpected argument: <dir>` for a second directory.
 
-Usage errors don't carry the `failed to start` banner described under [Troubleshooting](#troubleshooting), because nothing was started. A bad flag in a real directory can still touch that directory's `.janissary/logs/server.log`, since the launcher opens the log before it runs the server. A missing or invalid directory can't, so the launcher prints that message directly.
+Usage errors don't carry the `failed to start` banner described under [Troubleshooting](#troubleshooting), because nothing was started. A bad flag in a real directory still leaves a new `localhost-<timestamp>.log` under `.janissary/logs/server/`, since the launcher opens that file before it runs the server. A missing or invalid directory can't, so the launcher prints that message directly.
 
 ## Where the app opens
 
@@ -115,7 +115,7 @@ By default `janus` opens the app in a frameless Chrome window with no tabs or ad
 
 If none of those browsers is installed, or the window can't be started, Janissary opens the URL in your default browser instead. It works the same way there, except that some sites that refuse to be embedded may not render in [page tabs](/user-documentation/tab-types/web-pages).
 
-`--no-open` opens nothing and prints the server's URL on its own line instead. The same URL is on the `__JANUS_URL__` line of `.janissary/logs/server.log`. Open it in any browser, and stop the server with `janus stop`.
+`--no-open` opens nothing and prints the server's URL on its own line instead. The same URL is on the `__JANUS_URL__` line of `.janissary/logs/server/latest.log`, a link to the current run's log. Open it in any browser, and stop the server with `janus stop`.
 
 ## Stopping the app
 
@@ -147,7 +147,7 @@ When the last window or browser tab showing the app goes away, the server waits 
 
 ## Starting fresh
 
-Each launch starts fresh: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones from the previous session are cleared. Local shell and harness tabs, their transcripts and command history, tab-owned scheduled commands, and every other local tab you had open are gone. Project system schedules persist across launches; see [Project system schedules](/user-documentation/automation/scheduling#project-system-schedules). The launch opens the same single `janus` shell tab every launch does.
+Each launch starts fresh: browser logs, Git-failure output, workspace clones, and the remote file cache from the previous session are cleared. Harness captures, recordings, transcripts, and server logs stay on disk and are swept by age at startup instead; see [App configuration](/user-documentation/getting-started/configuration) for `logRetentionInDays`, the setting that controls how long they're kept. The local tabs you had open, along with the transcripts and command history you saw in them, are gone, as are their tab-owned scheduled commands. Project system schedules persist across launches; see [Project system schedules](/user-documentation/automation/scheduling#project-system-schedules). The launch opens the same single `janus` shell tab every launch does.
 
 Detached remote sessions are the exception. Every launch tries each eligible parked remote session independently and opens its tabs as the host answers: surviving remote shell and harness tabs are restored, and remote agent tabs aren't. Remote shells return on their existing PTYs with their last working directories. A host that refuses the attach or has nothing running is marked terminated; a host that can't be reached stays listed as detached in [Sessions](/user-documentation/tab-types/sessions), with the failure on its row and **Attach** available to try again. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for the full restore behavior.
 
@@ -155,7 +155,7 @@ Detached remote sessions are the exception. Every launch tries each eligible par
 
 ## Troubleshooting
 
-Since a normal launch doesn't print to the terminal, check `.janissary/logs/server.log` for anything the server would otherwise have shown — it's cleared at the start of every launch. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it.
+Since a normal launch doesn't print to the terminal, read `.janissary/logs/server/latest.log` for anything the server would otherwise have shown. That path is a link to the current run's log, named `localhost-<timestamp>.log`; each launch writes its own file, and older files stay until the launch sweep removes them by age. A launch that fails or is refused before the server is ready never repoints the link, so its own `localhost-<timestamp>.log` holds the failure. When the server exits before reporting ready, the tail of that file, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you don't have to go looking for it.
 
 If startup fails, the message opens with the app name and version, as in `janissary 0.20.0 — failed to start: <reason>`, so any report you share says which build it came from. Four failures also say what to do next. Any other failure shows the underlying error's own message after the banner and nothing more. The four you're most likely to see:
 
