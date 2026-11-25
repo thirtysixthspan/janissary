@@ -278,7 +278,7 @@ Recording covers named harness tabs, dedicated SSH tabs, and [shell tabs](/user-
 
 A recording captures terminal output, not keystrokes. Text that a program displays is still output, though: shell tabs show command lines as zsh echoes them, and an interactive program can also display text you type. Don't type secrets into a recorded session unless you are comfortable with them appearing in its recording. A password prompt that hides your typing does not display the password. Recordings stay under `.janissary/recordings/` and that directory is cleared at the next launch.
 
-To decline that for shell tabs, set `"recordShellTabs": false` in `.janissary/config.json` and restart. Shell tabs then write no recording and show no recording flag. They also write no [text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript) and show no **Open transcript** button. Harness and SSH tabs are unaffected and keep recording.
+To turn off recording for every tab and the activity log, set `"logEnabled": false` in `.janissary/config.json` and restart. Shell, harness, and ssh tabs then write no recording, and their recording flags read `not recording`. Shell and harness tabs write no transcript file, and a shell tab draws no **Open transcript** button. See [app configuration](/user-documentation/getting-started/configuration) for the other settings.
 
 Closing the harness tab or quitting the app closes the recording before the process ends.
 
