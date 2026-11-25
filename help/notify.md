@@ -6,6 +6,8 @@ Push a custom message into the notifications feed, attributed to the tab that se
 
 `notify <message>`
 
+Bare `notify` with no message prints `Usage: notify <message>.`
+
 **Use cases**
 
 - Add a reminder or status message to the session's notifications.
