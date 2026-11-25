@@ -18,6 +18,10 @@ Usage: question ask "<question>"
        question approve "<question>" <option> [<option> …]
 ```
 
+A bare `question ask` or `question approve` line at the end of a reply is prose, not a command. It ends the turn without opening a panel.
+
+The labelled block must hold exactly one `question` command. Zero or more than one command in the block draws the shared correction instead of ending the turn.
+
 ## Where the panel appears
 
 The panel opens on the tab that asked the question and stays tied to that tab as you switch away and back. Its title names the asking tab, such as `Question from bilal`, and the question appears under it word for word. It doesn't block the rest of the app: it's non-modal, so you can keep typing in other tabs, switch away, or use any other control while it's still waiting for you.
