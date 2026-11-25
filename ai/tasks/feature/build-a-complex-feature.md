@@ -19,7 +19,7 @@ Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or
 - In the single-plan route, every reference to a subplan means the sole source-plan work unit unless an explicit exception below applies. Run publication, improvement, implementation, focused review and repairs, full review, and PR updates on the same branch and PR. Never create a duplicate plan or fold the canonical plan into itself.
 - Use one feature branch and one pull request for the entire feature. Publish all improved ready subplan plans and open the PR before implementing any subplan. Every plan update, implementation, and repair is committed and pushed to that same branch and PR. Never create another PR.
 - Each subplan review covers only its newly published implementation commit, through the review task's `scope: commit` argument. Do not review the aggregate PR diff during the subplan cycles. The review reads no subplan, so first decline every resulting PR backlog item whose proposal delivers work a later subplan owns or work the plan's `Out of scope` list excludes from the feature, as Step 6 item 2 describes. Work every remaining item, one at a time in file order, before any further review runs. The review that follows is a resolution review: through `scope: range`, it reviews only the repair commits, for regressions and new defects. Repeat until a resolution review records nothing, then start the next subplan.
-- A full-PR review in Step 8 whose findings are pull request description only or documentation only needs no follow-up review. Focused subplan cycles always run their resolution review. Classify every entry when you record or read the backlog, before any repair starts. When every entry is description-only, work them as usual, then confirm the repair range changed only fix plans under `./product/plans/complete/` and `./product/backlog/pull-request.md`, and that `gh pr view <number> --json body` shows each correction. If both checks pass, proceed as though the review had recorded nothing: no full re-review runs to check description corrections. If any entry calls for another change, or either check fails, the normal follow-up review runs.
+- A full-PR review in Step 9 whose findings are pull request description only or documentation only needs no follow-up review. Focused subplan cycles always run their resolution review. Classify every entry when you record or read the backlog, before any repair starts. When every entry is description-only, work them as usual, then confirm the repair range changed only fix plans under `./product/plans/complete/` and `./product/backlog/pull-request.md`, and that `gh pr view <number> --json body` shows each correction. If both checks pass, proceed as though the review had recorded nothing: no full re-review runs to check description corrections. If any entry calls for another change, or either check fails, the normal follow-up review runs.
 - After every subplan and its focused review/repair cycle is complete, consolidate the canonical plan and update the PR description. Then review the full PR. Drain every finding one at a time and repeat the full review/repair cycle until a full review adds no findings and the backlog is empty. The PR remains open throughout; never merge or close it.
 - Preserve the repository's dependency audit, diff-scoped checks, test requirements, security rules, and task-specific publication safeguards. Never run `npm run check`.
 - If a child task's standalone behavior conflicts with this orchestration, apply only the explicit overrides below and retain every other child constraint.
@@ -63,7 +63,7 @@ Apply these overrides to `build-a-feature.md`:
 
 1. Select the supplied plan even if the original feature plan is rated 6 or higher. 
 2. Reuse the prepared workspace; override Step 0 and do not run workspace preparation again.
-3. Do not run the build task's PR-opening handoff, its review-and-repair cycle, or its pull request update. The orchestrator commits and pushes each implementation to the existing feature PR branch after implementation, as specified in Step 5, reviews that commit in Step 6, and reviews and updates the full PR in Steps 8 and 9.
+3. Do not run the build task's PR-opening handoff, its review-and-repair cycle, or its pull request update. The orchestrator commits and pushes each implementation to the existing feature PR branch after implementation, as specified in Step 5, reviews that commit in Step 6, and updates and reviews the full PR in Steps 8 and 9.
 4. Keep the original high-complexity plan and the improved subplan plans with the delivered work. Do not expand a subplan's planned file scope or resplit it. If its plan no longer covers the required implementation, preserve the work and report the scope mismatch as a blocker.
 
 For the single-plan route, explicitly override the build task's ready-plan selection and promotion steps: implement the canonical source plan at its recorded `complete/` path and leave it there. Apply overrides 2 and 3 above unchanged, preserve the plan's 1–5 rating and scope, and run all implementation, test, spec, publication, and focused-review stages. Do not create a second completed plan.
@@ -97,9 +97,15 @@ After the final subplan's focused review cycle is complete, verify the requireme
 
 Once every requirement is delivered and all focused review backlogs are empty, confirm the original source plan is still in `./product/plans/complete/`, where Step 2 moved it. This original plan is the canonical record of the full feature; keep its original complexity rating and incorporate the completed subplans' final outcomes during the update step.
 
-## Step 8 — Review and resolve the full pull request
+## Step 8 — Update the pull request
 
-After the canonical plan and PR description match the completed feature:
+After Step 7 completes, delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number. This initial update runs before the full-PR review in Step 9. Its Step 3 plan discovery finds the canonical plan from the branch's first commit, which moved the original source plan into `complete/` in Step 2. Confirm the plan it identifies is the source plan recorded in Step 0; if it identifies another plan or none, stop and report the blocker. Its Step 4 treats every completed subplan plan the way it treats a fix plan: it folds the subplan into the canonical plan and removes the subplan file from `product/plans/complete/`. The source plan's original complexity rating remains unchanged. The subagent updates the PR description, canonical plan, specs, and applicable help pages under `help/` to match the final code, then commits and pushes on the same branch. Preserve the update task's prohibition on source changes, its clean-tree and target checks, and its no-merge rule. If this update surfaces work requiring a code repair, resolve it before beginning the full-PR review in Step 9.
+
+If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion.
+
+## Step 9 — Review and resolve the full pull request
+
+After Step 8's update has made the canonical plan and PR description match the completed feature:
 
 1. Delegate `ai/tasks/feature/review-pull-request.md` to a fresh subagent with only the recorded PR number, so it runs in its default `aggregate` scope. This is the first review of the aggregate PR diff.
 2. Read `./product/backlog/pull-request.md`. Before the first repair, record the PR head SHA and classify each entry as description-only or not, as defined in the orchestration rules. Then resolve every entry in file order, one at a time, using `work-pull-request-issue.md` as described in Step 6. Do not start another review while any entry remains.
@@ -108,21 +114,15 @@ After the canonical plan and PR description match the completed feature:
 
 If a review or repair is blocked, preserve the PR and outstanding backlog, report the blocker, and do not claim completion.
 
-## Step 9 — Update the pull request
-
-Delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number before the full-PR review. Its Step 3 plan discovery finds the canonical plan from the branch's first commit, which moved the original source plan into `complete/` in Step 2. Confirm the plan it identifies is the source plan recorded in Step 0; if it identifies another plan or none, stop and report the blocker. Its Step 4 treats every completed subplan plan the way it treats a fix plan: it folds the subplan into the canonical plan and removes the subplan file from `product/plans/complete/`. The source plan's original complexity rating remains unchanged. The subagent updates the PR description, canonical plan, specs, and applicable help pages under `help/` to match the final code, then commits and pushes on the same branch. Preserve the update task's prohibition on source changes, its clean-tree and target checks, and its no-merge rule. If this update surfaces work requiring a code repair, resolve it before beginning the full-PR review.
-
-If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion.
-
 ### Test, repair, and update again
 
-After the initial update above and the full-PR review in Step 8 complete, run this cycle before final verification:
+After the initial update in Step 8 and the full-PR review above complete, run this cycle before final verification:
 
 1. Delegate `ai/tasks/feature/test-pull-request.md` to a fresh subagent with the recorded PR number. Preserve all of its attached-browser, base-branch instruction, dependency, scratch-instance, teardown, backlog-only publication, and no-merge safeguards. Do not substitute reading the testing steps for executing them.
 2. Require the test task to complete and publish its findings. If testing is blocked, including a missing attached browser, failed startup, browser loss, incomplete teardown, or failed publication, preserve the PR and outstanding backlog, report the blocker, and stop. Do not treat an incomplete run as a clean test pass.
 3. Read the PR backlog after testing. If entries remain, drain every entry in file order before another test pass: delegate `ai/tasks/feature/work-pull-request-issue.md` to a fresh subagent for each entry with the recorded PR number and an explicit selector. Preserve its tests, scope, and branch safeguards and apply Step 6's complexity-cutoff override. Verify each repair is published to the same branch and PR before selecting the next entry. Stop and report any blocked repair.
 4. After any repairs, repeat items 1 through 3. Retest even when every repaired finding was description-only; the review exception does not waive behavioral testing. Exit this cycle only when a completed test pass adds no new backlog entries and the backlog is empty (or contains only its required empty-file skeleton).
-5. Delegate `ai/tasks/feature/update-pull-request.md` again to a fresh subagent with the recorded PR number. Apply the same canonical-plan discovery and update safeguards described above, then confirm the final update is published and the PR remains open. If this update surfaces a code repair, resolve it and repeat the test/repair cycle and final update before proceeding. A blocked update stops completion.
+5. Delegate `ai/tasks/feature/update-pull-request.md` again to a fresh subagent with the recorded PR number. Apply the same canonical-plan discovery and update safeguards described in Step 8, then confirm the final update is published and the PR remains open. If this update surfaces a code repair, resolve it and repeat the test/repair cycle and final update before proceeding. A blocked update stops completion.
 
 ## Step 10 — Final verification and report
 
