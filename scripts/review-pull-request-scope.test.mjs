@@ -61,6 +61,20 @@ describe('the review-pull-request scope argument', () => {
     expect(text.indexOf(hexCheck)).toBeLessThan(text.indexOf('`git rev-parse --verify <sha>^{commit}` fails'));
   });
 
+  it('requires a range base on the pull request or at its merge base', () => {
+    const text = read(REVIEW);
+    const headCheck = '7. For `range`: the head is not in `origin/master..HEAD`, checked the same way.';
+    const baseCheck = '8. For `range`: the base is not in `origin/master..HEAD`, checked the same way, and is not the merge base';
+    const ancestorCheck = '9. For `range`: `git merge-base --is-ancestor <base> <head>` fails.';
+    expect(text).toContain(baseCheck);
+    expect(text).toContain('differs from the one `git merge-base origin/master HEAD` prints');
+    expect(text).toContain('A base equal to the merge base reviews the branch from its start.');
+    expect(text).toContain(ancestorCheck);
+    expect(text.indexOf(headCheck)).toBeGreaterThan(-1);
+    expect(text.indexOf(headCheck)).toBeLessThan(text.indexOf(baseCheck));
+    expect(text.indexOf(baseCheck)).toBeLessThan(text.indexOf(ancestorCheck));
+  });
+
   it('leaves no description-only shortcut in the focused review cycle', () => {
     expect(read(COMPLEX)).not.toContain('If every recorded entry was description-only');
   });

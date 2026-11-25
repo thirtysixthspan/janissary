@@ -66,7 +66,8 @@ State the pull request you are reviewing and how you identified it, in one sente
    5. `git rev-parse --verify <sha>^{commit}` fails for the commit SHA or for either end of the range.
    6. For `commit`: the commit is not in `origin/master..HEAD`, meaning `git merge-base --is-ancestor <sha> HEAD` fails or `git merge-base --is-ancestor <sha> origin/master` succeeds.
    7. For `range`: the head is not in `origin/master..HEAD`, checked the same way.
-   8. For `range`: `git merge-base --is-ancestor <base> <head>` fails.
+   8. For `range`: the base is not in `origin/master..HEAD`, checked the same way, and is not the merge base, meaning the full SHA `git rev-parse --verify <base>^{commit}` prints differs from the one `git merge-base origin/master HEAD` prints. A base equal to the merge base reviews the branch from its start.
+   9. For `range`: `git merge-base --is-ancestor <base> <head>` fails.
 
    Every SHA placed in a command, in these checks and in Step 3, is wrapped in single quotes, for example `git rev-parse --verify '<sha>^{commit}'`.
 

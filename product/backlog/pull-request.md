@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Require a range scope's base to lie on the pull request, closing a functionality gap that lets a range review judge master's commits as the pull request's own.
-
-Existing Issue: Step 1 item 5 of the review task checks that a range's head is in `origin/master..HEAD` and that its base is an ancestor of its head, but never checks where the base is, so a base on master older than the merge base passes and `git diff <base>..<head>` then includes master commits the pull request did not make. Severity: 3/10
-
-Existing Risk: 3/10 - A mistyped or stale base makes the review record findings against code master already carries, and the repair task then edits code outside the pull request's change to address them.
-
-Proposal Risk: 1/10 - A base equal to the merge base stays allowed, so reviewing the branch from its start still works; a deliberately older base now falls back to aggregate, which the report's `Scope:` line names.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2207 "require a range scope's base to be on the pull request branch". In ai/tasks/feature/review-pull-request.md Step 1 item 5, add a range check after the existing range-head check: the base must either be in `origin/master..HEAD`, checked with `git merge-base --is-ancestor` the same way as the head, or equal `git merge-base origin/master HEAD`; otherwise fall back to aggregate and record the raw value for Step 7. Keep the existing checks and their order, renumbering only those after the new one. Add a range that starts outside the pull request to the fallback examples in the "Review and recording" section of product/specs/pull-request-review.md. The callers in ai/tasks/feature/build-a-complex-feature.md Step 6 already pass a recorded PR head SHA as the base and need no change. Pin the new check's wording in scripts/review-pull-request-scope.test.mjs; its existing assertions must keep passing.
-
-
 * Make the review task's scope validation cover its own unknown-keyword check, closing a functionality gap where the step's opening sentence excludes the case its first check handles.
 
 Existing Issue: Step 1 item 5 of the review task applies its fallback checks only "for a `commit` or `range` request", yet its first check is for a keyword that is neither, so read literally an unknown keyword such as `scope: subplan 1a2b3c4` falls outside every rule and is assigned no effective scope. Severity: 2/10
