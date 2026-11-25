@@ -43,6 +43,15 @@ describe('the review-pull-request scope argument', () => {
     expect(text).not.toContain('Override its Step 2 and Step 3 review scope');
   });
 
+  it('blocks a focused or resolution review that did not run in its requested scope', () => {
+    const text = read(COMPLEX);
+    expect(text).toContain('confirm its `Scope:` line reads `commit <short-sha>`');
+    expect(text).toContain('confirm its `Scope:` line reads `range <base>..<head>`');
+    expect(text).toContain('Any other value, including `aggregate — requested "<value>" ignored`');
+    expect(text).toContain('work none of its entries');
+    expect(text).toContain('read the implementation commit SHA with `git rev-parse HEAD`');
+  });
+
   it('leaves no description-only shortcut in the focused review cycle', () => {
     expect(read(COMPLEX)).not.toContain('If every recorded entry was description-only');
   });
