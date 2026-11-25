@@ -24,7 +24,7 @@ The **Models** list has the accessible name `Models of role <name>` for screen r
 
 Both the model and command pickers focus their first control when they open. In the model field, the first `Escape` closes the candidate list and the next `Escape` closes the picker; in the command picker, `Escape` closes it directly. Adding, canceling, or pressing `Escape` returns focus to the button you opened them from.
 
-Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all for that choice; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
+Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all for that choice; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen. An effort on a `claude` entry is saved with the choice but ignored by Claude's ACP adapter, so it has no effect on the `ask` or `tell` prompts that use it. A `codex` entry does use its level as a reasoning-effort setting.
 
 ## Grant commands to a role
 
