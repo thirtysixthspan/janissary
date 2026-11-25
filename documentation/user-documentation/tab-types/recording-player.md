@@ -104,7 +104,9 @@ If `play` cannot open a file, it reports one of these lines in the tab where you
 - `play: <file>: not a playable file` when no player claims the file type.
 
 A recording file that exists but cannot be read still opens in the player, which shows the reason in
-its metadata line.
+its metadata line. A bad terminal size is one such reason, and a recorded resize with an invalid size
+is simply ignored; see [Playing a recording back](/user-documentation/advanced-agents/harness#playing-a-recording-back)
+for the exact rules.
 
 ## Turning shell recording off
 

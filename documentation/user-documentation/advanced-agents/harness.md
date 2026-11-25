@@ -280,7 +280,7 @@ Every harness session is recorded automatically. The full session, with its timi
 
 Recording covers named harness tabs, dedicated SSH tabs, and [shell tabs](/user-documentation/command-bar/shell#open-a-shell-tab). Interactive programs launched through `!`, such as `!vim`, are not recorded — a tab whose body is a terminal records, a program the `!` command took a tab over to does not. The three kinds share one directory and are told apart by the file's header: a harness recording names the bare program in `command` and the tab label in `title`, an SSH recording carries the full invocation you typed, and a shell recording names the shell's own path (`/bin/zsh`). That is worth knowing before you type one: an invocation with a secret passed in an ssh flag value puts that secret in a plaintext file under `.janissary/recordings/`.
 
-A recording captures terminal output, not keystrokes. Text that a program displays is still output, though: shell tabs show command lines as zsh echoes them, and an interactive program can also display text you type. Don't type secrets into a recorded session unless you are comfortable with them appearing in its recording. A password prompt that hides your typing does not display the password. Recordings stay under `.janissary/recordings/` and that directory is cleared at the next launch.
+A recording captures terminal output, not keystrokes. Text that a program displays is still output, though: shell tabs show command lines as zsh echoes them, and an interactive program can also display text you type. Don't type secrets into a recorded session unless you are comfortable with them appearing in its recording. A password prompt that hides your typing does not display the password. Recordings stay under `.janissary/recordings/` across launches and quitting. Once per launch Janissary removes recordings older than `logRetentionInDays` days (default `7`); a value of `0` removes those from earlier launches but keeps files from the current run.
 
 To turn off recording for every tab and the activity log, set `"logEnabled": false` in `.janissary/config.json` and restart. Shell, harness, and ssh tabs then write no recording, and their recording flags read `not recording`. Shell and harness tabs write no transcript file, and a shell tab draws no **Open transcript** button. See [app configuration](/user-documentation/getting-started/configuration) for the other settings.
 
@@ -290,7 +290,7 @@ A recording covers one stretch of time the tab is attached, so a session you det
 
 The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind. A resize before that first output updates the recording's starting dimensions without creating a file. Each file begins with an asciicast v3 header containing the session start time, command, tab label, and initial terminal size; later output, resizes, and a reported process exit are stored as timed events. Recordings written by older versions or other tools can also use asciicast v2, which the player reads.
 
-The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. Recordings from the current run are cleared the next time you start `janus`. SSH sessions and shell tabs are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. SSH sessions and shell tabs are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
 
 ### The recording flag
 
@@ -366,6 +366,12 @@ The line above the terminal says what is being played: the command the session r
 started, how long it is, and the session's exit status when the file carries one. A recording that
 cannot be read says why there instead of failing to open.
 
+A recording's header declares the terminal size it was made at. Each dimension must be a positive
+whole number no larger than `9007199254740991`. A header that leaves a dimension out, or gives it as
+zero, a negative number, a fraction, a value that isn't finite, or a number past that limit, opens the player with
+`the recording does not declare a terminal size` on the metadata line. A recorded resize with a size
+outside that range is ignored, and the rest of the recording still plays.
+
 Three answers come back in your transcript instead of a tab, and each names what was wrong:
 
 - `Usage: play <file>.` — nothing to play was named.
@@ -418,11 +424,12 @@ activity to open a newer point-in-time view.
 
 Transcript collection follows the current harness session from when the tab opens. It doesn't import earlier sessions as conversation history. The harness may create its session record only after its first turn, so a transcript isn't always available immediately.
 
-The transcript file is created lazily at `.janissary/harness-transcripts/<label>-<timestamp>.txt`
+The transcript file is created lazily at `.janissary/transcripts/harness/<label>-<timestamp>.txt`
 when the first transcript entry arrives. A harness that produces no transcript leaves no empty file.
 Janissary reads the harness's own session data to produce this file; it does not write to the harness's data directory. Closing the harness tab or quitting the app stops transcript updates and closes the file cleanly.
-The directory is cleared on every launch. SSH tabs never have
-a session transcript.
+Transcripts stay on disk across launches and quitting. Once per launch Janissary removes transcripts
+older than `logRetentionInDays` days (default `7`; `0` removes those from earlier launches). SSH tabs
+never have a session transcript.
 
 If Janissary cannot find a session record it recognizes, the tab remains available for screen-based monitoring without a transcript file. The notifications feed reports `no harness transcript found` once for that tab. This message concerns the session transcript, separately from a `.cast` recording failure. It is delivered the same way, queued whether or not the feed is open, and is never reported for SSH tabs.
 
