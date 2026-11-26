@@ -33,13 +33,25 @@ describe('schedules stylesheet', () => {
     );
   });
 
-  it('styles the row trash icon', () => {
-    expect(schedules).toContain('.schedules-row-delete {');
+  it('styles the row trash icon with the shared rule', () => {
+    expect(schedules).toContain('.schedules-row-icon-button {');
+    expect(schedules).not.toContain('.schedules-row-delete {');
     expect(schedules).not.toContain('.schedules-clear');
   });
 
   it('styles the pause control like the trash icon and mutes paused rows', () => {
-    expect(schedules).toContain('.schedules-row-pause {');
+    const iconButton = schedules.match(/\.schedules-row-icon-button \{[^}]+\}/)?.[0];
+
+    expect(iconButton).toBeDefined();
+    expect(iconButton).toContain('background: transparent');
+    expect(iconButton).toContain('border: none');
+    expect(iconButton).toContain('color: var(--muted)');
+    expect(iconButton).toContain('cursor: pointer');
+    expect(iconButton).toContain('font-size: 13px');
+    expect(iconButton).toContain('padding: 0 4px');
+    expect(iconButton).toContain('line-height: 1');
+    expect(iconButton).toContain('justify-self: center');
+    expect(schedules).not.toContain('.schedules-row-pause {');
     expect(schedules).toContain('.schedules-row.paused { color: var(--muted); }');
   });
 

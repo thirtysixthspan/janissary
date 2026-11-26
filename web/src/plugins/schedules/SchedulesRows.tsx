@@ -48,7 +48,7 @@ export function ScheduleSection({
             {canPauseRow(entry) ? (
               <button
                 type="button"
-                className="schedules-row-pause"
+                className="schedules-row-icon-button schedules-row-pause"
                 aria-label={pauseLabel}
                 title={pauseLabel}
                 onClick={(event) => {
@@ -65,7 +65,7 @@ export function ScheduleSection({
             )}
             <button
               type="button"
-              className="schedules-row-delete"
+              className="schedules-row-icon-button schedules-row-delete"
               aria-label={`Delete schedule ${entry.id}`}
               onClick={(event) => {
                 event.stopPropagation();
