@@ -56,6 +56,8 @@ type LineProps = {
   extraCarets?: string;
   // Syntax-highlighting token ranges for this line; empty when highlighting is off.
   tokens: TokenRange[];
+  findFrom?: number;
+  findTo?: number;
   // The in-editor persona-suggestion status pill for this line, when it is a `>`-led request line.
   pill?: SuggestPill;
   // Whether the pill holds keyboard focus (via Tab), so Enter fires the request instead of
@@ -76,12 +78,16 @@ type LineProps = {
 // at the cursor column, so it sits exactly at (line, col) with no measurement code. Token
 // boundaries fold into the same bounds set as selection/caret, so a token span never needs to
 // nest around a selection — everything flattens to one list of column-bounded segments.
+function segmentClass(scope: string | undefined, selected: boolean, findMatch: boolean): string | undefined {
+  return [scope, selected && 'editor-sel', findMatch && 'editor-find-match'].filter(Boolean).join(' ') || undefined;
+}
+
 function contentSegments(props: LineProps): React.ReactNode[] {
-  const { text, selFrom, selTo, caretCol, caretRef, tokens } = props;
+  const { text, selFrom, selTo, caretCol, caretRef, tokens, findFrom = -1, findTo = -1 } = props;
   const spans = parseSpans(props.extraSpans ?? '');
   const caretCols = new Set([caretCol, ...parseCarets(props.extraCarets ?? '')]);
   const tokenBounds = tokens.flatMap((t) => [t.from, t.to]);
-  const bounds = [...new Set([0, selFrom, selTo, text.length, ...caretCols, ...tokenBounds, ...spans.flat()])]
+  const bounds = [...new Set([0, selFrom, selTo, findFrom, findTo, text.length, ...caretCols, ...tokenBounds, ...spans.flat()])]
     .filter((b) => b >= 0 && b <= text.length)
     .toSorted((a, b) => a - b);
   // Only the primary caret takes the ref: it is the one EditorTab scrolls into view and measures
@@ -95,8 +101,8 @@ function contentSegments(props: LineProps): React.ReactNode[] {
     const [from, to] = [bounds[index], bounds[index + 1]];
     if (caretCols.has(from)) nodes.push(caret(from));
     const token = tokens.find((t) => from >= t.from && to <= t.to);
-    const className = [token?.scope, selected(from, to) ? 'editor-sel' : undefined].filter(Boolean).join(' ');
-    nodes.push(<span key={from} className={className || undefined}>{text.slice(from, to)}</span>);
+    const findMatch = findFrom >= 0 && from >= findFrom && to <= findTo;
+    nodes.push(<span key={from} className={segmentClass(token?.scope, selected(from, to), findMatch)}>{text.slice(from, to)}</span>);
   }
   if (caretCols.has(text.length) && (text.length > 0 || bounds.length === 1)) {
     // Zero-width space gives the inline span text content so the browser establishes a line box

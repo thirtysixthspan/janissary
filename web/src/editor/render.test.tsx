@@ -118,6 +118,39 @@ describe('EditorLine with several selections', () => {
   });
 });
 
+describe('EditorLine find match', () => {
+  const findMatchTexts = (container: HTMLElement) =>
+    [...container.querySelectorAll(':scope .editor-content .editor-find-match')].map((s) => s.textContent);
+
+  it('gives exactly the matched characters the editor-find-match class', () => {
+    const { container } = render(
+      <EditorLine text="two and two" line={0} gutterCh={2} isCurrent selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={[]} findFrom={8} findTo={11} />,
+    );
+    expect(findMatchTexts(container)).toEqual(['two']);
+    expect(container.querySelector(':scope .editor-content')?.textContent).toBe('two and two');
+  });
+
+  it('keeps a covered token class alongside editor-find-match', () => {
+    const tokens: TokenRange[] = [{ from: 0, to: 5, scope: 'hljs-keyword' }];
+    const { container } = render(
+      <EditorLine text="const x = 1;" line={0} gutterCh={2} isCurrent={false} selFrom={-1} selTo={-1} caretCol={-1} caretRef={null} tokens={tokens} findFrom={1} findTo={4} />,
+    );
+    const span = [...container.querySelectorAll(':scope .editor-content span')].find((s) => s.textContent === 'ons');
+    expect(span?.className).toBe('hljs-keyword editor-find-match');
+  });
+
+  it('paints nothing when the match is elsewhere', () => {
+    const withEmpty = render(
+      <EditorLine text="const x" line={0} gutterCh={2} isCurrent selFrom={0} selTo={5} caretCol={5} caretRef={null} tokens={[]} findFrom={-1} findTo={-1} />,
+    ).container;
+    const without = render(
+      <EditorLine text="const x" line={0} gutterCh={2} isCurrent selFrom={0} selTo={5} caretCol={5} caretRef={null} tokens={[]} />,
+    ).container;
+    expect(findMatchTexts(withEmpty)).toEqual([]);
+    expect(withEmpty.innerHTML).toBe(without.innerHTML);
+  });
+});
+
 describe('EditorLine suggestion pill', () => {
   const pill: SuggestPill = { text: 'run', runnable: true };
 

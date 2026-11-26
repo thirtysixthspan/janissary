@@ -1603,6 +1603,66 @@ describe('EditorTab', () => {
       await waitFor(() => expect(currentLine(container)).toBe('line two'));
     });
 
+    describe('buffer match highlight', () => {
+      const bufferMatches = (container: HTMLElement) =>
+        [...container.querySelectorAll(':scope .editor-row .editor-find-match')].map((n) => ({
+          line: n.closest<HTMLElement>('.editor-row')?.dataset.editorLine,
+          text: n.textContent,
+        }));
+
+      it('highlights the previewed match text in the buffer without editing it', async () => {
+        const { client } = makeClient();
+        const { container } = await renderLoaded(client);
+        openFind();
+        await searchForOneRow(container, 'two');
+
+        fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+
+        await waitFor(() => expect(bufferMatches(container)).toEqual([{ line: '1', text: 'two' }]));
+        expect(bufferTexts(container)).toEqual(['line one', 'line two']);
+        expect(hasEnabledSaveButton(container)).toBe(false);
+      });
+
+      it('paints nothing for a typed match the cursor has not moved to', async () => {
+        const { client } = makeClient();
+        const { container } = await renderLoaded(client);
+        openFind();
+
+        await searchForOneRow(container, 'two');
+
+        expect(currentLine(container)).toBe('line one');
+        expect(bufferMatches(container)).toEqual([]);
+      });
+
+      it('moves the highlight with the highlighted row', async () => {
+        const { client } = makeClient();
+        const { container } = await renderLoaded(client);
+        openFind();
+        search('line');
+        await waitFor(() => expect(findRows(container)).toHaveLength(2));
+
+        fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+        await waitFor(() => expect(bufferMatches(container)).toEqual([{ line: '1', text: 'line' }]));
+
+        fireEvent.keyDown(findInput(), { key: 'ArrowUp' });
+        await waitFor(() => expect(bufferMatches(container)).toEqual([{ line: '0', text: 'line' }]));
+      });
+
+      it('clears the highlight when the overlay closes', async () => {
+        const { client } = makeClient();
+        const { container } = await renderLoaded(client);
+        openFind();
+        await searchForOneRow(container, 'two');
+        fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+        await waitFor(() => expect(bufferMatches(container)).toHaveLength(1));
+
+        fireEvent.keyDown(findInput(), { key: 'Escape' });
+
+        expect(noFindInput()).toBeNull();
+        expect(bufferMatches(container)).toEqual([]);
+      });
+    });
+
     it('positions a selected match one quarter down the editor viewport', async () => {
       const { client } = makeClient();
       const { container } = await renderLoaded(client);

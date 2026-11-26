@@ -561,6 +561,14 @@ buffer; if the query was typed and no row was navigated to, Return first moves t
 highlighted (first ranked) match. With no matches, Return just closes the overlay. The cursor move is not an edit: it never dirties the buffer and never becomes
 an undo step, so an undo right after a jump undoes the last real edit.
 
+While the cursor sits on the highlighted row's line, the buffer behind the overlay highlights that
+row's matched characters the same way the overlay row emphasizes them: the accent background with
+the text in the background color, over any syntax color. Only the highlighted row's match is painted,
+not other occurrences on the line or other rows' matches, and it moves as the highlighted row moves.
+A typed query nobody has navigated to yet paints nothing in the buffer until the cursor reaches its
+line. The highlight is presentation only and never changes the text, cursor, or selection. It goes
+away as soon as the overlay closes.
+
 Escape closes the overlay and leaves the cursor on the last previewed line, with focus back in the
 buffer ready to type. Closing the overlay never scrolls the buffer: the view stays exactly where it was. Escape closes the overlay the same way when focus has moved back into the
 buffer while it is open; that Escape only closes the overlay and does not also collapse a selection.

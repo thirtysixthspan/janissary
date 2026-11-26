@@ -8,6 +8,7 @@ import { suggestPillLabel } from './suggest-request';
 import { buildEditorRows } from './editor-rows';
 import type { TokenRange } from '../shared/syntax-highlight/tokenize';
 import { approveIcon, rejectIcon } from '../shared/icons';
+import type { FindMatch } from './find-highlight';
 
 type EditorLinesProps = {
   state: EditorState;
@@ -16,6 +17,7 @@ type EditorLinesProps = {
   active: boolean;
   gutterCh: number;
   caretRef: React.Ref<HTMLSpanElement>;
+  findMatch?: FindMatch | null;
 };
 
 // The accept/decline icon pair rendered right-floated on a hunk's last added row, mirroring the
@@ -34,7 +36,7 @@ function HunkControls({ onAccept, onDecline }: { onAccept: () => void; onDecline
 // still-unresolved pending hunk, an inline diff preview of that hunk (all previewed at once) with
 // its own accept/decline icons. Split out of EditorTab.tsx to keep that file under the 200-line cap
 // (mirroring Decision 12's extraction of PendingSuggestPanel and handleSuggestKeyDown).
-export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef }: EditorLinesProps) {
+export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef, findMatch }: EditorLinesProps) {
   const pending = suggest.pending;
   const queryLine = suggest.queryLine;
   const rows = buildEditorRows(state.lines, pending?.hunks ?? []);
@@ -43,6 +45,7 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
     const [selFrom, selTo] = lineSelection(state, index);
     const extras = lineExtras(state, index);
     const onCursorLine = index === state.cursor.line;
+    const found = findMatch?.line === index ? findMatch : null;
     // A row after an open query line's anchor reads as if the anchor's line were not counted, so
     // the query renders as an insertion between two lines rather than a replacement of one.
     const gutterNumber = queryLine && index > queryLine.anchorLine ? index : index + 1;
@@ -60,6 +63,8 @@ export function EditorLines({ state, tokens, suggest, active, gutterCh, caretRef
         extraSpans={extras.spans}
         extraCarets={active && suggest.focusTarget === 'buffer' ? extras.carets : ''}
         tokens={tokens[index] ?? []}
+        findFrom={found ? found.from : -1}
+        findTo={found ? found.to : -1}
         removed={removed}
         gutterNumber={gutterNumber}
       />
