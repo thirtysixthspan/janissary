@@ -185,5 +185,5 @@ async function pullRebase(commands: SyncCommandRunner, dir: string, branch: stri
 }
 
 async function push(commands: SyncCommandRunner, dir: string, branch: string): Promise<void> {
-  await commands.run(['push', 'origin', `HEAD:${branch}`], dir, githubEnv());
+  await commands.run(['push', '--no-verify', 'origin', `HEAD:${branch}`], dir, githubEnv());
 }
