@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle the new Space/p shortcut so it cannot toggle a schedule when a focused button owns the key.
-
-Existing Issue: With a row selected, a Space keydown on the focused New schedule button — or on a pause button belonging to a different row — is consumed by the tab's onKeyDown, which prevents the button's own activation and toggles the selected row instead. Severity: 6/10
-
-Existing Risk: 6/10 - A keyboard user who selects a row and then tabs to New schedule pauses or resumes that schedule instead of opening the dialog, and a user who tabs to one row's pause control can change a different row's schedule; the wrong recurring entry is mutated and persisted without the user noticing.
-
-Proposal Risk: 2/10 - A target check confines the shortcut to the list container and leaves native button activation intact; the only residual risk is that the long-standing key handling on other focused buttons stays as it was.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2253 "keep the schedules tab Space/p shortcut from hijacking focused buttons". In web/src/plugins/schedules/SchedulesTab.tsx, guard the new Space/p branch of onKeyDown so it acts only when the event target is the list container itself — the same target check `ownsKey` in web/src/plugins/scripts/ScriptsTab.tsx uses — rather than any descendant button, leaving the selection and delete-dialog key paths as they are. Add colocated tests in web/src/plugins/schedules/SchedulesTab.test.tsx that select a recurring system row, focus the New schedule button, press Space, and assert openScheduleLaunch fires with no pause or resume intent, plus one that focuses a second row's pause button and asserts that button's row — not the selected one — is toggled. The existing pause/resume keyboard tests in that file drive keyDown on the list container and must keep passing unchanged.
-
-
 * Share the duplicated row icon button style added for the pause control.
 
 Existing Issue: The new .schedules-row-pause rule in web/src/plugins/schedules/schedules.css repeats all eight declarations of .schedules-row-delete instead of sharing them, creating a second copy of the same icon-button reset. Severity: 2/10

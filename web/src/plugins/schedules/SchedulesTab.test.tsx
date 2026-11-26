@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScheduleRow } from '@shared/plugins/schedules/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -446,6 +447,38 @@ describe('SchedulesTab pause and resume', () => {
     fireEvent.keyDown(list, { key: 'p', ctrlKey: true });
     fireEvent.keyDown(list, { key: 'p', altKey: true });
     expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves Space on the focused New schedule button to the button, so it opens the dialog instead of toggling the selected row', async () => {
+    const user = userEvent.setup();
+    const { container, intent, openScheduleLaunch } = renderTab([recurringSystem(), row({ id: 'other' })]);
+
+    fireEvent.click(container.querySelector('.schedules-row')!);
+    screen.getByRole('button', { name: 'New schedule' }).focus();
+    await user.keyboard(' ');
+
+    expect(openScheduleLaunch).toHaveBeenCalledTimes(1);
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves Space on another row\'s pause button to that button, so it toggles that row and not the selected one', async () => {
+    const user = userEvent.setup();
+    const { container, intent } = renderTab([
+      recurringSystem({ id: 'ping' }),
+      recurringSystem({ id: 'nightly', next: 'in 5m' }),
+    ]);
+
+    fireEvent.click(container.querySelector('.schedules-row')!);
+    screen.getByLabelText('Pause schedule nightly').focus();
+    await user.keyboard(' ');
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('pause', {
+      tab: 'system', owner: 'system', key: 'nightly', id: 'nightly',
+    });
+    expect(intent).not.toHaveBeenCalledWith('pause', {
+      tab: 'system', owner: 'system', key: 'ping', id: 'ping',
+    });
   });
 
   it('does not bubble a consumed Space past the list', () => {

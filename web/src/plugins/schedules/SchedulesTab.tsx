@@ -77,7 +77,7 @@ export function SchedulesTab({
       setSelected(nextSelection(entries.length, selected, e.key));
       return;
     }
-    if ((e.key === ' ' || e.key === 'p') && selected !== null
+    if ((e.key === ' ' || e.key === 'p') && e.target === e.currentTarget && selected !== null
       && !e.metaKey && !e.ctrlKey && !e.altKey) {
       const entry = entries[selected];
       if (entry && canPauseRow(entry)) {
