@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { readEffectiveAliases } from './parse.js';
 import { findManagedSections, serializeManagedSection, spliceManagedSection } from './section.js';
 
 const BEGIN = '# BEGIN janissary hosts';
@@ -64,6 +65,20 @@ describe('findManagedSections', () => {
     expect(found.ranges).toHaveLength(1);
     expect(found.outsideAliases).toEqual(['Keep', 'partialKeep', 'inPartial']);
     expect(found.outsideAliases).not.toContain('inside');
+  });
+
+  it('classifies literal names the same way as the alias reader', () => {
+    const text = [
+      'Host Keep',
+      'Host web1',
+      'Host keep',
+      'Host web*',
+      'Host !blocked',
+      'Host ""',
+    ].join('\n');
+    const outside = findManagedSections(text).outsideAliases;
+    expect(outside).toEqual(['Keep', 'web1']);
+    expect(outside).toEqual(readEffectiveAliases(text).map((alias) => alias.name));
   });
 });
 

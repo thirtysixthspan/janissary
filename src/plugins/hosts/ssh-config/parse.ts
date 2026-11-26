@@ -83,7 +83,7 @@ export type EffectiveAlias = {
   invalidToken: string;
 };
 
-function isLiteralName(name: string): boolean {
+export function isLiteralName(name: string): boolean {
   return name !== '' && !name.includes('*') && !name.includes('?') && !name.startsWith('!');
 }
 

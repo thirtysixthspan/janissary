@@ -1,4 +1,4 @@
-import { tokenizeSshConfig } from './parse.js';
+import { isLiteralName, tokenizeSshConfig } from './parse.js';
 
 const BEGIN = '# BEGIN janissary hosts';
 const END = '# END janissary hosts';
@@ -58,7 +58,7 @@ function outsideLiteralAliases(text: string): string[] {
   for (const block of tokenizeSshConfig(text)) {
     if (block.kind !== 'host') continue;
     for (const name of block.names) {
-      if (name === '' || name.includes('*') || name.includes('?') || name.startsWith('!')) continue;
+      if (!isLiteralName(name)) continue;
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
