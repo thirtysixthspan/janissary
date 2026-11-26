@@ -70,7 +70,7 @@ function runSystemSchedule(
   if (parsed.action === 'list') {
     const entries = owner.list();
     append(entries.length === 0 ? 'No scheduled commands in system.' : entries.map((entry) =>
-      `${entry.id}  ${entry.spec}  (next: ${fmtNextRun(entry.nextRun)})  script ${entry.script}`,
+      `${entry.id}  ${entry.spec}  ${entry.paused === true ? '(paused)' : `(next: ${fmtNextRun(entry.nextRun)})`}  script ${entry.script}`,
     ).join('\n'));
     return;
   }
@@ -80,6 +80,13 @@ function runSystemSchedule(
   }
   if (parsed.action === 'pause') {
     pauseSystemSchedule(parsed, append, managers);
+    return;
+  }
+  if (parsed.action === 'resume') {
+    const count = owner.list().filter((entry) => entry.id === parsed.id && entry.paused === true).length;
+    if (count === 0) { append(`No paused scheduled command "${parsed.id}" in system.`); return; }
+    const result = owner.resumeByName(parsed.id);
+    append(result.ok ? `Resumed ${parsed.id} in system.` : 'Could not save system schedules.');
     return;
   }
   if (parsed.action === 'cancel') {

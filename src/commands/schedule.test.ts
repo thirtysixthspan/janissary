@@ -36,7 +36,7 @@ describe('schedule command run', () => {
   let managers: unknown;
   let projectRoot: string;
   let systemEntries: { id: string; key: string; script: string; command: string; spec: string; nextRun: number; recurring: boolean; paused?: true }[];
-  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; pauseByName: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
+  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; pauseByName: ReturnType<typeof vi.fn>; resumeByName: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
   const schedule = () => schedules.get('janus') ?? [];
 
   beforeEach(() => {
@@ -54,6 +54,14 @@ describe('schedule command run', () => {
       }),
       pauseByName: vi.fn((name) => {
         systemEntries = systemEntries.map((entry) => entry.id === name && entry.recurring && !entry.paused ? { ...entry, paused: true } : entry);
+        return { ok: true };
+      }),
+      resumeByName: vi.fn((name) => {
+        systemEntries = systemEntries.map((entry) => {
+          if (entry.id !== name) return entry;
+          const { paused, ...active } = entry;
+          return paused ? active : entry;
+        });
         return { ok: true };
       }),
       cancelByName: vi.fn((name) => {
@@ -334,6 +342,59 @@ describe('schedule command run', () => {
     systemEntries = [recurringEntry('pause', '1')];
     run('schedule system cancel pause');
     expect(outputs.at(-1)).toBe('Cancelled pause in system.');
+    expect(systemEntries).toEqual([]);
+  });
+
+  it('prints a paused system entry with (paused) instead of a next-run time', () => {
+    systemEntries = [recurringEntry('ping', '1', true)];
+    run('schedule system list');
+    expect(outputs.at(-1)).toBe('ping  every 5m  (paused)  script deploy');
+  });
+
+  it('resumes every paused system entry with the exact name and prints the success line', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('ping', '2', true), recurringEntry('other', '3', true)];
+    run('schedule system resume ping');
+    expect(outputs.at(-1)).toBe('Resumed ping in system.');
+    expect(systemOwner.resumeByName).toHaveBeenCalledWith('ping');
+    expect(systemEntries.filter((entry) => entry.paused === true).map((entry) => entry.id)).toEqual(['other']);
+  });
+
+  it('reports no paused match without touching the owner', () => {
+    systemEntries = [recurringEntry('ping', '1'), recurringEntry('other', '2', true)];
+    run('schedule system resume ping');
+    expect(outputs.at(-1)).toBe('No paused scheduled command "ping" in system.');
+    expect(systemOwner.resumeByName).not.toHaveBeenCalled();
+    expect(systemEntries[0].paused).toBeUndefined();
+    run('schedule system resume nosuch');
+    expect(outputs.at(-1)).toBe('No paused scheduled command "nosuch" in system.');
+  });
+
+  it('prints the save error without claiming a resume succeeded', () => {
+    systemEntries = [recurringEntry('ping', '1', true)];
+    systemOwner.resumeByName.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system resume ping');
+    expect(outputs.at(-1)).toBe('Could not save system schedules.');
+    expect(systemEntries[0].paused).toBe(true);
+  });
+
+  it('cancels paused rows by name as well as active ones', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('ping', '2'), recurringEntry('other', '3')];
+    run('schedule system cancel ping');
+    expect(outputs.at(-1)).toBe('Cancelled ping in system.');
+    expect(systemEntries.map((entry) => entry.id)).toEqual(['other']);
+  });
+
+  it('clears paused rows as well as active ones', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('other', '2')];
+    run('schedule system clear');
+    expect(outputs.at(-1)).toBe('Cleared 2 scheduled commands in system.');
+    expect(systemEntries).toEqual([]);
+  });
+
+  it('still cancels a stored system entry named resume', () => {
+    systemEntries = [recurringEntry('resume', '1')];
+    run('schedule system cancel resume');
+    expect(outputs.at(-1)).toBe('Cancelled resume in system.');
     expect(systemEntries).toEqual([]);
   });
 

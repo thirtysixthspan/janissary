@@ -69,7 +69,10 @@ function parseSystemSchedule(tokens: string[], now: Date): ScheduleParseResult {
   if (action === 'pause' && second !== undefined && rest.length === 0) {
     return { scope: 'system', action: 'pause', id: second };
   }
-  if (['list', 'clear', 'cancel', 'pause'].includes(action)) return { error: SYSTEM_SCHEDULE_USAGE };
+  if (action === 'resume' && second !== undefined && rest.length === 0) {
+    return { scope: 'system', action: 'resume', id: second };
+  }
+  if (['list', 'clear', 'cancel', 'pause', 'resume'].includes(action)) return { error: SYSTEM_SCHEDULE_USAGE };
   const marker = tokens.at(-2);
   const script = tokens.at(-1);
   if (marker?.toLowerCase() !== 'script' || !script || !isRunscriptName(script)) {

@@ -216,6 +216,7 @@ describe('parseScheduleCommand', () => {
     expect(parseScheduleCommand('system CANCEL deploy', NOW)).toEqual({ scope: 'system', action: 'cancel', id: 'deploy' });
     expect(parseScheduleCommand('system CLEAR', NOW)).toEqual({ scope: 'system', action: 'clear' });
     expect(parseScheduleCommand('system PAUSE deploy', NOW)).toEqual({ scope: 'system', action: 'pause', id: 'deploy' });
+    expect(parseScheduleCommand('system RESUME deploy', NOW)).toEqual({ scope: 'system', action: 'resume', id: 'deploy' });
   });
 
   it('reserves pause as a system verb and rejects every other shape after it', () => {
@@ -226,9 +227,17 @@ describe('parseScheduleCommand', () => {
     ]) expect(parseScheduleCommand(line, NOW)).toEqual({ error: SYSTEM_SCHEDULE_USAGE });
   });
 
+  it('reserves resume as a system verb and rejects every other shape after it', () => {
+    expect(parseScheduleCommand('system resume ping', NOW)).toEqual({ scope: 'system', action: 'resume', id: 'ping' });
+    for (const line of [
+      'system resume', 'system resume ping extra', 'system resume ping every 5m script deploy',
+      'system resume every 5m script deploy',
+    ]) expect(parseScheduleCommand(line, NOW)).toEqual({ error: SYSTEM_SCHEDULE_USAGE });
+  });
+
   it('uses the exact system usage line with pause and resume', () => {
     expect(SYSTEM_SCHEDULE_USAGE).toBe('Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system pause <name> | schedule system resume <name> | schedule system clear');
-    expect(parseScheduleCommand('system resume ping', NOW)).toEqual({ error: SYSTEM_SCHEDULE_USAGE });
+    expect(parseScheduleCommand('system resume ping', NOW)).toEqual({ scope: 'system', action: 'resume', id: 'ping' });
   });
 
   it('uses the system usage message for malformed grammar and invalid script names', () => {

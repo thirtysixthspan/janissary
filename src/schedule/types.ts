@@ -22,6 +22,7 @@ export type ScheduleParseResult =
   | { scope: 'system'; action: 'list' }
   | { scope: 'system'; action: 'cancel'; id: string }
   | { scope: 'system'; action: 'pause'; id: string }
+  | { scope: 'system'; action: 'resume'; id: string }
   | { scope: 'system'; action: 'clear' }
   | { error: string };
 
