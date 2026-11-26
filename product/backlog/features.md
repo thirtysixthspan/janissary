@@ -2,8 +2,6 @@
 
 ## ready
 
-* Pause recurring system schedules. Prefect can deactivate an individual schedule and keep its recurrence settings for later resumption. Janissary persists each system schedule by key, and its Schedules tab offers creation and deletion (`product/specs/scheduling.md`). Add Pause and Resume to recurring system rows so a user can suspend one timer through a maintenance window or restart and pick up at its next future occurrence. Estimated complexity is medium because pause state must also apply during startup recovery. [Prefect schedules](https://www.prefect.io/docs/v3/concepts/schedules)
-
 * setup a MCP server for janissary run from the main application process - local only. The model is intended to expose all janissary commands, but be limited to just one command `question` at the moment. The intended goal is to allow harnesses to questions the user via the janissary question functionality rather than via the harness. the server should expose its connection and authentication details to all harnesses so that when run they have access to the available commands. When a harness asks a question, the question dialog should show up on the calling harness tab - tab must be provided by the caller. throw the unread flag on the tab if it is not focused. Harnesses running on a remote machine should connect to the local mcp server and can only run commands on the local process. 
 
 ## development
