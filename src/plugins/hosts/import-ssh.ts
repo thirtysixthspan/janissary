@@ -14,6 +14,7 @@ type ImportCounts = { hosts: SavedHost[]; imported: number; skipped: number };
 function acceptedHost(alias: EffectiveAlias, catalog: readonly SavedHost[]): SavedHost | undefined {
   if (alias.invalidToken !== '') return undefined;
   if (catalog.some((host) => sameHostName(host.name, alias.name))) return undefined;
+  if (alias.port !== '' && !/^[0-9]+$/.test(alias.port)) return undefined;
   const hostName = alias.hostName === '' ? alias.name : alias.hostName;
   const destination = formatDestination(
     alias.port === ''

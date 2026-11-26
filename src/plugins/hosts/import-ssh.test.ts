@@ -249,4 +249,42 @@ describe('importSshHosts', () => {
     });
     expect(readHostsFile(root, home).hosts).toEqual([{ name: 'web1', host: 'web1.example' }]);
   });
+
+  it('skips an alias whose Port is not plain decimal while importing the ordinary alias', () => {
+    const { home, root } = directories();
+    const source = sourceConfig(root, [
+      'Host web1', '  HostName web1.example', '  Port 2222',
+      'Host odd', '  HostName odd.example', '  Port 1e2',
+    ].join('\n'));
+
+    const result = importSshHosts(root, home, source, DISPLAY);
+
+    expect(result).toEqual({
+      ok: true,
+      hosts: [{ name: 'web1', host: 'web1.example', port: 2222 }],
+      imported: 1,
+      skipped: 1,
+      summary: 'Imported 1 host from ~/.ssh/config; skipped 1.',
+    });
+    expect(readHostsFile(root, home).hosts).toEqual([{ name: 'web1', host: 'web1.example', port: 2222 }]);
+  });
+
+  it('skips a hex Port but accepts a leading-zero decimal Port', () => {
+    const { home, root } = directories();
+    const source = sourceConfig(root, [
+      'Host hexport', '  HostName hex.example', '  Port 0x10',
+      'Host padded', '  HostName padded.example', '  Port 0222',
+    ].join('\n'));
+
+    const result = importSshHosts(root, home, source, DISPLAY);
+
+    expect(result).toEqual({
+      ok: true,
+      hosts: [{ name: 'padded', host: 'padded.example', port: 222 }],
+      imported: 1,
+      skipped: 1,
+      summary: 'Imported 1 host from ~/.ssh/config; skipped 1.',
+    });
+    expect(readHostsFile(root, home).hosts).toEqual([{ name: 'padded', host: 'padded.example', port: 222 }]);
+  });
 });

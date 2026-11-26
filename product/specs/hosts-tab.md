@@ -109,8 +109,10 @@ Import answers with one summary line. One alias added reports `Imported 1 host f
 report `Imported <n> hosts from <path>.`; nothing importable reports `No aliases to import from <path>.`
 A summary gains `; skipped <n>` before the period when aliases were skipped, so three hosts added with
 two skipped report `Imported 3 hosts from <path>; skipped 2.` An alias is skipped when its name is
-invalid or already in the catalog, or when its settings cannot be expressed as a saved host. Export
-also answers with one summary line: `Exported 1 host to <path>.`, `Exported 5 hosts to <path>; skipped 1.`
+invalid or already in the catalog, or when its settings cannot be expressed as a saved host. A port
+written in scientific or hexadecimal notation, such as `1e2` or `0x10`, cannot be expressed as a
+saved host port, so that alias is skipped and counted rather than converted; a decimal port with
+leading zeroes, such as `0222`, is imported as port 222. Export also answers with one summary line: `Exported 1 host to <path>.`, `Exported 5 hosts to <path>; skipped 1.`
 when a saved host is shadowed by a literal alias outside the managed section, or `No hosts to export.`
 when there is nothing to write.
 
