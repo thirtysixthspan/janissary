@@ -65,9 +65,21 @@ starts the login shell in the original directory. The whole remote command is ha
 argument, so the local shell neither expands its variables nor interprets its separators; expansion
 and command parsing happen only on the remote side.
 
-A host brought in from an ssh config through [[hosts-tab]] carries only its destination, user and
-port. Other ssh settings from the config, such as `IdentityFile` and `ProxyJump`, stop applying: the
-catalog stores no field for them, so the launch uses the saved values alone.
+A host brought in from an ssh config through [[hosts-tab]] keeps only its destination, user and port
+in the catalog. Settings attached to the alias name, such as `IdentityFile` and `ProxyJump`, are not
+carried into the saved host, because the catalog has no field to hold them. That describes what is
+stored, not what happens at launch. `buildSavedSshInvocation` in `src/ssh-saved-host.ts` builds the
+invocation from those three fields: `ssh`, an optional `-p` for the port, an optional `-t` for a
+working directory, `--`, and the real `[user@]host`, with no `-F` or other config override.
+`parseSshCommand` in `src/ssh.ts` keeps the command text verbatim for the spawn, so the real ssh
+binary still reads the user's ssh config for the destination when the saved host is launched.
+
+The alias name and the real destination are worth keeping apart. Say the config has a `Host devbox`
+block with `IdentityFile ~/.ssh/devbox_key`, and importing `devbox` saves the destination from that
+block but not the key. If the real host is `10.27.1.94`, the launch uses `anonymouscoward@10.27.1.94`
+rather than `devbox`, so that `Host devbox` block no longer matches. A `Host *` block, or one whose
+pattern matches the real destination, still applies at launch, so its `IdentityFile` or `ProxyJump`
+is read by ssh from the user's config just as it would be for a typed `ssh <destination>`.
 
 The new tab is labeled with the saved spelling, disambiguated with `-2`, `-3`, … if that label is
 already taken. The connections panel shows `ssh:<saved name>` for such a launch, so a saved host
