@@ -2,9 +2,6 @@
 
 ## ready
 
-* Import OpenSSH aliases into the Hosts tab. Termius can import named hosts from an existing SSH configuration. Janissary's Hosts tab reads its own catalog and accepts hosts individually through a form or `hosts add` (`product/specs/hosts-tab.md`, `product/specs/state-directory.md`). Add an import preview for concrete aliases and their supported hostname, user, and port settings, with conflicts shown before the user saves selected rows. Estimated complexity is medium because effective OpenSSH settings and Janissary's name and destination rules can differ. [Termius SSH config import](https://github.com/termius/termius-cli#import)
-
-
 * Pause recurring system schedules. Prefect can deactivate an individual schedule and keep its recurrence settings for later resumption. Janissary persists each system schedule by key, and its Schedules tab offers creation and deletion (`product/specs/scheduling.md`). Add Pause and Resume to recurring system rows so a user can suspend one timer through a maintenance window or restart and pick up at its next future occurrence. Estimated complexity is medium because pause state must also apply during startup recovery. [Prefect schedules](https://www.prefect.io/docs/v3/concepts/schedules)
 
 ## development
