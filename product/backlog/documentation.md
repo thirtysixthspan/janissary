@@ -2,8 +2,6 @@
 
 ## ready
 
-* pull-request-testing (3/10) — Of 25 facts, 21 are correct, 4 are missing and none are wrong. `documentation/user-documentation/workflows/testing-a-pull-request.md` omits that each generated step states its actions, inputs and expected result, that the workspace is prepared on `master` first so dependencies start as master's and a branch with no package diff installs nothing, and that a step correction's Proposal names the source line or test assertion supplying the true value. Add these to the 'What gets tested', 'Which branch runs' and 'Failures and reruns' sections of that page. Ground truth is `product/specs/pull-request-testing.md` and `ai/tasks/feature/test-pull-request.md`; no `help/` page exists because this is an agent task, not a command.
-
 * pull-request-updating (7/10) — Of 29 facts, 25 are correct, 3 are missing and 1 is wrong on the core description workflow. `documentation/user-documentation/workflows/updating-a-pull-request.md` says the title never changes, but `ai/tasks/feature/update-pull-request.md` refreshes a stale title with `gh pr edit <number> --title "<Conventional Commit subject>"` in Step 9; `product/specs/pull-request-updating.md` is itself stale. Also missing are that the Screenshots section carries a one-line reason no capture was possible, that each Behavior example, Screenshots claim and Do/Expect line must name a code path and line or test assertion, and that a plan-first pull request opens with a short What/Plan:/Subplans: summary expanded into the full body. Correct the title claim and add the three facts on that page. Ground truth is `product/specs/pull-request-updating.md` and `ai/tasks/feature/update-pull-request.md`; no `help/` page or command-table row exists for this task.
 
 * search-tab (3/10) — Of 48 facts, 46 are correct, 1 is genuinely missing and none are wrong. The Files to include and Files to exclude glob patterns are matched case-sensitively on every platform, so `*.TS` does not select `a.ts` even on a case-insensitive disk, confirmed in `src/search/filter-paths.ts`, but `documentation/user-documentation/command-bar/project-search.md` never says so. Add one sentence to its 'Choose which files to search' section beside the existing glob examples. Ground truth is `product/specs/search-tab.md`, `src/search/filter-paths.ts`, `src/plugins/search/manifest.ts` and `web/src/shared/app-chords.ts`. The spec's `Ctrl+Shift+F` claim is stale; the docs already correctly say `Cmd+Shift+F` in `help/keys.md` and `documentation/user-documentation/getting-started/keyboard.md`, so no change is needed there.
@@ -30,6 +28,7 @@
 
 ## resolved
 
+* pull-request-testing — documented in documentation/user-documentation/workflows/testing-a-pull-request.md (removed 2026-11-26)
 * pull-request-review — documented in documentation/user-documentation/workflows/pull-request-review.md (removed 2026-11-26)
 * models-tab — documented in documentation/user-documentation/tab-types/models.md, help/models.md (removed 2026-11-26)
 * keyboard-navigation — documented in documentation/user-documentation/getting-started/keyboard.md, help/keys.md (removed 2026-11-26)
