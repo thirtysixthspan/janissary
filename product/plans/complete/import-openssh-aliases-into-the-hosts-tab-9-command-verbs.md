@@ -24,7 +24,7 @@ Teach `parseCatalogCommand` to recognize `hosts import [file]` and `hosts export
 
 Depends on nothing earlier. `import-openssh-aliases-into-the-hosts-tab-10-command-runtime.md` consumes the variants this subplan produces, so it lands after this one and replaces this subplan's command-layer checkpoint behavior with execution.
 
-- Only `src/plugins/hosts/catalog-commands.ts` and its colocated test change here. `CatalogParse` gains two variants, one named `import` and one named `export`, each carrying a single `operand` string that is empty when no file was given, mirroring the plain string `name` of the existing `remove` variant at `src/plugins/hosts/catalog-commands.ts:14`. The parser stays pure and does no I/O (Assumption 1).
+- Only `src/plugins/hosts/catalog-commands.ts`, its colocated test, and the hardcoded usage-line expectations in `src/plugins/hosts/activate.test.ts` change here. `CatalogParse` gains two variants, one named `import` and one named `export`, each carrying a single `operand` string that is empty when no file was given, mirroring the plain string `name` of the existing `remove` variant at `src/plugins/hosts/catalog-commands.ts:14`. The parser stays pure and does no I/O (Assumption 1).
 - `CatalogOutcome` is not extended. `runCommand` reads `outcome.text` from the remaining `output` variant at `src/plugins/hosts/activate.ts:74`, so adding a `CatalogOutcome` member would break that access without an edit to `activate.ts`. Instead the final unmatched branch of `runCatalogCommand` at `src/plugins/hosts/catalog-commands.ts:94` becomes an explicit check for the `remove` variant, and a valid import or export variant returns a refusal carrying that verb's usage line at this checkpoint. No file is read, written, published, or opened; subplan 10 replaces this branch with the real dispatch.
 - The grammar is settled by requirements 50, 51, and 53 of `import-openssh-aliases-into-the-hosts-tab.md` and by the spec's "Every verb matches regardless of case" at `product/specs/hosts-tab.md:65`. The operand is read from the raw text after the verb, not from the whitespace-split word list, because `parseCatalogCommand` splits on whitespace (`src/plugins/hosts/catalog-commands.ts:53`) and that would break a quoted path containing spaces. Use string operations the way `parseAdd` does at `src/plugins/hosts/catalog-commands.ts:32` and `:37`, not a regular expression: `security/detect-unsafe-regex` is an error at `eslint.config.mjs:109`.
 - The exact parse contract is: match the verb case-insensitively through the existing lower-casing at `src/plugins/hosts/catalog-commands.ts:55`; trim the tail; an empty tail is the zero-operand variant; a tail starting with `"` is quoted and the next `"` closes it, with the inner text used verbatim, so `""` is malformed and a backslash never escapes the closing quote; non-whitespace after the closing quote, or a `"` anywhere in an unquoted tail, is malformed; an unquoted tail may not contain internal whitespace. Every malformed form returns the refusing verb's own usage line (Requirements 6 to 8, 10 and 11).
@@ -53,10 +53,11 @@ Depends on nothing earlier. `import-openssh-aliases-into-the-hosts-tab-10-comman
 
 ## Implementation steps
 
-Every step ends green under `$janissary/scripts/run.mjs check-diff`. This subplan changes two files: `src/plugins/hosts/catalog-commands.ts` and its colocated test. No symbol it imports is new, so the tree compiles at this commit without subplan 10.
+Every step ends green under `$janissary/scripts/run.mjs check-diff`. This subplan changes three files: `src/plugins/hosts/catalog-commands.ts`, its colocated test, and `src/plugins/hosts/activate.test.ts`. Changing the bare `USAGE` line requires updating the hardcoded old usage string in the `refuses unsupported forms and docking arguments` test in `activate.test.ts`, which asserts the refusal `runCommand` passes through, not any new command behavior. No symbol it imports is new, so the tree compiles at this commit without subplan 10.
 
 1. In `src/plugins/hosts/catalog-commands.ts`, extend `CatalogParse` with the two verb variants and their string `operand`; add the two case-insensitive verbs to `parseCatalogCommand` using the exact parse contract in Design decisions; add the two new usage constants and replace the bare `USAGE` line. Change the final unmatched branch of `runCatalogCommand` (`catalog-commands.ts:94`) into an explicit check for `remove`, and have the two new variants return a refusal with their own usage line at this checkpoint. Leave `list`, `add`, `remove`, `CatalogOutcome`, and `activate.ts` untouched. Build with `$janissary/scripts/run.mjs check-diff`.
 2. In `src/plugins/hosts/catalog-commands.test.ts`, add the cases listed under Tests beside the existing ones, leaving every existing case unchanged. Build with `$janissary/scripts/run.mjs check-diff` and confirm the whole server test project passes, including all three preserved-behavior pins.
+3. In `src/plugins/hosts/activate.test.ts`, update the three hardcoded old bare usage strings in the `refuses unsupported forms and docking arguments` test (`:211` to `:213`) to `Usage: hosts [list|add|remove|import|export].`, leaving every other case in that file unchanged. `activate.ts` itself stays untouched. Build with `$janissary/scripts/run.mjs check-diff`.
 
 ## UI design
 
@@ -75,6 +76,10 @@ In `src/plugins/hosts/catalog-commands.test.ts`:
 - Malformed new forms leave both `hosts.json` paths absent, extending the existing malformed-request case (Requirement 12, preserved behavior 3).
 - The `list`, `add`, and `remove` cases pass unchanged (preserved behaviors 1 and 2).
 
+In `src/plugins/hosts/activate.test.ts`:
+
+- The `refuses unsupported forms and docking arguments` test expects the new bare `Usage: hosts [list|add|remove|import|export].` line for `show`, `left`, and `right`, with every other case in the file unchanged (Requirement 9).
+
 ## Out of scope
 
 - No execution of either verb beyond the checkpoint refusal, no path resolution, no file access, no remote-tab decision, and no reporting text beyond the usage lines.
@@ -83,6 +88,6 @@ In `src/plugins/hosts/catalog-commands.test.ts`:
 
 ## Verification
 
-Run `$janissary/scripts/run.mjs check-diff`; lint, typecheck, and both test projects must pass with only these two files changed.
+Run `$janissary/scripts/run.mjs check-diff`; lint, typecheck, and both test projects must pass with only these three files changed.
 
 Then check against the running app with a scratch home. In the Hosts tab command bar run `show` and confirm the transcript says `Usage: hosts [list|add|remove|import|export].`; run `hosts import "my config" extra` and confirm `Usage: hosts import [file]`; run `hosts EXPORT` and confirm it is recognized as a verb (its usage line appears, not an unknown-verb refusal) and that no `hosts.json` appears in the scratch home. A failure looks like the old bare usage line, a split operand, an unknown-verb refusal for `EXPORT`, or a file created while parsing.

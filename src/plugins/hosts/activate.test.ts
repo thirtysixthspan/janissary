@@ -208,9 +208,9 @@ describe('hosts activation command', () => {
 
   it('refuses unsupported forms and docking arguments', () => {
     const f = fixture();
-    expect(refusal(() => runCommand(f, 'show'))).toBe('Usage: hosts [list|add|remove].');
-    expect(refusal(() => runCommand(f, 'left'))).toBe('Usage: hosts [list|add|remove].');
-    expect(refusal(() => runCommand(f, 'right'))).toBe('Usage: hosts [list|add|remove].');
+    expect(refusal(() => runCommand(f, 'show'))).toBe('Usage: hosts [list|add|remove|import|export].');
+    expect(refusal(() => runCommand(f, 'left'))).toBe('Usage: hosts [list|add|remove|import|export].');
+    expect(refusal(() => runCommand(f, 'right'))).toBe('Usage: hosts [list|add|remove|import|export].');
     expect(f.noted).toEqual([]);
     expect(f.updated).toEqual([]);
   });

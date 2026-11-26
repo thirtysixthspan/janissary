@@ -3,15 +3,19 @@ import type { HostsMutation, HostsNotify } from './hosts-file.js';
 import { isHostName, sameHostName, validateHostFields } from './hosts-values.js';
 import type { SavedHost } from './hosts-values.js';
 
-const USAGE = 'Usage: hosts [list|add|remove].';
+const USAGE = 'Usage: hosts [list|add|remove|import|export].';
 const ADD_USAGE = 'Usage: hosts add <name> <[user@]host[:port]> [path]';
 const REMOVE_USAGE = 'Usage: hosts remove <name>';
+const IMPORT_USAGE = 'Usage: hosts import [file]';
+const EXPORT_USAGE = 'Usage: hosts export [file]';
 
 export type CatalogParse =
   | { kind: 'open' }
   | { kind: 'list' }
   | { kind: 'add'; host: SavedHost }
   | { kind: 'remove'; name: string }
+  | { kind: 'import'; operand: string }
+  | { kind: 'export'; operand: string }
   | { kind: 'refusal'; reason: string };
 
 export type CatalogOutcome =
@@ -49,6 +53,18 @@ function parseRemove(words: string[]): CatalogParse {
   return refusal(validated.ok ? REMOVE_USAGE : validated.error);
 }
 
+function parseFileOperand(words: string[], argument: string): string | null {
+  const tail = argument.trim().slice(words[0].length).trim();
+  if (tail.length === 0) return '';
+  if (tail.startsWith('"')) {
+    const closing = tail.indexOf('"', 1);
+    if (closing < 2 || tail.slice(closing + 1).trim().length > 0) return null;
+    return tail.slice(1, closing);
+  }
+  if (words.length !== 2 || tail.includes('"')) return null;
+  return tail;
+}
+
 export function parseCatalogCommand(argument: string): CatalogParse {
   const words = argument.trim().split(/\s+/u).filter((word) => word.length > 0);
   if (words.length === 0) return { kind: 'open' };
@@ -56,6 +72,14 @@ export function parseCatalogCommand(argument: string): CatalogParse {
   if (verb === 'list') return words.length === 1 ? { kind: 'list' } : refusal(USAGE);
   if (verb === 'add') return parseAdd(words);
   if (verb === 'remove') return parseRemove(words);
+  if (verb === 'import') {
+    const operand = parseFileOperand(words, argument);
+    return operand === null ? refusal(IMPORT_USAGE) : { kind: 'import', operand };
+  }
+  if (verb === 'export') {
+    const operand = parseFileOperand(words, argument);
+    return operand === null ? refusal(EXPORT_USAGE) : { kind: 'export', operand };
+  }
   return refusal(USAGE);
 }
 
@@ -91,15 +115,18 @@ export function runCatalogCommand(
     });
     return mutationOutcome(mutation);
   }
-  const name = parsed.name;
-  const mutation = mutateHostsFile(root, home, notify, (hosts) => {
-    const match = hosts.find((host) => sameHostName(host.name, name));
-    if (match === undefined) return { ok: false, error: `No host named "${name}".` };
-    return {
-      ok: true,
-      hosts: hosts.filter((host) => !sameHostName(host.name, name)),
-      result: `Host ${match.name} removed.`,
-    };
-  });
-  return mutationOutcome(mutation);
+  if (parsed.kind === 'remove') {
+    const name = parsed.name;
+    const mutation = mutateHostsFile(root, home, notify, (hosts) => {
+      const match = hosts.find((host) => sameHostName(host.name, name));
+      if (match === undefined) return { ok: false, error: `No host named "${name}".` };
+      return {
+        ok: true,
+        hosts: hosts.filter((host) => !sameHostName(host.name, name)),
+        result: `Host ${match.name} removed.`,
+      };
+    });
+    return mutationOutcome(mutation);
+  }
+  return { kind: 'refusal', reason: parsed.kind === 'import' ? IMPORT_USAGE : EXPORT_USAGE };
 }
