@@ -122,7 +122,12 @@ describe('completeCommandLine — schedule `in <tab>` target', () => {
 });
 
 describe('completeCommandLine — system schedule grammar', () => {
-  const options = { names: ['alpha', 'nightly'], scripts: ['deploy', 'test-suite'] };
+  const options = {
+    names: ['alpha', 'nightly'],
+    scripts: ['deploy', 'test-suite'],
+    activeRecurringNames: ['alpha', 'daily'],
+    pausedNames: ['nightly', 'weekly'],
+  };
   const noFiles = '/no/such/dir/xyz';
 
   it('completes system subcommands, form keywords, and recurrence alternatives', () => {
@@ -147,6 +152,27 @@ describe('completeCommandLine — system schedule grammar', () => {
       .toBe('schedule system job at 3pm script deploy ');
     expect(completeCommandLine('schedule system job at 3pm script ', 35, noFiles, [], [], undefined, options).matches)
       .toEqual(['deploy', 'test-suite']);
+  });
+
+  it('offers pause and resume at the verb slot beside the existing verbs', () => {
+    const result = completeCommandLine('schedule system ', 16, noFiles, [], [], undefined, options);
+
+    expect(result.matches.toSorted((a, b) => a.localeCompare(b)))
+      .toEqual(['cancel', 'clear', 'list', 'pause', 'resume']);
+  });
+
+  it('offers only active recurring names after pause, never a paused one', () => {
+    const result = completeCommandLine('schedule system pause ', 22, noFiles, [], [], undefined, options);
+
+    expect(result.matches).toEqual(['alpha', 'daily']);
+    expect(result.matches).not.toContain('nightly');
+  });
+
+  it('offers only paused names after resume, never an active one', () => {
+    const result = completeCommandLine('schedule system resume ', 23, noFiles, [], [], undefined, options);
+
+    expect(result.matches).toEqual(['nightly', 'weekly']);
+    expect(result.matches).not.toContain('alpha');
   });
 });
 

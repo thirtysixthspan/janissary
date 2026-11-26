@@ -287,7 +287,8 @@ describe('completeLine', () => {
     );
     capabilities.completeLine('l', 1);
     expect(completeCommandLine).toHaveBeenLastCalledWith(
-      'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object), { names: [], scripts: [] },
+      'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object),
+      { names: [], scripts: [], activeRecurringNames: [], pausedNames: [] },
       expect.objectContaining({ labels: ['janus', 'shell'], navigators: [], workingDirOf: expect.any(Function) }),
       expect.any(Function),
       expect.objectContaining({ allows: expect.any(Function), names: expect.any(Array) }),

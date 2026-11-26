@@ -1,7 +1,12 @@
 import type { CompletionCursor, CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 
-export type SystemScheduleCompletions = { names: string[]; scripts: string[] };
+export type SystemScheduleCompletions = {
+  names: string[];
+  scripts: string[];
+  activeRecurringNames: string[];
+  pausedNames: string[];
+};
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -13,9 +18,15 @@ export function completeSystemSchedule(
   if (command !== 'schedule') return null;
   if (argumentIndex === 1) return completeWord(cursor, ['system']);
   if (preceding[1]?.toLowerCase() !== 'system') return null;
-  if (argumentIndex === 2) return completeWord(cursor, ['list', 'cancel', 'clear']);
+  if (argumentIndex === 2) return completeWord(cursor, ['list', 'cancel', 'clear', 'pause', 'resume']);
   if (preceding[2]?.toLowerCase() === 'cancel' && argumentIndex === 3) {
     return completeWord(cursor, options?.names ?? []);
+  }
+  if (preceding[2]?.toLowerCase() === 'pause' && argumentIndex === 3) {
+    return completeWord(cursor, options?.activeRecurringNames ?? []);
+  }
+  if (preceding[2]?.toLowerCase() === 'resume' && argumentIndex === 3) {
+    return completeWord(cursor, options?.pausedNames ?? []);
   }
   if (argumentIndex === 3) return completeWord(cursor, ['at', 'on', 'every']);
   if (preceding.at(-1)?.toLowerCase() === 'script') return completeWord(cursor, options?.scripts ?? []);
