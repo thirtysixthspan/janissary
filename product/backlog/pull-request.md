@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's export verification example, which expects a row that its own fixture makes clash.
-
-Existing Issue: How-to-verify step 3 expects `Exported 1 host to ~/.ssh/config; skipped 1.` with a managed section holding web1, but the step-1 config leaves `Host web1 web2` outside any section while the catalog holds both web1 and web2, so the clash rule skips both. Severity: 7/10
-
-Existing Risk: 6/10 - A verifier following the documented walk sees a different report and an empty section, concludes the clash rule is broken, and may change correct code to make the scenario pass.
-
-Proposal Risk: 2/10 - The prose then matches the code and the walk becomes reproducible; the clash rule itself stays as designed, so the only residual risk is a later rule change staling the example again.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2242 "correct the description's export verification example to match the clash rule". In the pull request body's "How to verify" step 3, reconcile the expected result with the step-1 fixture: the config still contains the literal aliases bad, web1 and web2 outside any managed section when Export runs, and the catalog holds web1 and web2, so `exportedHosts` in src/plugins/hosts/export-ssh.ts filters both out and `exportSummary` reports `No hosts to export; skipped 2.` with a header-only section appended by src/plugins/hosts/ssh-config/section.ts. Either change the fixture in step 1 so that only web2 is a literal alias outside the section, which is what the cited case `skips a literal alias outside the section but writes one that appears only inside` in src/plugins/hosts/export-ssh.test.ts actually uses, while keeping the `Exported 1 host ...; skipped 1.` expectation; or keep the fixture and change the expectation to the two-skip report and an empty section. Preserve every other description paragraph byte for byte and apply the body edit only after any branch commit is pushed. Verify by reading src/plugins/hosts/export-ssh.ts, src/plugins/hosts/ssh-config/section.ts and the cited test, and by walking the setup and step 3 against the real skip logic; no source file needs to change. The existing cases in src/plugins/hosts/export-ssh.test.ts cover the clash and empty-section behavior and must keep passing untouched.
-
-
 * Correct the plan's export verification step, which expects one exported host where the documented fixture produces two skips.
 
 Existing Issue: Verification step 3 of product/plans/complete/import-openssh-aliases-into-the-hosts-tab.md says Export reports `Exported 1 host to ~/.ssh/config; skipped 1.` and writes a section holding web1, but the step-1 fixture leaves `Host web1 web2` outside the section, so requirement 27's clash rule skips both saved hosts. Severity: 6/10
