@@ -2,8 +2,6 @@
 
 ## ready
 
-* transcript (3/10) — Of 21 facts, 19 are correct, 2 are missing and none are wrong. `documentation/user-documentation/getting-started/keyboard.md` documents the transcript scroll chords but not that the mouse wheel scrolls one line per tick, and no page states the one-running-entry-per-producer rule that an interleaved command keeps its own output and finishes on its own entry. Add the wheel behavior to the scrolling prose in `documentation/user-documentation/getting-started/keyboard.md` and optionally the shell-tab controls in `help/keys.md`, and add the interleaved-entry sentence to the 'Shell output and ACP replies' section of `documentation/user-documentation/getting-started/tabs.md`. Ground truth is `product/specs/transcript.md`, `web/src/shared/transcript/useTranscriptScroll.ts`, `web/src/shared/transcript/Transcript.tsx` and `src/tab/transcript/events.ts`.
-
 * web-fetch (5/10) — Of 19 facts, 18 are correct, none are missing and 1 is wrong. The 'Fetch agent tool' section of `help/web.md` says the agent ends its reply with a bare lowercase `web fetch …` line and that a bare line answers with the usage line. Shipped behavior requires exactly one `web fetch` command in a final fenced block whose info string is `janissary`; a bare final line is prose that ends the turn, and a malformed command in the block answers with `Usage: web fetch <url> [--format markdown|text|html] [--timeout <1-120>] [--max-chars <200-100000>] [--offset <n>] [--provider <name>]`. Rewrite that one section of `help/web.md` to match the fenced-block wording already present on the same page's `web search` paragraph and in `documentation/user-documentation/advanced-agents/acp-agent.md`. Ground truth is `product/specs/web-fetch.md`, `src/web/fetch/command.ts`, `src/acp/tool-table.ts` and `src/acp/command-block.ts`.
 
 ## development
@@ -14,6 +12,7 @@
 
 ## resolved
 
+* transcript — documented in documentation/user-documentation/getting-started/keyboard.md, documentation/user-documentation/getting-started/tabs.md (removed 2026-11-26)
 * tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md (removed 2026-11-26)
 * subagent — documented in help/subagent.md (removed 2026-11-26)
 * state-directory — documented in documentation/user-documentation/getting-started/startup.md, documentation/user-documentation/getting-started/configuration.md (removed 2026-11-26)

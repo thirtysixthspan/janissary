@@ -220,6 +220,8 @@ outside the remote workspace. The window titlebar reads `Janissary (<version>): 
 
 Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown. An `ask` line is printed as soon as you send it. Its answer arrives after the prompt settles as one rendered Markdown reply, beneath the `Thinking` marker on the next line when nothing else was printed in between, or at the current bottom under a fresh copy of the line when something was. It does not stream in a panel. Paths in supported rendered replies open an editor at the referenced line. See [Query ACP from a shell](/user-documentation/advanced-agents/acp-agent).
 
+Each running command or streaming reply writes its output only to the entry it started. When two runs overlap on the same tab, the one that finishes second leaves the first entry's output alone. An interleaved command keeps its own output and finishes on its own entry.
+
 While you stay at the bottom, the transcript follows incoming output and keeps the latest lines in view, even through a long stream. Scrolling away pauses following. It resumes when you scroll to within 40 pixels of the bottom. Press `Escape` to jump to the bottom and resume following.
 
 ## Agent tool steps fold up
