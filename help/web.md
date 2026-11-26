@@ -126,7 +126,15 @@ A local tab's fetch runs on the machine running Janissary, with that machine's t
 
 **Fetch agent tool**
 
-An `ask` or `tell` agent can read a page when its role grants `web fetch`; the built-in `ask` and `tell` roles grant it. The agent asks for a fetch by ending its reply with one lowercase `web fetch …` line, and a bare `web fetch` line answers with the usage line. Only a lowercase line counts, so an answer that begins a sentence with `Web fetch …` stays prose, and neither `WEB FETCH …` nor `web fetcher …` is a command. A role granting either web command has both web reply lines recognised, so a role that grants `web search` but not `web fetch` gets the fetch line extracted and refused with `Command not allowed for role "<role>": web fetch.` rather than kept as prose. If the granted `web fetch` row is disabled or agent-off, the tool refuses with `Command is disabled: web fetch.`; disabling the parent `web` row does the same. On a local tab the fetch runs on the machine running Janissary, and cancelling the prompt aborts the in-flight attempt and starts no further one. An `agent` run refuses every `web` line, so this tool is available only to `ask` and `tell` sessions.
+An `ask` or `tell` agent can read a page when its role grants `web fetch`; the built-in roles grant it. To read a page, the agent puts exactly one lowercase `web fetch …` command inside a final fenced block whose info string is exactly `janissary`. Only a lowercase command in that block counts, so an answer that begins a sentence with `Web fetch …` stays prose, and neither `WEB FETCH …` nor `web fetcher …` is a command. A bare `web fetch` final line outside the block is prose that ends the turn, not a command; a malformed `web fetch` command in the block answers with `Usage: web fetch <url> [--format markdown|text|html] [--timeout <1-120>] [--max-chars <200-100000>] [--offset <n>] [--provider <name>]`. Zero or more than one command in the block draws the shared correction sentence instead of ending the turn.
+
+````text
+```janissary
+web fetch https://nodejs.org/api/permissions.html --max-chars 5000
+```
+````
+
+A role granting either web command has both web commands extractable from that block, so a role that grants `web search` but not `web fetch` gets the fetch command refused with `Command not allowed for role "<role>": web fetch.` rather than kept as prose. If the granted `web fetch` row is disabled or agent-off, the tool refuses with `Command is disabled: web fetch.`; disabling the parent `web` row does the same. On a local tab the fetch runs on the machine running Janissary, and cancelling the prompt aborts the in-flight attempt and starts no further one. An `agent` run refuses every `web` line, so this tool is available only to `ask` and `tell` sessions.
 
 **Fetch examples**
 
