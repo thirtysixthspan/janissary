@@ -102,7 +102,7 @@ All questioning in this task works a **decision tree** of decisions: model every
 
 ### Question format
 
-Every question in every phase offers numbered answers for the user to pick from:
+The preserved-behavior question uses the checklist below. Every other question offers numbered answers for the user to pick from.
 
 - **At least three concrete answers**, numbered from 1, each grounded in what Step 2a found, in a 2b research suggestion, or in an earlier answer. Never ask an open "what should happen?".
 - **An "Other" answer**, numbered last, that lets the user write their own answer instead.
@@ -113,19 +113,27 @@ One answer may carry both marks when the answer you recommend is also the lowest
 
 ### 2e. Phase 1 — resolve product decisions
 
-Work the product-decision tree using the mechanism described above. Ask the user questions using `AskUserQuestion`, one question per call. Before the first question, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text:
+Work the product-decision tree using the mechanism described above. Ask one question at a time, using `AskUserQuestion` for numbered questions. Before the first question, make sure you have at least one applicable question in each category that the feature's existing text leaves open.
 
 - **Primary flow** — what exactly does the user do, and what do they see happen, step by step.
 - **Edge cases** — what happens on the empty state, a conflict, a cancel, an error, or an unexpected input.
-- **Preserved behavior** — when the feature touches an existing surface, ask exactly: "Which behaviors must continue, and what specifically must not happen?"
+- **Preserved behavior** — when the feature touches an existing surface with relevant behaviors to protect, use the checklist below.
 - **Scope boundary** — what is explicitly *not* included in this version.
 - **Naming/wording** — any user-visible text (labels, commands, messages) the plan needs to fix precisely.
 
-Skip a category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
+If the feature's existing description in `./product/backlog/features.md` already answers an applicable category unambiguously, quote that text back to the user as your understanding and move to the next question.
 
-Every question uses the question format above, with answers grounded in what you found in Step 2a. If a question has no natural small set of options, still propose your best-guess default as the recommended answer so the user can simply confirm it. Skip any category only if the feature's existing description in `./product/backlog/features.md` already answers it unambiguously — quote that text back to the user as your understanding rather than silently assuming it.
+Ground the available answers in what you found in Step 2a. If a numbered question has no natural small set of options, still propose your best-guess default as the recommended answer so the user can simply confirm it.
 
 Keep asking questions until the phase's frontier is empty — every product decision settled, none silently assumed. After the user answers each question, update the initial draft with every answer before continuing. Each answer must become a decision, behavior, scope boundary, or exact user-visible wording in the relevant existing section.
+
+#### Preserved-behavior checklist
+
+Ask “Which existing behaviors should this plan explicitly protect? Checking a behavior adds a safeguard to the plan so it keeps working through the change.”
+
+List each relevant behavior found in Step 2a as its own checkbox. Start recommended behaviors checked and all other candidates unchecked. Use a question tool if it supports independent checkboxes with initial checked states. Otherwise, show a Markdown checklist with `- [x]` for recommended behaviors and `- [ ]` for the rest. In the text version, let the user reply with `defaults`, the names of the behaviors to protect, or `none`.
+
+Wait for the user's confirmation. Apply the plan template's preservation and test requirements to each behavior in the confirmed selection.
 
 ### 2f. Phase 2 — resolve UI decisions
 
