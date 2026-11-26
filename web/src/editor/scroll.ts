@@ -10,13 +10,17 @@
 // on is still partly unpainted at the edge.
 
 import { caretRowBox, probePoint, screenRowHeight, scrollport } from './screen-rows';
+import { extendRunout } from './find-runout';
 
-// Keep a selected find result near the top of the viewport so the lines below it remain readable.
-export function positionCaretAtQuarter(body: HTMLElement, caret: HTMLElement): void {
+// Keep a selected find result near the top of the viewport so the lines below it remain readable,
+// growing the run-out below the last line first when the result is too near the end to get there.
+export function positionCaretAtQuarter(body: HTMLElement, caret: HTMLElement, runout: HTMLElement): void {
   const rect = caret.getBoundingClientRect();
   if (rect.height === 0 || body.clientHeight === 0) return;
   const target = body.getBoundingClientRect().top + body.clientHeight * 0.25;
-  body.scrollTop += rect.top + rect.height / 2 - target;
+  const scrollTop = body.scrollTop + rect.top + rect.height / 2 - target;
+  extendRunout(body, runout, scrollTop);
+  body.scrollTop = scrollTop;
 }
 
 // Scroll the body so the whole screen row the caret is on is inside the scrollport — not merely the

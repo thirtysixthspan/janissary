@@ -178,25 +178,51 @@ describe('revealVerticalProbe', () => {
 });
 
 describe('positionCaretAtQuarter', () => {
+  // A body `clientHeight` tall over `contentHeight` of rows, with the run-out counted in its scroll
+  // height the way a browser lays it out.
+  function withHeights(body: HTMLElement, clientHeight: number, contentHeight: number): HTMLElement {
+    const runout = document.createElement('div');
+    body.append(runout);
+    Object.defineProperties(body, {
+      clientHeight: { value: clientHeight },
+      scrollHeight: { get: () => contentHeight + (Number(runout.style.height.replace('px', '')) || 0) },
+    });
+    return runout;
+  }
+
   it('moves a selected caret to one quarter of the visible height', () => {
     const { body, caret } = makeBodyAndCaret();
-    Object.defineProperty(body, 'clientHeight', { value: 400 });
+    const runout = withHeights(body, 400, 2000);
     vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 500, height: 20 }));
 
-    positionCaretAtQuarter(body, caret);
+    positionCaretAtQuarter(body, caret, runout);
 
+    expect(body.scrollTop).toBe(390);
+    expect(runout.style.height).toBe('');
+    body.remove();
+  });
+
+  it('grows the run-out so a caret near the end of the content still reaches the quarter mark', () => {
+    const { body, caret } = makeBodyAndCaret();
+    const runout = withHeights(body, 400, 700);
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 500, height: 20 }));
+
+    positionCaretAtQuarter(body, caret, runout);
+
+    expect(runout.style.height).toBe('90px');
     expect(body.scrollTop).toBe(390);
     body.remove();
   });
 
   it('does nothing when the caret or scroll body has no layout', () => {
     const { body, caret } = makeBodyAndCaret();
-    Object.defineProperty(body, 'clientHeight', { value: 0 });
+    const runout = withHeights(body, 0, 700);
     vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 500, height: 20 }));
 
-    positionCaretAtQuarter(body, caret);
+    positionCaretAtQuarter(body, caret, runout);
 
     expect(body.scrollTop).toBe(0);
+    expect(runout.style.height).toBe('');
     body.remove();
   });
 });

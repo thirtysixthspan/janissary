@@ -1,6 +1,6 @@
 import React, { createRef, forwardRef, useMemo, useRef } from 'react';
 import { render, screen, waitFor, fireEvent, createEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { contentHash } from '@shared/editor/save-conflict';
 import { EditorTab } from './EditorTab';
@@ -1682,6 +1682,103 @@ describe('EditorTab', () => {
 
       await waitFor(() => expect(currentLine(container)).toBe('line two'));
       expect(body.scrollTop).toBe(310);
+    });
+
+    describe('run-out below the last line', () => {
+      const runoutOf = (container: HTMLElement) => container.querySelector(':scope .editor-body > .editor-find-runout') as HTMLElement;
+
+      // The prototype spy below would otherwise outlive the test, and an earlier test's leftover one
+      // would swallow the body's own measurement.
+      beforeEach(() => { vi.restoreAllMocks(); });
+      afterEach(() => { vi.restoreAllMocks(); });
+
+      // A 400px body over 600px of rows, so the largest offset the rows allow is 200, with the
+      // run-out counted in the scroll height the way a browser lays it out. Every caret sits at
+      // 500 on screen when the body is unscrolled, which puts the quarter mark at offset 310.
+      async function renderNearTheEnd(client: JanusClient) {
+        const result = await renderLoaded(client);
+        const body = result.container.querySelector('.editor-body') as HTMLElement;
+        const runout = runoutOf(result.container);
+        Object.defineProperties(body, {
+          clientHeight: { value: 400 },
+          scrollHeight: { get: () => 600 + (Number(runout.style.height.replace('px', '')) || 0) },
+        });
+        vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({
+          top: 100, bottom: 500, left: 0, right: 100, width: 100, height: 400, x: 0, y: 100, toJSON: () => ({}),
+        });
+        vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => {
+          const top = 500 - body.scrollTop;
+          return { top, bottom: top + 20, left: 0, right: 0, width: 0, height: 20, x: 0, y: top, toJSON: () => ({}) };
+        });
+        return { ...result, body, runout };
+      }
+
+      async function previewLineTwo(container: HTMLElement) {
+        openFind();
+        await searchForOneRow(container, 'two');
+        fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+        await waitFor(() => expect(currentLine(container)).toBe('line two'));
+      }
+
+      it('makes room past the last line so a match near the end reaches the quarter mark', async () => {
+        const { client } = makeClient();
+        const { container, body, runout } = await renderNearTheEnd(client);
+
+        await previewLineTwo(container);
+
+        expect(runout.style.height).toBe('110px');
+        expect(body.scrollTop).toBe(310);
+      });
+
+      it('keeps the room and the view where they are when the overlay closes', async () => {
+        const { client } = makeClient();
+        const { container, body, runout } = await renderNearTheEnd(client);
+        await previewLineTwo(container);
+
+        fireEvent.keyDown(findInput(), { key: 'Escape' });
+
+        expect(noFindInput()).toBeNull();
+        expect(runout.style.height).toBe('110px');
+        expect(body.scrollTop).toBe(310);
+      });
+
+      it('gives the room back as the buffer scrolls up, until none is left', async () => {
+        const { client } = makeClient();
+        const { container, body, runout } = await renderNearTheEnd(client);
+        await previewLineTwo(container);
+        fireEvent.keyDown(findInput(), { key: 'Escape' });
+
+        body.scrollTop = 250;
+        fireEvent.scroll(body);
+        expect(runout.style.height).toBe('50px');
+
+        body.scrollTop = 150;
+        fireEvent.scroll(body);
+        expect(runout.style.height).toBe('');
+      });
+
+      it('is not a buffer line and leaves the buffer clean', async () => {
+        const { client } = makeClient();
+        const { container, runout } = await renderNearTheEnd(client);
+
+        await previewLineTwo(container);
+
+        expect(runout.dataset.editorLine).toBeUndefined();
+        expect(runout.getAttribute('aria-hidden')).toBe('true');
+        expect(runout.textContent).toBe('');
+        expect(bufferTexts(container)).toEqual(['line one', 'line two']);
+        expect(hasEnabledSaveButton(container)).toBe(false);
+      });
+
+      it('is never added by ordinary cursor movement', async () => {
+        const { client } = makeClient();
+        const { container, runout } = await renderNearTheEnd(client);
+
+        fireEvent.keyDown(textarea(), { key: 'ArrowDown', metaKey: true });
+
+        await waitFor(() => expect(currentGutter(container)).toBe('2'));
+        expect(runout.style.height).toBe('');
+      });
     });
 
     it('moves the cursor to the highlighted match and closes on Enter', async () => {
