@@ -115,6 +115,21 @@ describe('writeSshConfigFile', () => {
     expect(readFileSync(link, 'utf8')).toBe('after');
   });
 
+  it('writes through a dangling symlink and creates the file it points at with mode 0600', () => {
+    const directory = scratch();
+    const target = path.join(directory, 'missing-parent', 'nested', 'config');
+    const link = path.join(directory, 'link');
+    symlinkSync(target, link);
+    const linkTarget = readlinkSync(link);
+
+    expect(writeSshConfigFile(link, 'Host lab')).toEqual({});
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(link)).toBe(linkTarget);
+    expect(readFileSync(target, 'utf8')).toBe('Host lab');
+    expect(statSync(target).mode & 0o777).toBe(0o600);
+    expect(statSync(path.dirname(target)).mode & 0o777).toBe(0o700);
+  });
+
   it('reports the mapped problem word and leaves the original bytes in place on a write error', () => {
     const directory = scratch();
     const file = path.join(directory, 'config');

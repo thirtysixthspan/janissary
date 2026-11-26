@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { replaceFileAtomically } from '../files.js';
 
@@ -33,7 +33,17 @@ export function writeSshConfigFile(filePath: string, content: string): WriteResu
     mkdirSync(parent, { recursive: true, mode: PARENT_MODE });
     let target = path.join(realpathSync(parent), path.basename(filePath));
     try {
-      if (lstatSync(target).isSymbolicLink()) target = realpathSync(target);
+      if (lstatSync(target).isSymbolicLink()) {
+        try {
+          target = realpathSync(target);
+        } catch (error) {
+          if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+            const resolved = path.resolve(path.dirname(target), readlinkSync(target));
+            mkdirSync(path.dirname(resolved), { recursive: true, mode: PARENT_MODE });
+            target = resolved;
+          }
+        }
+      }
     } catch { /* a missing destination is written at its requested path */ }
     replaceFileAtomically(target, Buffer.from(content, 'utf8'), TARGET_MODE);
     return {};

@@ -140,6 +140,8 @@ is too large, or that fails to open for any other reason, is left exactly as it 
 host block intact; the refusal names the config and the reason it could not be read. Only a target
 that is genuinely missing is treated as a new file and created with a fresh managed section.
 
+When the export target is a symlink, the export writes through to the file the link points at and leaves the link itself untouched, whether or not that file exists yet. If the pointed-to file is missing, its parent directories are created with the same restrictive mode as a new config's parent and the file is created with the same mode as a new config, so later reads through the link reach the exported section.
+
 ### Catalog files are not ssh configs
 
 Neither catalog that can supply the saved hosts, whether the project one or the home one, can be an export target or an import source. Naming one as the operand is refused with a message that names the catalog and says that the operation cannot use it; the catalog is not read as a config or written, and both catalogs stay byte for byte unchanged. A symlink or an alternate spelling that resolves to a catalog is refused just like the direct path. The refusal always tracks the locations that actually supply the saved hosts, so moving or renaming the catalog cannot leave it guarding the old places. An ordinary ssh config operand is unaffected.
