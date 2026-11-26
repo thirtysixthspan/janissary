@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Handle the in-application help and hosts-tab spec that still document the old bare usage line and omit the new import and export verbs.
+
+Existing Issue: The parser now returns `Usage: hosts [list|add|remove|import|export].` for unknown verbs and recognizes `import` and `export`, but help/hosts.md and product/specs/hosts-tab.md still state the old `Usage: hosts [list|add|remove].` line and list only the list, add and remove verbs. Severity: 5/10
+
+Existing Risk: 4/10 - Users reading the in-app help or the spec are told a refusal string the command never emits and have no way to learn the two new verbs are recognized, while a contributor treating the spec as the contract can rebuild the old three-verb grammar.
+
+Proposal Risk: 1/10 - The change touches only prose and leaves the parser and its tests untouched, so a wrong replacement would pass every test and surface only when someone compares the documented line with a real refusal in the command bar.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2242 "sync the hosts help and spec with the extended command grammar". In help/hosts.md, change the `hosts left` example in the Examples section and the malformed-request sentence in the Notes section to quote `Usage: hosts [list|add|remove|import|export].`, add `hosts import [file]` and `hosts export [file]` to the Usage block, and add a short Examples line recording that at this checkpoint both verbs are recognized but only reply with their own usage line (`Usage: hosts import [file]` and `Usage: hosts export [file]`) without reading or writing a file. In product/specs/hosts-tab.md's Commands section, replace the stale `Usage: hosts [list|add|remove].` text with the extended line and add a short paragraph stating that `import` and `export` take zero or one operand, that a double-quoted operand keeps its spaces with no escapes, and that malformed forms get that verb's own usage line. Keep the wording tied to the checkpoint behavior actually implemented in src/plugins/hosts/catalog-commands.ts, where both variants return a refusal and perform no I/O; do not describe execution that belongs to a later change. Verify by reading both documents against parseCatalogCommand and runCatalogCommand in src/plugins/hosts/catalog-commands.ts and against the usage-line assertions in src/plugins/hosts/catalog-commands.test.ts and src/plugins/hosts/activate.test.ts, which must keep passing untouched.
