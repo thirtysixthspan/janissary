@@ -5,6 +5,7 @@
 //   node scripts/lint-files.mjs src/foo.ts ...   # only the files you name
 //   node scripts/lint-files.mjs --fix            # autofix the uncommitted set
 //   node scripts/lint-files.mjs --fix src/foo.ts # flags and files can be combined
+//   node scripts/lint-files.mjs --base origin/master  # also the files committed since that ref
 //
 // Arguments starting with `-` are forwarded to ESLint; everything else is treated as a
 // path. With no paths given, the uncommitted set is derived from git. Only files ESLint
@@ -13,16 +14,26 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { parseBaseRef } from './base-ref.mjs';
 import { changedFiles } from './changed-files.mjs';
 
 const LINTABLE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 
-const arguments_ = process.argv.slice(2);
+const { base, rest: arguments_, error: baseError } = parseBaseRef(process.argv.slice(2));
+if (baseError) {
+  console.error(`lint-files: ${baseError}`);
+  process.exit(1);
+}
 const flags = arguments_.filter((a) => a.startsWith('-'));
 let paths = arguments_.filter((a) => !a.startsWith('-'));
 
 if (paths.length === 0) {
-  paths = changedFiles();
+  try {
+    paths = changedFiles(base);
+  } catch (error) {
+    console.error(`lint-files: cannot diff against ${base}: ${error.message}`);
+    process.exit(1);
+  }
 }
 
 // Keep paths ESLint can act on: lintable extensions, plus extension-less paths (likely
