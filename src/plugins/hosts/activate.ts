@@ -6,7 +6,7 @@ import {
   type TabPluginActivation,
   type TabPluginServerCapabilities,
 } from '../api.js';
-import { runCatalogCommand } from './catalog-commands.js';
+import { parseCatalogCommand, runCatalogCommand } from './catalog-commands.js';
 import { deleteHostEdit, saveHostEdit } from './host-edits.js';
 import { readHostsFile, type HostsRead } from './hosts-file.js';
 import { formatDestination, sameHostName, type SavedHost } from './hosts-values.js';
@@ -15,6 +15,7 @@ import {
   type DeleteHostIntent, type HostRow, type HostsPayload, type OpenIntent,
   type SaveHostIntent, type SaveHostResult,
 } from './shared.js';
+import { runExportIntent, runImportIntent, runSshIntent } from './ssh-intents.js';
 
 const INSTANCE_KEY = 'hosts';
 const TAB_TITLE = 'hosts';
@@ -54,6 +55,12 @@ function readNotify(capabilities: TabPluginServerCapabilities, owned: boolean): 
 function runCommand(argument: string, capabilities: TabPluginServerCapabilities): void {
   const root = originRoot(capabilities);
   const notify = readNotify(capabilities, false);
+  const parsed = parseCatalogCommand(argument);
+  if (parsed.kind === 'import' || parsed.kind === 'export') {
+    runSshIntent(parsed, capabilities, notify,
+      (read) => publish(capabilities, payloadOf(read)), 'command');
+    return;
+  }
   const outcome = argument.trim().length === 0
     ? { kind: 'open' as const }
     : runCatalogCommand(argument, root, homedir(), notify);
@@ -107,6 +114,24 @@ function deleteRow(
   return null;
 }
 
+function importRows(
+  _tab: HostsPayload, _payload: Record<string, never>, capabilities: TabPluginServerCapabilities,
+): null {
+  originRoot(capabilities);
+  return runImportIntent(
+    capabilities, readNotify(capabilities, true), (read) => publish(capabilities, payloadOf(read)),
+  );
+}
+
+function exportRows(
+  _tab: HostsPayload, _payload: Record<string, never>, capabilities: TabPluginServerCapabilities,
+): null {
+  originRoot(capabilities);
+  return runExportIntent(
+    capabilities, readNotify(capabilities, true), (read) => publish(capabilities, payloadOf(read)),
+  );
+}
+
 function dispatchMessage(name: string, result: DispatchResult): string | undefined {
   if (typeof result.result === 'string' && result.result.length > 0) return result.result;
   if (result.output.length > 0) return result.output;
@@ -139,6 +164,8 @@ export function activate(): TabPluginActivation {
     command: runCommand,
     intent: defineIntents('hosts', isHostsPayload, {
       refresh: { payload: isRefreshIntent, run: refresh },
+      import: { payload: isRefreshIntent, run: importRows },
+      export: { payload: isRefreshIntent, run: exportRows },
       open: { payload: isOpenIntent, run: openRow },
       save: { payload: isSaveHostIntent, run: save },
       delete: { payload: isDeleteHostIntent, run: deleteRow },

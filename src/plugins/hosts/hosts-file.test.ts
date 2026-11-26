@@ -3,7 +3,7 @@ import type * as FileSystem from 'node:fs';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { mutateHostsFile, readHostsFile, serializeHosts, writeHostsFile } from './hosts-file.js';
+import { catalogPaths, mutateHostsFile, readHostsFile, serializeHosts, writeHostsFile } from './hosts-file.js';
 import type { HostsChange } from './hosts-file.js';
 import type { SavedHost } from './hosts-values.js';
 
@@ -165,6 +165,34 @@ describe('selecting the effective hosts file', () => {
     const read = readHostsFile(root, home);
     expect(read.usable).toBe(false);
     expect(read.problems).toEqual([{ path: homeFile(home), problem: 'Missing destination' }]);
+  });
+});
+
+describe('shared catalog path definitions', () => {
+  it('reports the helper project path when only the project catalog exists', () => {
+    const { home, root } = directories();
+    writeJson(projectFile(root), { projecthost: { destination: 'project.example' } });
+
+    const catalogs = catalogPaths(root, home);
+    expect(catalogs.project).toBe(projectFile(root));
+    expect(readHostsFile(root, home).path).toBe(catalogs.project);
+  });
+
+  it('reports the helper home path when only the home catalog exists', () => {
+    const { home, root } = directories();
+    writeJson(homeFile(home), { homehost: { destination: 'home.example' } });
+
+    const catalogs = catalogPaths(root, home);
+    expect(catalogs.home).toBe(homeFile(home));
+    expect(readHostsFile(root, home).path).toBe(catalogs.home);
+  });
+
+  it('omits the project path when the root is empty', () => {
+    const { home } = directories();
+
+    const catalogs = catalogPaths('', home);
+    expect(catalogs.project).toBeUndefined();
+    expect(catalogs.home).toBe(homeFile(home));
   });
 });
 

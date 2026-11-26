@@ -43,6 +43,18 @@ describe('atomicWriteFile', () => {
     expect(statSync(target).mode & 0o777).toBe(0o600);
   });
 
+  it('applies a create mode only when the target does not exist yet', () => {
+    const directory = root();
+    const target = path.join(directory, 'created.json');
+
+    atomicWriteFile(target, 'first', 0o600);
+    expect(statSync(target).mode & 0o777).toBe(0o600);
+
+    atomicWriteFile(target, 'second', 0o644);
+    expect(statSync(target).mode & 0o777).toBe(0o600);
+    expect(readFileSync(target, 'utf8')).toBe('second');
+  });
+
   it('leaves an existing directory in place and cleans the temporary file when replacement fails', () => {
     const directory = root();
     const target = path.join(directory, 'target');

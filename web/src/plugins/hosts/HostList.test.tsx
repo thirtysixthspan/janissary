@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HostRow } from '@shared/plugins/hosts/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -110,9 +111,112 @@ describe('HostList rendering', () => {
     const actions = header.querySelector('.plugin-actions')!;
     expect(header.children).toHaveLength(1);
     expect([...actions.children]).toEqual([
-      screen.getByLabelText('Refresh'), screen.getByLabelText('New host'), screen.getByLabelText('Split'),
+      screen.getByLabelText('Refresh'), screen.getByLabelText('New host'),
+      screen.getByLabelText('Import from ssh config'), screen.getByLabelText('Export to ssh config'),
+      screen.getByLabelText('Split'),
     ]);
   });
+});
+
+describe('HostList ssh config buttons', () => {
+  it('names both buttons and shows their import and export icons', () => {
+    list([row()]);
+    const importButton = screen.getByRole('button', { name: 'Import from ssh config' });
+    const exportButton = screen.getByRole('button', { name: 'Export to ssh config' });
+    expect(importButton).toHaveAttribute('title', 'Import from ssh config');
+    expect(exportButton).toHaveAttribute('title', 'Export to ssh config');
+    expect(importButton.querySelector('svg')).toHaveAttribute('data-icon', 'file-import');
+    expect(exportButton.querySelector('svg')).toHaveAttribute('data-icon', 'file-export');
+  });
+
+  it('keeps both buttons in the metadata header when the list is empty', () => {
+    const fixture = capabilities();
+    fixture.value.splitAction = <button aria-label="Split">Split</button>;
+    const { container } = list([], fixture.value);
+    const actions = container.querySelector('.plugin-actions')!;
+    expect([...actions.querySelectorAll('button')].map((node) => node.getAttribute('aria-label')))
+      .toEqual(['Refresh', 'New host', 'Import from ssh config', 'Export to ssh config', 'Split']);
+  });
+
+  it('fires only import when Import is clicked', () => {
+    const fixture = capabilities();
+    const { container } = list([row()], fixture.value);
+    fireEvent.click(screen.getByRole('button', { name: 'Import from ssh config' }));
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith('import', {});
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(container.querySelector('.host-row')).toHaveClass('selected');
+  });
+
+  it('fires only export when Export is clicked', () => {
+    const fixture = capabilities();
+    const { container } = list([row()], fixture.value);
+    fireEvent.click(screen.getByRole('button', { name: 'Export to ssh config' }));
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith('export', {});
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(container.querySelector('.host-row')).toHaveClass('selected');
+  });
+
+  it.each(['Import from ssh config', 'Export to ssh config'])(
+    'keeps focus on %s after a click',
+    async (name) => {
+      const user = userEvent.setup();
+      const fixture = capabilities();
+      list([row()], fixture.value);
+      const button = screen.getByRole('button', { name });
+      await user.click(button);
+      expect(button).toHaveFocus();
+      expect(fixture.intent).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ['Import from ssh config', '{Enter}', 'import'],
+    ['Import from ssh config', ' ', 'import'],
+    ['Export to ssh config', '{Enter}', 'export'],
+    ['Export to ssh config', ' ', 'export'],
+  ])('activates %s with the %s key', async (name, key, intentName) => {
+    const user = userEvent.setup();
+    const fixture = capabilities();
+    list([row()], fixture.value);
+    screen.getByRole('button', { name }).focus();
+    await user.keyboard(key);
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith(intentName, {});
+  });
+
+  it('leaves list selection alone when a key lands on Import', async () => {
+    const user = userEvent.setup();
+    const fixture = capabilities();
+    const { container } = list([row({ name: 'a' }), row({ name: 'b' })], fixture.value);
+    screen.getByRole('button', { name: 'Import from ssh config' }).focus();
+    await user.keyboard('{ArrowDown}');
+    expect(container.querySelector('.host-row')).toHaveClass('selected');
+    expect(container.querySelectorAll('.host-row')[1]).not.toHaveClass('selected');
+    expect(fixture.intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves the new-host chord alone on the new buttons', () => {
+    list([row()]);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Export to ssh config' }), {
+      key: 'n', metaKey: true,
+    });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Import from ssh config' }), {
+      key: 'n', ctrlKey: true,
+    });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it.each(['Import from ssh config', 'Export to ssh config'])(
+    'never marks %s disabled or busy',
+    (name) => {
+      list([row()]);
+      const button = screen.getByRole('button', { name });
+      expect(button).not.toBeDisabled();
+      expect(button).not.toHaveAttribute('aria-busy');
+      fireEvent.click(button);
+      expect(button).not.toBeDisabled();
+      expect(button).not.toHaveAttribute('aria-busy');
+    },
+  );
 });
 
 describe('HostList intents', () => {

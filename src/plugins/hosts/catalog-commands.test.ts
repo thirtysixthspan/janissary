@@ -10,9 +10,11 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), renameSync: vi.fn(actual.renameSync) };
 });
 
-const USAGE = 'Usage: hosts [list|add|remove].';
+const USAGE = 'Usage: hosts [list|add|remove|import|export].';
 const ADD_USAGE = 'Usage: hosts add <name> <[user@]host[:port]> [path]';
 const REMOVE_USAGE = 'Usage: hosts remove <name>';
+const IMPORT_USAGE = 'Usage: hosts import [file]';
+const EXPORT_USAGE = 'Usage: hosts export [file]';
 
 const roots: string[] = [];
 
@@ -56,9 +58,44 @@ describe('parseCatalogCommand', () => {
     expect(parseCatalogCommand('REMOVE Lab')).toEqual({ kind: 'remove', name: 'Lab' });
   });
 
+  it('parses import and export with zero or one operand regardless of case', () => {
+    expect(parseCatalogCommand('IMPORT')).toEqual({ kind: 'import', operand: '' });
+    expect(parseCatalogCommand('import config')).toEqual({ kind: 'import', operand: 'config' });
+    expect(parseCatalogCommand('EXPORT')).toEqual({ kind: 'export', operand: '' });
+    expect(parseCatalogCommand('Export config')).toEqual({ kind: 'export', operand: 'config' });
+  });
+
+  it('keeps spaces in a quoted operand and reads an unquoted operand as one token', () => {
+    expect(parseCatalogCommand('import "my config file"')).toEqual({
+      kind: 'import', operand: 'my config file',
+    });
+    expect(parseCatalogCommand('export "a b"')).toEqual({ kind: 'export', operand: 'a b' });
+    expect(parseCatalogCommand('import config')).toEqual({ kind: 'import', operand: 'config' });
+  });
+
+  it('keeps backslashes and single quotes inside a quoted operand verbatim', () => {
+    expect(parseCatalogCommand(String.raw`import "a\b"`)).toEqual({ kind: 'import', operand: String.raw`a\b` });
+    expect(parseCatalogCommand('export "it\'s fine"')).toEqual({ kind: 'export', operand: 'it\'s fine' });
+    const slash = String.fromCodePoint(92);
+    expect(parseCatalogCommand(`import "tmp${slash}"`)).toEqual({ kind: 'import', operand: `tmp${slash}` });
+  });
+
+  it('refuses malformed import and export operands with their own usage lines', () => {
+    for (const tail of ['""', 'a"b', '"unclosed', 'config extra', '"my config" extra', '"a"b']) {
+      expect(parseCatalogCommand(`import ${tail}`)).toEqual({ kind: 'refusal', reason: IMPORT_USAGE });
+      expect(parseCatalogCommand(`export ${tail}`)).toEqual({ kind: 'refusal', reason: EXPORT_USAGE });
+    }
+  });
+
   it('refuses unknown verbs and list operands', () => {
     expect(parseCatalogCommand('show')).toEqual({ kind: 'refusal', reason: USAGE });
     expect(parseCatalogCommand('list extra')).toEqual({ kind: 'refusal', reason: USAGE });
+  });
+
+  it('uses the extended bare usage line', () => {
+    expect(parseCatalogCommand('show')).toEqual({
+      kind: 'refusal', reason: 'Usage: hosts [list|add|remove|import|export].',
+    });
   });
 
   it('refuses malformed add and remove arity', () => {
@@ -245,11 +282,29 @@ describe('runCatalogCommand', () => {
 
   it('skips storage for malformed requests', () => {
     const { home, root } = directories();
-    for (const argument of ['show', 'list extra', 'add', 'add name', 'add name @', 'remove a b', 'remove bad!name']) {
+    const malformed = [
+      'show', 'list extra', 'add', 'add name', 'add name @', 'remove a b', 'remove bad!name',
+      'import ""', 'import "unclosed', 'import a b', 'export ""', 'export "unclosed', 'export a b',
+    ];
+    for (const argument of malformed) {
       expect(runCatalogCommand(argument, root, home).kind).toBe('refusal');
     }
     expect(existsSync(homeFile(home))).toBe(false);
     expect(existsSync(projectFile(root))).toBe(false);
+  });
+
+  it('refuses valid import and export at the checkpoint without touching storage', () => {
+    const { home, root } = directories();
+    expect(runCatalogCommand('import "my config"', root, home)).toEqual({
+      kind: 'refusal', reason: IMPORT_USAGE,
+    });
+    expect(runCatalogCommand('EXPORT', root, home)).toEqual({
+      kind: 'refusal', reason: EXPORT_USAGE,
+    });
+    expect(existsSync(homeFile(home))).toBe(false);
+    expect(existsSync(projectFile(root))).toBe(false);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(vi.mocked(renameSync)).not.toHaveBeenCalled();
   });
 
   it('exercises add, list, replace and remove as one scratch workflow', () => {

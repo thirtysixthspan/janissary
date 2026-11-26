@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as FileSystem from 'node:fs';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -41,6 +41,16 @@ function writeCatalog(dir: string, value: unknown): string {
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(value));
   return file;
+}
+
+function writeText(file: string, text: string): string {
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, text);
+  return file;
+}
+
+function writeSshConfig(dir: string, text: string): string {
+  return writeText(path.join(dir, '.ssh', 'config'), text);
 }
 
 function row(name: string, destination: string): HostRow {
@@ -208,9 +218,9 @@ describe('hosts activation command', () => {
 
   it('refuses unsupported forms and docking arguments', () => {
     const f = fixture();
-    expect(refusal(() => runCommand(f, 'show'))).toBe('Usage: hosts [list|add|remove].');
-    expect(refusal(() => runCommand(f, 'left'))).toBe('Usage: hosts [list|add|remove].');
-    expect(refusal(() => runCommand(f, 'right'))).toBe('Usage: hosts [list|add|remove].');
+    expect(refusal(() => runCommand(f, 'show'))).toBe('Usage: hosts [list|add|remove|import|export].');
+    expect(refusal(() => runCommand(f, 'left'))).toBe('Usage: hosts [list|add|remove|import|export].');
+    expect(refusal(() => runCommand(f, 'right'))).toBe('Usage: hosts [list|add|remove|import|export].');
     expect(f.noted).toEqual([]);
     expect(f.updated).toEqual([]);
   });
@@ -253,6 +263,307 @@ describe('hosts activation command', () => {
     f.setOrigin(null);
     expect(refusal(() => runCommand(f, ''))).toBe('The Hosts tab has no origin.');
     expect(f.opened).toEqual([]);
+  });
+});
+
+describe('hosts activation ssh commands', () => {
+  it('notes a local import, publishes the written catalog, and never opens a tab', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(f.home, 'Host web1\n  HostName web1.example\n');
+
+    runCommand(f, 'import');
+
+    expect(f.noted).toEqual(['Imported 1 host from ~/.ssh/config.']);
+    expect(f.opened).toEqual([]);
+    expect(f.events).not.toContain('open:hosts');
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: file,
+      rows: [row('Lab', 'lab.local'), row('web1', 'web1.example')],
+    });
+  });
+
+  it('notes a local export report without publishing or opening a tab', () => {
+    const f = fixture();
+    writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+
+    runCommand(f, 'export');
+
+    expect(f.noted).toEqual(['Exported 1 host to ~/.ssh/config.']);
+    expect(f.opened).toEqual([]);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('executes valid verbs through the runner rather than returning the usage checkpoint', () => {
+    const imported = fixture();
+    writeCatalog(imported.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(imported.home, 'Host web1\n  HostName web1.example\n');
+    runCommand(imported, 'IMPORT');
+
+    const exported = fixture();
+    writeCatalog(exported.root, { Lab: { destination: 'lab.local' } });
+    runCommand(exported, 'EXPORT');
+
+    expect(imported.noted).toEqual(['Imported 1 host from ~/.ssh/config.']);
+    expect(exported.noted).toEqual(['Exported 1 host to ~/.ssh/config.']);
+    expect(imported.noted).not.toContain('Usage: hosts import [file]');
+    expect(exported.noted).not.toContain('Usage: hosts export [file]');
+  });
+
+  it('still refuses malformed import and export forms in the transcript', () => {
+    const f = fixture();
+    expect(refusal(() => runCommand(f, 'import a b'))).toBe('Usage: hosts import [file]');
+    expect(refusal(() => runCommand(f, 'export "unclosed'))).toBe('Usage: hosts export [file]');
+    expect(f.noted).toEqual([]);
+    expect(f.updated).toEqual([]);
+  });
+
+  it('notes an empty import report without publishing or writing', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(f.home, '');
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    runCommand(f, 'import');
+
+    expect(f.noted).toEqual(['No aliases to import from ~/.ssh/config.']);
+    expect(f.updated).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+  });
+
+  it('refuses a failed import without publishing or writing the catalog', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'import')))
+      .toBe('Cannot read ssh config ~/.ssh/config: no such file.');
+
+    expect(f.updated).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing import file with an abbreviated path', () => {
+    const f = fixture();
+    expect(refusal(() => runCommand(f, 'import ~/missing')))
+      .toBe('Cannot read ssh config ~/missing: no such file.');
+    expect(f.updated).toEqual([]);
+  });
+
+  it('refuses a failed export in the transcript without opening a tab', () => {
+    const f = fixture();
+    writeCatalog(f.home, '{bad json');
+
+    expect(refusal(() => runCommand(f, 'export')))
+      .toBe(`Cannot export hosts: ${path.join(f.home, '.janissary', 'hosts.json')} is unusable — fix it by hand.`);
+
+    expect(f.opened).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.notifications[0]?.text).toContain('is unusable');
+  });
+
+  it('refuses both verbs in a remote tab before touching any file', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(f.home, 'Host web1\n  HostName web1.example\n');
+    f.setOrigin({ label: 'hosts', cwd: f.root, root: f.root, remote: true });
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'import')))
+      .toBe('hosts import and hosts export work only in local tabs.');
+    expect(refusal(() => runCommand(f, 'export')))
+      .toBe('hosts import and hosts export work only in local tabs.');
+
+    expect(f.noted).toEqual([]);
+    expect(f.opened).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+  });
+
+  it('resolves a relative import operand against the tab cwd before the root', () => {
+    const f = fixture();
+    const cwd = path.join(f.root, 'tab-cwd');
+    writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeText(path.join(cwd, 'config'), 'Host fromcwd\n  HostName cwd.example\n');
+    writeText(path.join(f.root, 'config'), 'Host fromroot\n  HostName root.example\n');
+    f.setOrigin({ label: 'hosts', cwd, root: f.root });
+
+    runCommand(f, 'import config');
+
+    expect(f.noted).toEqual(['Imported 1 host from $root/tab-cwd/config.']);
+    expect(f.updated[0]?.value.payload.rows).toEqual([
+      row('fromcwd', 'cwd.example'), row('Lab', 'lab.local'),
+    ]);
+  });
+
+  it('falls back to the root when a relative operand is absent from the cwd', () => {
+    const f = fixture();
+    const cwd = path.join(f.root, 'tab-cwd');
+    mkdirSync(cwd, { recursive: true });
+    writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeText(path.join(f.root, 'config'), 'Host fromroot\n  HostName root.example\n');
+    f.setOrigin({ label: 'hosts', cwd, root: f.root });
+
+    runCommand(f, 'import config');
+
+    expect(f.noted).toEqual(['Imported 1 host from $root/config.']);
+    expect(f.updated[0]?.value.payload.rows).toEqual([
+      row('fromroot', 'root.example'), row('Lab', 'lab.local'),
+    ]);
+  });
+
+  it('refuses an export aimed at the home catalog without touching either catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/.janissary/hosts.json')))
+      .toBe('Cannot export hosts: ~/.janissary/hosts.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses an export aimed at the project catalog without touching either catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export $root/.janissary/hosts.json')))
+      .toBe('Cannot export hosts: $root/hosts.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses a dot-dot spelling that resolves to the home catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/.janissary/../.janissary/hosts.json')))
+      .toBe('Cannot export hosts: ~/.janissary/hosts.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+  });
+
+  it('refuses an export that reaches the home catalog through a symlink', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'aliased.json');
+    symlinkSync(homeFile, alias);
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/aliased.json')))
+      .toBe('Cannot export hosts: ~/aliased.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+  });
+
+  it('refuses an import whose source is the home catalog without touching either catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'import ~/.janissary/hosts.json')))
+      .toBe('Cannot import hosts: ~/.janissary/hosts.json is the hosts catalog and cannot be an import source.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses an export through a dangling link that names the project catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'dangling.json');
+    symlinkSync(`${path.join(f.root, '.janissary')}/absent/../hosts.json`, alias);
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/dangling.json')))
+      .toBe('Cannot export hosts: ~/dangling.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses an import through a dangling link that names the project catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'dangling.json');
+    symlinkSync(`${path.join(f.root, '.janissary')}/absent/../hosts.json`, alias);
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'import ~/dangling.json')))
+      .toBe('Cannot import hosts: ~/dangling.json is the hosts catalog and cannot be an import source.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('exports through a dangling link to an ordinary config path', () => {
+    const f = fixture();
+    writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'ordinary.json');
+    const target = path.join(f.home, 'plain-config');
+    symlinkSync(target, alias);
+
+    runCommand(f, 'export ~/ordinary.json');
+
+    expect(f.noted).toEqual(['Exported 1 host to ~/ordinary.json.']);
+    expect(readFileSync(target, 'utf8')).toContain('Host Lab');
   });
 });
 
@@ -560,5 +871,132 @@ describe('hosts activation intents', () => {
       rows: [row('Home', 'home.local'), row('New', 'new.local')],
     });
     expect(f.notifications[0]?.options).toEqual({ tab: 'hosts' });
+  });
+});
+
+describe('hosts activation ssh intents', () => {
+  it('imports from ~/.ssh/config, publishes once, notifies the Hosts tab, and returns null', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(f.home, 'Host web1\n  HostName web1.example\n');
+
+    expect(send(f, 'import', {})).toBeNull();
+
+    expect(f.updated).toHaveLength(1);
+    expect(f.updated[0]?.value.payload).toEqual({
+      filePath: file,
+      rows: [row('Lab', 'lab.local'), row('web1', 'web1.example')],
+    });
+    expect(f.notifications).toEqual([
+      { text: 'Imported 1 host from ~/.ssh/config.', options: { tab: 'hosts' } },
+    ]);
+    expect(f.noted).toEqual([]);
+    expect(f.opened).toEqual([]);
+    expect(f.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('exports without publishing or changing the payload, notifying the Hosts tab', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+    const tab = f.tabPayload([row('Lab', 'lab.local')]);
+
+    expect(send(f, 'export', {}, tab)).toBeNull();
+
+    expect(f.updated).toEqual([]);
+    expect(f.noted).toEqual([]);
+    expect(f.opened).toEqual([]);
+    expect(f.notifications).toEqual([
+      { text: 'Exported 1 host to ~/.ssh/config.', options: { tab: 'hosts' } },
+    ]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(tab).toEqual({
+      filePath: path.join(f.root, '.janissary', 'hosts.json'),
+      rows: [row('Lab', 'lab.local')],
+    });
+  });
+
+  it('notifies a failed import and a failed export without rejecting or writing the catalog', () => {
+    const imported = fixture();
+    const importFile = writeCatalog(imported.root, { Lab: { destination: 'lab.local' } });
+    const importBefore = readFileSync(importFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(send(imported, 'import', {})).toBeNull();
+
+    expect(imported.notifications).toEqual([
+      { text: 'Cannot read ssh config ~/.ssh/config: no such file.', options: { tab: 'hosts' } },
+    ]);
+    expect(imported.updated).toEqual([]);
+    expect(readFileSync(importFile, 'utf8')).toBe(importBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+
+    const exported = fixture();
+    writeCatalog(exported.home, '{bad json');
+
+    expect(send(exported, 'export', {})).toBeNull();
+
+    expect(exported.notifications.at(-1)).toEqual({
+      text: `Cannot export hosts: ${path.join(exported.home, '.janissary', 'hosts.json')} is unusable — fix it by hand.`,
+      options: { tab: 'hosts' },
+    });
+    expect(exported.updated).toEqual([]);
+  });
+
+  it('refuses a non-empty payload for either verb before reading or writing', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => send(f, 'import', { file: 'x' }))).toBe('invalid import payload');
+    expect(refusal(() => send(f, 'export', { file: 'x' }))).toBe('invalid export payload');
+
+    expect(f.notifications).toEqual([]);
+    expect(f.noted).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+  });
+
+  it('refuses both verbs in a remote tab in the notification feed before touching any file', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(f.home, 'Host web1\n  HostName web1.example\n');
+    f.setOrigin({ label: 'hosts', cwd: f.root, root: f.root, remote: true });
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(send(f, 'import', {})).toBeNull();
+    expect(send(f, 'export', {})).toBeNull();
+
+    expect(f.notifications).toEqual([
+      { text: 'hosts import and hosts export work only in local tabs.', options: { tab: 'hosts' } },
+      { text: 'hosts import and hosts export work only in local tabs.', options: { tab: 'hosts' } },
+    ]);
+    expect(f.noted).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+  });
+
+  it('refuses both verbs with no origin tab before touching any file', () => {
+    const f = fixture();
+    const file = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    writeSshConfig(f.home, 'Host web1\n  HostName web1.example\n');
+    const before = readFileSync(file, 'utf8');
+    f.setOrigin(null);
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => send(f, 'import', {}))).toBe('The Hosts tab has no origin.');
+    expect(refusal(() => send(f, 'export', {}))).toBe('The Hosts tab has no origin.');
+
+    expect(f.notifications).toEqual([]);
+    expect(f.noted).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
   });
 });

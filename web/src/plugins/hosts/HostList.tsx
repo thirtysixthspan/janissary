@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faRotate } from '@fortawesome/free-solid-svg-icons';
+import { faFileExport, faFileImport, faPlus, faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { HostRow, HostsPayload } from '@shared/plugins/hosts/shared';
 import {
   ConfirmDialog,
@@ -59,6 +59,8 @@ export function HostList({
   }, [focusName, payload.rows, select, capabilities.active, listRef]);
 
   const refresh = () => { fireIntent({ intent }, 'refresh', {}); };
+  const importHosts = () => { fireIntent({ intent }, 'import', {}); };
+  const exportHosts = () => { fireIntent({ intent }, 'export', {}); };
   const open = (row: HostRow) => { fireIntent({ intent }, 'open', { name: row.name }); };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -119,6 +121,12 @@ export function HostList({
           </button>
           <button type="button" title="New host" aria-label="New host" onClick={() => setEditing('new')}>
             <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <button type="button" title="Import from ssh config" aria-label="Import from ssh config" onClick={importHosts}>
+            <FontAwesomeIcon icon={faFileImport} />
+          </button>
+          <button type="button" title="Export to ssh config" aria-label="Export to ssh config" onClick={exportHosts}>
+            <FontAwesomeIcon icon={faFileExport} />
           </button>
           {capabilities.splitAction}
         </span>
