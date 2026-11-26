@@ -89,6 +89,10 @@ function isLiteralName(name: string): boolean {
 
 type Pattern = { matcher: Minimatch | undefined; negated: boolean };
 
+function escapeLiteralMetacharacters(pattern: string): string {
+  return pattern.replaceAll(/[[\]\\]/g, String.raw`\$&`);
+}
+
 function compilePatterns(names: string[]): Pattern[] {
   const patterns: Pattern[] = [];
   for (const name of names) {
@@ -99,7 +103,7 @@ function compilePatterns(names: string[]): Pattern[] {
       continue;
     }
     patterns.push({
-      matcher: new Minimatch(pattern, {
+      matcher: new Minimatch(escapeLiteralMetacharacters(pattern), {
         nocase: true,
         dot: true,
         nobrace: true,

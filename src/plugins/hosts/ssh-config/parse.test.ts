@@ -260,6 +260,52 @@ describe('readEffectiveAliases', () => {
     ]);
   });
 
+  it('matches a bracketed IPv6-style alias to its own block', () => {
+    expect(readEffectiveAliases([
+      'Host [::1]',
+      '  HostName ::1',
+      '  User ops',
+      '  Port 2200',
+    ].join('\n'))).toEqual([
+      { name: '[::1]', hostName: '::1', user: 'ops', port: '2200', invalidToken: '' },
+    ]);
+  });
+
+  it('matches a backslash-bearing alias to its own block', () => {
+    expect(readEffectiveAliases([
+      String.raw`Host win\host`,
+      '  HostName win.example',
+    ].join('\n'))).toEqual([
+      { name: String.raw`win\host`, hostName: 'win.example', user: '', port: '', invalidToken: '' },
+    ]);
+  });
+
+  it('keeps ordinary * and ? Host patterns matching alongside an escaped bracketed name', () => {
+    expect(readEffectiveAliases([
+      'Host web1',
+      'Host [::1]',
+      '  HostName ::1',
+      'Host *',
+      '  User ops',
+      'Host w?b1',
+      '  Port 2200',
+    ].join('\n'))).toEqual([
+      { name: 'web1', hostName: '', user: 'ops', port: '2200', invalidToken: '' },
+      { name: '[::1]', hostName: '::1', user: 'ops', port: '', invalidToken: '' },
+    ]);
+  });
+
+  it('keeps a negated bracketed name excluding its alias', () => {
+    expect(readEffectiveAliases([
+      'Host [::1]',
+      '  HostName ::1',
+      'Host ![::1]',
+      '  User ignored',
+    ].join('\n'))).toEqual([
+      { name: '[::1]', hostName: '::1', user: '', port: '', invalidToken: '' },
+    ]);
+  });
+
   it('keeps imports inside ./ or package specifiers with .js extensions', () => {
     for (const file of ['./parse.ts', './parse.test.ts']) {
       const source = readFileSync(new URL(file, import.meta.url), 'utf8');

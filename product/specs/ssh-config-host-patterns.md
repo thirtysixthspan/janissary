@@ -5,6 +5,10 @@ aliases its names match. Ordinary `*` and `?` wildcards keep their usual meaning
 of a name, `?` matches one character, matching ignores case, and a leading `!` excludes a name from
 the block.
 
+### Literal names with metacharacters
+
+A `Host` name with no `*` or `?` is a literal alias even when it contains brackets or a backslash, as a bracketed IPv6 address does. Those characters match their own spelling instead of acting as glob syntax, so the alias receives the `HostName`, `User`, and `Port` from its own block rather than falling back to its name as the destination. A leading `!` still excludes a name, and `*` and `?` keep their wildcard meaning.
+
 ### Complexity limits
 
 A `Host` name more than 1024 characters long, or containing more than three separate `*` wildcards,
