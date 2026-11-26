@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { commitFiles, createRepo, git, gitEnv } from './git-fixture.mjs';
 import { scriptPath } from './script-path.mjs';
 
 const lintFiles = scriptPath('lint-files.mjs');
@@ -29,6 +30,27 @@ describe('lint-files', () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('project eslint');
     expect(result.stdout).toContain('a.ts');
+  });
+
+  it("lints the branch's committed files with --base and never forwards it to ESLint", () => {
+    rmSync(project, { recursive: true, force: true });
+    project = createRepo('lint-files-');
+    writeFileSync(path.join(project, '.gitignore'), 'node_modules/\n');
+    git(project, ['add', '.gitignore']);
+    git(project, ['commit', '--quiet', '--no-verify', '--message', 'chore: ignore node_modules']);
+    git(project, ['checkout', '--quiet', '-b', 'feature']);
+    commitFiles(project, ['tool.mjs'], 'feat: add a tool');
+    const bin = path.join(project, 'node_modules', '.bin');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(path.join(bin, 'eslint'), '#!/bin/sh\necho "project eslint $*"\n');
+    chmodSync(path.join(bin, 'eslint'), 0o755);
+
+    const result = spawnSync(process.execPath, [lintFiles, '--base', 'master'], { cwd: project, env: gitEnv, encoding: 'utf8', timeout: 30_000 });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('tool.mjs');
+    expect(result.stdout).not.toContain('--base');
+    expect(result.stdout).not.toContain('master');
   });
 
   it('fails with a pointer to npm install when the project has no ESLint', () => {

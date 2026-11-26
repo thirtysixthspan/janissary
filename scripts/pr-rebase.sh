@@ -1,9 +1,13 @@
 #!/bin/bash
 # Rebase the current branch onto master and force-push when clean.
-# Usage: pr-rebase.sh <GH_REMOTE> [BRANCH]
+# Usage: pr-rebase.sh <GH_REMOTE> [BRANCH] [--check-diff]
 #
-# Exit: 0 = rebased cleanly, check gate green, branch force-pushed
-#       1 = a hard error (fetch failed, or check gate red after rebase)
+# After a clean rebase it re-verifies with the full check gate (pr-check-gate.sh).
+# --check-diff runs check-diff --base <GH_REMOTE>/master in its place, which
+# checks only the branch's own changes since master.
+#
+# Exit: 0 = rebased cleanly, checks green, branch force-pushed
+#       1 = a hard error (fetch failed, or checks red after rebase)
 #       2 = conflicts need manual resolution — resolve the listed files'
 #           markers (preserve BOTH sides), then re-run this script to continue
 #
@@ -13,8 +17,18 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-GH_REMOTE="${1:-origin}"
-BRANCH="${2:-$(git rev-parse --abbrev-ref HEAD)}"
+CHECK_DIFF=0
+POSITIONAL=()
+for arg in "$@"; do
+  if [[ "$arg" == "--check-diff" ]]; then
+    CHECK_DIFF=1
+  else
+    POSITIONAL+=("$arg")
+  fi
+done
+
+GH_REMOTE="${POSITIONAL[0]:-origin}"
+BRANCH="${POSITIONAL[1]:-$(git rev-parse --abbrev-ref HEAD)}"
 
 rebase_in_progress() {
   local d
@@ -46,10 +60,18 @@ if rebase_in_progress; then
   exit 2
 fi
 
-echo "Rebase clean — re-verifying with the check gate..."
-if ! "$SCRIPT_DIR/pr-check-gate.sh"; then
-  echo "Check gate is red after rebase — fix the fallout before pushing." >&2
-  exit 1
+if [[ $CHECK_DIFF -eq 1 ]]; then
+  echo "Rebase clean — re-verifying with check-diff against $GH_REMOTE/master..."
+  if ! node "$SCRIPT_DIR/check-diff.mjs" --base "$GH_REMOTE/master"; then
+    echo "check-diff is red after rebase — fix the fallout before pushing." >&2
+    exit 1
+  fi
+else
+  echo "Rebase clean — re-verifying with the check gate..."
+  if ! "$SCRIPT_DIR/pr-check-gate.sh"; then
+    echo "Check gate is red after rebase — fix the fallout before pushing." >&2
+    exit 1
+  fi
 fi
 
 echo "Force-pushing $BRANCH..."

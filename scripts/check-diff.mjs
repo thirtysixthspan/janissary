@@ -5,62 +5,34 @@
 //
 //   npm run check:diff           # concurrent lint + tsc + test
 //   npm run check:diff -- --seq  # sequential (fail-fast) for debugging
+//   npm run check:diff -- --base origin/master  # also the changes committed since that ref
 
 import { spawn } from 'node:child_process';
+import { parseBaseRef } from './base-ref.mjs';
 import { changedFiles } from './changed-files.mjs';
-import { hasHelpMarkdownChanges } from './help-doc-changes.mjs';
-import { scriptPath } from './script-path.mjs';
+import { selectChecks } from './diff-checks.mjs';
 
-// Named from this file's own directory, not the working directory — see `script-path.mjs`.
-const LINT_FILES = scriptPath('lint-files.mjs');
+const { base, rest: options, error: baseError } = parseBaseRef(process.argv.slice(2));
+if (baseError) {
+  console.log(`check:diff: ${baseError}`);
+  process.exit(1);
+}
+const seq = options.includes('--seq');
 
-const LINTABLE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
-const seq = process.argv.includes('--seq');
-
-const files = changedFiles();
+let files;
+try {
+  files = changedFiles(base);
+} catch (error) {
+  console.log(`check:diff: cannot diff against ${base}: ${error.message.trim()}`);
+  process.exit(1);
+}
 if (files.length === 0) {
-  console.log('check:diff: no changes');
+  console.log(base === undefined ? 'check:diff: no changes' : `check:diff: no changes against ${base}`);
   process.exit(0);
 }
 
-// Classify files to decide which checks to run
-const hasLintable = files.some((f) => {
-  const base = f.split('/').pop() ?? f;
-  return !base.includes('.') || LINTABLE.test(f);
-});
-const touchesSrc = files.some((f) => f.startsWith('src/'));
-const touchesWeb = files.some((f) => f.startsWith('web/'));
-const touchesHelp = hasHelpMarkdownChanges(files);
-// The server project also carries the tests for scripts/ (see vitest.config.ts), which have no
-// TypeScript project of their own to typecheck.
-const touchesScripts = files.some((f) => f.startsWith('scripts/'));
-
-function makeCheck(name, executable, args, display) {
-  return { name, executable, args, display: display ?? [executable, ...args].join(' ') };
-}
-
-// Checks to run with timing. `display` is the command a user would type to rerun a check by hand.
-const checks = [];
-
-if (hasLintable) {
-  checks.push(makeCheck('lint', 'node', [LINT_FILES], '$janissary/scripts/run.mjs lint-files'));
-}
-
-if (touchesSrc || touchesWeb) {
-  checks.push(makeCheck('tsc', 'npm', ['run', 'typecheck:diff']));
-}
-
-if (touchesSrc || touchesScripts) {
-  checks.push(makeCheck('test:server', 'npm', ['run', 'test:diff:server']));
-}
-
-if (touchesWeb) {
-  checks.push(makeCheck('test:web', 'npm', ['run', 'test:diff:web']));
-}
-
-if (touchesHelp) {
-  checks.push(makeCheck('test:help', 'npm', ['run', 'test:server', '--', 'src/commands.test.ts']));
-}
+// Checks to run with timing.
+const checks = selectChecks(files, base);
 
 if (checks.length === 0) {
   console.log('check:diff: no checks apply to the changed files');

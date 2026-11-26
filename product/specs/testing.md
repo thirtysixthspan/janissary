@@ -34,6 +34,16 @@ The summary starts with a blank line, prints one line per check in run order, an
 
 With `--seq` the checks run one at a time and the run stops at the first failure. That failure's block prints before the summary, and every check after it is reported as `<name> - skipped` without a timing. The rerun commands are the npm invocations a user would type, such as `npm run typecheck:diff` or `npm run test:server -- src/commands.test.ts`.
 
+### Diff-scoped checks against a base ref
+
+`--base <ref>` (or `--base=<ref>`) adds the files the branch committed since that ref to the uncommitted and untracked ones, leaving out files the branch deleted. The lint check then lints that same set and shows as `$janissary/scripts/run.mjs lint-files --base <ref>`. The server and web tests run the tests related to it, shown as `npm run test:server -- --changed <ref>` and `npm run test:client -- --changed <ref>`. With nothing changed against the ref it prints `check:diff: no changes against <ref>` and exits 0. A ref git cannot resolve prints `check:diff: cannot diff against <ref>` with git's message and exits 1, so a bad base never passes as unchanged. `--base` without a ref prints `check:diff: --base needs a git ref` and exits 1. Without `--base`, committed branch changes are never checked.
+
+`lint-files --base <ref>` lints the same set when no paths are named, and never passes `--base` on to ESLint.
+
+### Merge rebase checks
+
+When the merge workflow rebases a conflicting pull request onto `master`, it re-verifies the result with the diff-scoped checks against the freshly fetched `master` rather than the full typecheck, lint, and test gate. A pull request that changes no lintable file, project source, or test passes that step in seconds. The rebase step keeps running the full gate for every other workflow that uses it unless they ask for the scoped checks. A red result stops the rebase step before it pushes.
+
 ### Diff-scoped help tests
 
 When a Markdown file under `help/` changes, the diff-scoped check runs `src/commands.test.ts` in the server project. That test reads the command table and help pages directly, so it covers help changes that Vitest's changed-source dependency detection cannot associate with a test file.

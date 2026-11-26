@@ -103,11 +103,13 @@ $janissary/scripts/run.mjs pr-check-mergeable "$BRANCH" "$OWNER_REPO"
 
 ## Step 6 — Resolve conflicts against master (repeat up to 5 times)
 
-`pr:rebase` fetches `master`, rebases your branch onto it, re-runs the check gate, and force-pushes (with `--force-with-lease`) when the result is clean:
+`pr:rebase` fetches `master`, rebases your branch onto it, and force-pushes (with `--force-with-lease`) when the result is clean. With `--check-diff` it re-verifies the rebase with `check-diff --base origin/master`, which lints, typechecks, and tests only what the branch changed since `master`, in place of the full check gate:
 
 ```bash
-$janissary/scripts/run.mjs pr-rebase origin my-branch-name
+$janissary/scripts/run.mjs pr-rebase origin my-branch-name --check-diff
 ```
+
+This is the last check before `master`, since this task merges without waiting on PR checks. CI runs the full suite only after the merge, so breakage the import graph can't see, such as config or fixtures read from disk, shows up on `master` rather than here.
 
 - **Exit 0** → rebased cleanly and pushed. Re-check conflict status (Step 5); when `MERGEABLE`, go to Step 7 (merge).
 - **Exit 2** → it stopped on conflicts and listed the files. Open each, resolve the markers correctly (preserve the intent of *both* sides; never blindly drop master's changes), then **re-run the same command** — it continues the in-progress rebase.
