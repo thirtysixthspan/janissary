@@ -9,6 +9,8 @@ the block.
 
 A `Host` name with no `*` or `?` is a literal alias even when it contains brackets or a backslash, as a bracketed IPv6 address does. Those characters match their own spelling instead of acting as glob syntax, so the alias receives the `HostName`, `User`, and `Port` from its own block rather than falling back to its name as the destination. A leading `!` still excludes a name, and `*` and `?` keep their wildcard meaning. An empty name is never literal.
 
+Import does not save such a bracketed alias: although the reader resolves its `HostName`, `User`, and `Port`, the bracketed name and a colon-bearing destination do not satisfy the saved-host name rules, so Import skips the alias, counts it in the summary, and writes no row for it.
+
 The same rule decides which names are literal everywhere they are read: a name counted as a literal alias when receiving settings is also counted as a literal alias when reporting the names left outside a Janissary-managed section. A wildcard, a negated name, and an empty name are excluded from both.
 
 ### Complexity limits

@@ -232,4 +232,21 @@ describe('importSshHosts', () => {
     expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
     expect(existsSync(homeFile(home))).toBe(false);
   });
+
+  it('skips a bracketed alias whose name fails the saved-host rules', () => {
+    const { home, root } = directories();
+    const source = sourceConfig(root, [
+      'Host [::1]', '  HostName ::1', '  User ops', '  Port 2200',
+      'Host web1', '  HostName web1.example',
+    ].join('\n'));
+
+    expect(importSshHosts(root, home, source, DISPLAY)).toEqual({
+      ok: true,
+      hosts: [{ name: 'web1', host: 'web1.example' }],
+      imported: 1,
+      skipped: 1,
+      summary: 'Imported 1 host from ~/.ssh/config; skipped 1.',
+    });
+    expect(readHostsFile(root, home).hosts).toEqual([{ name: 'web1', host: 'web1.example' }]);
+  });
 });
