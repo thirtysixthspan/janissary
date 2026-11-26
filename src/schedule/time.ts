@@ -33,3 +33,10 @@ export function computeNextRun(entry: ScheduleEntry, now: Date): number {
   }
   return now.getTime();
 }
+
+export function nextFutureRun(entry: ScheduleEntry, now: Date): number {
+  if (entry.intervalMs) return now.getTime() + entry.intervalMs;
+  let nextRun = computeNextRun(entry, now);
+  while (nextRun <= now.getTime()) nextRun = computeNextRun(entry, new Date(nextRun));
+  return nextRun;
+}

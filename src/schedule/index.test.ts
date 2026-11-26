@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatLateDuration, formatSchedule } from './display.js';
 import { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
-import { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
+import { nextOccurrenceOfTime, nextWeekday, computeNextRun, nextFutureRun } from './time.js';
 import { parseScheduleCommand } from './index.js';
 import type { ScheduleEntry } from './types.js';
 
@@ -84,6 +84,24 @@ describe('next-run math', () => {
   it('computeNextRun rolls clock-time recurrences forward', () => {
     const entry = { timeOfDay: { hour: 13, minute: 0 }, recurring: true } as ScheduleEntry;
     expect(new Date(computeNextRun(entry, NOW)).getDate()).toBe(24);
+  });
+
+  it('nextFutureRun advances interval entries from now', () => {
+    const entry = { intervalMs: 300_000, recurring: true, nextRun: 0 } as ScheduleEntry;
+    const result = nextFutureRun(entry, NOW);
+    expect(result).toBe(NOW.getTime() + 300_000);
+    expect(result).toBeGreaterThan(NOW.getTime());
+  });
+
+  it('nextFutureRun returns the first future occurrence for stale clock-time entries', () => {
+    const daily = { timeOfDay: { hour: 15, minute: 0 }, recurring: true, nextRun: 0 } as ScheduleEntry;
+    expect(nextFutureRun(daily, NOW)).toBe(new Date(2026, 5, 23, 15, 0, 0, 0).getTime());
+
+    const weekday = { timeOfDay: { hour: 9, minute: 0 }, weekday: 1, recurring: true, nextRun: 0 } as ScheduleEntry;
+    const monday = nextFutureRun(weekday, NOW);
+    expect(monday).toBeGreaterThan(NOW.getTime());
+    expect(new Date(monday).getDay()).toBe(1);
+    expect(monday).toBe(new Date(2026, 5, 29, 9, 0, 0, 0).getTime());
   });
 });
 

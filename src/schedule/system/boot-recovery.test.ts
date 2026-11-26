@@ -37,4 +37,17 @@ describe('recoverSystemSchedules', () => {
     expect(result.entries[0]).toMatchObject({ key: 'daily-key', id: 'same', recurring: true });
     expect(result.entries[0].nextRun).toBeGreaterThan(100);
   });
+
+  it('leaves an overdue paused entry untouched while an overdue active entry is still recovered', () => {
+    const active = entry({ key: 'active', nextRun: 100 });
+    const paused = entry({ key: 'paused', nextRun: 100, paused: true });
+
+    const result = recoverSystemSchedules([active, paused], 100);
+
+    expect(result.missed).toEqual([active]);
+    expect(result.entries.find((e) => e.key === 'paused')).toBe(paused);
+    expect(paused.nextRun).toBe(100);
+    expect(paused.paused).toBe(true);
+    expect(result.entries.find((e) => e.key === 'active')?.nextRun).toBeGreaterThan(100);
+  });
 });
