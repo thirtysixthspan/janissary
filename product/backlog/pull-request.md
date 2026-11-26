@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - A target check confines the shortcut to the list container
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2253 "keep the schedules tab Space/p shortcut from hijacking focused buttons". In web/src/plugins/schedules/SchedulesTab.tsx, guard the new Space/p branch of onKeyDown so it acts only when the event target is the list container itself — the same target check `ownsKey` in web/src/plugins/scripts/ScriptsTab.tsx uses — rather than any descendant button, leaving the selection and delete-dialog key paths as they are. Add colocated tests in web/src/plugins/schedules/SchedulesTab.test.tsx that select a recurring system row, focus the New schedule button, press Space, and assert openScheduleLaunch fires with no pause or resume intent, plus one that focuses a second row's pause button and asserts that button's row — not the selected one — is toggled. The existing pause/resume keyboard tests in that file drive keyDown on the list container and must keep passing unchanged.
 
 
-* Update the schedules-tab spec to describe the new pause and resume controls and their shortcuts.
-
-Existing Issue: The schedules tab section of product/specs/scheduling.md inventories the row controls and keys but says nothing about the per-row pause/resume button, the Space/p shortcuts, or the muted paused-row state this change adds. Severity: 4/10
-
-Existing Risk: 4/10 - The spec is declared authoritative, so a reader following its control inventory will not know the list can pause and resume system schedules and will assume the trash icon and selection keys are the only row interactions.
-
-Proposal Risk: 2/10 - The spec will match the controls once updated, with only the residual risk that the prose has to stay in step with later UI changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2253 "document the schedules tab pause and resume controls in the spec". In product/specs/scheduling.md, extend the paragraph describing the tab's live list and row controls to state that each recurring system row carries a pause/resume icon that sends the system-row pause or resume action by key without changing the selection, that a paused row shows `paused` as its next run with a muted style, and that Space or p on a selected row toggles it; keep the existing statements about click, double-click, Enter, arrows, Backspace/Delete, and the trash icon intact. In product/specs/scripts-tab.md, add Space, p, and the pause icon to the paragraph recording the schedules tab's keyboard-target divergence so it no longer omits the newly affected keys and control. Make no source behavior changes; the colocated tests in web/src/plugins/schedules/SchedulesTab.test.tsx pin these controls and must keep passing.
-
-
 * Share the duplicated row icon button style added for the pause control.
 
 Existing Issue: The new .schedules-row-pause rule in web/src/plugins/schedules/schedules.css repeats all eight declarations of .schedules-row-delete instead of sharing them, creating a second copy of the same icon-button reset. Severity: 2/10
