@@ -1,8 +1,8 @@
 import type { ScheduleEntry } from '../types.js';
 
-export type SystemScheduleEntry = ScheduleEntry & { key: string; script: string };
+export type SystemScheduleEntry = ScheduleEntry & { key: string; script: string; paused?: true };
 
-export type SystemScheduleSnapshot = { version: 1; entries: SystemScheduleEntry[] };
+export type SystemScheduleSnapshot = { version: 1 | 2; entries: SystemScheduleEntry[] };
 
 export type StoreLoadResult =
   | { ok: true; snapshot: SystemScheduleSnapshot }

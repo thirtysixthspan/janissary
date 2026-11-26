@@ -27,7 +27,7 @@ describe('SystemScheduleManager mutations', () => {
     expect(owner.list().map((entry) => entry.key)).toEqual([second.key]);
     expect(owner.cancelByName('same').ok).toBe(true);
     expect(owner.list()).toEqual([]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
     void controller.shutdown();
   });
 
@@ -97,7 +97,7 @@ describe('SystemScheduleManager mutations', () => {
       { line: 'first', origin: { kind: 'system-schedule', scheduleKey: added.ok ? added.entry!.key : '' } },
       { line: 'second', origin: { kind: 'system-schedule', scheduleKey: added.ok ? added.entry!.key : '' } },
     ]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
     await controller.shutdown();
   });
 
@@ -190,7 +190,7 @@ describe('SystemScheduleManager mutations', () => {
     ]);
     const persisted = { ...recurring.entry, nextRun: 60_001 };
     expect(controller.managers.systemSchedule.list()).toEqual([persisted]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [persisted] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [persisted] } });
     await controller.shutdown();
   });
 
@@ -217,7 +217,7 @@ describe('SystemScheduleManager mutations', () => {
 
   it.each([
     ['invalid data', { version: 1, entries: [{ key: 'bad' }] }],
-    ['unsupported version', { version: 2, entries: [] }],
+    ['unsupported version', { version: 3, entries: [] }],
   ])('ignores %s without rewriting it or accepting new schedules', (_label, snapshot) => {
     const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-load-error-'));
     const directory = path.join(root, '.janissary');
@@ -232,7 +232,7 @@ describe('SystemScheduleManager mutations', () => {
 
     expect(controller.managers.systemSchedule.list()).toEqual([]);
     expect(readFileSync(file, 'utf8')).toBe(original);
-    if (snapshot.version === 2) {
+    if (snapshot.version === 3) {
       expect(controller.managers.systemSchedule.add(schedule('new', 'ignored')).ok).toBe(false);
       expect(readFileSync(file, 'utf8')).toBe(original);
       expect(stderr).toHaveBeenCalledTimes(2);
@@ -268,7 +268,7 @@ describe('SystemScheduleManager mutations', () => {
     expect(unreadable.ok && readable.ok).toBe(true);
     const unreadableEntry = controller.managers.systemSchedule.list()[0];
     expect(controller.managers.systemSchedule.list()).toEqual([unreadableEntry]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [unreadableEntry] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [unreadableEntry] } });
     expect(system.runtime?.queue).toEqual([{ line: 'run good', origin: { kind: 'system-schedule', scheduleKey: readable.ok ? readable.entry!.key : '' } }]);
     expect(toast).toHaveBeenCalledOnce();
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('System schedule good ran') }));
@@ -294,8 +294,8 @@ describe('SystemScheduleManager mutations', () => {
     await controller.managers.systemSchedule.tick(1);
 
     expect(controller.managers.systemSchedule.list()).toEqual([]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
-    expect(snapshotsAtNotice).toEqual([{ ok: true, snapshot: { version: 1, entries: [] } }]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
+    expect(snapshotsAtNotice).toEqual([{ ok: true, snapshot: { version: 2, entries: [] } }]);
     expect(controller.managers.tab.byLabel('system')?.runtime?.queue).toEqual([]);
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('System schedule missing could not run: script ".janissary/scripts/build.rs" is missing.'),
@@ -327,7 +327,7 @@ describe('SystemScheduleManager mutations', () => {
     await controller.managers.systemSchedule.tick(1);
     expect(controller.managers.systemSchedule.list()).toEqual([due]);
     expect(system.runtime?.queue).toEqual([]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [due] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [due] } });
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: 'System shell could not start: not ready.' }));
     await controller.managers.systemSchedule.tick(2);
     expect(controller.managers.systemSchedule.list()).toEqual([]);
@@ -345,7 +345,7 @@ describe('SystemScheduleManager mutations', () => {
     await firingTick;
     expect(controller.managers.systemSchedule.list()).toEqual([]);
     expect(system.runtime?.queue).toHaveLength(1);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
     expect(ensure).toHaveBeenCalledTimes(2);
     subscription.unsubscribe();
     vi.restoreAllMocks();
@@ -372,7 +372,7 @@ describe('SystemScheduleManager mutations', () => {
 
     expect(system.runtime?.queue).toEqual([]);
     expect(controller.managers.systemSchedule.list()).toEqual([due]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [due] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [due] } });
     await controller.shutdown();
   });
 

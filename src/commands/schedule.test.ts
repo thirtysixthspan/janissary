@@ -364,7 +364,7 @@ describe('system schedule command persistence', () => {
       controller.managers.tab.tabs.push(issuingTab);
       command.run!('schedule system release at 5pm script deploy', { label: issuingTab.label, index: 0 }, controller.managers);
       const persisted = new SystemScheduleStore(root).load();
-      expect(persisted).toMatchObject({ ok: true, snapshot: { version: 1, entries: [
+      expect(persisted).toMatchObject({ ok: true, snapshot: { version: 2, entries: [
         { id: 'release', script: 'deploy', command: 'script deploy', spec: 'at 5:00pm' },
       ] } });
       controller.managers.systemSchedule.dispose();

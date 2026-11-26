@@ -40,8 +40,31 @@ describe('system schedule store decoding', () => {
     expect(decodeSystemScheduleSnapshot({ version: 1, entries: [{ ...entry, weekday: 7 }] }).ok).toBe(false);
   });
 
+  it('decodes version-2 snapshots with and without paused entries', () => {
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [entry] })).toEqual({
+      ok: true, snapshot: { version: 2, entries: [entry] },
+    });
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...entry, paused: true }] })).toEqual({
+      ok: true, snapshot: { version: 2, entries: [{ ...entry, paused: true }] },
+    });
+  });
+
+  it('rejects paused in a version-1 entry', () => {
+    expect(decodeSystemScheduleSnapshot({ version: 1, entries: [{ ...entry, paused: true }] }).ok).toBe(false);
+  });
+
+  it('rejects a non-true paused value in a version-2 entry', () => {
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...entry, paused: false }] }).ok).toBe(false);
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...entry, paused: 1 }] }).ok).toBe(false);
+  });
+
+  it('rejects a paused one-shot in a version-2 entry', () => {
+    const oneShot = { ...entry, recurring: false, timeOfDay: undefined };
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...oneShot, paused: true }] }).ok).toBe(false);
+  });
+
   it('distinguishes unsupported schema versions', () => {
-    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [] })).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
+    expect(decodeSystemScheduleSnapshot({ version: 3, entries: [] })).toEqual({ ok: false, kind: 'unsupported-version', version: 3 });
     expect(decodeSystemScheduleSnapshot([]).ok).toBe(false);
   });
 });

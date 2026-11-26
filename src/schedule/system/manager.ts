@@ -134,7 +134,7 @@ export class SystemScheduleManager {
   }
 
   private save(entries: SystemScheduleEntry[]): boolean {
-    const result = this.store.save({ version: 1, entries } satisfies SystemScheduleSnapshot);
+    const result = this.store.save({ version: 2, entries } satisfies SystemScheduleSnapshot);
     if (result.ok) return true;
     process.stderr.write(`System schedules could not save: ${saveError(result)}\n`);
     return false;
