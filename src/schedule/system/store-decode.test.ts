@@ -1,5 +1,9 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeSystemScheduleSnapshot } from './store-decode.js';
+import { SystemScheduleStore } from './store.js';
 import { parseEverySchedule } from '../every-schedule.js';
 
 const entry = {
@@ -66,5 +70,16 @@ describe('system schedule store decoding', () => {
   it('distinguishes unsupported schema versions', () => {
     expect(decodeSystemScheduleSnapshot({ version: 3, entries: [] })).toEqual({ ok: false, kind: 'unsupported-version', version: 3 });
     expect(decodeSystemScheduleSnapshot([]).ok).toBe(false);
+  });
+
+  it('round-trips a paused entry through a version-2 store with all fields intact', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-paused-store-'));
+    try {
+      const paused = { ...entry, paused: true as const };
+      expect(new SystemScheduleStore(root).save({ version: 2, entries: [paused] })).toEqual({ ok: true });
+      expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

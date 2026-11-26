@@ -404,4 +404,199 @@ describe('SystemScheduleManager mutations', () => {
     ]);
     await controller.shutdown();
   });
+
+  it('pauseByKey flags a recurring entry without changing its other fields and saves version 2', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-fields-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), command: 'script morning', script: 'morning',
+      spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 1_800_000_000_000,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const original = added.entry;
+
+    expect(system.pauseByKey(original.key)).toEqual({ ok: true });
+
+    const paused = { ...original, paused: true };
+    expect(system.list()).toEqual([paused]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    void controller.shutdown();
+  });
+
+  it('does not fire a paused due entry on tick', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-tick-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'build.rs'), 'run\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    const ensure = vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('build', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(controller.managers.systemSchedule.pauseByKey(added.entry.key).ok).toBe(true);
+    const paused = { ...added.entry, paused: true };
+
+    await controller.managers.systemSchedule.tick(1);
+
+    expect(controller.managers.systemSchedule.list()).toEqual([paused]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(ensure).not.toHaveBeenCalled();
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    await controller.shutdown();
+  });
+
+  it('stops a deferred firing and appends nothing when a pause is committed during shell preparation', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-deferred-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'build.rs'), 'stale\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    const toast = vi.fn();
+    const subscription = messageBus.on('notifications', 'toast', toast);
+    const gate = Promise.withResolvers<{ lines: string[]; entry: undefined; missing: false }>();
+    vi.spyOn(firing, 'fireSystemBatch').mockReturnValueOnce(gate.promise);
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('build', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const due = added.entry;
+    const ticking = controller.managers.systemSchedule.tick(1);
+    await Promise.resolve();
+    expect(controller.managers.systemSchedule.pauseByKey(due.key).ok).toBe(true);
+    gate.resolve({ lines: ['stale'], entry: undefined, missing: false });
+    await ticking;
+
+    const paused = { ...due, paused: true };
+    expect(controller.managers.systemSchedule.list()).toEqual([paused]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(toast).not.toHaveBeenCalled();
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    subscription.unsubscribe();
+    vi.restoreAllMocks();
+    await controller.shutdown();
+  });
+
+  it('resumeByKey clears the flag, sets a future nextRun, and does not replay the paused gap', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-resume-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'build.rs'), 'run\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('build', 'ignored'), command: 'script build', script: 'build',
+      spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(controller.managers.systemSchedule.pauseByKey(added.entry.key).ok).toBe(true);
+    const before = Date.now();
+    expect(controller.managers.systemSchedule.resumeByKey(added.entry.key)).toEqual({ ok: true });
+    const resumed = controller.managers.systemSchedule.list()[0];
+    expect(resumed.paused).toBeUndefined();
+    expect(resumed.nextRun).toBeGreaterThan(before);
+    expect(resumed.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+
+    await controller.managers.systemSchedule.tick(Date.now());
+
+    expect(controller.managers.systemSchedule.list()).toEqual([resumed]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [resumed] } });
+    await controller.shutdown();
+  });
+
+  it('does not call save when pausing an already-paused or resuming an active entry', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-nosave-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000,
+      nextRun: 1_800_000_000_000,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(system.pauseByKey(added.entry.key).ok).toBe(true);
+    const save = vi.spyOn(SystemScheduleStore.prototype, 'save');
+    save.mockClear();
+
+    expect(system.pauseByKey(added.entry.key)).toEqual({ ok: true });
+    expect(system.pauseByName('morning')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+    expect(system.resumeByKey('missing')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+
+    expect(system.resumeByKey(added.entry.key).ok).toBe(true);
+    expect(save).toHaveBeenCalledOnce();
+    save.mockClear();
+    expect(system.resumeByName('morning')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+    save.mockRestore();
+    void controller.shutdown();
+  });
+
+  it('leaves memory and the store unchanged when a pause cannot be saved', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-failsave-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000,
+      nextRun: 1_800_000_000_000,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const active = system.list();
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    vi.spyOn(SystemScheduleStore.prototype, 'save').mockReturnValue({ ok: false, kind: 'io', error: new Error('disk full') });
+
+    expect(system.pauseByKey(added.entry.key)).toEqual({ ok: false, error: 'could not save system schedules' });
+
+    expect(system.list()).toEqual(active);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: active } });
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('System schedules could not save:'));
+    vi.restoreAllMocks();
+    void controller.shutdown();
+  });
+
+  it('does not pause a one-shot schedule', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-oneshot-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({ ...schedule('once', 'ignored'), nextRun: 1_800_000_000_000 });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const save = vi.spyOn(SystemScheduleStore.prototype, 'save');
+    save.mockClear();
+
+    expect(system.pauseByKey(added.entry.key)).toEqual({ ok: true });
+    expect(system.pauseByName('once')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+    expect(system.list()).toEqual([added.entry]);
+
+    save.mockRestore();
+    void controller.shutdown();
+  });
+
+  it('keeps a paused entry and all its fields when reloaded from the same store', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-reload-'));
+    const first = createController(sinks, root);
+    const added = first.managers.systemSchedule.add({
+      ...schedule('morning', 'ignored'), command: 'script morning', script: 'morning',
+      spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(first.managers.systemSchedule.pauseByKey(added.entry.key).ok).toBe(true);
+    const paused = { ...added.entry, paused: true };
+    void first.shutdown();
+
+    const reloaded = createController(sinks, root);
+    reloaded.managers.systemSchedule.load();
+    expect(reloaded.managers.systemSchedule.list()).toEqual([paused]);
+    expect(reloaded.managers.systemSchedule.pauseByKey(added.entry.key)).toEqual({ ok: true });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    void reloaded.shutdown();
+  });
 });
