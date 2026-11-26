@@ -307,20 +307,20 @@ describe('completeCommandLine — runscript commands', () => {
   const noFiles = '/no/such/dir/xyz';
 
   it('completes execute names only in its single name slot', () => {
-    expect(completeCommandLine('execute dep', 11, noFiles, [], [], undefined, { names: [], scripts }).newInput)
+    expect(completeCommandLine('execute dep', 11, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).newInput)
       .toBe('execute deploy ');
-    expect(completeCommandLine('execute ', 8, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('execute ', 8, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual(scripts);
-    expect(completeCommandLine('execute deploy extra', 20, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('execute deploy extra', 20, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual([]);
   });
 
   it('combines bare edit script names with file matches but leaves paths to filesystem completion', () => {
-    expect(completeCommandLine('edit dep', 8, noFiles, [], [], undefined, { names: [], scripts }).newInput)
+    expect(completeCommandLine('edit dep', 8, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).newInput)
       .toBe('edit deploy ');
-    expect(completeCommandLine('edit src/dep', 12, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('edit src/dep', 12, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual([]);
-    expect(completeCommandLine('edit deploy.ts', 14, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('edit deploy.ts', 14, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual([]);
   });
 });
@@ -389,7 +389,7 @@ describe('completeCommandLine — disabled command guard', () => {
 
   it('guards every command-specific completer', () => {
     const labels = ['janus'];
-    const scripts = { names: [], scripts: ['deploy'] };
+    const scripts = { names: [], scripts: ['deploy'], activeRecurringNames: [], pausedNames: [] };
     const cases: [string, string][] = [
       ['send jan', 'send'],
       ['tab mo', 'tab'],
