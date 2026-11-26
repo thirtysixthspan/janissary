@@ -2,8 +2,6 @@
 
 ## ready
 
-* subagent (3/10) — Of 26 facts, 20 are correct, 6 are missing and none are wrong. `help/subagent.md` names only `Subagent: inline` and omits the record and connection names `Subagent: <task filename>` and `subagent:<canonical role>`, the termination causes (Terminate, caller-tab close, caller-session close and shutdown, but not aborting the invoking prompt), the agent-facing `started` and completion message shapes, the `Remote connection unavailable.` refusal, that a subagent's tool table omits `subagent`, and the rule that a first non-space `{` selects JSON while everything else is parsed as flags. Add these to `help/subagent.md`, which generates the command-reference page, and add the connection-name wording to `help/connections.md` and `documentation/user-documentation/command-bar/connections.md`. Ground truth is `product/specs/subagent.md`, `src/commands/subagent.ts`, `src/subagent/parse.ts`, `src/subagent/messages.ts`, `src/subagent/launch.ts`, `src/subagent/remote-workspace.ts` and `src/acp/tool-table.ts`.
-
 * tab-plugins (4/10) — Of 14 facts, 13 are correct, 1 is missing and none are wrong. `documentation/user-documentation/command-bar/plugins.md` shows an example `plugins` status output with 21 lines and omits the shipped `hosts` plugin, which should appear as `hosts 1.0.0 api=3 state=declared`, and its 'What a plugin gives you' command list also omits `hosts`. Add that line to the example output and `hosts` to the reachable-command list; `help/plugins.md` and the `help/commands.md` row describe the format generically and need no edit. Ground truth is `product/specs/tab-plugins.md`, `src/plugins/catalog.ts`, `src/plugins/hosts/manifest.ts` and `src/commands/plugins.ts`.
 
 * transcript (3/10) — Of 21 facts, 19 are correct, 2 are missing and none are wrong. `documentation/user-documentation/getting-started/keyboard.md` documents the transcript scroll chords but not that the mouse wheel scrolls one line per tick, and no page states the one-running-entry-per-producer rule that an interleaved command keeps its own output and finishes on its own entry. Add the wheel behavior to the scrolling prose in `documentation/user-documentation/getting-started/keyboard.md` and optionally the shell-tab controls in `help/keys.md`, and add the interleaved-entry sentence to the 'Shell output and ACP replies' section of `documentation/user-documentation/getting-started/tabs.md`. Ground truth is `product/specs/transcript.md`, `web/src/shared/transcript/useTranscriptScroll.ts`, `web/src/shared/transcript/Transcript.tsx` and `src/tab/transcript/events.ts`.
@@ -18,6 +16,7 @@
 
 ## resolved
 
+* subagent — documented in help/subagent.md (removed 2026-11-26)
 * state-directory — documented in documentation/user-documentation/getting-started/startup.md, documentation/user-documentation/getting-started/configuration.md (removed 2026-11-26)
 * ssh-tab — documented in documentation/user-documentation/advanced-agents/harness.md, help/ssh.md (removed 2026-11-26)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-11-26)
