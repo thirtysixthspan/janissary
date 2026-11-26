@@ -35,8 +35,8 @@ describe('schedule command run', () => {
   let tab: { label: string; index: number };
   let managers: unknown;
   let projectRoot: string;
-  let systemEntries: { id: string; key: string; script: string; command: string; spec: string; nextRun: number; recurring: boolean }[];
-  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
+  let systemEntries: { id: string; key: string; script: string; command: string; spec: string; nextRun: number; recurring: boolean; paused?: true }[];
+  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; pauseByName: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
   const schedule = () => schedules.get('janus') ?? [];
 
   beforeEach(() => {
@@ -50,6 +50,10 @@ describe('schedule command run', () => {
       list: () => systemEntries,
       add: vi.fn((entry) => {
         systemEntries.push({ ...entry, key: `key-${systemEntries.length}` });
+        return { ok: true };
+      }),
+      pauseByName: vi.fn((name) => {
+        systemEntries = systemEntries.map((entry) => entry.id === name && entry.recurring && !entry.paused ? { ...entry, paused: true } : entry);
         return { ok: true };
       }),
       cancelByName: vi.fn((name) => {
@@ -90,6 +94,13 @@ describe('schedule command run', () => {
   afterEach(() => { rmSync(projectRoot, { recursive: true, force: true }); });
 
   const run = (command_: string) => command.run!(command_, tab, managers as never);
+  const recurringEntry = (id: string, key: string, paused?: true): (typeof systemEntries)[number] => ({
+    id, key, script: 'deploy', command: 'script deploy', spec: 'every 5m', nextRun: Date.now(), recurring: true,
+    ...(paused === true && { paused }),
+  });
+  const oneShotEntry = (id: string, key: string): (typeof systemEntries)[number] => ({
+    id, key, script: 'deploy', command: 'script deploy', spec: 'at 3pm', nextRun: Date.now(), recurring: false,
+  });
 
   it('opens the launch dialog for the bare token and records nothing', () => {
     run('schedule');
@@ -281,6 +292,49 @@ describe('schedule command run', () => {
     expect(outputs.at(-1)).toBe('Cleared 1 scheduled commands in system.');
     run('schedule system list');
     expect(outputs.at(-1)).toBe('No scheduled commands in system.');
+  });
+
+  it('pauses every recurring system entry with the exact name and prints the success line', () => {
+    systemEntries = [recurringEntry('ping', '1'), recurringEntry('ping', '2'), recurringEntry('other', '3')];
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('Paused ping in system.');
+    expect(systemOwner.pauseByName).toHaveBeenCalledWith('ping');
+    expect(systemEntries.filter((entry) => entry.paused === true).map((entry) => entry.id)).toEqual(['ping', 'ping']);
+    expect(systemEntries[2].paused).toBeUndefined();
+    expect(schedule()).toEqual([]);
+  });
+
+  it('reports success when the matching recurring rows are already paused', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('ping', '2', true)];
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('Paused ping in system.');
+    expect(systemOwner.pauseByName).toHaveBeenCalledWith('ping');
+    expect(systemEntries.every((entry) => entry.paused === true)).toBe(true);
+  });
+
+  it('reports no recurring match without touching the owner when only one-shots carry the name', () => {
+    systemEntries = [oneShotEntry('ping', '1')];
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('No recurring scheduled command "ping" in system.');
+    expect(systemOwner.pauseByName).not.toHaveBeenCalled();
+    expect(systemEntries).toHaveLength(1);
+    run('schedule system pause nosuch');
+    expect(outputs.at(-1)).toBe('No recurring scheduled command "nosuch" in system.');
+  });
+
+  it('prints the save error without claiming a pause succeeded', () => {
+    systemEntries = [recurringEntry('ping', '1')];
+    systemOwner.pauseByName.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('Could not save system schedules.');
+    expect(systemEntries[0].paused).toBeUndefined();
+  });
+
+  it('still cancels a stored system entry named pause', () => {
+    systemEntries = [recurringEntry('pause', '1')];
+    run('schedule system cancel pause');
+    expect(outputs.at(-1)).toBe('Cancelled pause in system.');
+    expect(systemEntries).toEqual([]);
   });
 
   it('does not report success when the project owner cannot save', () => {
