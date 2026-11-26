@@ -78,6 +78,8 @@ Picking a task only inserts the command; the agent then reads that file and foll
 - A final phase settles whatever is still open, including anything the two passes raised.
 - It moves the finished plan from `product/plans/draft/` to `product/plans/ready/`, where `build-a-feature` picks it up.
 
-It asks one question at a time. Each question lists at least three numbered answers and a last **Other** answer where you type your own. One answer is marked as recommended, and one as the lowest-cost option, the one least likely to grow the scope. A single answer can carry both marks. The draft is rewritten as you answer. A phase is finished when no question is left hanging, so the questioning is the longest part of the task rather than something you can skip past.
+It asks one question at a time. When a feature touches something you already use, the agent shows a checklist of behaviors the plan can protect. Recommended behaviors start checked. Check the behaviors you want the plan to safeguard through the change. If the agent shows a text checklist, reply with `defaults`, name the behaviors to protect, or reply with `none`.
+
+Other questions list at least three numbered answers and a last **Other** answer where you type your own. One answer is marked as recommended and one as the lowest-cost option. A single answer can carry both marks. The agent updates the draft as you answer and finishes each phase when every question is settled.
 
 The planning tasks do one job each and change only plans. `rate-plan-complexity` counts five things about the plan and its code, runs them through a fixed formula, and writes a single complexity line under the plan's title; its formula tops out at 9, so it never writes a 10. `decompose-plan` turns one plan into ordered subplans, rates and improves each one, moves the finished subplans to ready, and keeps the original plan, unchanged, as the record of the whole feature. It writes no code and opens no pull request.
