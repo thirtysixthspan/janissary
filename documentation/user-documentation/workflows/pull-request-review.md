@@ -10,9 +10,25 @@ execute ./ai/tasks/feature/review-pull-request.md 232
 
 The target can be a number (`232`), `#232`, a full pull request URL, or the head branch name. With no target, the agent uses the pull request for the branch you have checked out. If that finds nothing, it uses the only open pull request, and it stops and lists the candidates when there are none or several. It also stops if the pull request isn't open.
 
+## Review a specific scope
+
+Add a scope after the target to review one commit or a range of commits. For example:
+
+```
+execute ./ai/tasks/feature/review-pull-request.md 232 scope: commit 1a2b3c4
+```
+
+The scope takes one of these forms: `scope: commit <sha>`, `scope: range <base>..<head>`, or `scope: aggregate`. With no scope, the agent uses `aggregate` and reviews the whole pull request. `commit` reviews one commit against its parent. `range` reviews the changes from `<base>` to `<head>`.
+
+A `commit` or `range` scope reads no plan and checks no promises. It judges only functionality gaps, technical debt, and security issues, and its report shows description fidelity and plan fidelity as out of scope. An `aggregate` review checks all five points in [What the review covers](#what-the-review-covers).
+
+A scope the agent can't use falls back to `aggregate`, and the report names the value it ignored. That covers an unknown keyword, a missing commit, a value that isn't a commit identifier, a commit that doesn't exist or isn't on the pull request's branch, and a range that starts outside the pull request. A range may start at the commit the branch grew from, which reviews the branch from its start.
+
+A `commit` or `range` scope with no changes is a clean review, so the agent records nothing. When a scope ends before the branch's latest commit, the agent reads each change as it stood at the end of that scope, without switching your checked-out branch. It drops a finding that a later commit on the branch has already resolved. A search term that starts with a dash is treated as text to find, not an option.
+
 ## What the review covers
 
-The agent reads every line the pull request adds, changes, or removes, in every kind of file, and checks each file of a repeated pattern on its own. It also checks every promise the pull request makes: the goal, decisions, changes, tests, documentation edits, and verification steps in its plan, each fix plan a repair added, and each claim in the description. It judges all of that on five points:
+The agent reads every line the pull request adds, changes, or removes, in every kind of file, and checks each file of a repeated pattern on its own. It also checks every promise the pull request makes: the goal, decisions, preserved-behavior entries (the behavior to keep, what must not happen with it, and the test that pins it), changes, tests, documentation edits, and verification steps in its plan, each fix plan a repair added, and each claim in the description. For each preserved-behavior entry, the agent checks the code for the behavior the plan says must not happen and records a finding when a test pins behavior the plan forbids. It judges all of that on five points:
 
 - Does the description match what the code does?
 - Does the code deliver the plan?
@@ -21,6 +37,8 @@ The agent reads every line the pull request adds, changes, or removes, in every 
 - What security issues does it add?
 
 There is no limit on the number of findings, and a minor one is recorded with a low severity rather than dropped. A review that finds nothing says so and records nothing. Its report states how many changed files and promise items it covered.
+
+Some pull requests have no plan of their own, which is normal for a hygiene or documentation change. The agent uses the description and the commit subjects as the statement of intent, judges plan fidelity against them, and says so in the report.
 
 When the description states a change-set statistic that is wrong, such as a commit, file, or line count or a commit SHA, the agent proposes removing the claim instead of correcting the number. A correct statistic isn't a finding on its own.
 
