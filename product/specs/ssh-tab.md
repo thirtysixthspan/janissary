@@ -65,6 +65,10 @@ starts the login shell in the original directory. The whole remote command is ha
 argument, so the local shell neither expands its variables nor interprets its separators; expansion
 and command parsing happen only on the remote side.
 
+A host brought in from an ssh config through [[hosts-tab]] carries only its destination, user and
+port. Other ssh settings from the config, such as `IdentityFile` and `ProxyJump`, stop applying: the
+catalog stores no field for them, so the launch uses the saved values alone.
+
 The new tab is labeled with the saved spelling, disambiguated with `-2`, `-3`, … if that label is
 already taken. The connections panel shows `ssh:<saved name>` for such a launch, so a saved host
 reads as `ssh:thecandykingdom` instead of its real destination `ssh:anonymouscoward@10.27.1.94`;

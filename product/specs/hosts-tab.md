@@ -79,11 +79,59 @@ a replacement reports `Host <name> updated.`
 removed.` with the spelling that was stored. If nothing matches, `No host named "<name>".` is reported
 with the spelling you typed and the catalog is left alone.
 
-Malformed requests never touch the catalog. An unknown verb or a bad `list` gives `Usage: hosts
-[list|add|remove].`, a bad `add` gives `Usage: hosts add <name> <[user@]host[:port]> [path]`, and a bad
-`remove` gives `Usage: hosts remove <name>`. A bare or repeated `@`, an empty user, wrong number of
-operands, and any invalid field are refused before reading or writing. Problems reading or saving the
-file are reported without rewording.
+`hosts import [file]` reads the usable aliases of an ssh config into the catalog.
+`hosts export [file]` writes the saved hosts into the config's managed section. Both verbs match
+regardless of case. With no operand, both use `~/.ssh/config`. An operand beginning with `~`, `~/` or `$HOME/`
+expands to the home directory, `$root` to the project root, and `$workspace` to
+`$root/.janissary/workspace`; an absolute path is used as it stands. A relative operand is tried
+against the typing tab's working directory and then the project root. A double-quoted operand keeps
+its spaces, so `hosts export "~/my hosts"` names one file rather than two operands.
+
+Malformed requests never touch the catalog. An unknown verb or a bad `list` gives
+`Usage: hosts [list|add|remove|import|export].`, a bad `add` gives
+`Usage: hosts add <name> <[user@]host[:port]> [path]`, a bad `remove` gives
+`Usage: hosts remove <name>`, a bad `import` gives `Usage: hosts import [file]`, and a bad `export`
+gives `Usage: hosts export [file]`. A bare or repeated `@`, an empty user, wrong number of operands,
+and any invalid field are refused before reading or writing. Problems reading or saving the file are
+reported without rewording.
+
+### Importing and exporting
+
+Import reads the aliases of an ssh config into the catalog; export writes the saved hosts into one
+managed section of an ssh config. Both actions are all or none, without dialog: the import is all or
+none, without dialog, and the export is all or none, without dialog. Neither asks for confirmation
+or offers a choice of hosts. Each is available as a button in the tab's metadata bar and as a command
+(see Commands); both routes follow the same rules and report the same messages, either in the
+transcript the command was typed in or as a notification on the Hosts tab. A successful import
+publishes the updated rows; when nothing is added, the catalog is left byte for byte as it was.
+
+Import answers with one summary line. One alias added reports `Imported 1 host from <path>.`; several
+report `Imported <n> hosts from <path>.`; nothing importable reports `No aliases to import from <path>.`
+A summary gains `; skipped <n>` before the period when aliases were skipped, so three hosts added with
+two skipped report `Imported 3 hosts from <path>; skipped 2.` An alias is skipped when its name is
+invalid or already in the catalog, or when its settings cannot be expressed as a saved host. Export
+also answers with one summary line: `Exported 1 host to <path>.`, `Exported 5 hosts to <path>; skipped 1.`
+when a saved host is shadowed by a literal alias outside the managed section, or `No hosts to export.`
+when there is nothing to write.
+
+The managed section is delimited by `# BEGIN janissary hosts` and `# END janissary hosts` and opens with
+the header comment `# Managed by Janissary; edits inside this section are replaced on export.` Each host
+is a block of `Host <name>` followed by four-space-indented `HostName`, `User` and `Port` lines, with
+one blank line between hosts; `User` and `Port` appear only when the saved host has those values.
+Everything outside the markers, including hand-written blocks, is left as it was. If the target is
+missing it is created with mode `0600`, and a missing parent directory is created with mode `0700`.
+
+Both actions refuse to run in a remote tab with `hosts import and hosts export work only in local tabs.`
+A config that cannot be read is refused with `Cannot read ssh config <path>: <problem>.` — the problem
+names the cause, such as `no such file`, `is a directory`, `permission denied`, `file is too large` or
+`could not be read` — and an existing config is never overwritten on that account (see Exporting to an
+ssh config). A failed write is reported as `Could not write ssh config <path>: <problem>.` and leaves
+the target unchanged. An unusable saved catalog is refused with
+`Cannot export hosts: <path> is unusable — fix it by hand.`, alongside the
+`Hosts file <path> is unusable: <problem>.` notice for the catalog. Naming either catalog as the
+operand is refused in both directions (see Catalog files are not ssh configs). An imported host keeps
+only its destination, user and port in the catalog; other ssh settings do not carry over (see
+[[ssh-tab]] § Saved host destinations).
 
 ### Exporting to an ssh config
 
