@@ -81,7 +81,7 @@ The repair works on that pull request's branch, writes a fix plan, updates the s
 
 <img class="agent-float" src="/agents/yusuf-south-east.png" alt="" />
 
-Building a feature from a ready plan runs this loop for you. After the pull request opens, the whole pull request is reviewed against the finished plan. Each finding is repaired one at a time, in file order, and the pull request is reviewed again. It repeats until a review adds no findings and the backlog is empty. Then the pull request is updated to match the final code. There are three parts to this: how the feature is staged, the focused and resolution reviews for each part, and the testing and final checks. The pull request stays open and nothing merges it for you.
+Building a feature from a ready plan runs this loop for you. After the pull request opens, the whole pull request is reviewed against the finished plan. Each finding is repaired one at a time, in file order. If the repairs changed production code, the pull request is reviewed again. Repairs that only touch the description, plans, specs, help, or documentation don't trigger another review. It repeats until a review adds no findings and the backlog is empty, or a round of repairs changes no production code. Then the pull request is updated to match the final code. There are three parts to this: how the feature is staged, the focused and resolution reviews for each part, and the testing and final checks. The pull request stays open and nothing merges it for you.
 
 ### How a complex feature is staged
 
@@ -97,9 +97,9 @@ A subplan skips the three closing stages a standalone feature build runs: it doe
 
 Once a subplan's implementation is pushed, that commit gets a review against its subplan alone. The whole pull request isn't reviewed during these cycles. Every finding goes into the backlog and is repaired one at a time, in file order, before any other review runs.
 
-A resolution review follows. It checks each repaired finding against what its entry proposed and looks for regressions the repairs introduced, without reviewing the subplan from scratch. Anything still unresolved, or broken by a repair, is recorded and repaired the same way, and another resolution review follows. The next subplan starts only when a resolution review adds no findings, its predecessor and all its repairs are published, and the backlog is empty.
+A resolution review follows when the repairs changed production code. It checks each repaired finding against what its entry proposed and looks for regressions the repairs introduced, without reviewing the subplan from scratch. Anything still unresolved, or broken by a repair, is recorded and repaired the same way, and another resolution review follows if those repairs changed production code. The next subplan starts only when a resolution review adds no findings or a round of repairs changes no production code, its predecessor and all its repairs are published, and the backlog is empty.
 
-When every subplan has finished that cycle and the feature's own plan and description match the finished code, the whole pull request gets a full review. Its findings are also repaired one at a time before another full review, and the cycles repeat until a review adds none. When a review's findings only call for changes to the description, those changes are made and the work moves on without another review, as long as the repairs changed nothing else and the description shows each correction.
+When every subplan has finished that cycle and the feature's own plan and description match the finished code, the whole pull request gets a full review. Its findings are also repaired one at a time before another full review, and the cycles repeat until a review adds none. When a round of repairs changes no production code, only the description, plans, specs, help, or documentation, the work moves on without another review, as long as the description shows each correction.
 
 ### Testing and final checks
 
