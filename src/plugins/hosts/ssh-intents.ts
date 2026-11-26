@@ -1,4 +1,4 @@
-import { realpathSync } from 'node:fs';
+import { readlinkSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
@@ -15,6 +15,7 @@ export type PublishHosts = (read: HostsRead) => void;
 
 const REMOTE_REFUSAL = 'hosts import and hosts export work only in local tabs.';
 const DEFAULT_DISPLAY = '~/.ssh/config';
+const MAX_LINK_HOPS = 40;
 
 type Target = { path: string; display: string };
 
@@ -28,11 +29,24 @@ function targetOf(variant: SshIntentVariant, root: string, cwd: string): Target 
 }
 
 function realPath(filePath: string): string {
-  try {
-    return realpathSync(filePath);
-  } catch {
-    return path.resolve(filePath);
+  let current = filePath;
+  for (let hop = 0; hop < MAX_LINK_HOPS; hop += 1) {
+    try {
+      return realpathSync(current);
+    } catch (error) {
+      if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') {
+        return path.resolve(current);
+      }
+      let link: string;
+      try {
+        link = readlinkSync(current);
+      } catch {
+        return path.resolve(current);
+      }
+      current = path.resolve(path.dirname(current), link);
+    }
   }
+  return path.resolve(current);
 }
 
 function isCatalogPath(targetPath: string, root: string, home: string): boolean {

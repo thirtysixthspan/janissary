@@ -510,6 +510,61 @@ describe('hosts activation ssh commands', () => {
     expect(f.updated).toEqual([]);
     expect(f.opened).toEqual([]);
   });
+
+  it('refuses an export through a dangling link that names the project catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'dangling.json');
+    symlinkSync(`${path.join(f.root, '.janissary')}/absent/../hosts.json`, alias);
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/dangling.json')))
+      .toBe('Cannot export hosts: ~/dangling.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses an import through a dangling link that names the project catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'dangling.json');
+    symlinkSync(`${path.join(f.root, '.janissary')}/absent/../hosts.json`, alias);
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'import ~/dangling.json')))
+      .toBe('Cannot import hosts: ~/dangling.json is the hosts catalog and cannot be an import source.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('exports through a dangling link to an ordinary config path', () => {
+    const f = fixture();
+    writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'ordinary.json');
+    const target = path.join(f.home, 'plain-config');
+    symlinkSync(target, alias);
+
+    runCommand(f, 'export ~/ordinary.json');
+
+    expect(f.noted).toEqual(['Exported 1 host to ~/ordinary.json.']);
+    expect(readFileSync(target, 'utf8')).toContain('Host Lab');
+  });
 });
 
 describe('hosts activation intents', () => {
