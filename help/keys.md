@@ -16,6 +16,8 @@
 | `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
 | `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a picker, the clipboard-history popup, or a modal dialog is open. A shell tab keeps the key for its own two surfaces; in an editor tab's text it outdents instead; in a pending question panel it moves backward between its buttons |
 
+Modal pickers are mutually exclusive, and an open one takes every keystroke. A plugin-contributed overlay, such as the clipboard-history popup, ranks below the eight built-in pickers; two contributed overlays resolve in a fixed order. The clipboard-history popup shows on a shell, editor, harness, or ssh tab, though its chord is answered on every tab type.
+
 **Command bar controls**:
 
 | Key | Action |

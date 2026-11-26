@@ -88,7 +88,11 @@ The eight overlays that float above the command bar are mutually exclusive: only
 7. task picker
 8. profile picker
 
-The [clipboard-history popup](/user-documentation/command-bar/clipboard) ranks after those eight. It opens only when none of them is up, and while it is open it claims keystrokes the same way. `Shift+Tab` does not move focus between sections, and `Ctrl+W` closes no tab.
+Any overlay a plugin contributes ranks below all eight, so a built-in always wins and a chord pressed while a contributed overlay is open never reaches it. When two contributed overlays could open at once, the same one wins every time: they resolve in the order their plugins are declared. The [clipboard-history popup](/user-documentation/command-bar/clipboard) is one of these. It opens only when none of the eight is up, and while it is open it claims keystrokes the same way. `Shift+Tab` does not move focus between sections, and `Ctrl+W` closes no tab.
+
+Whether the clipboard-history popup shows depends on the tab. It shows on a shell, editor, harness, or ssh tab. On other tab types, such as a markdown, image, PDF, web page, video, SQL, or conversations tab, the chord still opens the popup and it holds the keyboard, but nothing appears on screen. See [Clipboard history](/user-documentation/command-bar/clipboard#tabs-without-a-command-line) for the full behavior.
+
+Each overlay rests on the command bar at its current height, inside the tab's colored left edge and spanning to the tab's right side. It leaves the bar and the colored edge visible. A plugin tab with no command bar places its overlays at the bottom of the tab instead.
 
 An open overlay claims every keystroke. Nothing underneath it scrolls the transcript, switches tabs, or reorders them, and the shortcut that would open another overlay does nothing until the open one is dismissed. Quick Open holds its own text input and answers its own typing, arrows, `Enter`, and `Escape` there. The command queue popup is the one exception: its selected command is edited in the command bar, so the bar keeps working while it is open, with only `Enter`, the arrows, and `Backspace`/`Delete` on an empty line reserved by the popup.
 
