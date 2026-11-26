@@ -57,7 +57,7 @@ For decomposed subplans, confirm the plans are in ready. Process the recorded re
 
 For each promoted subplan, delegate `ai/tasks/feature/build-a-feature.md` to a fresh subagent with the exact ready-plan path. It must implement only that subplan, run its required diff-scoped checks after each implementation change, write/update the functional specs, and promote that plan to `complete/`.
 
-Implementation is not complete until that subplan's diff-scoped checks (`$janissary/scripts/run.mjs check-diff`) are green. A step that fails to compile until a later subplan lands is not acceptable: each subplan must build on its own at its own commit. If a subplan cannot be made green without editing files outside its plan, that is a scope mismatch rather than a tolerance to record; preserve the work and report the blocker instead of proceeding.
+Implementation is not complete until that subplan's diff-scoped checks (`$janissary/scripts/run.mjs check-diff`) are green. A step that fails to compile until a later subplan lands is not acceptable: each subplan must build on its own at its own commit. 
 
 Apply these overrides to `build-a-feature.md`:
 
