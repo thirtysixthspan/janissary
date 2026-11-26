@@ -218,6 +218,48 @@ describe('readEffectiveAliases', () => {
     ]);
   });
 
+  it('refuses an over-long Host pattern without applying its settings', () => {
+    expect(readEffectiveAliases([
+      'Host web1',
+      `Host ${'*'.repeat(1025)}`,
+      '  HostName ignored.example',
+    ].join('\n'))).toEqual([
+      { name: 'web1', hostName: '', user: '', port: '', invalidToken: '' },
+    ]);
+  });
+
+  it('refuses a star-heavy Host pattern without applying its settings', () => {
+    expect(readEffectiveAliases([
+      'Host xxxxweb1',
+      'Host *?*?*?*web1',
+      '  HostName ignored.example',
+    ].join('\n'))).toEqual([
+      { name: 'xxxxweb1', hostName: '', user: '', port: '', invalidToken: '' },
+    ]);
+  });
+
+  it('makes a block with a refused negated pattern non-matching', () => {
+    expect(readEffectiveAliases([
+      'Host web1 xxxxweb1 !*?*?*?*web1',
+      '  HostName ignored.example',
+    ].join('\n'))).toEqual([
+      { name: 'web1', hostName: '', user: '', port: '', invalidToken: '' },
+      { name: 'xxxxweb1', hostName: '', user: '', port: '', invalidToken: '' },
+    ]);
+  });
+
+  it('keeps ordinary * and ? Host patterns matching', () => {
+    expect(readEffectiveAliases([
+      'Host web1',
+      'Host *',
+      '  User ops',
+      'Host w?b1',
+      '  Port 2200',
+    ].join('\n'))).toEqual([
+      { name: 'web1', hostName: '', user: 'ops', port: '2200', invalidToken: '' },
+    ]);
+  });
+
   it('keeps imports inside ./ or package specifiers with .js extensions', () => {
     for (const file of ['./parse.ts', './parse.test.ts']) {
       const source = readFileSync(new URL(file, import.meta.url), 'utf8');

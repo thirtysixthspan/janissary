@@ -1,4 +1,5 @@
 import { Minimatch } from 'minimatch';
+import { isHostPatternTooComplex } from './pattern-limits.js';
 
 export type SshSetting = { keyword: string; value: string };
 
@@ -86,13 +87,17 @@ function isLiteralName(name: string): boolean {
   return name !== '' && !name.includes('*') && !name.includes('?') && !name.startsWith('!');
 }
 
-type Pattern = { matcher: Minimatch; negated: boolean };
+type Pattern = { matcher: Minimatch | undefined; negated: boolean };
 
 function compilePatterns(names: string[]): Pattern[] {
   const patterns: Pattern[] = [];
   for (const name of names) {
     const negated = name.startsWith('!');
     const pattern = negated ? name.slice(1) : name;
+    if (isHostPatternTooComplex(pattern)) {
+      patterns.push({ matcher: undefined, negated });
+      continue;
+    }
     patterns.push({
       matcher: new Minimatch(pattern, {
         nocase: true,
@@ -111,6 +116,7 @@ function blockMatches(patterns: Pattern[], alias: string): boolean {
   let positive = false;
   let negative = false;
   for (const pattern of patterns) {
+    if (pattern.matcher === undefined) return false;
     if (!pattern.matcher.match(alias)) continue;
     if (pattern.negated) negative = true;
     else positive = true;
