@@ -62,6 +62,8 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
   const cancel = vi.fn();
   const clearAll = vi.fn();
   const cancelByKey = vi.fn(() => ({ ok: true as const }));
+  const pauseByKey = vi.fn(() => ({ ok: true as const }));
+  const resumeByKey = vi.fn(() => ({ ok: true as const }));
   const clearSystem = vi.fn(() => ({ ok: true as const }));
   const systemRows: { id: string; key: string }[] = [];
   const setActiveTab = vi.fn();
@@ -78,7 +80,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     questions: { pendingFor: (): unknown => undefined },
     launchDir: undefined,
     schedule: { aggregatedView: () => rows, cancel, clearAll },
-    systemSchedule: { list: () => systemRows, cancelByKey, clear: clearSystem },
+    systemSchedule: { list: () => systemRows, cancelByKey, pauseByKey, resumeByKey, clear: clearSystem },
     systemShell: { ensure: vi.fn(async () => ({ status: 'failed' as const, reason: 'unavailable' })) },
     conversations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
@@ -111,7 +113,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     },
     acpRecords: { rows: vi.fn(() => []) },
   } as unknown as Managers;
-  return { cancel, cancelByKey, clearAll, clearSystem, managers, setActiveTab, systemRows };
+  return { cancel, cancelByKey, clearAll, clearSystem, managers, pauseByKey, resumeByKey, setActiveTab, systemRows };
 }
 
 function contextFor(
@@ -435,6 +437,65 @@ describe('the schedules topic source', () => {
       topic: 'schedules', action: 'cancel', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
     })).toBe('could not save system schedules');
     expect(fixture.cancelByKey).toHaveBeenCalledWith('key-a');
+  });
+
+  it('pauses and resumes one current recurring system key', () => {
+    const systemRow: AggregatedScheduleView = {
+      tab: 'system', id: 'build', spec: 'every 5m', next: 'later', recurring: true,
+      command: 'script build', owner: 'system', key: 'key-a',
+    };
+    const fixture = makeManagers([systemRow]);
+
+    expect(runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'pause', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
+    })).toBeUndefined();
+    expect(runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'resume', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
+    })).toBeUndefined();
+    expect(fixture.pauseByKey).toHaveBeenCalledOnce();
+    expect(fixture.pauseByKey).toHaveBeenCalledWith('key-a');
+    expect(fixture.resumeByKey).toHaveBeenCalledOnce();
+    expect(fixture.resumeByKey).toHaveBeenCalledWith('key-a');
+  });
+
+  it('refuses pause and resume for a stale key or a one-shot row without calling the owner', () => {
+    const recurring: AggregatedScheduleView = {
+      tab: 'system', id: 'build', spec: 'every 5m', next: 'later', recurring: true,
+      command: 'script build', owner: 'system', key: 'key-a',
+    };
+    const oneShot: AggregatedScheduleView = {
+      tab: 'system', id: 'ping', spec: 'at 9am', next: 'later', recurring: false,
+      command: 'script ping', owner: 'system', key: 'one-shot',
+    };
+    const fixture = makeManagers([recurring, oneShot]);
+
+    for (const action of ['pause', 'resume'] as const) {
+      expect(runTopicAction(fixture.managers, {
+        topic: 'schedules', action, tab: 'system', id: 'build', owner: 'system', key: 'stale',
+      })).toBeUndefined();
+      expect(runTopicAction(fixture.managers, {
+        topic: 'schedules', action, tab: 'system', id: 'ping', owner: 'system', key: 'one-shot',
+      })).toBeUndefined();
+    }
+    expect(fixture.pauseByKey).not.toHaveBeenCalled();
+    expect(fixture.resumeByKey).not.toHaveBeenCalled();
+  });
+
+  it('returns a failed pause or resume save through topicAction', () => {
+    const systemRow: AggregatedScheduleView = {
+      tab: 'system', id: 'build', spec: 'every 5m', next: 'later', recurring: true,
+      command: 'script build', owner: 'system', key: 'key-a',
+    };
+    const fixture = makeManagers([systemRow]);
+    fixture.pauseByKey.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
+    fixture.resumeByKey.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
+
+    expect(runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'pause', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
+    })).toBe('could not save system schedules');
+    expect(runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'resume', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
+    })).toBe('could not save system schedules');
   });
 
   it('reports a failed system clear and leaves tab schedules untouched', () => {

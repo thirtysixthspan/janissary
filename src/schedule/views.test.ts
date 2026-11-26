@@ -40,4 +40,20 @@ describe('aggregatedScheduleView', () => {
       { tab: 'system', id: 'build', command: 'script build', owner: 'system', key: 'key' },
     ]);
   });
+
+  it('marks a paused system row without moving it from its stored-time position', () => {
+    const paused = { ...systemEntry('build', 'build-key', 5), paused: true as const };
+    const rows = aggregatedScheduleView(
+      new Map([['agent', [entry('fetch', 'echo hi', 10)]]]),
+      [{ label: 'agent' }] as never,
+      [paused, systemEntry('early', 'early-key', 20)],
+    );
+
+    expect(rows.map(({ id }) => id)).toEqual(['build', 'fetch', 'early']);
+    expect(rows[0]).toMatchObject({
+      tab: 'system', id: 'build', owner: 'system', key: 'build-key', paused: true, next: 'paused',
+    });
+    expect(rows[1]).not.toHaveProperty('paused');
+    expect(rows[2]).not.toHaveProperty('paused');
+  });
 });

@@ -17,6 +17,14 @@ export function scheduleTopicAction(managers: Managers, action: TabPluginTopicAc
       managers.schedule.cancel(action.tab, action.id);
       return;
     }
+    case 'pause':
+    case 'resume': {
+      if (!isRecurringSystemRow(managers, action)) return;
+      const result = action.action === 'pause'
+        ? managers.systemSchedule.pauseByKey(action.key)
+        : managers.systemSchedule.resumeByKey(action.key);
+      return result.ok ? undefined : result.error;
+    }
     case 'clear': {
       if (action.owner === 'tab') {
         managers.schedule.clearAll();
@@ -30,6 +38,14 @@ export function scheduleTopicAction(managers: Managers, action: TabPluginTopicAc
       return;
     }
   }
+}
+
+function isRecurringSystemRow(
+  managers: Managers,
+  action: Extract<ScheduleAction, { action: 'pause' | 'resume' }>,
+): boolean {
+  return managers.schedule.aggregatedView().some((row) => row.owner === 'system'
+    && row.key === action.key && row.id === action.id && row.tab === action.tab && row.recurring);
 }
 
 function cancelSystemSchedule(managers: Managers, key: string, id: string): string | undefined {
