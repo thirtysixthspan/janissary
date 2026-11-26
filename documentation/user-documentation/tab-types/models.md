@@ -14,7 +14,7 @@ Bare `models` opens the catalog in the center, or returns a docked catalog there
 
 ## Browse the catalog
 
-Models are grouped by provider under a friendly heading. Claude models appear under **Anthropic** and Codex models under **OpenAI**. OpenCode models are split by the prefix before the `/` in their id: `opencode` appears under **OpenCode Zen**, `opencode-go` under **OpenCode Go**, `google` under **Google**, and `openai` under **OpenAI**. An OpenCode id with no `/` uses **OpenCode Zen**, and any other prefix becomes its own heading. The two **OpenAI** groups stay separate; the Harness column tells them apart.
+Models are grouped by provider under a friendly heading. Claude models appear under **Anthropic** and Codex models under **OpenAI**. OpenCode models are split by the prefix before the `/` in their id: `opencode` appears under **OpenCode Zen**, `opencode-go` under **OpenCode Go**, `google` under **Google**, and `openai` under **OpenAI**. An OpenCode id with no `/` uses **OpenCode Zen**, and any other prefix becomes its own heading. The two **OpenAI** groups stay separate; the Harness column tells them apart. When Refresh finds a new prefix, its group appears after the existing OpenCode groups.
 
 The table shows the model id, its display name, the harness that uses it, and its actions. Missing names fall back to the model id. In a docked catalog, each row stacks its id and actions above its name and harness. If no models are visible, the catalog reads `No models` without column headings.
 
@@ -24,7 +24,9 @@ Hidden models do not appear in the catalog. Disabled models that are not hidden 
 
 ## Refresh provider lists
 
-Press **Refresh** to fetch the latest models from the providers configured on your machine. The icon spins while the refresh runs. When it finishes, the catalog updates and a line appears in the [notifications](/user-documentation/tab-types/notifications) feed, even when it is closed.
+Press **Refresh** in the metadata row, beside the split and dock-cycle controls, to fetch the latest models from the providers configured on your machine. The button is disabled and its icon spins while the refresh runs. When it finishes, the catalog updates and a line appears in the [notifications](/user-documentation/tab-types/notifications) feed, even when it is closed.
+
+Refresh queries the providers at the same time and waits up to 30 seconds for each. OpenCode runs `opencode models` and reads one `<provider>/<model>` id per line. Codex runs `codex debug models`, keeps only entries whose `visibility` is `list`, and uses `slug` as the model id and `display_name` as the name. Claude reads pages from `GET https://api.anthropic.com/v1/models` with `ANTHROPIC_API_KEY`; without that key, Claude is skipped.
 
 The line starts with `Models refreshed:` when at least one provider was reached. It starts with `Models not refreshed:` when none were. Reached providers show the visible model count and nonzero additions or removals; skipped or failed providers follow. If OpenCode does not report a provider already in your catalog, that prefix is kept and the line says `<prefix> skipped: not configured in opencode.`
 
@@ -32,7 +34,7 @@ If Claude is skipped because no API key is available, the line says `claude skip
 
 ## Delete a model
 
-Use the trash button on a visible, enabled row. Confirming sets `disabled` and `hidden` to `true` on that model; it does not remove the record. Janissary writes the effective catalog to the project's `.janissary/known-models.json`, creating the file when needed. If two records share an id, Delete changes only the first one and leaves the duplicate as it was.
+Use the trash button on a visible, enabled row. A `Delete <model id>?` dialog asks you to confirm. Confirming sets `disabled` and `hidden` to `true` on that model; it does not remove the record. Janissary writes the effective catalog to the project's `.janissary/known-models.json`, creating the file when needed. If two records share an id, Delete changes only the first one and leaves the duplicate as it was.
 
 A model you delete is no longer offered for that harness. Its saved role entry remains, marked `Not in the model catalog`. To restore it, clear its `disabled` and `hidden` flags in `.janissary/known-models.json` by hand. If a model became unavailable while its confirmation was open, the tab shows a dismissible alert such as `Delete failed: no model "<harness> <id>"` and leaves the file unchanged.
 
