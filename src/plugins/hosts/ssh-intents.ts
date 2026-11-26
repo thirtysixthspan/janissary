@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
@@ -24,6 +25,27 @@ function targetOf(variant: SshIntentVariant, root: string, cwd: string): Target 
   return resolveSshConfigTarget(
     root, homedir(), path.join(root, '.janissary', 'workspace'), cwd, variant.operand,
   );
+}
+
+function realPath(filePath: string): string {
+  try {
+    return realpathSync(filePath);
+  } catch {
+    return path.resolve(filePath);
+  }
+}
+
+function isCatalogPath(targetPath: string, root: string, home: string): boolean {
+  const resolved = realPath(targetPath);
+  return [
+    path.join(root, '.janissary', 'hosts.json'),
+    path.join(home, '.janissary', 'hosts.json'),
+  ].some((catalog) => realPath(catalog) === resolved);
+}
+
+function catalogRefusal(kind: SshIntentVariant['kind'], display: string): string {
+  const role = kind === 'export' ? 'an export target' : 'an import source';
+  return `Cannot ${kind} hosts: ${display} is the hosts catalog and cannot be ${role}.`;
 }
 
 function report(
@@ -55,17 +77,22 @@ export function runSshIntent(
   }
   const root = origin?.root ?? '';
   const cwd = origin?.cwd ?? '';
+  const home = homedir();
   const target = targetOf(variant, root, cwd);
+  if (isCatalogPath(target.path, root, home)) {
+    report(mode, capabilities, notify, catalogRefusal(variant.kind, target.display), true);
+    return;
+  }
   if (variant.kind === 'import') {
-    const outcome = importSshHosts(root, homedir(), target.path, target.display);
+    const outcome = importSshHosts(root, home, target.path, target.display);
     if (!outcome.ok) {
       report(mode, capabilities, notify, outcome.error, true);
       return;
     }
-    if (outcome.imported > 0) publish(readHostsFile(root, homedir(), notify));
+    if (outcome.imported > 0) publish(readHostsFile(root, home, notify));
     report(mode, capabilities, notify, outcome.summary, false);
     return;
   }
-  const outcome = exportSshHosts(root, homedir(), target.path, target.display, notify);
+  const outcome = exportSshHosts(root, home, target.path, target.display, notify);
   report(mode, capabilities, notify, outcome.ok ? outcome.report : outcome.error, !outcome.ok);
 }

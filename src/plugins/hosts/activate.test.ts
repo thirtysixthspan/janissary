@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as FileSystem from 'node:fs';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -416,6 +416,99 @@ describe('hosts activation ssh commands', () => {
     expect(f.updated[0]?.value.payload.rows).toEqual([
       row('fromroot', 'root.example'), row('Lab', 'lab.local'),
     ]);
+  });
+
+  it('refuses an export aimed at the home catalog without touching either catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/.janissary/hosts.json')))
+      .toBe('Cannot export hosts: ~/.janissary/hosts.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses an export aimed at the project catalog without touching either catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export $root/.janissary/hosts.json')))
+      .toBe('Cannot export hosts: $root/hosts.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
+  });
+
+  it('refuses a dot-dot spelling that resolves to the home catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/.janissary/../.janissary/hosts.json')))
+      .toBe('Cannot export hosts: ~/.janissary/hosts.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+  });
+
+  it('refuses an export that reaches the home catalog through a symlink', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const alias = path.join(f.home, 'aliased.json');
+    symlinkSync(homeFile, alias);
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'export ~/aliased.json')))
+      .toBe('Cannot export hosts: ~/aliased.json is the hosts catalog and cannot be an export target.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+  });
+
+  it('refuses an import whose source is the home catalog without touching either catalog', () => {
+    const f = fixture();
+    const homeFile = writeCatalog(f.home, { Home: { destination: 'home.local' } });
+    const projectFile = writeCatalog(f.root, { Lab: { destination: 'lab.local' } });
+    const homeBefore = readFileSync(homeFile, 'utf8');
+    const projectBefore = readFileSync(projectFile, 'utf8');
+    vi.mocked(writeFileSync).mockClear();
+
+    expect(refusal(() => runCommand(f, 'import ~/.janissary/hosts.json')))
+      .toBe('Cannot import hosts: ~/.janissary/hosts.json is the hosts catalog and cannot be an import source.');
+
+    expect(readFileSync(homeFile, 'utf8')).toBe(homeBefore);
+    expect(readFileSync(projectFile, 'utf8')).toBe(projectBefore);
+    expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+    expect(f.events).toEqual([]);
+    expect(f.updated).toEqual([]);
+    expect(f.opened).toEqual([]);
   });
 });
 
