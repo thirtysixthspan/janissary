@@ -60,6 +60,8 @@
 | `hist` | Open command history picker |
 | `hosts` | Open or focus the Hosts tab of saved hosts |
 | `hosts add` | `hosts add <name> <[user@]host[:port]> [path]` saves a host |
+| `hosts export` | `hosts export [file]` writes the saved hosts into an ssh config's managed section |
+| `hosts import` | `hosts import [file]` reads the usable aliases of an ssh config into the catalog |
 | `hosts list` | `hosts list` prints the saved hosts as JSON |
 | `hosts remove` | `hosts remove <name>` removes a saved host |
 | `image` | `image <path>` opens an image through the bundled image tab plugin; accepts the same paths and wildcards as `open` |

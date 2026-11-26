@@ -12,10 +12,14 @@ Open the Hosts tab, a single table of saved hosts that can be opened as ssh sess
 
 `hosts remove <name>`
 
+`hosts import [file]`
+
+`hosts export [file]`
+
 **Use cases**
 
 - Open or focus the one Hosts tab. Running `hosts` again refreshes its rows in place. Coming back to the tab after hiding it re-reads the catalog; opening it the first time doesn't.
-- See the hosts in a table with **Name**, **User**, **Destination** and **Path** columns in that order. Rows follow name order ignoring case and keep the spelling you saved. A blank user or path leaves its cell empty, and the destination reads `host` or `host:port`. Long cells end in an ellipsis; the two controls at the right stay fully visible. An empty catalog shows `No saved hosts` with no column headings, while Refresh, New host and Split still work.
+- See the hosts in a table with **Name**, **User**, **Destination** and **Path** columns in that order. Rows follow name order ignoring case and keep the spelling you saved. A blank user or path leaves its cell empty, and the destination reads `host` or `host:port`. Long cells end in an ellipsis; the two controls at the right stay fully visible. An empty catalog shows `No saved hosts` with no column headings, while Refresh, New host, Import from ssh config, Export to ssh config and Split still work.
 - Hover a row for its full `[user@]host[:port]` on one line, with the saved path on the next line when it has one.
 - Click a row twice, or select it and press Enter, to open an ssh tab for that host. A row highlighted with the keyboard still takes two clicks to open with the mouse.
 - Move the highlight with `Up` and `Down`, which stop at the first and last row without wrapping. `Home` and `End` jump to those ends, and `Escape` leaves the list unchanged.
@@ -23,6 +27,9 @@ Open the Hosts tab, a single table of saved hosts that can be opened as ssh sess
 - Edit or delete a host with the pencil or trash control at the right of its row. Screen readers name them `Edit host <name>` and `Delete host <name>`.
 - Save a host with an optional user, port and remote working directory; adding an existing name updates it.
 - Remove a saved host by name, ignoring case.
+- Import every usable alias from an ssh config into the catalog with the **Import from ssh config** button beside New host, or with `hosts import`. Each literal alias becomes one saved host with its destination, user and port; aliases that clash or cannot be expressed as saved hosts are skipped and counted in the summary. Nothing you already saved is changed.
+- Export the saved hosts back into one Janissary-managed section of an ssh config with the **Export to ssh config** button or `hosts export`. The section mirrors the catalog; anything outside the markers is left alone, and a saved host shadowed by a literal alias outside the section is skipped.
+- Both actions are one step, with no dialog or choice of hosts, and work only in local tabs. The buttons report in the notifications feed; the commands answer in the transcript and refresh an already open Hosts tab. Both default to `~/.ssh/config` and accept a file operand, including a double-quoted path with spaces.
 
 **Examples**
 
@@ -31,7 +38,9 @@ Open the Hosts tab, a single table of saved hosts that can be opened as ssh sess
 - `hosts add Lab ops@lab.local:2222 ~/work` saves a host and replies `Host Lab added.`
 - `hosts remove lab` removes it and replies `Host Lab removed.`
 - `hosts remove ghost` replies `No host named "ghost".` when nothing matches, and leaves the catalog alone.
-- `hosts left` is refused with `Usage: hosts [list|add|remove].`; the Hosts tab stays in the centre.
+- `hosts import` reads `~/.ssh/config` and replies `Imported 1 host from ~/.ssh/config; skipped 2.` when one alias is added and two are skipped, or `No aliases to import from ~/.ssh/config.` when nothing can be added.
+- `hosts export "~/my hosts"` writes the managed section to that one file and replies `Exported 1 host to ~/my hosts; skipped 1.`
+- `hosts left` is refused with `Usage: hosts [list|add|remove|import|export].`; the Hosts tab stays in the centre.
 
 **Host form and deletion**
 
@@ -47,7 +56,9 @@ A saved name also works as the `on <address>` target for `shell`, `harness`, and
 
 Opening a row's ssh session writes no line to the Hosts tab's transcript, since that tab has no transcript. If the launch fails immediately, the error comes back to the Hosts tab as a notification instead of being written to a log.
 
-Malformed requests never touch the catalog. Every verb matches regardless of case, so `hosts LIST` works. An unknown verb or a bad `list` replies `Usage: hosts [list|add|remove].`, a bad `add` replies `Usage: hosts add <name> <[user@]host[:port]> [path]`, and a bad `remove` replies `Usage: hosts remove <name>`. An invalid name, user, host, port, or path in a structurally valid `hosts add` or `hosts remove` replies with that field's specific diagnostic — `Invalid <field> "<value>". Use letters, digits, and . - _ only.` for name, user, or host, `Invalid port "<value>". Use digits only, from 1 to 65535.` for a port, and `Invalid path "<value>". Use letters, digits, and . - _ / ~ only.` for a path. A problem with a hosts file is reported once per distinct problem; it does not change the tab's rows until a Refresh or a return to the tab.
+Malformed requests never touch the catalog. Every verb matches regardless of case, so `hosts LIST` works. An unknown verb or a bad `list` replies `Usage: hosts [list|add|remove|import|export].`, a bad `add` replies `Usage: hosts add <name> <[user@]host[:port]> [path]`, a bad `remove` replies `Usage: hosts remove <name>`, a bad `import` replies `Usage: hosts import [file]`, and a bad `export` replies `Usage: hosts export [file]`. An invalid name, user, host, port, or path in a structurally valid `hosts add` or `hosts remove` replies with that field's specific diagnostic — `Invalid <field> "<value>". Use letters, digits, and . - _ only.` for name, user, or host, `Invalid port "<value>". Use digits only, from 1 to 65535.` for a port, and `Invalid path "<value>". Use letters, digits, and . - _ / ~ only.` for a path. A problem with a hosts file is reported once per distinct problem; it does not change the tab's rows until a Refresh or a return to the tab.
+
+Import and export work only in local tabs: from a remote tab both refuse with `hosts import and hosts export work only in local tabs.` Neither catalog can be an import source or an export target; naming one is refused with `Cannot export hosts: <path> is the hosts catalog and cannot be an export target.` (or the matching import wording). An unreadable import source or export target is refused with `Cannot read ssh config <path>: <problem>.`, a failed write with `Could not write ssh config <path>: <problem>.`, and an unusable catalog with `Cannot export hosts: <path> is unusable — fix it by hand.`; a refused export leaves the config unchanged. An imported host stores only its destination, user and port, so other settings from the alias are not saved; launching it still runs the real ssh binary, which reads your ssh config for the destination as usual.
 
 Saved hosts live at `~/.janissary/hosts.json`, overridden by your project's `.janissary/hosts.json`. A usable project file replaces the home file entirely, even when it holds `{}`: that explicitly means zero hosts, and the two files are never merged. When neither file exists, the catalog is empty and the first save creates the file in effect.
 
