@@ -30,7 +30,7 @@
 | `conversations` | Open the conversation list; `conversations <title>` opens a saved conversation by title, ignoring case |
 | `conversations left` | Dock the conversation list in the left sidebar |
 | `conversations right` | Dock the conversation list in the right sidebar |
-| `db` | `db sqlite <create\|delete\|query\|list> [name] [query]` runs SQLite database commands in the current tab's transcript; bare `db` prints its usage. To browse a database in a tab, use `sql database <name>` or `sql file <path>` |
+| `db` | Runs SQLite database commands in the current tab's transcript; bare `db` prints its usage. To browse a database in a tab, use `sql database <name>` or `sql file <path>` |
 | `db sqlite create` | `db sqlite create <name>` creates a new SQLite database |
 | `db sqlite delete` | `db sqlite delete <name>` deletes a SQLite database |
 | `db sqlite list` | `db sqlite list` lists the available SQLite databases |
