@@ -80,6 +80,8 @@ Picking a task only inserts the command; the agent then reads that file and foll
 
 It asks one question at a time. When a feature touches something you already use, the agent shows a checklist of behaviors the plan can protect. Recommended behaviors start checked. Check the behaviors you want the plan to safeguard through the change. If the agent shows a text checklist, reply with `defaults`, name the behaviors to protect, or reply with `none`.
 
+When the agent asks about optional features, each extra starts unchecked. Check the extras you want to include in the plan. If you get a text checklist, name the extras to include or reply with `none`.
+
 Other questions list at least three numbered answers and a last **Other** answer where you type your own. One answer is marked as recommended and one as the lowest-cost option. A single answer can carry both marks. The agent updates the draft as you answer and finishes each phase when every question is settled.
 
 The planning tasks do one job each and change only plans. `rate-plan-complexity` counts five things about the plan and its code, runs them through a fixed formula, and writes a single complexity line under the plan's title; its formula tops out at 9, so it never writes a 10. `decompose-plan` turns one plan into ordered subplans, rates and improves each one, moves the finished subplans to ready, and keeps the original plan, unchanged, as the record of the whole feature. It writes no code and opens no pull request.

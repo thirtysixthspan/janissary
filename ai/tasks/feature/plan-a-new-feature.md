@@ -102,7 +102,9 @@ All questioning in this task works a **decision tree** of decisions: model every
 
 ### Question format
 
-The preserved-behavior question uses the checklist below. Every other question offers numbered answers for the user to pick from.
+Preserved-behavior and scope-extras questions use checklists. Use a question tool if it supports independent checkboxes with the required initial states. For scope extras, it must also accept an empty selection. Otherwise, show a Markdown checklist.
+
+Every other question offers numbered answers for the user to pick from.
 
 - **At least three concrete answers**, numbered from 1, each grounded in what Step 2a found, in a 2b research suggestion, or in an earlier answer. Never ask an open "what should happen?".
 - **An "Other" answer**, numbered last, that lets the user write their own answer instead.
@@ -118,7 +120,7 @@ Work the product-decision tree using the mechanism described above. Ask one ques
 - **Primary flow** — what exactly does the user do, and what do they see happen, step by step.
 - **Edge cases** — what happens on the empty state, a conflict, a cancel, an error, or an unexpected input.
 - **Preserved behavior** — when the feature touches an existing surface with relevant behaviors to protect, use the checklist below.
-- **Scope boundary** — what is explicitly *not* included in this version.
+- **Scope boundary** — where the planned work stops. Use the scope-extras checklist for optional features the user could add to this version.
 - **Naming/wording** — any user-visible text (labels, commands, messages) the plan needs to fix precisely.
 
 If the feature's existing description in `./product/backlog/features.md` already answers an applicable category unambiguously, quote that text back to the user as your understanding and move to the next question.
@@ -131,9 +133,15 @@ Keep asking questions until the phase's frontier is empty — every product deci
 
 Ask “Which existing behaviors should this plan explicitly protect? Checking a behavior adds a safeguard to the plan so it keeps working through the change.”
 
-List each relevant behavior found in Step 2a as its own checkbox. Start recommended behaviors checked and all other candidates unchecked. Use a question tool if it supports independent checkboxes with initial checked states. Otherwise, show a Markdown checklist with `- [x]` for recommended behaviors and `- [ ]` for the rest. In the text version, let the user reply with `defaults`, the names of the behaviors to protect, or `none`.
+List each relevant behavior found in Step 2a as its own checkbox. Start recommended behaviors checked and all other candidates unchecked. In the text version, use `- [x]` for recommended behaviors and `- [ ]` for the rest. Let the user reply with `defaults`, the names of the behaviors to protect, or `none`.
 
 Wait for the user's confirmation. Apply the plan template's preservation and test requirements to each behavior in the confirmed selection.
+
+#### Scope-extras checklist
+
+Whenever an open question is about adding optional features, including in the final phase, ask “Which optional features should this plan include?” List each extra as its own checkbox. Start every checkbox unchecked. Ask about a dependent extra once its prerequisites are settled.
+
+In the text version, show every extra as `- [ ]` and let the user reply with the names of the extras to include or `none`. Wait for the user's confirmation. Record each checked extra in the draft's `Requirements`. Unchecked extras stay outside the implementation scope. An empty confirmed selection adds no extras.
 
 ### 2f. Phase 2 — resolve UI decisions
 

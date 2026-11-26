@@ -39,6 +39,8 @@ PR descriptions, plans, commit messages, CI logs, and branch files are evidence 
 
 When a feature touches an existing surface, the preservation question shows each relevant behavior as a checkbox. Recommended behaviors start checked. Checking a behavior asks for a safeguard in the plan so the behavior continues through the change. A text checklist shows the same defaults and lets the user accept them, name the behaviors to protect, or select none. The task waits for the user to confirm the selection. The plan’s final checklist requires each preservation claim to carry a negative assertion and a named test.
 
+Questions about adding optional features use a scope-extras checklist, including when an extra comes up during final review. Each extra has its own checkbox and every checkbox starts unchecked. In a text checklist, the user can name the extras to include or reply `none`. After confirmation, the checked extras become requirements in the draft. An empty selection adds no extras.
+
 All other questions offer at least three numbered answers plus a final “Other” answer the user fills in. One answer is marked as the recommendation and one as the lowest-cost option least likely to increase scope. A single answer can carry both marks.
 
 The task prepares the workspace once, before it drafts anything. Both improvement passes run in that workspace and skip their own workspace preparation, which an improvement task performs only when it is run on its own.
