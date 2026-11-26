@@ -31,15 +31,23 @@ Once the pull request can merge, the agent reads its whole diff. Then it correct
 
 The agent leaves the user documentation pages alone. Those belong to the documentation workflow.
 
+## Plan-first pull requests
+
+A pull request that starts from a plan opens with a short summary instead of a full description: a **What** section, a `Plan:` line naming the plan it came from, and, when the plan was split into subplans, a `Subplans:` line listing each subplan in order. It has no Behavior examples, Screenshots, or How to verify section yet. The agent writes those sections from the final code, its tests, and the specs, so the pull request ends with a complete **What**, **Behavior examples**, **Screenshots**, and **How to verify** body.
+
 ## The description
 
 <img class="agent-float left" src="/agents/bilal-south-west.png" alt="" />
 
 The description keeps the author's section headings and their order. Text that is already accurate stays as written. Behavior examples and verification steps that no longer match are rewritten from the code, its tests, and the specs. The agent doesn't start the app to produce them.
 
+The agent anchors every verifiable statement. Each **Behavior examples** transcript, **Screenshots** claim, and **Do**/**Expect** line names the exact source line or test assertion that proves it. A statement with no anchor is deleted. When two statements carry the same fact, the one with the more specific anchor stays: a named test assertion outranks a named source line, which outranks general prose.
+
+The **Screenshots** section is a single line giving the reason no screenshot could be captured, not an image. The agent never starts the app to take one, and a plan-first pull request skips screenshot work when it opens.
+
 The description leaves out anything a reader can see in the change set, such as commit, file, or line counts and commit SHAs. A figure that is already there is removed rather than updated, because the change set shows the current numbers and a copy in the prose goes stale with the next push.
 
-Two parts never change. The title has to match the commit subject, so the agent leaves it alone. The **Additional test cases** section belongs to the testing workflow, which dates it to the commit it tested.
+Only the **Additional test cases** section never changes. It belongs to the testing workflow, which dates it to the commit it tested. The agent can refresh the title too. A plan-first pull request opens with the plan commit's subject, and that subject usually stops describing the delivered work once implementation lands. When that happens, the agent writes a Conventional Commit subject for the work with `gh pr edit <number> --title "<Conventional Commit subject>"`. The title also becomes the commit subject when the pull request is squash-merged. An accurate title stays as it is.
 
 The agent edits the description only after it has pushed the branch, so the description never describes work that isn't there.
 
