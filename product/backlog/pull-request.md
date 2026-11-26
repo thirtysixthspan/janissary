@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Correct the ssh spec's claim that ssh-config settings stop applying to hosts imported from an ssh config.
+
+Existing Issue: The paragraph added to product/specs/ssh-tab.md under Saved host destinations says IdentityFile and ProxyJump from an imported alias stop applying and that the launch uses the saved values alone, but buildSavedSshInvocation in src/ssh-saved-host.ts spawns the real ssh binary with only the saved user, host and port and no -F or config override, so ssh still reads the user's config for the destination. Severity: 6/10
+
+Existing Risk: 5/10 - A reader takes the spec as a guarantee that importing an alias isolates the launch from config settings, yet a `Host *` or destination-matching block still supplies IdentityFile or ProxyJump, so the launch silently uses keys or a jump host the spec says cannot apply.
+
+Proposal Risk: 2/10 - The spec will describe both halves of the behavior while the launch path stays unchanged; the remaining risk is that the corrected wording must still make the alias-name versus destination distinction clear to a skimming reader.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2242 "correct the ssh spec's claim that config settings stop applying to imported hosts". Rewrite the paragraph added to product/specs/ssh-tab.md § Saved host destinations so it states that the catalog stores only destination, user and port, and that settings attached to the imported alias name are therefore not carried into the saved host, while the real ssh binary still reads the user's ssh config when the saved host is launched. Point to buildSavedSshInvocation in src/ssh-saved-host.ts, which emits ssh plus optional -p/-t, -- and [user@]host with no -F or config overrides, and to parseSshCommand in src/ssh.ts, which spawns the generated command as-is. Add one example contrasting a `Host <alias>` block, which no longer matches the real destination after import, with a `Host *` or destination-matching block, which still applies at launch. Keep the parallel statement in product/specs/hosts-tab.md § Importing and exporting consistent: "other ssh settings do not carry over" describes the catalog and remains true, so it should not be rewritten to claim that launch-time config is ignored. No code change is required; verify by tracing the saved-host launch path from buildSavedSshInvocation through the ssh spawn and confirming both spec files read consistently. No test change is needed because no test asserts spec wording.
