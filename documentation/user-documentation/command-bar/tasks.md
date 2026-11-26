@@ -70,9 +70,10 @@ Expand **planning** to work on a single plan before you build it. Choose `rate-p
 
 Picking a task only inserts the command; the agent then reads that file and follows it, so what happens next depends on the task. `plan-a-new-feature`, the task that drafts a new plan, works in phases and asks you a lot along the way:
 
+- It looks at the related code, then has a separate agent search the web for patterns, tools, and libraries that could make the feature simpler or better. It keeps the suggestions that clearly fit and drops the ones that clearly don't.
 - It questions you about product decisions first: user flow, edge cases, scope, wording.
 - If the feature has something you see or operate on screen, it then asks about that UI: where it appears, how you use it, what it shows when empty, loading, or failed, its keys, and which existing UI it should match.
-- Then it decides whether the feature needs implementation questions at all, and if so asks about those: where code lives, what it extends or replaces.
+- Then it decides whether the feature needs implementation questions at all, and if so asks about those: where code lives, what it extends or replaces. It also asks whether to use any research suggestion it couldn't judge on its own, even for a small feature.
 - It runs two improvement passes over the answered draft.
 - A final phase settles whatever is still open, including anything the two passes raised.
 - It moves the finished plan from `product/plans/draft/` to `product/plans/ready/`, where `build-a-feature` picks it up.

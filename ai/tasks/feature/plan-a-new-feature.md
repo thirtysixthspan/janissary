@@ -18,14 +18,14 @@ This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo to ground a plan in real code. Create new plan files under `./product/plans/draft/`. Move the completed plan to `./product/plans/ready/` in Step 2i. Edit `./product/backlog/features.md` to remove a `### ` entry from the `## ready` section once its plan has been drafted and confirmed. Ask the user clarifying questions — this is expected, not an interruption to avoid.
+Read any file in the repo to ground a plan in real code. Delegate `ai/tasks/feature/research-a-feature.md` to a fresh subagent in Step 2b. Create new plan files under `./product/plans/draft/`. Move the completed plan to `./product/plans/ready/` in Step 2j. Edit `./product/backlog/features.md` to remove a `### ` entry from the `## ready` section once its plan has been drafted and confirmed. Ask the user clarifying questions — this is expected, not an interruption to avoid.
 
 ### Forbidden — no exceptions
 
 1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/planning/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
 2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and its own plan file, under `./product/plans/draft/` and then `./product/plans/ready/`.
 3. **Skipping question resolution.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles. Keep asking targeted questions, one at a time, until every such decision is resolved.
-4. **Promoting a plan before it is complete.** The plan stays in `./product/plans/draft/` while it is drafted, questioned, and improved, because the improvement passes in 2g look for it there. It moves to `./product/plans/ready/` only in 2i, after every box in both 2h checklists is checked.
+4. **Promoting a plan before it is complete.** The plan stays in `./product/plans/draft/` while it is drafted, questioned, and improved, because the improvement passes in 2h look for it there. It moves to `./product/plans/ready/` only in 2j, after every box in both 2i checklists is checked.
 5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is complete.** Don't clear the backlog ahead of a complete plan actually existing. Never add a feature named at invocation to the file either — an unlisted feature is planned without ever passing through the backlog.
 
 ---
@@ -40,7 +40,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 1. Read `./product/backlog/features.md` in full. Each entry under the `## ready` heading, up to the next `## ` heading, is a `### <title>` followed by its description body.
 2. Pick the feature to plan:
-   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/feature/plan-a-new-feature.md "<feature title>"`), plan that one. First look for its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the feature**: take it at face value and plan it exactly as if it had been listed, without stopping and without adding it to the features file. A named feature is never rejected for being absent from the backlog; it simply arrives with no description body, so treat the named text as its entire description everywhere the steps below read one — and expect to ask about every question category in 2d, since nothing is pre-answered.
+   - **If a specific feature is named in the task invocation** (e.g. `execute ai/tasks/feature/plan-a-new-feature.md "<feature title>"`), plan that one. First look for its `### ` entry under `## ready` — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the feature**: take it at face value and plan it exactly as if it had been listed, without stopping and without adding it to the features file. A named feature is never rejected for being absent from the backlog; it simply arrives with no description body, so treat the named text as its entire description everywhere the steps below read one — and expect to ask about every question category in 2e, since nothing is pre-answered.
    - **Otherwise**, take the first `### ` entry listed under `## ready` (top of the section).
 3. If `## ready` is empty **and** the invocation named no feature, report "No ready features in `./product/backlog/features.md`" and stop.
 4. Copy the feature's title verbatim — do not paraphrase or shorten it; for a feature named at invocation, that is the named text as given. Say in one sentence which feature you're planning, and whether it came from the features file or from the invocation, before starting Step 2.
@@ -61,7 +61,19 @@ Do exactly this, in order, before asking any question:
 
 Stop after these three checks — this is reconnaissance, not a design phase. Do not spend more than a few minutes here. If you find nothing related, that is a valid outcome; say so and move on to 2b.
 
-### 2b. Decide whether this feature needs implementation questions
+### 2b. Research the feature
+
+Delegate `ai/tasks/feature/research-a-feature.md` to a fresh subagent and wait for its result. Pass it a long feature description: the feature's title, its full description body (or the named text, for a feature named at invocation), and what Step 2a found, with file paths. The subagent researches online and returns a short list of the most relevant and valuable patterns, designs, strategies, techniques, tools, and libraries for this feature. Preserve every rule of that task. It edits no files and asks the user nothing.
+
+Not every suggestion will fit. Use your own judgment and sort each one into exactly one bucket, writing the bucket and a one-line reason in your working notes:
+
+- **Adopt** — it clearly fits the feature and the codebase. The initial draft in 2d records it under `Design decisions`, with its source URL.
+- **Discard** — it clearly does not fit, duplicates what the codebase already does, or costs more than it saves. Drop it.
+- **Unclear** — its appropriateness, usefulness, or need depends on a decision you can't settle from the code. Phase 3 (2g) puts it to the user, whatever the complexity checks in 2c say.
+
+An empty list is a valid result; move on to 2c. When the subagent reports `Status: research failed`, say so in one sentence and continue planning without suggestions. A failed research run never stops this task.
+
+### 2c. Decide whether this feature needs implementation questions
 
 Answer these four yes/no checks about the feature, using only what the feature's `./product/backlog/features.md` text says plus what you found in 2a:
 
@@ -70,15 +82,15 @@ Answer these four yes/no checks about the feature, using only what the feature's
 3. Does it involve **concurrency, background processes, or timing/race conditions**?
 4. Did Step 2a find **no close existing precedent** in the codebase to model it on?
 
-**If you answered "yes" to any of the four, this feature is high complexity** — Phase 3 (`2f`) asks the implementation questions (where should this live, which existing mechanism does it extend or replace) after the product and UI questions are settled. **If all four are "no,"** Phase 3 carries no questions — do not ask the user to make implementation decisions for a small, precedented feature.
+**If you answered "yes" to any of the four, this feature is high complexity** — Phase 3 (`2g`) asks the implementation questions (where should this live, which existing mechanism does it extend or replace) after the product and UI questions are settled. **If all four are "no,"** Phase 3 carries no questions of its own — do not ask the user to make implementation decisions for a small, precedented feature. The one exception is the research suggestions 2b sorted as unclear: Phase 3 asks about those whatever these checks say.
 
 If you are unsure whether a check is "yes" or "no," treat it as "no" — the default is product-only questions. When in doubt, ask fewer implementation questions rather than more.
 
-### 2c. Write the initial draft
+### 2d. Write the initial draft
 
 Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name derived from the feature's `### ` title (lowercase, spaces to hyphens, strip punctuation — e.g. "profile launcher" → `profile-launcher.md`). Follow `ai/guidelines/plan-template.md` for the plan's sections and each section's format and content; that template is the single owner of plan shape, so do not work from a section list copied out of an older plan. `./product/plans/ready/sql-path.md` is the plan currently in `ready/` if you want a sense of the house tone and level of detail, but the template governs structure.
 
-The initial draft records only the feature text and facts established in Step 2a. Do not invent a design decision that needs the user's input. Use every section the template requires, in the template's order, with the content it prescribes for a draft at this stage. In particular, record just the UI facts Step 2a established in the `UI design` section (the surface the feature extends and the existing components it resembles), and leave that section out entirely when the feature has no UI, as the template specifies.
+The initial draft records only the feature text, facts established in Step 2a, and the research suggestions 2b sorted as adopt. Record each adopted suggestion as one bullet under `Design decisions`, naming what it is, how this feature uses it, and its source URL. Do not invent a design decision that needs the user's input. Use every section the template requires, in the template's order, with the content it prescribes for a draft at this stage. In particular, record just the UI facts Step 2a established in the `UI design` section (the surface the feature extends and the existing components it resembles), and leave that section out entirely when the feature has no UI, as the template specifies.
 
 Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's. The template documents this as the one phase-specific exception to its common shape.
 
@@ -92,14 +104,14 @@ All questioning in this task works a **decision tree** of decisions: model every
 
 Every question in every phase offers numbered answers for the user to pick from:
 
-- **At least three concrete answers**, numbered from 1, each grounded in what Step 2a found or in an earlier answer. Never ask an open "what should happen?".
+- **At least three concrete answers**, numbered from 1, each grounded in what Step 2a found, in a 2b research suggestion, or in an earlier answer. Never ask an open "what should happen?".
 - **An "Other" answer**, numbered last, that lets the user write their own answer instead.
 - **A recommendation.** Mark the answer you recommend.
 - **A lowest-cost option.** Mark the answer that costs the least to build and is least likely to increase scope.
 
 One answer may carry both marks when the answer you recommend is also the lowest-cost option. Every other answer carries neither.
 
-### 2d. Phase 1 — resolve product decisions
+### 2e. Phase 1 — resolve product decisions
 
 Work the product-decision tree using the mechanism described above. Ask the user questions using `AskUserQuestion`, one question per call. Before the first question, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text:
 
@@ -115,9 +127,9 @@ Every question uses the question format above, with answers grounded in what you
 
 Keep asking questions until the phase's frontier is empty — every product decision settled, none silently assumed. After the user answers each question, update the initial draft with every answer before continuing. Each answer must become a decision, behavior, scope boundary, or exact user-visible wording in the relevant existing section.
 
-### 2e. Phase 2 — resolve UI decisions
+### 2f. Phase 2 — resolve UI decisions
 
-**This phase runs only when the feature has a UI.** `ai/guidelines/plan-template.md` defines what counts as a UI and when the plan carries a `UI design` section; apply that definition here rather than a local rule. If the feature has no UI, skip directly to 2f without asking anything here, and leave the section out of the plan as the template requires.
+**This phase runs only when the feature has a UI.** `ai/guidelines/plan-template.md` defines what counts as a UI and when the plan carries a `UI design` section; apply that definition here rather than a local rule. If the feature has no UI, skip directly to 2g without asking anything here, and leave the section out of the plan as the template requires.
 
 UI decisions hang off product decisions, so start this phase only once Phase 1's frontier is empty. Before the first question, open the existing UI surface closest to the feature (the component it extends, or the one it most resembles) and read it, so every option can name a real component, style, or convention rather than a hypothetical one.
 
@@ -133,31 +145,35 @@ Every question uses the question format above, exactly as in Phase 1. Skip a cat
 
 Keep asking questions until the phase's frontier is empty. After each answer, write it into the plan's `UI design` section as a layout, interaction, state, binding, or convention it must follow, in the format the template prescribes for that section. The template also owns what that section states about client-code placement under `ai/guidelines/react-code-organization.md` and about keeping server-owned state on the server per `ai/guidelines/architecture-principles.md` §1; do not restate those rules here.
 
-### 2f. Phase 3 — resolve implementation decisions
+### 2g. Phase 3 — resolve implementation decisions
 
-**If Step 2b said this feature is high complexity**, work the implementation-decision tree with the same mechanism and no limits: one question at a time in the question format above, phrased as a choice between concrete approaches (e.g. "extend module X" vs "add a new module") — never as an open "how should this be built?" — covering where the code should live, which existing mechanism it extends or replaces, and any new protocol message or concurrency concern 2b flagged. Keep going until every implementation decision is settled, updating the draft after each answer as above.
+**If Step 2c said this feature is high complexity**, work the implementation-decision tree with the same mechanism and no limits: one question at a time in the question format above, phrased as a choice between concrete approaches (e.g. "extend module X" vs "add a new module") — never as an open "how should this be built?" — covering where the code should live, which existing mechanism it extends or replaces, and any new protocol message or concurrency concern 2c flagged. Keep going until every implementation decision is settled, updating the draft after each answer as above.
 
-**If all four checks said "no"**, this phase carries no questions to ask: the default is product-only decisions for a small, precedented feature, so skip directly to 2g without asking the user anything here.
+**If all four checks said "no"**, this phase carries no implementation-decision questions of its own: the default is product-only decisions for a small, precedented feature.
 
-### 2g. Improve the answered draft
+**Research suggestions, whatever the complexity.** Whether or not the checks in 2c flagged anything, ask the user about every suggestion 2b sorted as unclear, one question per suggestion, in the question format above. Name the suggestion, what it would simplify or improve, its cost, and its source, and offer concrete answers such as adopting it for the whole feature, adopting it for one named part, or leaving it out. An adopted suggestion becomes a bullet under `Design decisions` with its source URL. A declined one goes under `Out of scope` when the user's reason is worth keeping, and is otherwise dropped.
 
-Run the following tasks **separately and in order**, targeting the exact draft created in 2c. Finish and report the first before starting the second:
+When there are no implementation questions and no unclear suggestions, skip directly to 2h without asking the user anything here.
+
+### 2h. Improve the answered draft
+
+Run the following tasks **separately and in order**, targeting the exact draft created in 2d. Finish and report the first before starting the second:
 
 1. Open `ai/tasks/planning/improve-plan.md` and execute every step in order, except `Step 0 — Prepare the workspace`. Verify every plan claim and referenced code path as that task requires. Complete its verification and give its `Plan / Complexity / Fixed / Open` report before proceeding.
 2. Open `ai/tasks/planning/improve-plan-with-minimalism.md` and execute every step in order, except `Step 0 — Prepare the workspace`. Apply its full ladder to the plan produced by the first task. Complete its verification and give its `Plan / Complexity / Trimmed / Open` report before proceeding.
 
 Both tasks reuse the workspace this task prepared in its own Step 0. Pass the specific draft path to each task's plan-selection step; do not let other drafts change the target. The improvement tasks edit only this plan, which remains in `draft/` throughout both passes. Note any pre-existing unrelated changes when verifying each pass and leave them untouched.
 
-These are two task executions, not a combined review: reading the task files, adding a complexity rating, or making a general improvement pass does not complete either task. For each task, follow its own checklist, reread the resulting plan, and report its actual findings, including `Open` items. Preserve any product decisions from the feature text or the user's answers; carry new product or implementation questions into 2h rather than silently deciding them. A documentation follow-up candidate that `improve-plan.md` reports under `Open` is not a question: leave it in that report and out of 2h, per the documentation scope above. When documentation is the feature's primary focus, `improve-plan.md`'s rule against naming a documentation page does not apply to this plan, and its documentation pages stay in it.
+These are two task executions, not a combined review: reading the task files, adding a complexity rating, or making a general improvement pass does not complete either task. For each task, follow its own checklist, reread the resulting plan, and report its actual findings, including `Open` items. Preserve any product decisions from the feature text or the user's answers; carry new product or implementation questions into 2i rather than silently deciding them. A documentation follow-up candidate that `improve-plan.md` reports under `Open` is not a question: leave it in that report and out of 2i, per the documentation scope above. When documentation is the feature's primary focus, `improve-plan.md`'s rule against naming a documentation page does not apply to this plan, and its documentation pages stay in it.
 
-Before starting 2h, verify both gates:
+Before starting 2i, verify both gates:
 
 - [ ] `improve-plan.md` was run through all applicable steps and its verification and report were completed.
 - [ ] `improve-plan-with-minimalism.md` was then run through all applicable steps and its verification and report were completed.
 
 If either gate is unchecked, finish that task before continuing. If a task cannot be completed, leave the plan in `draft/`, report the incomplete task and why, and stop without promoting the plan, removing the backlog entry, or merging. Never claim a task was completed when any required step was skipped.
 
-### 2h. Final question phase — resolve remaining and new questions
+### 2i. Final question phase — resolve remaining and new questions
 
 **After the plan is complete, another questioning phase occurs in order to resolve any open questions.** Read the improved plan and check this list:
 
@@ -177,21 +193,21 @@ Before moving on, check the completed plan against this list:
 - [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
 - [ ] Every question identified by the final review is resolved in the plan.
 - [ ] Every preservation claim in the plan has a negative assertion and a named test.
-- [ ] Both improvement tasks passed their separate 2g gates before this review.
+- [ ] Both improvement tasks passed their separate 2h gates before this review.
 
-### 2i. Promote the completed plan
+### 2j. Promote the completed plan
 
-Once every box in both 2h checklists is checked, move the plan from `./product/plans/draft/` to `./product/plans/ready/`. It is complete and ready to implement. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
+Once every box in both 2i checklists is checked, move the plan from `./product/plans/draft/` to `./product/plans/ready/`. It is complete and ready to implement. Use plain `mv` (not `git mv`) — the new plan file is not tracked by git yet, and `git mv` fails on an untracked file:
 
 ```bash
 mv ./product/plans/draft/<slug>.md ./product/plans/ready/<slug>.md
 ```
 
-### 2j. Remove the entry from the backlog
+### 2k. Remove the entry from the backlog
 
 Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text. If the feature came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
-### 2k. Merge the completed plan
+### 2l. Merge the completed plan
 
 Once the promoted plan and backlog update are complete, execute `ai/tasks/workspace/merge-change-to-master.md` in full.
 
