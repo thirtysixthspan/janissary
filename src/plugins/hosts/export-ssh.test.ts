@@ -160,6 +160,22 @@ describe('exportSshHosts', () => {
     expect(readFileSync(file, 'utf8')).toBe('Host keep\n');
   });
 
+  it('refuses an oversized target with manual hosts and leaves its bytes unchanged', () => {
+    const { home, root } = directories();
+    writeJson(homeFile(home), { dev: { destination: 'dev.example' } });
+    const manual = ['Host keep', '  HostName keep.example', '', 'Host tail', '  HostName tail.example', ''].join('\n');
+    const file = writeConfig(root, manual + 'x'.repeat(1024 * 1024 + 1));
+    const before = readFileSync(file);
+    vi.mocked(writeSshConfigFile).mockClear();
+
+    expect(exportSshHosts(root, home, file, DISPLAY, vi.fn())).toEqual({
+      ok: false,
+      error: 'Cannot read ssh config ~/.ssh/config: file is too large.',
+    });
+    expect(writeSshConfigFile).not.toHaveBeenCalled();
+    expect(readFileSync(file)).toEqual(before);
+  });
+
   it('reports one, several, and zero hosts with the exact singular, plural, and empty wording', () => {
     const one = directories();
     writeJson(homeFile(one.home), { solo: { destination: 'solo.example' } });

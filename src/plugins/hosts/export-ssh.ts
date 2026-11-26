@@ -32,6 +32,9 @@ export function exportSshHosts(
     return { ok: false, error: `Cannot export hosts: ${catalog.path} is unusable — fix it by hand.` };
   }
   const read = readSshConfigFile(targetPath);
+  if (read.problem !== undefined && read.problem !== 'no such file') {
+    return { ok: false, error: `Cannot read ssh config ${displayPath}: ${read.problem}.` };
+  }
   const found = findManagedSections(read.text);
   if (catalog.hosts.length === 0 && found.ranges.length === 0) {
     return { ok: true, report: 'No hosts to export.' };

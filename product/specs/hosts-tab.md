@@ -84,3 +84,10 @@ Malformed requests never touch the catalog. An unknown verb or a bad `list` give
 `remove` gives `Usage: hosts remove <name>`. A bare or repeated `@`, an empty user, wrong number of
 operands, and any invalid field are refused before reading or writing. Problems reading or saving the
 file are reported without rewording.
+
+### Exporting to an ssh config
+
+An export refuses a target it cannot read rather than writing to it. A config that already exists but
+is too large, or that fails to open for any other reason, is left exactly as it was, with every manual
+host block intact; the refusal names the config and the reason it could not be read. Only a target
+that is genuinely missing is treated as a new file and created with a fresh managed section.
