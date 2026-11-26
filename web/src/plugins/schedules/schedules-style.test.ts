@@ -4,9 +4,9 @@ import schedules from './schedules.css?raw';
 describe('schedules stylesheet', () => {
   it('sizes each column to its content and lets the command column shrink', () => {
     expect(schedules).toContain(
-      'grid-template-columns: auto auto auto auto auto minmax(0, auto) auto',
+      'grid-template-columns: auto auto auto auto auto minmax(0, auto) auto auto',
     );
-    expect(schedules).toContain('grid-template-columns: auto auto auto minmax(0, auto) auto');
+    expect(schedules).toContain('grid-template-columns: auto auto auto minmax(0, auto) auto auto');
   });
 
   it('keeps the headings and the rows on the section grid through subgrid', () => {
@@ -36,6 +36,11 @@ describe('schedules stylesheet', () => {
   it('styles the row trash icon', () => {
     expect(schedules).toContain('.schedules-row-delete {');
     expect(schedules).not.toContain('.schedules-clear');
+  });
+
+  it('styles the pause control like the trash icon and mutes paused rows', () => {
+    expect(schedules).toContain('.schedules-row-pause {');
+    expect(schedules).toContain('.schedules-row.paused { color: var(--muted); }');
   });
 
   it('styles the metadata row buttons like the sessions header, and drops the old actions wrapper', () => {

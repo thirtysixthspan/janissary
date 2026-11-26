@@ -1,15 +1,15 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPause, faPlay, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { ScheduleRow } from '@shared/plugins/schedules/shared';
-import { scheduleRowKey } from './schedules-keys';
+import { canPauseRow, scheduleRowKey } from './schedules-keys';
 
 // One section of the schedules list: a title, its own column-heading row, then its rows. `offset` is the
 // section's first position in the flat, on-screen order, so numbering and selection indexes continue
 // across sections. Each row ends in a trash icon that asks to delete that row's schedule. An empty
 // section renders nothing.
 export function ScheduleSection({
-  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onDelete,
+  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onTogglePause, onDelete,
 }: {
   owner: 'system' | 'tab';
   entries: ScheduleRow[];
@@ -18,6 +18,7 @@ export function ScheduleSection({
   selected: number | null;
   onRowClick: (index: number) => void;
   onRowDoubleClick: (entry: ScheduleRow) => void;
+  onTogglePause: (entry: ScheduleRow) => void;
   onDelete: (entry: ScheduleRow) => void;
 }) {
   if (entries.length === 0) return null;
@@ -29,19 +30,39 @@ export function ScheduleSection({
       </div>
       {entries.map((entry, i) => {
         const index = offset + i;
+        const paused = entry.owner === 'system' && (entry.paused ?? false);
+        const pauseLabel = paused ? `Resume schedule ${entry.id}` : `Pause schedule ${entry.id}`;
         return (
           <div
             key={scheduleRowKey(entry)}
             role="button"
             tabIndex={-1}
             aria-selected={index === selected}
-            className={`schedules-row${entry.recurring ? ' recurring' : ''}${index === selected ? ' selected' : ''}`}
+            className={`schedules-row${entry.recurring ? ' recurring' : ''}${paused ? ' paused' : ''}${index === selected ? ' selected' : ''}`}
             data-index={index}
             onClick={() => onRowClick(index)}
             onDoubleClick={() => onRowDoubleClick(entry)}
           >
             <span className="schedules-num">{index + 1})</span>
             {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}
+            {canPauseRow(entry) ? (
+              <button
+                type="button"
+                className="schedules-row-pause"
+                aria-label={pauseLabel}
+                title={pauseLabel}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (event.detail > 1) return;
+                  onTogglePause(entry);
+                }}
+                onDoubleClick={(event) => event.stopPropagation()}
+              >
+                <FontAwesomeIcon icon={paused ? faPlay : faPause} />
+              </button>
+            ) : (
+              <span className="schedules-row-pause-empty" />
+            )}
             <button
               type="button"
               className="schedules-row-delete"
@@ -69,6 +90,7 @@ function FullHeadings() {
       <span className="schedules-spec">Timing</span>
       <span className="schedules-next">Next Run</span>
       <span>Command</span>
+      <span />
     </>
   );
 }
@@ -80,6 +102,7 @@ function CompactHeadings() {
       <span>Next Run</span>
       <span>Id</span>
       <span>Agent</span>
+      <span />
     </>
   );
 }
