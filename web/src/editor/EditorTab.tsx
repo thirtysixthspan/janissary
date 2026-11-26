@@ -14,6 +14,7 @@ import { useEditorPlugins, type PluginReport } from './plugins/useEditorPlugins'
 import type { EditorPluginHost } from './plugins/host';
 import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
+import { findMatchHighlight } from './find-highlight';
 import { selectionsText } from './model';
 import { keepCaretRowVisible, positionCaretAtQuarter } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
@@ -199,6 +200,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
             active={active && !overlayOpen}
             gutterCh={gutterCh}
             caretRef={caretRef}
+            findMatch={findMatchHighlight(find, state.cursor.line)}
           />
         )}
       </div>
