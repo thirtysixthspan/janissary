@@ -24,11 +24,11 @@ The agent runs the steps the pull request itself offers: the **How to verify** s
 
 After those, it writes up to five more steps of its own for the behavior the pull request changes. It looks for realistic uses the manual steps skip, empty states, error paths, cancelling, repeating an action, and unexpected input. A small change may get fewer than five. Anything the plan defers as out of scope isn't tested.
 
-It adds those steps to the pull request description under **Additional test cases**, after **How to verify**, so you can repeat them by hand. The section names the commit it was written for, and a later run replaces it instead of adding a second one. Nothing else in the description changes.
+It adds those steps to the pull request description under **Additional test cases**, after **How to verify**, so you can repeat them by hand. Each step states the actions to take, the inputs to use, and the result to expect. The section names the commit it was written for, and a later run replaces it instead of adding a second one. Nothing else in the description changes.
 
 ## Which branch runs
 
-The agent builds and starts the app from the pull request's branch, using fresh scratch state that never touches your own app. It installs only the packages where the branch differs from `master`, and only after a supply-chain audit of the branch's lockfile passes. The audit uses Janissary's own checker, not the branch's copy, so a pull request can't change how it gets checked. No install script runs, and what gets installed is exactly the audited lockfile. A branch whose package list and lockfile disagree isn't installed at all. The agent reports it as untestable and records nothing.
+The agent prepares the workspace on `master` first, so dependencies start as `master`'s. It then builds and starts the app from the pull request's branch, using fresh scratch state that never touches your own app. It installs only the packages where the branch differs from `master`, and only after a supply-chain audit of the branch's lockfile passes. A branch with no package diff installs nothing and runs on `master`'s install as it is. The audit uses Janissary's own checker, not the branch's copy, so a pull request can't change how it gets checked. No install script runs, and what gets installed is exactly the audited lockfile. A branch whose package list and lockfile disagree isn't installed at all. The agent reports it as untestable and records nothing.
 
 The agent takes the instructions for preparing the workspace from `master`, and the instructions for building, starting, and stopping the app from the pull request's base branch. Each falls back to Janissary's own copy when that branch has none. It never takes them from the pull request under test. That way a tested pull request can't rewrite its own tester: one that changes how its app starts is still started the old way, and a start failure is reported like any other.
 
@@ -50,7 +50,7 @@ If the branch won't build or start after one retry, every step is reported as no
 
 The agent runs every failing step a second time on a freshly started app. A step that fails both times is a failure. One that fails only once is reported as intermittent, with how often it failed. A step that quits the app on purpose, such as closing the last tab, runs alone on a fresh app after the rest. If an earlier step ends the session by accident, the steps it cut off are run again on a fresh app instead of counted as failures.
 
-Each failure is traced to a likely cause. When the app does what the plan says and the step expects something else, the step is wrong, and the agent records a correction to the description instead.
+Each failure is traced to a likely cause. When the app does what the plan says and the step expects something else, the step is wrong, and the agent records a correction to the description instead. That correction's Proposal names the source line or test assertion that supplies the true value, so you can anchor the fix to the code that proves it.
 
 When the agent writes a step of its own, it runs it even when no plan, spec, or description says what should happen. That step fails only on plainly broken behavior, such as an uncaught error, a hang, a crash, or lost data; anything else is reported as `unspecified — <observed>`, and nothing is filed.
 
