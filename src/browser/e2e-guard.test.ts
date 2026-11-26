@@ -4,7 +4,7 @@ import { WebSocket } from 'ws';
 import { bridgeSession, startE2EGuard, type E2EGuardOptions } from './e2e-guard.js';
 import { E2EClientRefusal, WILL_NOT_RESTART } from './e2e-refusal.js';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
-import { loopbackBindable } from '../http-test-fixture.js';
+import { loopbackReachable } from '../http-test-fixture.js';
 import { fakeSocket, closedWith, type FakeSocket } from '../websocket-test-fixture.js';
 
 // The guard against a stub upstream `ws` server. This is the layer that most needs pinning: it is
@@ -232,9 +232,9 @@ describe('the session bridge while the browser is still starting', () => {
 
 // The listener itself — the bind, the path gate, and the wiring to the bridge — is the one part with
 // no seam above it, because the handshake *is* the behaviour. So these ask first whether this
-// environment will bind a loopback port, and skip where it will not. Where it will they run against a
-// real listener and a real client, with the browser behind it still the recording fake.
-describe.skipIf(!(await loopbackBindable()))('startE2EGuard', () => {
+// environment will bind a loopback port and connect to it, and skip where it will not. Where it will
+// they run against a real listener and a real client, with the browser behind it still the recording fake.
+describe.skipIf(!(await loopbackReachable()))('startE2EGuard', () => {
   // A free port, taken the way the guard's own caller takes one: bind to 0, read what the OS handed
   // out, give it back. The window between closing and the guard binding is the one production lives with.
   async function freePort(): Promise<number> {

@@ -9,7 +9,7 @@ import { AgentRunManager } from './agent/manager.js';
 import { staticFileServer } from './serve-static.js';
 import { saveImageEdit } from './plugins/image/edit.js';
 import { guardRequest } from './request-boundary.js';
-import { fakeRequest, fakeResponse, loopbackBindable } from './http-test-fixture.js';
+import { fakeRequest, fakeResponse, loopbackReachable } from './http-test-fixture.js';
 import type { ServerEvent } from './protocol.js';
 import { messageBus } from './bus.js';
 import { ControllerCore } from './controller.js';
@@ -35,9 +35,9 @@ const waitFor = async (pred: () => boolean, ms = 2000) => {
 
 // A WebSocket upgrade is the handshake and nothing else — there is no seam above it to drive without
 // a socket, and a stubbed `ws` would only be asserting that the stub works. So the cases below ask
-// whether a loopback port can be bound at all, and skip where the sandbox says no rather than
-// weakening what they check. Where a port can be bound they run against a real server.
-const canBindLoopback = await loopbackBindable();
+// whether a loopback port can be bound and connected to, and skip where the sandbox says no rather
+// than weakening what they check. Where the round trip works they run against a real server.
+const canReachLoopback = await loopbackReachable();
 
 // The HTTP half needs no socket at all. The server mounts the static handler behind the request
 // boundary, and these cases depend on that: a malformed path is answered 400 by the boundary rather
@@ -173,7 +173,7 @@ describe('the static file server', () => {
   });
 });
 
-describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
+describe.skipIf(!canReachLoopback)('startServer (WS + RPC + security)', () => {
   it('waits for shell preparation and recovery before starting the scheduler', async () => {
     const order: string[] = [];
     const gate = Promise.withResolvers<{ status: 'failed'; reason: Error }>();

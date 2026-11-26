@@ -112,17 +112,36 @@ export function fakeResponse(): FakeResponse {
   };
 }
 
-// Whether this environment will let a test bind a loopback port at all.
+// Whether this environment will let a test bind a loopback port and then connect to it.
 //
 // Most of what the HTTP routes do can be driven with the recorder above, but a few things genuinely
 // are the socket — a WebSocket upgrade, whether a probe against a bound port is accepted. Those cases
 // are not worth faking: a stub would assert that the stub works. So rather than weaken them, they ask
-// this first, and skip where the sandbox says no. Where a port can be bound they run for real.
-export async function loopbackBindable(): Promise<boolean> {
-  const { createServer } = await import('node:net');
-  return new Promise<boolean>((resolve) => {
-    const probe = createServer();
-    probe.once('error', () => resolve(false));
-    probe.listen(0, '127.0.0.1', () => { probe.close(() => resolve(true)); });
+// this first, and skip where the sandbox says no. Where the round trip works they run for real.
+//
+// Binding alone is not enough to ask about. Some sandboxes allow the bind and then refuse the
+// client's connect with EPERM. A bind-only probe says yes there, and every case fails instead of
+// skipping.
+export async function loopbackReachable(): Promise<boolean> {
+  const { createServer, connect } = await import('node:net');
+  const server = createServer((peer) => { peer.destroy(); });
+  const port = await new Promise<number | undefined>((resolve) => {
+    server.once('error', () => { resolve(undefined); });
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      resolve(address && typeof address !== 'string' ? address.port : undefined);
+    });
   });
+  if (port === undefined) return false;
+
+  // A sandbox that drops the connect rather than refusing it would otherwise hang collection.
+  const reachable = await new Promise<boolean>((resolve) => {
+    const client = connect(port, '127.0.0.1');
+    const settle = (ok: boolean) => { client.destroy(); resolve(ok); };
+    client.setTimeout(1000, () => { settle(false); });
+    client.once('connect', () => { settle(true); });
+    client.once('error', () => { settle(false); });
+  });
+  await new Promise<void>((resolve) => { server.close(() => { resolve(); }); });
+  return reachable;
 }
