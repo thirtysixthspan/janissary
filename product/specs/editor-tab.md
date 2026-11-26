@@ -642,7 +642,8 @@ Saving a synced file writes and confirms the save exactly as an ordinary save do
 flash is not delayed by anything that happens next. After that, the saved file alone is committed
 with the message `sync: <filename>` (the saved file's name); nothing else changed in the shared
 workspace goes into that commit. The shared workspace is then brought up to date with the sync
-branch on `origin`, and the commit is pushed to that branch. If updating with it fails, including because
+branch on `origin`, and the commit is pushed to that branch. The push skips the repository's push
+hooks, so a hook the project defines cannot reject or delay a sync. If updating with it fails, including because
 of a conflicting remote change, the local save and its commit remain in the shared workspace, the
 push is skipped, and the sync enters its error state. A later manual resync retries the update
 without silently replacing the saved content with the remote version. Any failure of this

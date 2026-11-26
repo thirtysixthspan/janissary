@@ -255,10 +255,18 @@ describe('GitSync', () => {
   });
 
   it('surfaces a push failure as an error result', async () => {
-    failPatterns = [['diff', '--cached', '--quiet'], ['push', 'origin', 'HEAD:master']];
+    failPatterns = [['diff', '--cached', '--quiet'], ['push', '--no-verify', 'origin', 'HEAD:master']];
     const sync = new GitSync(makeWorkspace());
     const result = await sync.saveSync('bugs.md');
     expect(result).toEqual({ error: expect.stringContaining('push') });
+  });
+
+  it('pushes with --no-verify so the project\'s push hooks are skipped', async () => {
+    failPatterns = [['diff', '--cached', '--quiet']];
+    const sync = new GitSync(makeWorkspace());
+    expect(await sync.saveSync('bugs.md')).toEqual({ ok: true });
+    const pushCall = calls.find((c) => c.args[0] === 'push');
+    expect(pushCall?.args).toEqual(['push', '--no-verify', 'origin', 'HEAD:master']);
   });
 
   it('passes GH_TOKEN in the environment of the pull and push execFile calls', async () => {
@@ -280,7 +288,7 @@ describe('GitSync sync branch', () => {
     expect(await sync.saveSync('bugs.md')).toEqual({ ok: true });
     const commands = commandLines();
     expect(commands).toContain('pull --rebase --autostash origin main');
-    expect(commands).toContain('push origin HEAD:main');
+    expect(commands).toContain('push --no-verify origin HEAD:main');
     expect(commands.some((c) => c.includes('master'))).toBe(false);
     const pullCall = calls.find((c) => c.args[0] === 'pull');
     const pushCall = calls.find((c) => c.args[0] === 'push');
@@ -294,7 +302,7 @@ describe('GitSync sync branch', () => {
     await sync.saveSync('bugs.md');
     const commands = commandLines();
     expect(commands).toContain('pull --rebase --autostash origin trunk');
-    expect(commands).toContain('push origin HEAD:trunk');
+    expect(commands).toContain('push --no-verify origin HEAD:trunk');
   });
 
   it('falls back to master for a detached worktree with no origin/HEAD', async () => {
@@ -303,7 +311,7 @@ describe('GitSync sync branch', () => {
     await sync.saveSync('bugs.md');
     const commands = commandLines();
     expect(commands).toContain('pull --rebase --autostash origin master');
-    expect(commands).toContain('push origin HEAD:master');
+    expect(commands).toContain('push --no-verify origin HEAD:master');
   });
 
   it('resolves the branch once for every later cycle on the same worktree', async () => {
