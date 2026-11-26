@@ -424,6 +424,37 @@ describe('SystemScheduleManager mutations', () => {
     void controller.shutdown();
   });
 
+  it('pauseByName pauses every same-id recurring entry and leaves other ids untouched', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-name-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const first = system.add({
+      ...schedule('morning', 'ignored'), command: 'script first', script: 'first', spec: 'every 1m',
+      recurring: true, intervalMs: 60_000, nextRun: 1_800_000_000_000,
+    });
+    const second = system.add({
+      ...schedule('morning', 'ignored'), command: 'script second', script: 'second', spec: 'every 1m',
+      recurring: true, intervalMs: 60_000, nextRun: 1_800_000_006_000,
+    });
+    const other = system.add({
+      ...schedule('evening', 'ignored'), command: 'script other', script: 'other', nextRun: 1_800_000_012_000,
+    });
+    if (!first.ok || !first.entry || !second.ok || !second.entry || !other.ok || !other.entry) {
+      throw new Error('schedules were not added');
+    }
+
+    expect(system.pauseByName('morning')).toEqual({ ok: true });
+
+    const expected = [
+      { ...first.entry, paused: true },
+      { ...second.entry, paused: true },
+      other.entry,
+    ];
+    expect(system.list()).toEqual(expected);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: expected } });
+    void controller.shutdown();
+  });
+
   it('does not fire a paused due entry on tick', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-tick-'));
     const scripts = path.join(root, '.janissary', 'scripts');
@@ -510,6 +541,28 @@ describe('SystemScheduleManager mutations', () => {
     expect(system.runtime?.queue).toEqual([]);
     expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [resumed] } });
     await controller.shutdown();
+  });
+
+  it('resumeByName clears the paused flag, sets a future nextRun, and saves the resumed entry', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-resume-name-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), command: 'script morning', script: 'morning', spec: 'every 1m',
+      recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(system.pauseByName('morning')).toEqual({ ok: true });
+
+    const before = Date.now();
+    expect(system.resumeByName('morning')).toEqual({ ok: true });
+    const resumed = system.list()[0];
+    expect(resumed.paused).toBeUndefined();
+    expect(resumed.nextRun).toBeGreaterThan(before);
+    expect(resumed.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [resumed] } });
+    void controller.shutdown();
   });
 
   it('does not call save when pausing an already-paused or resuming an active entry', () => {
