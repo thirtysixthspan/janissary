@@ -95,3 +95,21 @@ export function runSshIntent(
   const outcome = exportSshHosts(root, home, target.path, target.display, notify);
   report(mode, capabilities, notify, outcome.ok ? outcome.report : outcome.error, !outcome.ok);
 }
+
+export function runImportIntent(
+  capabilities: TabPluginServerCapabilities,
+  notify: SshIntentNotify,
+  publish: PublishHosts,
+): null {
+  runSshIntent({ kind: 'import', operand: '' }, capabilities, notify, publish, 'intent');
+  return null;
+}
+
+export function runExportIntent(
+  capabilities: TabPluginServerCapabilities,
+  notify: SshIntentNotify,
+  publish: PublishHosts,
+): null {
+  runSshIntent({ kind: 'export', operand: '' }, capabilities, notify, publish, 'intent');
+  return null;
+}

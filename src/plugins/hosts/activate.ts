@@ -15,7 +15,7 @@ import {
   type DeleteHostIntent, type HostRow, type HostsPayload, type OpenIntent,
   type SaveHostIntent, type SaveHostResult,
 } from './shared.js';
-import { runSshIntent } from './ssh-intents.js';
+import { runExportIntent, runImportIntent, runSshIntent } from './ssh-intents.js';
 
 const INSTANCE_KEY = 'hosts';
 const TAB_TITLE = 'hosts';
@@ -114,6 +114,24 @@ function deleteRow(
   return null;
 }
 
+function importRows(
+  _tab: HostsPayload, _payload: Record<string, never>, capabilities: TabPluginServerCapabilities,
+): null {
+  originRoot(capabilities);
+  return runImportIntent(
+    capabilities, readNotify(capabilities, true), (read) => publish(capabilities, payloadOf(read)),
+  );
+}
+
+function exportRows(
+  _tab: HostsPayload, _payload: Record<string, never>, capabilities: TabPluginServerCapabilities,
+): null {
+  originRoot(capabilities);
+  return runExportIntent(
+    capabilities, readNotify(capabilities, true), (read) => publish(capabilities, payloadOf(read)),
+  );
+}
+
 function dispatchMessage(name: string, result: DispatchResult): string | undefined {
   if (typeof result.result === 'string' && result.result.length > 0) return result.result;
   if (result.output.length > 0) return result.output;
@@ -146,6 +164,8 @@ export function activate(): TabPluginActivation {
     command: runCommand,
     intent: defineIntents('hosts', isHostsPayload, {
       refresh: { payload: isRefreshIntent, run: refresh },
+      import: { payload: isRefreshIntent, run: importRows },
+      export: { payload: isRefreshIntent, run: exportRows },
       open: { payload: isOpenIntent, run: openRow },
       save: { payload: isSaveHostIntent, run: save },
       delete: { payload: isDeleteHostIntent, run: deleteRow },
