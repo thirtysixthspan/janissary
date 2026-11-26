@@ -70,7 +70,7 @@ Four kinds of file are skipped. Files larger than 2 MB are too large for the edi
 
 The **Files to include** and **Files to exclude** fields across the top narrow that set. Each takes glob patterns separated by commas, such as `*.md, docs`, and editing either one reruns the search.
 
-A pattern with no `/` in it matches at any depth, so `*.md` finds Markdown files in every folder. A pattern with a `/` is anchored to the project root, so `src/*.ts` covers `src/` and nothing below it. A plain name that isn't a wildcard also names a folder and everything inside it, so `docs` works like `docs/**`. A leading `./` or a trailing `/` changes nothing.
+A pattern with no `/` in it matches at any depth, so `*.md` finds Markdown files in every folder. A pattern with a `/` is anchored to the project root, so `src/*.ts` covers `src/` and nothing below it. A plain name that isn't a wildcard also names a folder and everything inside it, so `docs` works like `docs/**`. A leading `./` or a trailing `/` changes nothing. Patterns are case-sensitive on every platform, so `*.TS` doesn't match `a.ts` even on a case-insensitive disk.
 
 An empty include searches everything, and an empty exclude removes nothing. When both name a file, the exclude wins. A pattern that matches nothing narrows the search to nothing. Because the comma always separates patterns, you can't use a brace list like `{a,b}`.
 
