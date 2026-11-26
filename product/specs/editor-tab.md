@@ -561,6 +561,18 @@ buffer; if the query was typed and no row was navigated to, Return first moves t
 highlighted (first ranked) match. With no matches, Return just closes the overlay. The cursor move is not an edit: it never dirties the buffer and never becomes
 an undo step, so an undo right after a jump undoes the last real edit.
 
+A match too close to the end of the file to reach the quarter mark still gets there, rather than
+staying at the bottom of the view behind the overlay. The buffer scrolls past its last line into
+empty room below it, and that room is exactly as tall as the preview needs: none at all when the
+file's own lines are enough. The room has no gutter number and no text, a press in it does nothing,
+and it never dirties the buffer. It stays when the overlay closes, so closing still leaves the view
+where it was. Scrolling back up gives it back: the room shrinks to the part the view still reaches
+into and is gone once the last line is back at or above the bottom edge. Only a find preview adds
+it; typing, cursor movement, and ordinary scrolling never do, and switching away from the tab and
+back keeps whatever room the restored scroll position needs. The run-out is an empty element after
+the buffer's rows, grown by `positionCaretAtQuarter` and trimmed on body scroll by `trimRunout` in
+`web/src/editor/find-runout.ts`.
+
 While the cursor sits on the highlighted row's line, the buffer behind the overlay highlights that
 row's matched characters the same way the overlay row emphasizes them: the accent background with
 the text in the background color, over any syntax color. Only the highlighted row's match is painted,

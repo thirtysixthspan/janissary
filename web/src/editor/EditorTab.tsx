@@ -16,7 +16,8 @@ import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
 import { findMatchHighlight } from './find-highlight';
 import { selectionsText } from './model';
-import { keepCaretRowVisible, positionCaretAtQuarter } from './scroll';
+import { keepCaretRowVisible } from './scroll';
+import { useFindPreviewScroll } from './useFindPreviewScroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { LineFind } from '../shared/line-find/LineFind';
 import { handleSuggestPillClick } from './handleSuggestPillClick';
@@ -76,11 +77,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   saveRef.current = file.save;
   useEditorLineJump(editor, api, caretRef);
   const find = useLineFind(state?.lines ?? null, active);
-  useEffect(() => {
-    const result = find.results[find.selected];
-    if (!find.findOpen || !result || state?.cursor.line !== result.index || !bodyRef.current || !caretRef.current) return;
-    positionCaretAtQuarter(bodyRef.current, caretRef.current);
-  }, [find.findOpen, find.results, find.selected, state?.cursor.line]);
+  const findPreview = useFindPreviewScroll(bodyRef, caretRef, find, state?.cursor.line);
   const pluginKey = useEditorPlugins(
     client, editor.url, api, editor.name, pluginHost, pluginReports,
   );
@@ -95,7 +92,8 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
 
   useEditorDrop(tab.label, visible, textareaRef, api.insert, api.paste);
 
-  const onBodyScroll = useEditorScrollRetention(bodyRef, visible);
+  const retainScroll = useEditorScrollRetention(bodyRef, visible);
+  const onBodyScroll = () => { retainScroll(); findPreview.onScroll(); };
 
   const loaded = state !== null;
   // While the metadata row's rename session is open (a default-named new file auto-starts one), the
@@ -203,6 +201,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
             findMatch={findMatchHighlight(find, state.cursor.line)}
           />
         )}
+        <div className="editor-find-runout" ref={findPreview.runoutRef} aria-hidden="true" />
       </div>
       {file.conflictOpen && (
         <OverwriteConflictDialog
