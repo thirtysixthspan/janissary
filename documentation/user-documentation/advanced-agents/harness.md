@@ -482,9 +482,13 @@ A saved host can carry a user, a port and a remote working directory. The port i
 
 The new tab joins the group, color and working directory of the tab you typed the command in, even when a different tab has focus as it opens. That tab's transcript keeps the line you typed exactly as entered, including a leading `/`, while the connection details come from the saved host. Opening a host from the Hosts tab writes no transcript line, since that tab has none; an immediate launch error goes back to the caller instead of a log.
 
+The connections panel shows `ssh:<saved name>` for that tab, such as `ssh:lab` instead of the address it connects to. That name is fixed when the tab opens: editing the saved host later doesn't change what the panel shows. See [Connections](/user-documentation/command-bar/connections) for the panel rows.
+
 ### Recording an SSH session
 
 Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. It records terminal output and resizes, without input events. Text echoed by the remote program is still output. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels. The tab's own [recording flag](#the-recording-flag) opens it without naming the file.
+
+There's no per-tab switch for SSH recording. Only `"logEnabled": false` in `.janissary/config.json` turns it off, and a restart is needed before new tabs follow it. Those tabs write no recording, and their [recording flag](#the-recording-flag) reads `not recording`. See [Recordings](#recordings) for how long files are kept.
 
 That error output a failed connection takes with it does reach the recording: `ssh` prints it before exiting, so it's captured before the tab closes.
 
