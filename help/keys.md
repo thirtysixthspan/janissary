@@ -94,6 +94,18 @@ View clauses restore only the named parts of a local tree; remote view clauses a
 | `,` | Previous recorded moment |
 | `]` / `[` | Faster / slower |
 
+**Schedules tab controls** (active only while the schedules tab is the visible one and its list has focus):
+
+| Key | Action |
+| --- | ------ |
+| `↑` / `↓` | Move the selection one row up / down |
+| `Home` / `End` | Select the first / last row |
+| `Enter` | Switch to the tab that owns the selected row |
+| `Backspace` / `Delete` | Open the confirmation dialog to delete the selected schedule |
+| `Space` or `p` | Play / pause |
+
+On a selected recurring system row, Play means resume and Pause means pause: `Space` or `p` pauses the row when it is active and resumes it when it is paused, the same control the row's icon offers. One-shot system rows and tab-owned rows have no such control, and the keys do nothing when no row is selected.
+
 **Editor tab controls** (active only while an editor tab is focused):
 
 | Key | Action |
