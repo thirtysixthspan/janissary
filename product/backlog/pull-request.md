@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's command import report in the verification walkthrough, which drops the skipped clause the shared fixture produces.
-
-Existing Issue: How to verify step 2 expects the transcript note `Imported 1 host from ~/.ssh/config.` from the shared Setup fixture, while that fixture skips two aliases so the command actually notes `Imported 1 host from ~/.ssh/config; skipped 2.`. Severity: 5/10
-
-Existing Risk: 5/10 - A reviewer following the walkthrough sees a different transcript line than the one documented and can conclude the skip counting or the clash rule is broken when the implementation is correct.
-
-Proposal Risk: 2/10 - The documented command path and the button path then agree with the summary formatter and its test, leaving only the unchanged implementation to maintain.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2242 "correct the command import report in the verification walkthrough". In the pull request body's How to verify section, step 2, change the Expect transcript note to `Imported 1 host from ~/.ssh/config; skipped 2.` so it matches the shared Setup fixture, where `bad` is skipped for its invalid user and the saved `web2` is skipped as a clash. Keep the step's other assertions, the identical report in step 1, and every other paragraph of the description byte for byte; apply the body edit with gh pr edit --body-file only after the branch commit is pushed, using the body-edit route in ai/tasks/feature/work-pull-request-issue.md. Verify by reading the step against importSummary in src/plugins/hosts/import-ssh.ts and the case in src/plugins/hosts/import-ssh.test.ts that asserts `Imported 1 host from ~/.ssh/config; skipped 2.`, and confirm the pull request stays OPEN on the same head branch. No source or test file changes.
-
-
 * Handle the unhandled dangling symlink export target so the link survives and the file it names is created.
 
 Existing Issue: Exporting to a symlink whose target does not exist yet replaces the link with a regular file instead of writing through to the file it points at. Severity: 4/10
