@@ -1,3 +1,5 @@
+import { Minimatch } from 'minimatch';
+
 export type SshSetting = { keyword: string; value: string };
 
 export type HostBlock = { kind: 'host'; names: string[]; settings: SshSetting[] };
@@ -70,4 +72,118 @@ export function tokenizeSshConfig(text: string): SshConfigBlock[] {
     }
   }
   return blocks;
+}
+
+export type EffectiveAlias = {
+  name: string;
+  hostName: string;
+  user: string;
+  port: string;
+  invalidToken: string;
+};
+
+function isLiteralName(name: string): boolean {
+  return name !== '' && !name.includes('*') && !name.includes('?') && !name.startsWith('!');
+}
+
+type Pattern = { matcher: Minimatch; negated: boolean };
+
+function compilePatterns(names: string[]): Pattern[] {
+  const patterns: Pattern[] = [];
+  for (const name of names) {
+    const negated = name.startsWith('!');
+    const pattern = negated ? name.slice(1) : name;
+    patterns.push({
+      matcher: new Minimatch(pattern, {
+        nocase: true,
+        dot: true,
+        nobrace: true,
+        noext: true,
+        nonegate: true,
+      }),
+      negated,
+    });
+  }
+  return patterns;
+}
+
+function blockMatches(patterns: Pattern[], alias: string): boolean {
+  let positive = false;
+  let negative = false;
+  for (const pattern of patterns) {
+    if (!pattern.matcher.match(alias)) continue;
+    if (pattern.negated) negative = true;
+    else positive = true;
+  }
+  return positive && !negative;
+}
+
+function expandValue(value: string, alias: string, hostName: boolean): { value: string; invalidToken: string } {
+  let result = '';
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index] ?? '';
+    if (char !== '%') {
+      result += char;
+      continue;
+    }
+    const next = value[index + 1] ?? '';
+    if (hostName && (next === '%' || next === 'h')) {
+      result += next === '%' ? '%' : alias;
+      index++;
+    } else {
+      return { value, invalidToken: next === '' ? '%' : `%${next}` };
+    }
+  }
+  return { value: result, invalidToken: '' };
+}
+
+function assignValues(alias: EffectiveAlias, blocks: SshConfigBlock[]): void {
+  let hostName: string | undefined;
+  let user: string | undefined;
+  let port: string | undefined;
+  for (const block of blocks) {
+    if (block.kind !== 'host' || !blockMatches(compilePatterns(block.names), alias.name)) continue;
+    for (const setting of block.settings) {
+      switch (setting.keyword) {
+        case 'hostname': {
+          hostName ??= setting.value;
+          break;
+        }
+        case 'user': {
+          user ??= setting.value;
+          break;
+        }
+        case 'port': {
+          port ??= setting.value;
+          break;
+        }
+      }
+    }
+  }
+  const expanded = expandValue(hostName ?? '', alias.name, true);
+  const userExpanded = expandValue(user ?? '', alias.name, false);
+  const portExpanded = expandValue(port ?? '', alias.name, false);
+  alias.hostName = expanded.value;
+  alias.user = userExpanded.value;
+  alias.port = portExpanded.value;
+  alias.invalidToken = expanded.invalidToken || userExpanded.invalidToken || portExpanded.invalidToken;
+}
+
+export function readEffectiveAliases(text: string): EffectiveAlias[] {
+  const blocks = tokenizeSshConfig(text);
+  const aliases: EffectiveAlias[] = [];
+  const seen = new Set<string>();
+  for (const block of blocks) {
+    if (block.kind !== 'host') continue;
+    for (const name of block.names) {
+      const key = name.toLowerCase();
+      if (!isLiteralName(name) || seen.has(key)) continue;
+      seen.add(key);
+      aliases.push({ name, hostName: '', user: '', port: '', invalidToken: '' });
+    }
+  }
+  for (const alias of aliases) {
+    assignValues(alias, blocks);
+  }
+  return aliases;
 }
