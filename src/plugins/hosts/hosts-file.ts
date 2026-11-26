@@ -84,12 +84,18 @@ function reportProblems(consulted: Consulted[], notify: HostsNotify): void {
   }
 }
 
-export function readHostsFile(root: string, home: string, notify?: HostsNotify): HostsRead {
+export function catalogPaths(root: string, home: string): { project?: string; home: string } {
   const homePath = path.join(home, '.janissary', FILE_NAME);
+  return root === ''
+    ? { home: homePath }
+    : { project: path.join(root, '.janissary', FILE_NAME), home: homePath };
+}
+
+export function readHostsFile(root: string, home: string, notify?: HostsNotify): HostsRead {
+  const { project: projectPath, home: homePath } = catalogPaths(root, home);
   const consulted: Consulted[] = [];
   let effective: { filePath: string; hosts: SavedHost[] } | undefined;
-  if (root !== '') {
-    const projectPath = path.join(root, '.janissary', FILE_NAME);
+  if (projectPath !== undefined) {
     const state = readAt(projectPath);
     consulted.push({ filePath: projectPath, state });
     if (state.kind === 'usable') effective = { filePath: projectPath, hosts: state.hosts };

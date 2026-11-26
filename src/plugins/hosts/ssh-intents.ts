@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
 import type { CatalogParse } from './catalog-commands.js';
 import { exportSshHosts } from './export-ssh.js';
-import { readHostsFile, type HostsRead } from './hosts-file.js';
+import { catalogPaths, readHostsFile, type HostsRead } from './hosts-file.js';
 import { importSshHosts } from './import-ssh.js';
 import { resolveSshConfigTarget } from './ssh-config-target.js';
 
@@ -37,10 +37,9 @@ function realPath(filePath: string): string {
 
 function isCatalogPath(targetPath: string, root: string, home: string): boolean {
   const resolved = realPath(targetPath);
-  return [
-    path.join(root, '.janissary', 'hosts.json'),
-    path.join(home, '.janissary', 'hosts.json'),
-  ].some((catalog) => realPath(catalog) === resolved);
+  const { project, home: catalogHome } = catalogPaths(root, home);
+  return [project, catalogHome]
+    .some((catalog) => catalog !== undefined && realPath(catalog) === resolved);
 }
 
 function catalogRefusal(kind: SshIntentVariant['kind'], display: string): string {
