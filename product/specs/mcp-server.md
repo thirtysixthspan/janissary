@@ -18,6 +18,7 @@ Validation runs before a panel opens. Each failure returns an MCP tool error res
 - `kind must be "ask" or "approve".` for an unknown kind.
 - `question must not be empty.` for an empty question.
 - `approve needs at least one option.` for an `approve` with no options.
+- `options must be a list of strings.` when any option is not a string, for either kind.
 
 A question raised on a tab that is not focused marks that tab unread and records `Question from <tab>` as well, just as an ACP agent's question does. The panel, its ordering, and those notifications are described in [[agent-questions]]; the unread badge is described in [[tabs]].
 
@@ -52,5 +53,7 @@ A launch with `--no-mcp` or `--offline`, a launch while the server is not runnin
 ### Remote relay
 
 A remote harness gets its MCP endpoint on the remote host, inside that session's `janus remote-serve`, without naming a remote port or setting up an ssh forward. The far side mints its own bearer token and gives that endpoint and token to the harness in its launch environment; the local server's persisted token never leaves the local machine. The endpoint serves the same `question` tool, but the call travels back to the local Janissary over the session's existing connection, where the question is put to the human and the answer returns to the remote harness. A remote harness can only run commands on the local process (see [[remote-server]]).
+
+The local side checks every relayed call itself before it opens a panel, because it can't rely on the far side's validation. A call naming any tool other than `question` fails with the tool error `Unknown MCP tool "<tool>".`. A `question` call's arguments get the same validation, with the same exact texts, as a local call. That includes a non-string question, which fails with `question must not be empty.`, and a non-string `tab`, which is looked up as the empty name and fails with `No tab named "".`. A refused call opens no panel and claims no call id, so a later valid call with the same id is put to the human normally.
 
 Calls hold through a lost link for a 60-second grace window, whatever the reason, and the window starts when the link drops even for a call already delivered to the local side and still waiting for an answer; a deliberate Detach gives the far side no signal, so it looks like any other link loss. A call made while the link is down waits like one already in flight. If the link returns inside the window, every waiting call is re-sent and answered; a re-sent call attaches to its existing question rather than opening a second one. If the window ends with no link, every waiting call fails with the tool error `Janissary is not connected.` and its local question is withdrawn, with the same panel, notification and next-question behavior as a harness cancellation. A call made after that fails at once with the same text until a link returns. A refused call is never sent over the session and leaves no question behind for a later attach. See [[remote-server]] for the frames and session lifecycle.

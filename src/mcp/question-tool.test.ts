@@ -20,6 +20,12 @@ describe('validateQuestionArgs', () => {
     });
   });
 
+  it.each(['approve', 'ask'])('rejects a non-string option for %s with the exact error text', (kind) => {
+    expect(validateQuestionArgs({ tab: 'build', kind, question: 'Deploy?', options: ['Staging', null] })).toEqual({
+      error: 'options must be a list of strings.',
+    });
+  });
+
   it('declares the exact no-tab error text produced after tab resolution', () => {
     expect(QUESTION_ERROR.noTab('build')).toBe('No tab named "build".');
   });

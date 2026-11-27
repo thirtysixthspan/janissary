@@ -156,6 +156,42 @@ describe('createMcpRelay', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { label: 'an unknown tool', tool: 'shell', args: { tab: 'asker', kind: 'ask', question: 'Which port?' }, text: 'Unknown MCP tool "shell".' },
+    { label: 'a non-string question', tool: 'question', args: { tab: 'asker', kind: 'ask', question: { text: 'Which port?' } }, text: 'question must not be empty.' },
+    { label: 'a non-string option', tool: 'question', args: { tab: 'asker', kind: 'approve', question: 'Deploy?', options: ['Yes', 2] }, text: 'options must be a list of strings.' },
+    { label: 'an unknown kind', tool: 'question', args: { tab: 'asker', kind: 'maybe', question: 'Deploy?' }, text: 'kind must be "ask" or "approve".' },
+  ])('refuses $label without registering and lets a later valid call with the same id register', async ({ tool, args, text }) => {
+    const { relay, call, register, send, answer } = fixture();
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool, args: JSON.stringify(args) });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({ type: 'mcp-result', call: 'call-1', text, isError: true });
+    expect(register).not.toHaveBeenCalled();
+
+    send.mockClear();
+    call('call-1');
+    expect(answer('3000')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: '3000', isError: false,
+    }));
+    expect(register).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers a non-string tab as the empty name without registering', async () => {
+    const { relay, register, send } = fixture();
+
+    relay.handle({
+      type: 'mcp-call', call: 'call-1', tool: 'question',
+      args: JSON.stringify({ tab: 7, kind: 'ask', question: 'Which port?' }),
+    });
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: 'No tab named "".', isError: true,
+    }));
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it('clears the map on channel close so a re-send registers a fresh question', () => {
     const { call, register, channel } = fixture();
     call('call-1');

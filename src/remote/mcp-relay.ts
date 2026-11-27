@@ -1,12 +1,26 @@
 import type { Managers } from '../managers.js';
 import { createLocalExecutor } from '../mcp/executor.js';
-import type { ToolResult } from '../mcp/tools.js';
+import { validateQuestionArgs, type QuestionArgs } from '../mcp/question-tool.js';
+import { TOOLS, unknownToolError, type ToolResult } from '../mcp/tools.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
 type McpCallFrame = Extract<ServerFrame, { type: 'mcp-call' }>;
 type McpCancelFrame = Extract<ServerFrame, { type: 'mcp-cancel' }>;
 
 type Pending = { result?: ToolResult; controller?: AbortController };
+
+function decodeCall(frame: McpCallFrame): QuestionArgs | { error: string } {
+  const malformed = { error: `Malformed MCP arguments: ${frame.args}` };
+  let args: unknown;
+  try {
+    args = JSON.parse(frame.args);
+  } catch {
+    return malformed;
+  }
+  if (typeof args !== 'object' || args === null || Array.isArray(args)) return malformed;
+  if (TOOLS.every((tool) => tool.name !== frame.tool)) return { error: unknownToolError(frame.tool) };
+  return validateQuestionArgs(args as Record<string, unknown>);
+}
 
 export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) => void) {
   const execute = createLocalExecutor(managers);
@@ -23,15 +37,9 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
         if (existing.result !== undefined) answer(frame.call, existing.result);
         return;
       }
-      let args: Record<string, unknown>;
-      try {
-        args = JSON.parse(frame.args) as Record<string, unknown>;
-      } catch {
-        answer(frame.call, { text: `Malformed MCP arguments: ${frame.args}`, isError: true });
-        return;
-      }
-      if (typeof args !== 'object' || args === null || Array.isArray(args)) {
-        answer(frame.call, { text: `Malformed MCP arguments: ${frame.args}`, isError: true });
+      const args = decodeCall(frame);
+      if ('error' in args) {
+        answer(frame.call, { text: args.error, isError: true });
         return;
       }
       const controller = new AbortController();

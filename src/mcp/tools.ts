@@ -21,6 +21,8 @@ export type ToolDefinition = {
   inputSchema: z.ZodTypeAny;
 };
 
+export const unknownToolError = (tool: string): string => `Unknown MCP tool "${tool}".`;
+
 export const TOOLS: readonly ToolDefinition[] = [
   {
     name: 'question',

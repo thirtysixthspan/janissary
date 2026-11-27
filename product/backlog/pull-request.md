@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the security gap where the local relay runs any remote `mcp-call` as a question without checking the tool name or re-validating its arguments.
-
-Existing Issue: The local relay hands every decoded `mcp-call` to the local question executor whatever its `tool` field says, and the executor casts the parsed arguments to `QuestionArgs` without checking that `tab`, `kind`, `question` and `options` have the right types, so the only validation a remote call ever gets is the far side's own. Severity: 4/10
-
-Existing Risk: 3/10 - A far-side process that sends a crafted frame (an object as the question, numbers as options, an unknown kind, or a future tool name) reaches `Questions.register` and the wire `PendingQuestionView` unchecked, which can break the local question panel's rendering and will silently run a question when a second registry tool is added.
-
-Proposal Risk: 1/10 - The local process validates what it executes, so the remaining exposure is only whatever the shared validator itself misses, which a test on each rejected shape would show.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "validate the tool name and arguments of relayed mcp-call frames on the local side before executing them". In `src/remote/mcp-relay.ts`, after the existing non-object check in `handle`, refuse a `frame.tool` that is not the name of an entry in `TOOLS` from `src/mcp/tools.ts` with an `isError` `mcp-result` (for example `Unknown MCP tool "<tool>".`) and register nothing, then run `validateQuestionArgs` from `src/mcp/question-tool.ts` on the parsed object and answer its `error` text as an `isError` result, again before any `AbortController` or pending entry is created, so a rejected call leaves its id unclaimed exactly as the malformed-arguments path does. Tighten `validateQuestionArgs` so every `options` element must be a string (answered with the existing `approve needs at least one option.` text or a new exact text added to `QUESTION_ERROR` and `product/specs/mcp-server.md`), since relayed arguments never pass through the SDK's zod schema, while a non-string `tab` keeps resolving as the empty name and returning `No tab named "".`; the local HTTP path keeps its current behavior because zod already enforces those types there. Add cases to `src/remote/mcp-relay.test.ts` for an unknown tool, a non-string question, a non-string option and an unknown kind, each asserting the exact error text, no `register` call, and that a later valid call with the same id registers; the existing malformed-argument and re-send tests in that file and the four exact-text tests in `src/mcp/question-tool.test.ts` must keep passing unchanged.
-
-
 * Handle frames that arrive while an MCP harness spawn is still waiting for its endpoint to bind, so a kill, input, resize or shutdown in that window is not lost.
 
 Existing Issue: `RemoteProcesses.spawn` now awaits `FarSideMcp.launch()` before it inserts the entry, so a `kill`, `input` or `resize` for that id, or a `killAll` from shutdown, that is processed during the await finds no entry and is dropped, and the PTY is spawned afterwards anyway; the duplicate-id guard is also checked only before the await. Severity: 4/10
