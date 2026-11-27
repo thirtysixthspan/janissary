@@ -59,6 +59,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.questions = new Questions((label, pending) => {
     messageBus.emit('state', { type: 'dirty' });
     if (pending && managers.tab.cur().label !== label) {
+      managers.tab.markUnread(label);
       notify(managers, 'question', label, undefined, { openTab: label });
     }
   });

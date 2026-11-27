@@ -6,7 +6,7 @@ import { createController, type Controller } from '../controller.js';
 import { openNotificationsTab } from '../notifications/tab.js';
 import { TabPluginHost } from '../plugins/host.js';
 import { SystemShellManager } from '../system-shell.js';
-import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { seedRootTab, seedTestTab } from '../tab/root-tab-test-fixture.js';
 import { AcpSessionRecords } from '../acp-records/manager.js';
 import { ACP_RECORD_RETENTION_MS } from '../acp-records/model.js';
 import { AcpRecordStore } from '../acp-records/store.js';
@@ -56,6 +56,25 @@ describe('createManagers question-pending wiring', () => {
     openNotificationsTab(c.managers);
     c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
     void c.managers.questions.register({ tab: 'janus', kind: 'ask', question: 'ok?' });
+    expect(feedText(c)).not.toContain('Question from janus');
+  });
+
+  it('marks a background tab unread when a question becomes pending and still notifies', () => {
+    const c = makeController();
+    seedTestTab(c.managers.tab, 'bob');
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is the background tab
+    void c.managers.questions.register({ tab: 'bob', kind: 'ask', question: 'ok?' });
+    expect(c.view().find((t) => t.label === 'bob')?.hasUnread).toBe(true);
+    expect(feedText(c)).toContain('Question from bob');
+  });
+
+  it('does not mark the active tab unread when a question becomes pending for it', () => {
+    const c = makeController();
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
+    void c.managers.questions.register({ tab: 'janus', kind: 'ask', question: 'ok?' });
+    expect(c.view().find((t) => t.label === 'janus')?.hasUnread).toBe(false);
     expect(feedText(c)).not.toContain('Question from janus');
   });
 });
