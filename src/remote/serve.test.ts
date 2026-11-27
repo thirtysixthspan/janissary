@@ -9,6 +9,7 @@ import { loadProjectTokens } from '../project/tokens.js';
 import { loadGitIdentity, getGitIdentity } from '../git/identity.js';
 import { spawnPty } from '../pty.js';
 import { RemoteServer } from './serve.js';
+import { FarSideMcp } from './serve-mcp.js';
 import { wireShutdown, CHANNEL_SIGNALS } from './serve-start.js';
 import { WorkspaceManager } from '../workspace/manager.js';
 import { RemoteChannel } from './channel/index.js';
@@ -570,11 +571,13 @@ describe('RemoteServer', () => {
   });
 
   it('reports a failed shared MCP endpoint to a later harness before exiting it', async () => {
+    const probe = new FarSideMcp(vi.fn(), 'probe');
+    const port = Number(new URL(probe.launch().url).port);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    probe.dispose();
+    cryptoMock.port = port;
     const blocker = createServer();
-    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', () => resolve()));
-    const address = blocker.address();
-    if (address === null || typeof address === 'string') throw new Error('expected a bound blocker port');
-    cryptoMock.port = address.port;
+    await new Promise<void>((resolve) => blocker.listen(port, '127.0.0.1', () => resolve()));
     const { server, frames, exit } = makeServer();
     try {
       server.receive(`${encodeFrame({ type: 'provision', label: 'mcp-collision' })}\n`);
