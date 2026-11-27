@@ -2,6 +2,8 @@ import type { Managers } from '../managers.js';
 import { Questions } from '../questions.js';
 import type { Tab } from '../tab/types.js';
 import { describe, expect, it, vi } from 'vitest';
+import { RemoteChannel } from './channel/index.js';
+import type { ChannelTransport } from './channel/types.js';
 import { createMcpRelay } from './mcp-relay.js';
 
 function fixture() {
@@ -17,12 +19,21 @@ function fixture() {
   } as unknown as Managers;
   const send = vi.fn();
   const relay = createMcpRelay(managers, send);
+  const transport: ChannelTransport = { id: 'pty-1', write: vi.fn(), kill: vi.fn() };
+  const channel = new RemoteChannel(transport, {
+    onTerminalData: vi.fn(),
+    onAttached: vi.fn(),
+    onFrame: vi.fn(),
+    onError: vi.fn(),
+    onClose: vi.fn(),
+    onFinalClose: () => relay.clear(),
+  });
   const call = (id: string, question = 'Which port?') => relay.handle({
     type: 'mcp-call', call: id, tool: 'question',
     args: JSON.stringify({ tab: 'asker', kind: 'ask', question }),
   });
   const answer = (text: string) => questions.answer('asker', questions.pendingFor('asker')!.id, text);
-  return { questions, register, send, relay, call, answer };
+  return { questions, register, send, relay, call, answer, channel };
 }
 
 describe('createMcpRelay', () => {
@@ -73,10 +84,11 @@ describe('createMcpRelay', () => {
   });
 
   it('clears the map on channel close so a re-send registers a fresh question', () => {
-    const { call, register, relay } = fixture();
+    const { call, register, channel } = fixture();
     call('call-1');
 
-    relay.clear();
+    channel.close();
+    channel.close();
     call('call-1');
 
     expect(register).toHaveBeenCalledTimes(2);
