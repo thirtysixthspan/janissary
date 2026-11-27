@@ -87,6 +87,15 @@ describe('notificationText', () => {
     expect(notificationText('question', 'build')).toBe('Question from build');
   });
 
+  it('renders the MCP failure reason verbatim', () => {
+    expect(notificationText('mcp-failed', 'janus', 'MCP server failed to start: EADDRINUSE'))
+      .toBe('MCP server failed to start: EADDRINUSE');
+  });
+
+  it('formats the withdrawn-question message', () => {
+    expect(notificationText('question-withdrawn', 'build')).toBe('Question from build withdrawn');
+  });
+
   it.each([
     ['transcript-unavailable', 'no harness transcript found'],
     ['ssh-recording-failed', 'ssh recording failed'],

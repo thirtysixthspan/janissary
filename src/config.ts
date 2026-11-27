@@ -75,6 +75,9 @@ export type Config = {
   // one. A plugin reaches only its own entry, through the `readSettings`/`saveSettings` capabilities
   // (see `plugins/settings.ts`), and the value is whatever JSON object that plugin chose to save.
   pluginSettings: Record<string, Record<string, unknown>>;
+  // Hand-edited in `.janissary/config.json`; overrides the persisted MCP server port when it is a
+  // valid TCP port. Deliberately absent from a fresh config and from backfills.
+  mcpPort?: number;
 };
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;

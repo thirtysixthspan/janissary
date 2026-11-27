@@ -29,6 +29,14 @@ function nonNegativeIntegerValue(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : fallback;
 }
 
+// A hand-edited TCP port is meaningful only as a whole number in 1..65535. Anything else is absent
+// rather than a fallback, so the port persisted by the MCP manager applies.
+function portValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 65_535
+    ? value
+    : undefined;
+}
+
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback;
 }
@@ -115,6 +123,7 @@ export function backfillMissingKeys(parsed: unknown, defaults: Config): Record<s
 
 export function decodeConfig(value: unknown, defaults: Config): Config {
   const record = isRecord(value) ? value : {};
+  const mcpPort = portValue(record.mcpPort);
   return {
     transcriptMaxLines: numberValue(record.transcriptMaxLines, defaults.transcriptMaxLines),
     maxToolTurns: positiveIntegerValue(record.maxToolTurns, defaults.maxToolTurns),
@@ -134,6 +143,7 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     syncPaths: strings(record.syncPaths, defaults.syncPaths),
     externalViewers: stringMap(record.externalViewers, defaults.externalViewers),
     pluginSettings: settingsMap(record.pluginSettings),
+    ...(mcpPort !== undefined && { mcpPort }),
   };
 }
 

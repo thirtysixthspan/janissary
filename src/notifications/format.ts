@@ -65,6 +65,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'file-operation':
     case 'open-unsupported':
     case 'tab': { return detail ?? ''; }
+    case 'mcp-failed':
     case 'plugin-failure':
     case 'plugin-note':
     case 'launch-refused':
@@ -72,6 +73,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'launch-root-cloned':
     case 'remote-refused': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
+    case 'question-withdrawn': { return `Question from ${tabLabel} withdrawn`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }
     case 'ssh-recording-failed': { return 'ssh recording failed'; }
     case 'harness-recording-failed': { return 'harness recording failed'; }

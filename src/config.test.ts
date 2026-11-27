@@ -569,6 +569,53 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.pluginSettings).toEqual({});
   });
+
+  it.each([1, 8123, 65_535])('reads the integer mcpPort %p', (value) => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ mcpPort: value }) + '\n');
+
+    expect(loadConfig(tmpDir).mcpPort).toBe(value);
+  });
+
+  it.each([0, -1, 2.5, '8123', null, 65_536])('leaves mcpPort absent for %p', (value) => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ mcpPort: value }) + '\n');
+
+    expect(loadConfig(tmpDir).mcpPort).toBeUndefined();
+  });
+
+  it('does not write mcpPort into a fresh config', () => {
+    loadConfig(tmpDir);
+
+    const parsed = JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'config.json'), 'utf8'));
+    expect(parsed).not.toHaveProperty('mcpPort');
+  });
+
+  it('does not add mcpPort when backfilling an older config', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ transcriptMaxLines: 100 }));
+
+    const config = loadConfig(tmpDir);
+    expect(config.mcpPort).toBeUndefined();
+    const written = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, unknown>;
+    expect(written).not.toHaveProperty('mcpPort');
+    expect(written.transcriptMaxLines).toBe(100);
+  });
+
+  it('preserves a hand-edited mcpPort when another key is backfilled', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    writeFileSync(configPath, JSON.stringify({ mcpPort: 8123 }));
+
+    expect(loadConfig(tmpDir).mcpPort).toBe(8123);
+    const written = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, unknown>;
+    expect(written.mcpPort).toBe(8123);
+  });
 });
 
 describe('updateConfig', () => {
