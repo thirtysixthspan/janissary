@@ -83,6 +83,20 @@ describe('schedules plugin notifications', () => {
     expect(fixture.updated).toEqual([{ key: 'schedules', value: { payload: { entries: ROWS } } }]);
     expect(fixture.updated[0].value.title).toBeUndefined();
   });
+
+  it('carries a paused system row into the tab payload', () => {
+    const fixture = fakeCapabilities();
+    const rows: AggregatedScheduleView[] = [{
+      tab: 'system', id: 'build', spec: 'every 5m', next: 'paused', recurring: true,
+      command: 'script build', owner: 'system', key: 'system-key', paused: true,
+    }];
+
+    activate().notify?.({ topic: 'schedules', data: rows, tabs: ['schedules'] }, fixture.capabilities);
+
+    expect(fixture.updated[0].value).toMatchObject({
+      payload: { entries: [{ owner: 'system', key: 'system-key', paused: true, next: 'paused' }] },
+    });
+  });
 });
 
 describe('schedules plugin intents', () => {
@@ -98,12 +112,17 @@ describe('schedules plugin intents', () => {
     expect(intent('clear', { owner: 'tab' }, fixture)).toBeNull();
     expect(intent('cancel', { tab: 'agent-1', id: 'fetch' }, fixture)).toBeNull();
     expect(intent('focus-owner', { tab: 'agent-1' }, fixture)).toBeNull();
+    const systemIdentity = { tab: 'system', id: 'build', owner: 'system', key: 'system-key' };
+    expect(intent('pause', systemIdentity, fixture)).toBeNull();
+    expect(intent('resume', systemIdentity, fixture)).toBeNull();
 
     expect(fixture.actions).toEqual([
       { topic: 'schedules', action: 'clear', owner: 'system' },
       { topic: 'schedules', action: 'clear', owner: 'tab' },
       { topic: 'schedules', action: 'cancel', tab: 'agent-1', id: 'fetch' },
       { topic: 'schedules', action: 'focusOwner', tab: 'agent-1' },
+      { topic: 'schedules', action: 'pause', ...systemIdentity },
+      { topic: 'schedules', action: 'resume', ...systemIdentity },
     ]);
   });
 
@@ -117,6 +136,8 @@ describe('schedules plugin intents', () => {
       ['cancel', { tab: 'system', id: 'build', owner: 'system' }, 'invalid cancel payload'],
       ['focus-owner', {}, 'invalid focus-owner payload'],
       ['focus-owner', { tab: 'system', owner: 'system' }, 'invalid focus-owner payload'],
+      ['pause', { tab: 'agent-1', id: 'fetch' }, 'invalid pause payload'],
+      ['resume', { tab: 'system', id: 'build', owner: 'system' }, 'invalid resume payload'],
       ['unknown', {}, 'unknown schedules intent "unknown"'],
     ] as const) {
       expect(() => intent(name, payload, fixture)).toThrow(new TabPluginRejection(message));
@@ -127,6 +148,8 @@ describe('schedules plugin intents', () => {
   it.each([
     ['clear', { owner: 'system' }, 'clear'],
     ['cancel', { tab: 'system', id: 'build', owner: 'system', key: 'system-key' }, 'cancel'],
+    ['pause', { tab: 'system', id: 'build', owner: 'system', key: 'system-key' }, 'pause'],
+    ['resume', { tab: 'system', id: 'build', owner: 'system', key: 'system-key' }, 'resume'],
   ] as const)('turns a durable %s error into a request rejection', (name, payload) => {
     const fixture = fakeCapabilities();
     fixture.capabilities.topicAction = vi.fn(() => 'could not save system schedules');

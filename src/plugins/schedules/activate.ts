@@ -11,11 +11,13 @@ import {
   isClearIntent,
   isFocusOwnerIntent,
   isSchedulesPayload,
+  isSystemRowIntent,
   type CancelIntent,
   type ClearIntent,
   type FocusOwnerIntent,
   type ScheduleRow,
   type SchedulesPayload,
+  type SystemRowIntent,
 } from './shared.js';
 
 // The list is a singleton, so one fixed instance key is the whole of this plugin's tab bookkeeping:
@@ -30,7 +32,9 @@ function toPayload(rows: readonly AggregatedScheduleView[]): SchedulesPayload {
       id: row.id, spec: row.spec, next: row.next, recurring: row.recurring,
       tab: row.tab, command: row.command,
     };
-    return row.owner === 'system' ? { ...entry, owner: 'system' as const, key: row.key } : entry;
+    return row.owner === 'system'
+      ? { ...entry, owner: 'system' as const, key: row.key, ...(row.paused && { paused: true as const }) }
+      : entry;
   });
   return { entries };
 }
@@ -70,6 +74,22 @@ export function activate(): TabPluginActivation {
           const error = capabilities.topicAction(payload.owner === 'system'
             ? { topic: 'schedules', action: 'cancel', ...payload }
             : { topic: 'schedules', action: 'cancel', tab: payload.tab, id: payload.id });
+          if (error) capabilities.rejectRequest(error);
+          return null;
+        },
+      },
+      pause: {
+        payload: isSystemRowIntent,
+        run: (_tab, payload: SystemRowIntent, capabilities) => {
+          const error = capabilities.topicAction({ topic: 'schedules', action: 'pause', ...payload });
+          if (error) capabilities.rejectRequest(error);
+          return null;
+        },
+      },
+      resume: {
+        payload: isSystemRowIntent,
+        run: (_tab, payload: SystemRowIntent, capabilities) => {
+          const error = capabilities.topicAction({ topic: 'schedules', action: 'resume', ...payload });
           if (error) capabilities.rejectRequest(error);
           return null;
         },

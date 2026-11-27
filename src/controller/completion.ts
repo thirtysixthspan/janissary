@@ -28,15 +28,16 @@ export function complete(managers: Managers, text: string, cursor: number, label
   const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
   let scripts: string[] = [];
   try { scripts = catalogRunscripts(managers.tab.launchDir); } catch { /* An unsafe catalog has no suggestions. */ }
-  const currentNames = 'systemSchedule' in managers
-    ? managers.systemSchedule.list().map((entry) => entry.id)
-    : [];
-  const names = [...new Set(currentNames)]
-    .toSorted((left, right) => left.localeCompare(right));
+  const currentEntries = 'systemSchedule' in managers ? managers.systemSchedule.list() : [];
+  const sortedNames = (entries: typeof currentEntries) =>
+    [...new Set(entries.map((entry) => entry.id))].toSorted((left, right) => left.localeCompare(right));
+  const names = sortedNames(currentEntries);
+  const activeRecurringNames = sortedNames(currentEntries.filter((entry) => entry.recurring && !entry.paused));
+  const pausedNames = sortedNames(currentEntries.filter((entry) => entry.paused === true));
   return completeCommandLine(
     text, cursor, cwd, labels,managers.connection.completionConnections(tab.label),
     { personas: listPersonas('monitor'), names: managers.monitor.namesFor(tab.label), targets },
-    { names, scripts },
+    { names, scripts, activeRecurringNames, pausedNames },
     files,
     (harness) => managers.models.modelsFor(harness),
     completionPolicy(managers.nativeCommandSettings?.current()),

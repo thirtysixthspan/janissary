@@ -1,4 +1,4 @@
-export const SCHEDULES_PAYLOAD_SCHEMA_VERSION = 2;
+export const SCHEDULES_PAYLOAD_SCHEMA_VERSION = 3;
 
 // One row of the aggregated list: a scheduled command, the tab that owns it, and when it next runs.
 // Deliberately re-declared rather than imported from the host's `AggregatedScheduleView`: this
@@ -11,7 +11,7 @@ export type ScheduleRow = {
   recurring: boolean;
   tab: string;
   command: string;
-} & ({ owner?: 'tab'; key?: never } | { owner: 'system'; key: string });
+} & ({ owner?: 'tab'; key?: never } | { owner: 'system'; key: string; paused?: true });
 
 export type SchedulesPayload = { entries: ScheduleRow[] };
 
@@ -20,6 +20,7 @@ type ScheduleOwnerIntent = { tab: string; owner?: 'tab'; key?: never }
 export type CancelIntent = ScheduleOwnerIntent & { id: string };
 export type FocusOwnerIntent = ScheduleOwnerIntent;
 export type ClearIntent = { owner: 'system' | 'tab' };
+export type SystemRowIntent = { tab: 'system'; owner: 'system'; id: string; key: string };
 
 function isScheduleRow(value: unknown): value is ScheduleRow {
   return isRecord(value)
@@ -31,7 +32,9 @@ function isScheduleRow(value: unknown): value is ScheduleRow {
     && typeof value.command === 'string'
     && (value.owner === undefined && value.key === undefined
       || value.owner === 'tab' && value.key === undefined
-      || value.owner === 'system' && typeof value.key === 'string');
+      || value.owner === 'system' && typeof value.key === 'string')
+    && (value.paused === undefined || value.paused === true)
+    && (value.paused === undefined || value.owner === 'system');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,6 +54,14 @@ export function isCancelIntent(value: unknown): value is CancelIntent {
 
 export function isFocusOwnerIntent(value: unknown): value is FocusOwnerIntent {
   return isRecord(value) && typeof value.tab === 'string' && isScheduleOwnerIntent(value);
+}
+
+export function isSystemRowIntent(value: unknown): value is SystemRowIntent {
+  return isRecord(value)
+    && value.tab === 'system'
+    && value.owner === 'system'
+    && typeof value.id === 'string'
+    && typeof value.key === 'string';
 }
 
 function isScheduleOwnerIntent(value: Record<string, unknown>): boolean {

@@ -104,6 +104,8 @@ export type TabPluginTopicAction =
   | ModelsTopicAction
   | { topic: 'schedules'; action: 'cancel'; tab: string; id: string; owner?: 'tab' }
   | { topic: 'schedules'; action: 'cancel'; tab: 'system'; id: string; owner: 'system'; key: string }
+  | { topic: 'schedules'; action: 'pause'; tab: 'system'; id: string; owner: 'system'; key: string }
+  | { topic: 'schedules'; action: 'resume'; tab: 'system'; id: string; owner: 'system'; key: string }
   // Clear one owner's schedules. Each owner is cleared separately, so clearing tab timers never
   // touches project schedules and a failed project save never touches tab timers.
   | { topic: 'schedules'; action: 'clear'; owner: 'system' | 'tab' }

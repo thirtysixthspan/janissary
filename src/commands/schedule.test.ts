@@ -35,8 +35,8 @@ describe('schedule command run', () => {
   let tab: { label: string; index: number };
   let managers: unknown;
   let projectRoot: string;
-  let systemEntries: { id: string; key: string; script: string; command: string; spec: string; nextRun: number; recurring: boolean }[];
-  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
+  let systemEntries: { id: string; key: string; script: string; command: string; spec: string; nextRun: number; recurring: boolean; paused?: true }[];
+  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; pauseByName: ReturnType<typeof vi.fn>; resumeByName: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
   const schedule = () => schedules.get('janus') ?? [];
 
   beforeEach(() => {
@@ -50,6 +50,18 @@ describe('schedule command run', () => {
       list: () => systemEntries,
       add: vi.fn((entry) => {
         systemEntries.push({ ...entry, key: `key-${systemEntries.length}` });
+        return { ok: true };
+      }),
+      pauseByName: vi.fn((name) => {
+        systemEntries = systemEntries.map((entry) => entry.id === name && entry.recurring && !entry.paused ? { ...entry, paused: true } : entry);
+        return { ok: true };
+      }),
+      resumeByName: vi.fn((name) => {
+        systemEntries = systemEntries.map((entry) => {
+          if (entry.id !== name) return entry;
+          const { paused, ...active } = entry;
+          return paused ? active : entry;
+        });
         return { ok: true };
       }),
       cancelByName: vi.fn((name) => {
@@ -90,6 +102,13 @@ describe('schedule command run', () => {
   afterEach(() => { rmSync(projectRoot, { recursive: true, force: true }); });
 
   const run = (command_: string) => command.run!(command_, tab, managers as never);
+  const recurringEntry = (id: string, key: string, paused?: true): (typeof systemEntries)[number] => ({
+    id, key, script: 'deploy', command: 'script deploy', spec: 'every 5m', nextRun: Date.now(), recurring: true,
+    ...(paused === true && { paused }),
+  });
+  const oneShotEntry = (id: string, key: string): (typeof systemEntries)[number] => ({
+    id, key, script: 'deploy', command: 'script deploy', spec: 'at 3pm', nextRun: Date.now(), recurring: false,
+  });
 
   it('opens the launch dialog for the bare token and records nothing', () => {
     run('schedule');
@@ -283,6 +302,102 @@ describe('schedule command run', () => {
     expect(outputs.at(-1)).toBe('No scheduled commands in system.');
   });
 
+  it('pauses every recurring system entry with the exact name and prints the success line', () => {
+    systemEntries = [recurringEntry('ping', '1'), recurringEntry('ping', '2'), recurringEntry('other', '3')];
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('Paused ping in system.');
+    expect(systemOwner.pauseByName).toHaveBeenCalledWith('ping');
+    expect(systemEntries.filter((entry) => entry.paused === true).map((entry) => entry.id)).toEqual(['ping', 'ping']);
+    expect(systemEntries[2].paused).toBeUndefined();
+    expect(schedule()).toEqual([]);
+  });
+
+  it('reports success when the matching recurring rows are already paused', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('ping', '2', true)];
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('Paused ping in system.');
+    expect(systemOwner.pauseByName).toHaveBeenCalledWith('ping');
+    expect(systemEntries.every((entry) => entry.paused === true)).toBe(true);
+  });
+
+  it('reports no recurring match without touching the owner when only one-shots carry the name', () => {
+    systemEntries = [oneShotEntry('ping', '1')];
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('No recurring scheduled command "ping" in system.');
+    expect(systemOwner.pauseByName).not.toHaveBeenCalled();
+    expect(systemEntries).toHaveLength(1);
+    run('schedule system pause nosuch');
+    expect(outputs.at(-1)).toBe('No recurring scheduled command "nosuch" in system.');
+  });
+
+  it('prints the save error without claiming a pause succeeded', () => {
+    systemEntries = [recurringEntry('ping', '1')];
+    systemOwner.pauseByName.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system pause ping');
+    expect(outputs.at(-1)).toBe('Could not save system schedules.');
+    expect(systemEntries[0].paused).toBeUndefined();
+  });
+
+  it('still cancels a stored system entry named pause', () => {
+    systemEntries = [recurringEntry('pause', '1')];
+    run('schedule system cancel pause');
+    expect(outputs.at(-1)).toBe('Cancelled pause in system.');
+    expect(systemEntries).toEqual([]);
+  });
+
+  it('prints a paused system entry with (paused) instead of a next-run time', () => {
+    systemEntries = [recurringEntry('ping', '1', true)];
+    run('schedule system list');
+    expect(outputs.at(-1)).toBe('ping  every 5m  (paused)  script deploy');
+  });
+
+  it('resumes every paused system entry with the exact name and prints the success line', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('ping', '2', true), recurringEntry('other', '3', true)];
+    run('schedule system resume ping');
+    expect(outputs.at(-1)).toBe('Resumed ping in system.');
+    expect(systemOwner.resumeByName).toHaveBeenCalledWith('ping');
+    expect(systemEntries.filter((entry) => entry.paused === true).map((entry) => entry.id)).toEqual(['other']);
+  });
+
+  it('reports no paused match without touching the owner', () => {
+    systemEntries = [recurringEntry('ping', '1'), recurringEntry('other', '2', true)];
+    run('schedule system resume ping');
+    expect(outputs.at(-1)).toBe('No paused scheduled command "ping" in system.');
+    expect(systemOwner.resumeByName).not.toHaveBeenCalled();
+    expect(systemEntries[0].paused).toBeUndefined();
+    run('schedule system resume nosuch');
+    expect(outputs.at(-1)).toBe('No paused scheduled command "nosuch" in system.');
+  });
+
+  it('prints the save error without claiming a resume succeeded', () => {
+    systemEntries = [recurringEntry('ping', '1', true)];
+    systemOwner.resumeByName.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system resume ping');
+    expect(outputs.at(-1)).toBe('Could not save system schedules.');
+    expect(systemEntries[0].paused).toBe(true);
+  });
+
+  it('cancels paused rows by name as well as active ones', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('ping', '2'), recurringEntry('other', '3')];
+    run('schedule system cancel ping');
+    expect(outputs.at(-1)).toBe('Cancelled ping in system.');
+    expect(systemEntries.map((entry) => entry.id)).toEqual(['other']);
+  });
+
+  it('clears paused rows as well as active ones', () => {
+    systemEntries = [recurringEntry('ping', '1', true), recurringEntry('other', '2')];
+    run('schedule system clear');
+    expect(outputs.at(-1)).toBe('Cleared 2 scheduled commands in system.');
+    expect(systemEntries).toEqual([]);
+  });
+
+  it('still cancels a stored system entry named resume', () => {
+    systemEntries = [recurringEntry('resume', '1')];
+    run('schedule system cancel resume');
+    expect(outputs.at(-1)).toBe('Cancelled resume in system.');
+    expect(systemEntries).toEqual([]);
+  });
+
   it('does not report success when the project owner cannot save', () => {
     systemOwner.add.mockReturnValue({ ok: false, error: 'disk full' });
     run('schedule system deploy at 3pm script deploy');
@@ -364,7 +479,7 @@ describe('system schedule command persistence', () => {
       controller.managers.tab.tabs.push(issuingTab);
       command.run!('schedule system release at 5pm script deploy', { label: issuingTab.label, index: 0 }, controller.managers);
       const persisted = new SystemScheduleStore(root).load();
-      expect(persisted).toMatchObject({ ok: true, snapshot: { version: 1, entries: [
+      expect(persisted).toMatchObject({ ok: true, snapshot: { version: 2, entries: [
         { id: 'release', script: 'deploy', command: 'script deploy', spec: 'at 5:00pm' },
       ] } });
       controller.managers.systemSchedule.dispose();

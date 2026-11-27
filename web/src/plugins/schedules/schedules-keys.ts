@@ -10,3 +10,7 @@ export function scheduleRowKey(row: ScheduleRow): string {
     ? JSON.stringify(['system', row.key])
     : JSON.stringify(['tab', row.tab, row.id]);
 }
+
+export function canPauseRow(entry: ScheduleRow): boolean {
+  return entry.owner === 'system' && typeof entry.key === 'string' && entry.recurring;
+}

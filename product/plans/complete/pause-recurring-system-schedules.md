@@ -66,6 +66,7 @@ Schedules tab:
 41. A pause or resume from the tab that fails to save leaves the row as it was (user answer: "Silent, like Delete").
 42. Deleting a paused row from the Schedules tab removes only that row by key (user answer: "Core set": "Delete-by-key still removes only that row").
 43. A `pause` or `resume` intent naming a key that is not a recurring system row in the current view is refused and changes nothing (precedent: the `cancel` topic action is authorized against the current aggregated view, Existing functionality 6).
+43a. The Space/p shortcut acts only when the list container itself owns the keydown (`e.target === e.currentTarget`): Space on the focused New schedule button still opens the New schedule dialog without toggling the selected row, and Space on a different row's pause button activates that button's row rather than the selected one.
 
 Elsewhere:
 
@@ -73,6 +74,15 @@ Elsewhere:
 45. The Scripts tab counts paused schedules exactly like active ones, for its clock icon and its delete warning (user answer: "Count paused too").
 46. `product/specs/scheduling.md` describes pause and resume, the version-2 store, the new verbs and messages, and the row control (`ai/guidelines/architecture-principles.md` §10).
 47. `help/keys.md` gains a Schedules tab controls table (user answer: "Space or p toggles"; see UI design 12).
+47a. `product/specs/tab-plugins.md` describes all five schedules topic actions — cancel one entry, clear one owner's entries, switch to the owning tab, and pause or resume a recurring system row by its immutable key — each authorized against the plugin's current aggregated view with a failed save returned as a domain error the schedules intent rejects. It states that a system row may carry `paused: true` whose next run reads `paused`, and that the plugin pauses or resumes such a row through those topic actions rather than only cancel, clear, and focus.
+47b. `help/schedule.md` lists `schedule system pause <name>` and `schedule system resume <name>` beside the other system management forms, names pausing and resuming recurring schedules in the project-schedule use case, notes that `pause` and `resume` are reserved immediately after `schedule system`, and shows one example per verb with the exact replies `Paused nightly in system.` and `Resumed nightly in system.`.
+
+Rejected intents:
+
+48. A rejected `pause` intent from the tab's row control is consumed as a console warning rather than an unhandled browser rejection.
+49. A rejected `resume` intent from the tab's row control is consumed the same way.
+50. The delete confirmation sends its `cancel` intent through the same consumed path, so a rejected `cancel` intent does not become an unhandled rejection.
+51. A failed row-changing intent adds no toast, error panel, or optimistic row update; the row keeps the icon and Next Run from the last server view.
 
 ## Design decisions
 
@@ -87,6 +97,11 @@ Elsewhere:
 - `pause` and `resume` are reserved after `schedule system` by the same branch that reserves `list`, `cancel`, and `clear` today (user answer: "Reserve them"; Existing functionality 10).
 - State-aware completion widens `SystemScheduleCompletions` from `{ names, scripts }` with two more name lists, the active recurring names and the paused names. They're built in `src/controller/completion.ts` from `systemSchedule.list()` (user answer: "State-aware names"; Existing functionality 11).
 - The Pause/Resume row control switches its icon, visible tooltip, and accessible name between the two actions, and carries no `aria-pressed`. This follows the WAI-ARIA and MDN guidance for play/pause controls (https://www.w3.org/WAI/ARIA/apg/patterns/button/, https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-pressed, https://inclusive-components.design/toggle-button/).
+- The Space/p shortcut is gated on `e.target === e.currentTarget`, the container half of the Scripts tab's `ownsKey` pattern. Keys aimed at a focused button stay with that button: Space on New schedule still opens the dialog, and Space on a second row's pause button toggles that row. Selection, delete, and Enter branches keep their existing target handling.
+- The pause icon button and the trash button share one `.schedules-row-icon-button` CSS rule carrying the eight identical icon-button declarations, instead of a duplicate block on each. Each button keeps its own class (`schedules-row-pause`, `schedules-row-delete`) alongside the shared class, so a later hover, focus, or color change cannot drift between them.
+- The Schedules tab sends `pause`, `resume`, and a confirmed `cancel` through the shared `fireIntent` helper (`web/src/plugins/fire-intent.ts`, published by `web/src/plugins/api.ts`), which awaits the intent and turns a server rejection into a `console.warn` naming the intent. The tab holds no optimistic row state, so the row keeps the server's last shape and no error UI is added.
+- Completion is exercised from a shell tab, the client that sends the `complete` intent. The shell renders the picker only when more than one name matches (`web/src/plugins/shell/ShellTab.tsx:215`), so a single match is inserted directly without a picker.
+- A failed save is exercised by making the containing `.janissary/` directory unwritable with `chmod 555 .janissary`, not the store file: `src/atomic-write.ts:10-16` creates a temporary file beside the store and renames it over the target, so the file's own mode does not gate the write.
 
 ## Preserved behavior
 
@@ -134,6 +149,7 @@ Elsewhere:
 12. The system list line is formatted in one place: `src/commands/schedule.ts:73` `` `${entry.id}  ${entry.spec}  (next: ${fmtNextRun(entry.nextRun)})  script ${entry.script}` ``.
 13. A row button that acts on the first click of a double-click only: `web/src/plugins/scripts/ScriptRowActions.tsx:30` `if (action !== 'delete' && event.detail > 1) return;`.
 14. System-row topic action authorization is already tested with a live key and a stale one: `src/plugins/topics.test.ts:415` `topic: 'schedules', action: 'cancel', tab: 'system', id: 'build', owner: 'system', key: 'stale',`.
+15. The shared `fireIntent` helper awaits an intent and consumes a rejection with `console.warn`: `web/src/plugins/fire-intent.ts:16` `export function fireIntent(...)`.
 
 ## Implementation steps
 
@@ -145,9 +161,9 @@ Each step ends green under `$janissary/scripts/run.mjs check-diff`.
 
 3. **Wire, plugin server, and topic actions.** Add the optional `paused: true` to the system branch of `AggregatedScheduleView` in `src/protocol/schedule.ts`, and to the system branch of `ScheduleRow` in `src/plugins/schedules/shared.ts`, keeping `shared.test.ts`'s shape pin passing. `aggregatedScheduleView` in `src/schedule/views.ts` copies the flag and sets `next` to `paused` for a paused entry. Add one guard, `isSystemRowIntent`, to `shared.ts`. It accepts only the system identity `{ tab: 'system', owner: 'system', key, id }`, and both the `pause` and `resume` intents use it, since they carry the same payload. Also update `isScheduleRow` to accept `paused` only on system rows. Raise `SCHEDULES_PAYLOAD_SCHEMA_VERSION` to 3, along with the literal in `web/src/plugins/registry.tsx`. Add `pause` and `resume` actions to the `schedules` topic union in `src/plugins/api-topics.ts`. In `src/plugins/schedule-topic-actions.ts`, authorize each against a recurring system row with that key and id in the current aggregated view, then call `pauseByKey` or `resumeByKey`, returning the save error when it fails. Add `pause` and `resume` entries to the intent table in `src/plugins/schedules/activate.ts`, carrying the error to `rejectRequest` as `cancel` does, and copy `paused` in `toPayload`. Build command: `$janissary/scripts/run.mjs check-diff`.
 
-4. **Schedules tab control and keys.** In `SchedulesRows.tsx`, give recurring system rows a Pause/Resume icon button immediately before the trash button, and other rows an empty cell in that position. The button sends the intent through a new `onTogglePause(entry)` prop and follows UI design 3 to 17. It ignores a click whose `event.detail` is above 1, as `ScriptRowActions` does (Existing functionality 13), and stops both its click and its double-click from reaching the row's handlers. In `SchedulesTab.tsx`, handle `Space` and `p` on the selected row, send `pause` or `resume` with the system identity, and return focus to the list container after an icon press. Add the `paused` row class and the extra grid column to `schedules.css`, for both renderings. Build command: `$janissary/scripts/run.mjs check-diff`.
+4. **Schedules tab control and keys.** In `SchedulesRows.tsx`, give recurring system rows a Pause/Resume icon button immediately before the trash button, and other rows an empty cell in that position. The button sends the intent through a new `onTogglePause(entry)` prop and follows UI design 3 to 17. It ignores a click whose `event.detail` is above 1, as `ScriptRowActions` does (Existing functionality 13), and stops both its click and its double-click from reaching the row's handlers. In `SchedulesTab.tsx`, handle `Space` and `p` on the selected row, send `pause` or `resume` with the system identity, and return focus to the list container after an icon press. Gate that branch on `e.target === e.currentTarget` so keys aimed at a focused button are left to the button. Add the `paused` row class and the extra grid column to `schedules.css`, for both renderings, and replace the two identical icon-button declaration blocks with one shared `.schedules-row-icon-button` rule that the pause and trash buttons both use. In `SchedulesTab.tsx`, `togglePause` and `confirmDelete` send `pause`, `resume`, and `cancel` through `fireIntent` from `../api`, so a rejected save is warned in the console instead of escaping as an unhandled rejection, with the identity shapes, pending-delete reset, and focus return unchanged. Build command: `$janissary/scripts/run.mjs check-diff`.
 
-5. **Spec and in-app help.** Update `product/specs/scheduling.md` in the Durable system schedules and runscripts, System schedule firing, Scheduling tab, and `schedule` command sections to describe Requirements 1 to 45. That includes changing "a versioned snapshot" to say this build writes version 2 and reads versions 1 and 2. Add the Schedules tab controls table to `help/keys.md`. Build command: `$janissary/scripts/run.mjs check-diff`.
+5. **Spec and in-app help.** Update `product/specs/scheduling.md` in the Durable system schedules and runscripts, System schedule firing, Scheduling tab, and `schedule` command sections to describe Requirements 1 to 45. That includes changing "a versioned snapshot" to say this build writes version 2 and reads versions 1 and 2. Extend the two "Scheduled-command actions" and "Bundled schedules plugin" passages of `product/specs/tab-plugins.md` to name all five schedules actions, the current-view authorization and failed-save domain-error rule, the per-owner clear, and the optional `paused: true` wire field whose next run reads `paused`. Add the Schedules tab controls table to `help/keys.md`, and add the two verbs, the reserved-word note, and one example per verb to `help/schedule.md`. Build command: `$janissary/scripts/run.mjs check-diff`.
 
 ## UI design
 
@@ -171,6 +187,9 @@ Each step ends green under `$janissary/scripts/run.mjs check-diff`.
 18. Both renderings' grids gain one column for the icon. Long ids, owners, and commands keep truncating with an ellipsis as today (existing `schedules.css` rules).
 19. The empty state (`No scheduled commands.`) and the section titles are unchanged.
 20. Client code stays inside `web/src/plugins/schedules/`. The one rule both the icon and the keys need, whether a row can be paused (a recurring system row), is a pure predicate added to `schedules-keys.ts`. Both `SchedulesRows.tsx` and the key handler in `SchedulesTab.tsx` call it, so the rule stays out of JSX (`ai/guidelines/react-code-organization.md` §5).
+21. The Space/p branch acts only when the event target is the list container itself, so a key that belongs to a focused button is not consumed by the list: Space on New schedule opens the dialog, and Space on another row's pause button toggles that button's own row.
+22. The pause button and the trash button share a single `.schedules-row-icon-button` rule for their icon-button declarations. Each keeps its own class alongside the shared one, and no second copy of the declaration block remains.
+23. A rejected `pause`, `resume`, or `cancel` adds no error UI: the row keeps its icon and Next Run from the last server view and only a console warning records the failure, matching a failed Delete today.
 
 ## Tests
 
@@ -189,6 +208,11 @@ Each step ends green under `$janissary/scripts/run.mjs check-diff`.
 - `src/schedule/system/runscript-rows.test.ts`: a paused schedule still counts toward its runscript (Requirement 45).
 - `web/src/plugins/schedules/SchedulesTab.test.tsx`: the icon appears only on recurring system rows in both renderings, with the right icon, label, and title; pressing it sends the matching intent without moving the selection or opening the delete dialog; a double-click sends one intent and doesn't focus the owner; `Space` and `p` toggle a selected recurring system row and do nothing elsewhere; a paused row shows `paused` and the `paused` class (Requirements 38 to 40; UI design 3 to 17).
 - `web/src/plugins/schedules/schedules-keys.test.ts`: the pausable-row predicate is true only for recurring system rows (Requirement 40; UI design 13, 20).
+- `src/schedule/system/manager.test.ts`: by-name positive paths commit real changes — `pauseByName pauses every same-id recurring entry and leaves other ids untouched` keeps every other field and the one-shot intact and persists version 2, and `resumeByName clears the paused flag, sets a future nextRun, and saves the resumed entry` bounds the future time to one interval and persists a matching snapshot; the existing no-op and no-save tests stay byte-for-byte (Requirements 1 to 5, 8, 9, 12).
+- `src/completion/index.test.ts`: the remaining `systemSchedule` option fixtures in the runscript-completion and disabled-command-guard suites carry all four contract fields (`names`, `scripts`, `activeRecurringNames`, `pausedNames`), with the two new lists empty where pause/resume names are not under test, while the system grammar suite pins the state-aware lists (Requirements 35 to 37).
+- `web/src/plugins/schedules/SchedulesTab.test.tsx`: Space on the focused New schedule button opens the dialog with no pause or resume intent, and Space on a second recurring row's pause button sends that row's intent and never the selected row's (Requirement 43a; UI design 21).
+- `web/src/plugins/schedules/schedules-style.test.ts`: the single `.schedules-row-icon-button` rule pins all eight icon-button declarations, neither `.schedules-row-delete` nor `.schedules-row-pause` still has its own declaration block, and the grid-column and muted paused-row assertions keep passing (UI design 22).
+- `web/src/plugins/schedules/SchedulesTab.test.tsx`: with an `intent` that rejects, Pause, Resume, and a confirmed Delete keep the row unchanged, emit a console warning, and raise no unhandled rejection (Requirements 48 to 51).
 
 ## Out of scope
 
@@ -201,6 +225,7 @@ Each step ends green under `$janissary/scripts/run.mjs check-diff`.
 - No confirmation dialog for pause or resume (user answer: "Act immediately").
 - Paused rows are not re-sorted to the end of their section (user answer: "`paused`, stale order").
 - No migration tool for an older Janissary: once this version saves a version-2 store, an older process reports it as unsupported and loads no system schedules from it (user answer: "Always v2").
+- No error UI for a rejected row-changing intent: no toast, no optimistic row update, and no change to `fireIntent` itself; the only trace is a console warning.
 
 ## Verification
 
@@ -212,3 +237,8 @@ Each step ends green under `$janissary/scripts/run.mjs check-diff`.
    4. Quit and relaunch the app after the stored next-run time has passed. No `missed its run` notice appears for `ping`, and the row still reads `paused`.
    5. Select the row and press `Space`. The row returns to the accent color and Next Run shows a time about one minute ahead, not a time in the past. No firing happens straight away. An immediate firing means resume ran the backlog.
    6. Type `schedule system pause ping`, then `schedule system list`. They print `Paused ping in system.` and then `ping  every 1m  (paused)  script ping`. Type `schedule system resume nosuch`, which prints `No paused scheduled command "nosuch" in system.`.
+    7. With a recurring row selected, Tab to the New schedule button and press Space: the dialog opens and the selected row's pause state is unchanged. Tab to a different recurring row's pause button and press Space: that row toggles and the selected row does not.
+    8. Open the in-app `schedule` help and confirm it lists both new verbs beside cancel and clear, notes they are reserved after `schedule system`, and shows the exact `Paused nightly in system.` and `Resumed nightly in system.` replies; open `keys` help and confirm the Schedules tab table includes `Space` or `p`.
+    9. Open a shell tab and complete each form: type `schedule system ` and press Tab to see `cancel`, `clear`, `list`, `pause` and `resume`; with at least two active recurring rows, `schedule system pause ` and Tab lists only those active names; with at least two paused rows, `schedule system resume ` and Tab lists only those paused names. With a single match the name is filled in directly instead of opening a picker (`web/src/plugins/shell/ShellTab.tsx:215`).
+   10. From the scratch project make `.janissary/` unwritable with `chmod 555 .janissary`, type `schedule system pause ping`, and restore the mode. Only `Could not save system schedules.` is printed, no success line, and the store and in-memory list keep the active entry. Making the store file itself unwritable does not fail the save because it is replaced by a temporary file and rename.
+   11. With a recurring system row open in `schedules`, make `.janissary/` unwritable again, press the row's Pause icon, then confirm a Delete on a paused row, and restore the mode. Both rows stay as they were, no `[pageerror]` appears, and each rejected intent produces one console warning naming the intent.

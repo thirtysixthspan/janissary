@@ -5,7 +5,7 @@ export type ScheduleView = { id: string; spec: string; next: string; recurring: 
 // One row in the aggregated "schedules" tab: a ScheduleView plus its owner label and command. System
 // rows carry their immutable key; tab rows keep the original shape.
 export type AggregatedScheduleView = ScheduleView & { tab: string; command: string }
-  & ({ owner?: 'tab'; key?: never } | { owner: 'system'; key: string });
+  & ({ owner?: 'tab'; key?: never } | { owner: 'system'; key: string; paused?: true });
 // The open "New schedule" dialog's data: eligible tab labels, the active label, and the project
 // runscript catalog. Null in the snapshot when the dialog is closed.
 export type ScheduleLaunchView = { targets: string[]; active: string; runscripts: string[] };

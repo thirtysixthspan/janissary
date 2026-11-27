@@ -36,10 +36,10 @@ describe('system schedule storage integration', () => {
       expect(readFileSync(store.file, 'utf8')).toBe('{broken');
       expect(store.save(snapshot).ok).toBe(true);
       expect(readFileSync(store.file, 'utf8')).not.toBe('{broken');
-      writeFileSync(store.file, '{"version":2,"entries":[]}');
-      expect(store.load()).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
-      expect(store.save(snapshot)).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
-      expect(new SystemScheduleStore(root).save(snapshot)).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
+      writeFileSync(store.file, '{"version":3,"entries":[]}');
+      expect(store.load()).toEqual({ ok: false, kind: 'unsupported-version', version: 3 });
+      expect(store.save(snapshot)).toEqual({ ok: false, kind: 'unsupported-version', version: 3 });
+      expect(new SystemScheduleStore(root).save(snapshot)).toEqual({ ok: false, kind: 'unsupported-version', version: 3 });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -27,7 +27,7 @@ describe('SystemScheduleManager mutations', () => {
     expect(owner.list().map((entry) => entry.key)).toEqual([second.key]);
     expect(owner.cancelByName('same').ok).toBe(true);
     expect(owner.list()).toEqual([]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
     void controller.shutdown();
   });
 
@@ -97,7 +97,7 @@ describe('SystemScheduleManager mutations', () => {
       { line: 'first', origin: { kind: 'system-schedule', scheduleKey: added.ok ? added.entry!.key : '' } },
       { line: 'second', origin: { kind: 'system-schedule', scheduleKey: added.ok ? added.entry!.key : '' } },
     ]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
     await controller.shutdown();
   });
 
@@ -190,7 +190,7 @@ describe('SystemScheduleManager mutations', () => {
     ]);
     const persisted = { ...recurring.entry, nextRun: 60_001 };
     expect(controller.managers.systemSchedule.list()).toEqual([persisted]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [persisted] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [persisted] } });
     await controller.shutdown();
   });
 
@@ -217,7 +217,7 @@ describe('SystemScheduleManager mutations', () => {
 
   it.each([
     ['invalid data', { version: 1, entries: [{ key: 'bad' }] }],
-    ['unsupported version', { version: 2, entries: [] }],
+    ['unsupported version', { version: 3, entries: [] }],
   ])('ignores %s without rewriting it or accepting new schedules', (_label, snapshot) => {
     const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-load-error-'));
     const directory = path.join(root, '.janissary');
@@ -232,7 +232,7 @@ describe('SystemScheduleManager mutations', () => {
 
     expect(controller.managers.systemSchedule.list()).toEqual([]);
     expect(readFileSync(file, 'utf8')).toBe(original);
-    if (snapshot.version === 2) {
+    if (snapshot.version === 3) {
       expect(controller.managers.systemSchedule.add(schedule('new', 'ignored')).ok).toBe(false);
       expect(readFileSync(file, 'utf8')).toBe(original);
       expect(stderr).toHaveBeenCalledTimes(2);
@@ -268,7 +268,7 @@ describe('SystemScheduleManager mutations', () => {
     expect(unreadable.ok && readable.ok).toBe(true);
     const unreadableEntry = controller.managers.systemSchedule.list()[0];
     expect(controller.managers.systemSchedule.list()).toEqual([unreadableEntry]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [unreadableEntry] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [unreadableEntry] } });
     expect(system.runtime?.queue).toEqual([{ line: 'run good', origin: { kind: 'system-schedule', scheduleKey: readable.ok ? readable.entry!.key : '' } }]);
     expect(toast).toHaveBeenCalledOnce();
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('System schedule good ran') }));
@@ -294,8 +294,8 @@ describe('SystemScheduleManager mutations', () => {
     await controller.managers.systemSchedule.tick(1);
 
     expect(controller.managers.systemSchedule.list()).toEqual([]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
-    expect(snapshotsAtNotice).toEqual([{ ok: true, snapshot: { version: 1, entries: [] } }]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
+    expect(snapshotsAtNotice).toEqual([{ ok: true, snapshot: { version: 2, entries: [] } }]);
     expect(controller.managers.tab.byLabel('system')?.runtime?.queue).toEqual([]);
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('System schedule missing could not run: script ".janissary/scripts/build.rs" is missing.'),
@@ -327,7 +327,7 @@ describe('SystemScheduleManager mutations', () => {
     await controller.managers.systemSchedule.tick(1);
     expect(controller.managers.systemSchedule.list()).toEqual([due]);
     expect(system.runtime?.queue).toEqual([]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [due] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [due] } });
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: 'System shell could not start: not ready.' }));
     await controller.managers.systemSchedule.tick(2);
     expect(controller.managers.systemSchedule.list()).toEqual([]);
@@ -345,7 +345,7 @@ describe('SystemScheduleManager mutations', () => {
     await firingTick;
     expect(controller.managers.systemSchedule.list()).toEqual([]);
     expect(system.runtime?.queue).toHaveLength(1);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [] } });
     expect(ensure).toHaveBeenCalledTimes(2);
     subscription.unsubscribe();
     vi.restoreAllMocks();
@@ -372,7 +372,7 @@ describe('SystemScheduleManager mutations', () => {
 
     expect(system.runtime?.queue).toEqual([]);
     expect(controller.managers.systemSchedule.list()).toEqual([due]);
-    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [due] } });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [due] } });
     await controller.shutdown();
   });
 
@@ -403,5 +403,253 @@ describe('SystemScheduleManager mutations', () => {
       { input: 'clear', output: 'Command is disabled: clear.' },
     ]);
     await controller.shutdown();
+  });
+
+  it('pauseByKey flags a recurring entry without changing its other fields and saves version 2', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-fields-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), command: 'script morning', script: 'morning',
+      spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 1_800_000_000_000,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const original = added.entry;
+
+    expect(system.pauseByKey(original.key)).toEqual({ ok: true });
+
+    const paused = { ...original, paused: true };
+    expect(system.list()).toEqual([paused]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    void controller.shutdown();
+  });
+
+  it('pauseByName pauses every same-id recurring entry and leaves other ids untouched', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-name-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const first = system.add({
+      ...schedule('morning', 'ignored'), command: 'script first', script: 'first', spec: 'every 1m',
+      recurring: true, intervalMs: 60_000, nextRun: 1_800_000_000_000,
+    });
+    const second = system.add({
+      ...schedule('morning', 'ignored'), command: 'script second', script: 'second', spec: 'every 1m',
+      recurring: true, intervalMs: 60_000, nextRun: 1_800_000_006_000,
+    });
+    const other = system.add({
+      ...schedule('evening', 'ignored'), command: 'script other', script: 'other', nextRun: 1_800_000_012_000,
+    });
+    if (!first.ok || !first.entry || !second.ok || !second.entry || !other.ok || !other.entry) {
+      throw new Error('schedules were not added');
+    }
+
+    expect(system.pauseByName('morning')).toEqual({ ok: true });
+
+    const expected = [
+      { ...first.entry, paused: true },
+      { ...second.entry, paused: true },
+      other.entry,
+    ];
+    expect(system.list()).toEqual(expected);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: expected } });
+    void controller.shutdown();
+  });
+
+  it('does not fire a paused due entry on tick', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-tick-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'build.rs'), 'run\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    const ensure = vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('build', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(controller.managers.systemSchedule.pauseByKey(added.entry.key).ok).toBe(true);
+    const paused = { ...added.entry, paused: true };
+
+    await controller.managers.systemSchedule.tick(1);
+
+    expect(controller.managers.systemSchedule.list()).toEqual([paused]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(ensure).not.toHaveBeenCalled();
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    await controller.shutdown();
+  });
+
+  it('stops a deferred firing and appends nothing when a pause is committed during shell preparation', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-deferred-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'build.rs'), 'stale\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    const toast = vi.fn();
+    const subscription = messageBus.on('notifications', 'toast', toast);
+    const gate = Promise.withResolvers<{ lines: string[]; entry: undefined; missing: false }>();
+    vi.spyOn(firing, 'fireSystemBatch').mockReturnValueOnce(gate.promise);
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('build', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const due = added.entry;
+    const ticking = controller.managers.systemSchedule.tick(1);
+    await Promise.resolve();
+    expect(controller.managers.systemSchedule.pauseByKey(due.key).ok).toBe(true);
+    gate.resolve({ lines: ['stale'], entry: undefined, missing: false });
+    await ticking;
+
+    const paused = { ...due, paused: true };
+    expect(controller.managers.systemSchedule.list()).toEqual([paused]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(toast).not.toHaveBeenCalled();
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    subscription.unsubscribe();
+    vi.restoreAllMocks();
+    await controller.shutdown();
+  });
+
+  it('resumeByKey clears the flag, sets a future nextRun, and does not replay the paused gap', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-resume-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'build.rs'), 'run\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const added = controller.managers.systemSchedule.add({
+      ...schedule('build', 'ignored'), command: 'script build', script: 'build',
+      spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(controller.managers.systemSchedule.pauseByKey(added.entry.key).ok).toBe(true);
+    const before = Date.now();
+    expect(controller.managers.systemSchedule.resumeByKey(added.entry.key)).toEqual({ ok: true });
+    const resumed = controller.managers.systemSchedule.list()[0];
+    expect(resumed.paused).toBeUndefined();
+    expect(resumed.nextRun).toBeGreaterThan(before);
+    expect(resumed.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+
+    await controller.managers.systemSchedule.tick(Date.now());
+
+    expect(controller.managers.systemSchedule.list()).toEqual([resumed]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [resumed] } });
+    await controller.shutdown();
+  });
+
+  it('resumeByName clears the paused flag, sets a future nextRun, and saves the resumed entry', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-resume-name-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), command: 'script morning', script: 'morning', spec: 'every 1m',
+      recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(system.pauseByName('morning')).toEqual({ ok: true });
+
+    const before = Date.now();
+    expect(system.resumeByName('morning')).toEqual({ ok: true });
+    const resumed = system.list()[0];
+    expect(resumed.paused).toBeUndefined();
+    expect(resumed.nextRun).toBeGreaterThan(before);
+    expect(resumed.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [resumed] } });
+    void controller.shutdown();
+  });
+
+  it('does not call save when pausing an already-paused or resuming an active entry', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-nosave-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000,
+      nextRun: 1_800_000_000_000,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(system.pauseByKey(added.entry.key).ok).toBe(true);
+    const save = vi.spyOn(SystemScheduleStore.prototype, 'save');
+    save.mockClear();
+
+    expect(system.pauseByKey(added.entry.key)).toEqual({ ok: true });
+    expect(system.pauseByName('morning')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+    expect(system.resumeByKey('missing')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+
+    expect(system.resumeByKey(added.entry.key).ok).toBe(true);
+    expect(save).toHaveBeenCalledOnce();
+    save.mockClear();
+    expect(system.resumeByName('morning')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+    save.mockRestore();
+    void controller.shutdown();
+  });
+
+  it('leaves memory and the store unchanged when a pause cannot be saved', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-failsave-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({
+      ...schedule('morning', 'ignored'), spec: 'every 1m', recurring: true, intervalMs: 60_000,
+      nextRun: 1_800_000_000_000,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const active = system.list();
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    vi.spyOn(SystemScheduleStore.prototype, 'save').mockReturnValue({ ok: false, kind: 'io', error: new Error('disk full') });
+
+    expect(system.pauseByKey(added.entry.key)).toEqual({ ok: false, error: 'could not save system schedules' });
+
+    expect(system.list()).toEqual(active);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: active } });
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('System schedules could not save:'));
+    vi.restoreAllMocks();
+    void controller.shutdown();
+  });
+
+  it('does not pause a one-shot schedule', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-oneshot-'));
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add({ ...schedule('once', 'ignored'), nextRun: 1_800_000_000_000 });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const save = vi.spyOn(SystemScheduleStore.prototype, 'save');
+    save.mockClear();
+
+    expect(system.pauseByKey(added.entry.key)).toEqual({ ok: true });
+    expect(system.pauseByName('once')).toEqual({ ok: true });
+    expect(save).not.toHaveBeenCalled();
+    expect(system.list()).toEqual([added.entry]);
+
+    save.mockRestore();
+    void controller.shutdown();
+  });
+
+  it('keeps a paused entry and all its fields when reloaded from the same store', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-pause-reload-'));
+    const first = createController(sinks, root);
+    const added = first.managers.systemSchedule.add({
+      ...schedule('morning', 'ignored'), command: 'script morning', script: 'morning',
+      spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: 0,
+    });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    expect(first.managers.systemSchedule.pauseByKey(added.entry.key).ok).toBe(true);
+    const paused = { ...added.entry, paused: true };
+    void first.shutdown();
+
+    const reloaded = createController(sinks, root);
+    reloaded.managers.systemSchedule.load();
+    expect(reloaded.managers.systemSchedule.list()).toEqual([paused]);
+    expect(reloaded.managers.systemSchedule.pauseByKey(added.entry.key)).toEqual({ ok: true });
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    void reloaded.shutdown();
   });
 });

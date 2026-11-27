@@ -3,4 +3,4 @@ export const SCHEDULE_USAGE =
   + ' | schedule list [in TAB] | schedule cancel <name> [in TAB] | schedule clear [in TAB]';
 
 export const SYSTEM_SCHEDULE_USAGE =
-  'Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system clear';
+  'Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system pause <name> | schedule system resume <name> | schedule system clear';

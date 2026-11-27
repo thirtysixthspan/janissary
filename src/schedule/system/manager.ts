@@ -5,7 +5,15 @@ import { SystemScheduleStore } from './store.js';
 import { recoverSystemSchedules } from './boot-recovery.js';
 import { appendSystemBatch, fireSystemBatch } from './firing.js';
 import { notifySystemScheduleMissedRun, notifySystemScheduleMissingScript } from './notices.js';
-import { cancelSystemScheduleByKey, cancelSystemScheduleByName, createSystemSchedule } from './mutations.js';
+import {
+  cancelSystemScheduleByKey,
+  cancelSystemScheduleByName,
+  createSystemSchedule,
+  pauseSystemScheduleByKey,
+  pauseSystemScheduleByName,
+  resumeSystemScheduleByKey,
+  resumeSystemScheduleByName,
+} from './mutations.js';
 import type { SystemScheduleInput } from './mutations.js';
 import type { SystemScheduleEntry, SystemScheduleSnapshot } from './types.js';
 
@@ -70,6 +78,30 @@ export class SystemScheduleManager {
     return this.commit(next) ? { ok: true } : { ok: false, error: 'could not save system schedules' };
   }
 
+  pauseByKey(key: string): SystemScheduleResult {
+    const next = pauseSystemScheduleByKey(this.entries, key);
+    if (next === this.entries) return { ok: true };
+    return this.commit(next) ? { ok: true } : { ok: false, error: 'could not save system schedules' };
+  }
+
+  pauseByName(name: string): SystemScheduleResult {
+    const next = pauseSystemScheduleByName(this.entries, name);
+    if (next === this.entries) return { ok: true };
+    return this.commit(next) ? { ok: true } : { ok: false, error: 'could not save system schedules' };
+  }
+
+  resumeByKey(key: string): SystemScheduleResult {
+    const next = resumeSystemScheduleByKey(this.entries, key);
+    if (next === this.entries) return { ok: true };
+    return this.commit(next) ? { ok: true } : { ok: false, error: 'could not save system schedules' };
+  }
+
+  resumeByName(name: string): SystemScheduleResult {
+    const next = resumeSystemScheduleByName(this.entries, name);
+    if (next === this.entries) return { ok: true };
+    return this.commit(next) ? { ok: true } : { ok: false, error: 'could not save system schedules' };
+  }
+
   clear(): SystemScheduleResult {
     if (this.entries.length === 0) return { ok: true };
     return this.commit([]) ? { ok: true } : { ok: false, error: 'could not save system schedules' };
@@ -88,6 +120,7 @@ export class SystemScheduleManager {
 
   private async fireDue(now: number): Promise<void> {
     for (const claimed of this.entries) {
+      if (claimed.paused) continue;
       if (claimed.nextRun > now) continue;
       if (this.disposed) return;
       let outcome;
@@ -108,7 +141,7 @@ export class SystemScheduleManager {
   ): void {
     if (this.entries.every((entry) => entry.key !== claimed.key)) return;
     const current = this.entries.find((entry) => entry.key === claimed.key);
-    if (!current) return;
+    if (!current || current.paused) return;
     const next = this.entries.filter((entry) => entry.key !== claimed.key);
     if (outcome.entry) next.push(outcome.entry);
     if (!this.commit(next)) return;
@@ -134,7 +167,7 @@ export class SystemScheduleManager {
   }
 
   private save(entries: SystemScheduleEntry[]): boolean {
-    const result = this.store.save({ version: 1, entries } satisfies SystemScheduleSnapshot);
+    const result = this.store.save({ version: 2, entries } satisfies SystemScheduleSnapshot);
     if (result.ok) return true;
     process.stderr.write(`System schedules could not save: ${saveError(result)}\n`);
     return false;

@@ -35,6 +35,13 @@ export function aggregatedScheduleView(
       const row = {
         tab: label, id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring, command: e.command,
       };
-      return system ? { ...row, owner: 'system' as const, key: e.key } : row;
+      return system
+        ? {
+          ...row,
+          owner: 'system' as const,
+          key: e.key,
+          ...(e.paused && { paused: true as const, next: 'paused' }),
+        }
+        : row;
     });
 }

@@ -122,7 +122,12 @@ describe('completeCommandLine — schedule `in <tab>` target', () => {
 });
 
 describe('completeCommandLine — system schedule grammar', () => {
-  const options = { names: ['alpha', 'nightly'], scripts: ['deploy', 'test-suite'] };
+  const options = {
+    names: ['alpha', 'nightly'],
+    scripts: ['deploy', 'test-suite'],
+    activeRecurringNames: ['alpha', 'daily'],
+    pausedNames: ['nightly', 'weekly'],
+  };
   const noFiles = '/no/such/dir/xyz';
 
   it('completes system subcommands, form keywords, and recurrence alternatives', () => {
@@ -147,6 +152,27 @@ describe('completeCommandLine — system schedule grammar', () => {
       .toBe('schedule system job at 3pm script deploy ');
     expect(completeCommandLine('schedule system job at 3pm script ', 35, noFiles, [], [], undefined, options).matches)
       .toEqual(['deploy', 'test-suite']);
+  });
+
+  it('offers pause and resume at the verb slot beside the existing verbs', () => {
+    const result = completeCommandLine('schedule system ', 16, noFiles, [], [], undefined, options);
+
+    expect(result.matches.toSorted((a, b) => a.localeCompare(b)))
+      .toEqual(['cancel', 'clear', 'list', 'pause', 'resume']);
+  });
+
+  it('offers only active recurring names after pause, never a paused one', () => {
+    const result = completeCommandLine('schedule system pause ', 22, noFiles, [], [], undefined, options);
+
+    expect(result.matches).toEqual(['alpha', 'daily']);
+    expect(result.matches).not.toContain('nightly');
+  });
+
+  it('offers only paused names after resume, never an active one', () => {
+    const result = completeCommandLine('schedule system resume ', 23, noFiles, [], [], undefined, options);
+
+    expect(result.matches).toEqual(['nightly', 'weekly']);
+    expect(result.matches).not.toContain('alpha');
   });
 });
 
@@ -281,20 +307,20 @@ describe('completeCommandLine — runscript commands', () => {
   const noFiles = '/no/such/dir/xyz';
 
   it('completes execute names only in its single name slot', () => {
-    expect(completeCommandLine('execute dep', 11, noFiles, [], [], undefined, { names: [], scripts }).newInput)
+    expect(completeCommandLine('execute dep', 11, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).newInput)
       .toBe('execute deploy ');
-    expect(completeCommandLine('execute ', 8, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('execute ', 8, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual(scripts);
-    expect(completeCommandLine('execute deploy extra', 20, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('execute deploy extra', 20, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual([]);
   });
 
   it('combines bare edit script names with file matches but leaves paths to filesystem completion', () => {
-    expect(completeCommandLine('edit dep', 8, noFiles, [], [], undefined, { names: [], scripts }).newInput)
+    expect(completeCommandLine('edit dep', 8, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).newInput)
       .toBe('edit deploy ');
-    expect(completeCommandLine('edit src/dep', 12, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('edit src/dep', 12, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual([]);
-    expect(completeCommandLine('edit deploy.ts', 14, noFiles, [], [], undefined, { names: [], scripts }).matches)
+    expect(completeCommandLine('edit deploy.ts', 14, noFiles, [], [], undefined, { names: [], scripts, activeRecurringNames: [], pausedNames: [] }).matches)
       .toEqual([]);
   });
 });
@@ -363,7 +389,7 @@ describe('completeCommandLine — disabled command guard', () => {
 
   it('guards every command-specific completer', () => {
     const labels = ['janus'];
-    const scripts = { names: [], scripts: ['deploy'] };
+    const scripts = { names: [], scripts: ['deploy'], activeRecurringNames: [], pausedNames: [] };
     const cases: [string, string][] = [
       ['send jan', 'send'],
       ['tab mo', 'tab'],

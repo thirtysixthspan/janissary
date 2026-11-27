@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScheduleRow } from '@shared/plugins/schedules/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -223,15 +224,15 @@ describe('SchedulesTab sections', () => {
     const headings = [...container.querySelectorAll(':scope .schedules-headings > span')].map((cell) => cell.textContent);
     const cells = [...container.querySelectorAll(':scope .schedules-row > span')].map((cell) => cell.textContent);
 
-    expect(headings).toEqual(['', 'Agent', 'Id', 'Timing', 'Next Run', 'Command']);
-    expect(cells).toEqual(['1)', 'agent-1', 'fetch', 'every 5m', 'Jan 1 3:00pm', 'echo hi']);
+    expect(headings).toEqual(['', 'Agent', 'Id', 'Timing', 'Next Run', 'Command', '']);
+    expect(cells).toEqual(['1)', 'agent-1', 'fetch', 'every 5m', 'Jan 1 3:00pm', 'echo hi', '']);
   });
 
   it('names the compressed columns Next Run, Id, Agent', () => {
     const { container } = renderTab([row()], 'right');
 
     const headings = [...container.querySelectorAll(':scope .schedules-headings > span')].map((cell) => cell.textContent);
-    expect(headings).toEqual(['', 'Next Run', 'Id', 'Agent']);
+    expect(headings).toEqual(['', 'Next Run', 'Id', 'Agent', '']);
   });
 
   it('numbers rows continuously from the top across both sections', () => {
@@ -354,5 +355,199 @@ describe('SchedulesTab new schedule button', () => {
     expect(openScheduleLaunch).toHaveBeenCalledTimes(1);
     expect(container.querySelector('.schedules-compact')).not.toBeNull();
     expect(container.querySelector('.plugin-actions')).toContainElement(screen.getByRole('button', { name: 'Split' }));
+  });
+});
+
+describe('SchedulesTab pause and resume', () => {
+  function recurringSystem(overrides: { id?: string; paused?: true; next?: string } = {}): ScheduleRow {
+    const id = overrides.id ?? 'ping';
+    const fields = {
+      id, spec: 'every 1m', next: overrides.next ?? 'in 1m', tab: 'system',
+      command: `script ${id}`, recurring: true, owner: 'system' as const, key: id,
+    };
+    return overrides.paused ? { ...fields, paused: overrides.paused } : fields;
+  }
+
+  const identity = { tab: 'system', owner: 'system', key: 'ping', id: 'ping' };
+
+  function rejectingCapabilities(reason: string) {
+    const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>()
+      .mockRejectedValue(new Error(reason));
+    const capabilities: TabPluginClientCapabilities = {
+      ...makeCapabilities().capabilities,
+      intent: async <Result,>(name: string, payload: unknown) =>
+        intent(name, payload) as Promise<Result>,
+    };
+    return { capabilities, intent };
+  }
+
+  it('offers the control only on recurring system rows, in both layouts', () => {
+    const entries = [
+      recurringSystem(),
+      recurringSystem({ id: 'nightly', paused: true, next: 'paused' }),
+      row({ id: 'once', tab: 'system', owner: 'system', key: 'once-key' }),
+      row({ id: 'tab-recurring', recurring: true }),
+    ];
+
+    for (const dock of [null, 'right'] as const) {
+      const rendered = renderTab(entries, dock);
+      const pause = screen.getByLabelText('Pause schedule ping');
+      const resume = screen.getByLabelText('Resume schedule nightly');
+
+      expect(pause).toHaveAttribute('title', 'Pause schedule ping');
+      expect(resume).toHaveAttribute('title', 'Resume schedule nightly');
+      expect(pause).not.toHaveAttribute('aria-pressed');
+      expect(pause.querySelector('svg')).toHaveAttribute('data-icon', 'pause');
+      expect(resume.querySelector('svg')).toHaveAttribute('data-icon', 'play');
+      expect(screen.queryByLabelText('Pause schedule once')).toBeNull();
+      expect(screen.queryByLabelText('Pause schedule tab-recurring')).toBeNull();
+      expect(rendered.container.querySelectorAll('.schedules-row-pause')).toHaveLength(2);
+      rendered.unmount();
+    }
+  });
+
+  it('sends one pause intent on press, leaving the selection and the delete dialog alone', () => {
+    const { container, intent } = renderTab([row({ id: 'other' }), recurringSystem()]);
+    const list = container.querySelector('.schedules-tab')!;
+
+    fireEvent.click(screen.getByLabelText('Pause schedule ping'));
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('pause', identity);
+    expect(container.querySelectorAll('.schedules-row.selected')).toHaveLength(0);
+    expect(screen.queryByText('Delete schedule "ping"?')).toBeNull();
+    expect(document.activeElement).toBe(list);
+  });
+
+  it('sends the resume intent when the row is paused', () => {
+    const { intent } = renderTab([recurringSystem({ paused: true, next: 'paused' })]);
+
+    fireEvent.click(screen.getByLabelText('Resume schedule ping'));
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('resume', identity);
+  });
+
+  it.each([
+    { action: 'pause', label: 'Pause schedule ping', paused: false },
+    { action: 'resume', label: 'Resume schedule ping', paused: true },
+  ] as const)('consumes a rejected $action intent without changing the row or raising an unhandled error', async ({ action, label, paused }) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const { capabilities, intent } = rejectingCapabilities('could not save system schedules');
+      const entry = recurringSystem(paused ? { paused: true, next: 'paused' } : {});
+      const { container } = render(<SchedulesTab payload={{ entries: [entry] }} capabilities={capabilities} />);
+      const before = container.querySelector('.schedules-row')!.textContent;
+
+      fireEvent.click(screen.getByLabelText(label));
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+
+      expect(intent).toHaveBeenCalledWith(action, identity);
+      expect(container.querySelector('.schedules-row')!.textContent).toBe(before);
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+      expect(warn).toHaveBeenCalledWith(`Plugin intent "${action}" failed: could not save system schedules`);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+      warn.mockRestore();
+    }
+  });
+
+  it('counts a double-click on the control as one press without focusing the owner', () => {
+    const { intent } = renderTab([recurringSystem()]);
+    const button = screen.getByLabelText('Pause schedule ping');
+
+    fireEvent.click(button, { detail: 1 });
+    fireEvent.click(button, { detail: 2 });
+    fireEvent.doubleClick(button);
+
+    expect(intent.mock.calls.map(([name]) => name)).toEqual(['pause']);
+  });
+
+  it('toggles only a selected recurring system row with Space and p', () => {
+    const { container, intent } = renderTab([recurringSystem(), row({ id: 'other' })]);
+    const list = container.querySelector('.schedules-tab')!;
+
+    fireEvent.keyDown(list, { key: ' ' });
+    expect(intent).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(list, { key: 'Home' });
+    fireEvent.keyDown(list, { key: ' ' });
+    expect(intent).toHaveBeenLastCalledWith('pause', identity);
+
+    intent.mockClear();
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.keyDown(list, { key: 'p' });
+    fireEvent.keyDown(list, { key: 'Home' });
+    fireEvent.keyDown(list, { key: 'p', metaKey: true });
+    fireEvent.keyDown(list, { key: 'p', ctrlKey: true });
+    fireEvent.keyDown(list, { key: 'p', altKey: true });
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves Space on the focused New schedule button to the button, so it opens the dialog instead of toggling the selected row', async () => {
+    const user = userEvent.setup();
+    const { container, intent, openScheduleLaunch } = renderTab([recurringSystem(), row({ id: 'other' })]);
+
+    fireEvent.click(container.querySelector('.schedules-row')!);
+    screen.getByRole('button', { name: 'New schedule' }).focus();
+    await user.keyboard(' ');
+
+    expect(openScheduleLaunch).toHaveBeenCalledTimes(1);
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves Space on another row\'s pause button to that button, so it toggles that row and not the selected one', async () => {
+    const user = userEvent.setup();
+    const { container, intent } = renderTab([
+      recurringSystem({ id: 'ping' }),
+      recurringSystem({ id: 'nightly', next: 'in 5m' }),
+    ]);
+
+    fireEvent.click(container.querySelector('.schedules-row')!);
+    screen.getByLabelText('Pause schedule nightly').focus();
+    await user.keyboard(' ');
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('pause', {
+      tab: 'system', owner: 'system', key: 'nightly', id: 'nightly',
+    });
+    expect(intent).not.toHaveBeenCalledWith('pause', {
+      tab: 'system', owner: 'system', key: 'ping', id: 'ping',
+    });
+  });
+
+  it('does not bubble a consumed Space past the list', () => {
+    const { container, intent } = renderTab([recurringSystem()]);
+    const list = container.querySelector('.schedules-tab')!;
+    const onBodyKeyDown = vi.fn();
+    document.body.addEventListener('keydown', onBodyKeyDown);
+
+    try {
+      fireEvent.keyDown(list, { key: 'Home' });
+      onBodyKeyDown.mockClear();
+      fireEvent.keyDown(list, { key: ' ' });
+
+      expect(onBodyKeyDown).not.toHaveBeenCalled();
+      expect(intent).toHaveBeenCalledWith('pause', identity);
+    } finally {
+      document.body.removeEventListener('keydown', onBodyKeyDown);
+    }
+  });
+
+  it('reads paused with a muted class in both layouts', () => {
+    const entries = [recurringSystem({ paused: true, next: 'paused' })];
+
+    for (const dock of [null, 'right'] as const) {
+      const rendered = renderTab(entries, dock);
+      const renderedRow = rendered.container.querySelector('.schedules-row')!;
+
+      expect(renderedRow).toHaveClass('paused', 'recurring');
+      expect(renderedRow.querySelector('.schedules-next')).toHaveTextContent('paused');
+      rendered.unmount();
+    }
   });
 });

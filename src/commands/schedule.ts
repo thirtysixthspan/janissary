@@ -70,12 +70,23 @@ function runSystemSchedule(
   if (parsed.action === 'list') {
     const entries = owner.list();
     append(entries.length === 0 ? 'No scheduled commands in system.' : entries.map((entry) =>
-      `${entry.id}  ${entry.spec}  (next: ${fmtNextRun(entry.nextRun)})  script ${entry.script}`,
+      `${entry.id}  ${entry.spec}  ${entry.paused === true ? '(paused)' : `(next: ${fmtNextRun(entry.nextRun)})`}  script ${entry.script}`,
     ).join('\n'));
     return;
   }
   if (parsed.action === 'add') {
     addSystemSchedule(parsed, append, managers);
+    return;
+  }
+  if (parsed.action === 'pause') {
+    pauseSystemSchedule(parsed, append, managers);
+    return;
+  }
+  if (parsed.action === 'resume') {
+    const count = owner.list().filter((entry) => entry.id === parsed.id && entry.paused === true).length;
+    if (count === 0) { append(`No paused scheduled command "${parsed.id}" in system.`); return; }
+    const result = owner.resumeByName(parsed.id);
+    append(result.ok ? `Resumed ${parsed.id} in system.` : 'Could not save system schedules.');
     return;
   }
   if (parsed.action === 'cancel') {
@@ -89,6 +100,18 @@ function runSystemSchedule(
   if (count === 0) { append('No scheduled commands in system.'); return; }
   const result = owner.clear();
   append(result.ok ? `Cleared ${count} scheduled commands in system.` : 'Could not save system schedules.');
+}
+
+function pauseSystemSchedule(
+  parsed: Extract<ScheduleParseResult, { scope: 'system'; action: 'pause' }>,
+  append: (text: string) => void,
+  managers: CommandManagers,
+): void {
+  const owner = managers.systemSchedule;
+  const count = owner.list().filter((entry) => entry.id === parsed.id && entry.recurring).length;
+  if (count === 0) { append(`No recurring scheduled command "${parsed.id}" in system.`); return; }
+  const result = owner.pauseByName(parsed.id);
+  append(result.ok ? `Paused ${parsed.id} in system.` : 'Could not save system schedules.');
 }
 
 function addSystemSchedule(

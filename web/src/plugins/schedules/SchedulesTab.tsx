@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
-import { PluginActionsHeader, newTabIcon, type TabPluginClientCapabilities } from '../api';
-import { nextSelection } from './schedules-keys';
+import { fireIntent, PluginActionsHeader, newTabIcon, type TabPluginClientCapabilities } from '../api';
+import { canPauseRow, nextSelection } from './schedules-keys';
 import { sectionSchedules } from './schedules-sections';
 import { ScheduleSection } from './SchedulesRows';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
@@ -57,9 +57,17 @@ export function SchedulesTab({
       const identity = pendingDelete.owner === 'system'
         ? { tab: pendingDelete.tab, owner: 'system', key: pendingDelete.key }
         : { tab: pendingDelete.tab };
-      void capabilities.intent('cancel', { ...identity, id: pendingDelete.id });
+      fireIntent(capabilities, 'cancel', { ...identity, id: pendingDelete.id });
     }
     setPendingDelete(null);
+  };
+
+  const togglePause = (entry: ScheduleRow) => {
+    if (entry.owner !== 'system') return;
+    fireIntent(capabilities, entry.paused ? 'resume' : 'pause', {
+      tab: entry.tab, owner: 'system', key: entry.key, id: entry.id,
+    });
+    containerRef.current?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -67,6 +75,16 @@ export function SchedulesTab({
       e.preventDefault();
       e.stopPropagation();
       setSelected(nextSelection(entries.length, selected, e.key));
+      return;
+    }
+    if ((e.key === ' ' || e.key === 'p') && e.target === e.currentTarget && selected !== null
+      && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const entry = entries[selected];
+      if (entry && canPauseRow(entry)) {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePause(entry);
+      }
       return;
     }
     if ((e.key === 'Backspace' || e.key === 'Delete') && selected !== null) {
@@ -115,6 +133,7 @@ export function SchedulesTab({
             selected={selected}
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
+            onTogglePause={togglePause}
             onDelete={setPendingDelete}
           />
           <ScheduleSection
@@ -125,6 +144,7 @@ export function SchedulesTab({
             selected={selected}
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
+            onTogglePause={togglePause}
             onDelete={setPendingDelete}
           />
         </>

@@ -17,12 +17,12 @@
   padding: 0 4px; line-height: 1;
 }
 .schedules-dock-cycle:hover { color: var(--fg); }
-.schedules-row-delete {
+.schedules-row-icon-button {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1; justify-self: center;
 }
 .schedules-section {
-  display: grid; grid-template-columns: auto auto auto auto auto minmax(0, auto) auto; gap: 12px;
+  display: grid; grid-template-columns: auto auto auto auto auto minmax(0, auto) auto auto; gap: 12px;
 }
 .schedules-section-title {
   grid-column: 1 / -1; padding: 6px 12px 2px; color: var(--fg); font-weight: 600;
@@ -40,6 +40,7 @@
 .schedules-row:hover { background: var(--border); }
 .schedules-row.selected { background: var(--bg-soft); }
 .schedules-row.recurring { color: var(--accent); }
+.schedules-row.paused { color: var(--muted); }
 .schedules-num { color: var(--muted); flex-shrink: 0; }
 .schedules-owner { color: var(--muted); flex-shrink: 0; }
 .schedules-id { flex-shrink: 0; }
@@ -50,6 +51,6 @@
 }
 .schedules-headings > .schedules-spec, .schedules-headings > .schedules-next,
 .schedules-row > .schedules-spec, .schedules-row > .schedules-next { white-space: normal; overflow-wrap: anywhere; }
-.schedules-compact .schedules-section { grid-template-columns: auto auto auto minmax(0, auto) auto; gap: 8px; }
+.schedules-compact .schedules-section { grid-template-columns: auto auto auto minmax(0, auto) auto auto; gap: 8px; }
 .schedules-compact .schedules-headings, .schedules-compact .schedules-row { font-size: 12px; }
 .schedules-section + .schedules-section { margin-top: 8px; }

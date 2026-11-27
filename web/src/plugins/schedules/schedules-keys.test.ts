@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { nextSelection, scheduleRowKey } from './schedules-keys';
+import type { ScheduleRow } from '@shared/plugins/schedules/shared';
+import { canPauseRow, nextSelection, scheduleRowKey } from './schedules-keys';
 
 describe('nextSelection', () => {
   it('ArrowDown moves forward by one and clamps at the last index', () => {
@@ -43,5 +44,30 @@ describe('scheduleRowKey', () => {
   it('keeps a system-tab timer distinct from a project-owned system row', () => {
     const base = { id: 'build', spec: 'at 9am', next: 'later', recurring: false, tab: 'system', command: 'script build' };
     expect(scheduleRowKey(base)).not.toBe(scheduleRowKey({ ...base, owner: 'system', key: 'first' }));
+  });
+});
+
+describe('canPauseRow', () => {
+  const base = { id: 'ping', spec: 'every 1m', next: 'in 1m', tab: 'system', command: 'script ping' };
+
+  it('accepts a recurring system row with a key', () => {
+    expect(canPauseRow({ ...base, owner: 'system', key: 'ping', recurring: true })).toBe(true);
+  });
+
+  it('stays true for a paused recurring system row', () => {
+    expect(canPauseRow({ ...base, owner: 'system', key: 'ping', recurring: true, paused: true })).toBe(true);
+  });
+
+  it('refuses a one-shot system row', () => {
+    expect(canPauseRow({ ...base, owner: 'system', key: 'ping', recurring: false })).toBe(false);
+  });
+
+  it('refuses a tab row even when it recurs', () => {
+    expect(canPauseRow({ ...base, tab: 'agent-1', recurring: true })).toBe(false);
+  });
+
+  it('refuses a system row without a key', () => {
+    const withoutKey = { ...base, owner: 'system', recurring: true } as unknown as ScheduleRow;
+    expect(canPauseRow(withoutKey)).toBe(false);
   });
 });

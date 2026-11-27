@@ -68,6 +68,18 @@ describe('runscript rows', () => {
     });
   });
 
+  it('counts a paused schedule toward its runscript just like an active one', () => {
+    withProject((root) => {
+      const dir = scriptsDir(root);
+      writeFileSync(path.join(dir, 'alpha.rs'), '');
+      const entries = [scheduled('one', 'alpha'), { ...scheduled('two', 'alpha'), paused: true as const }];
+
+      expect(readRunscriptRows(fakeManagers(root, [], entries)).rows).toEqual([
+        { name: 'alpha', schedules: 2, open: false },
+      ]);
+    });
+  });
+
   it('marks a row open only when an editor tab holds its absolute runscript path', () => {
     withProject((root) => {
       const dir = scriptsDir(root);

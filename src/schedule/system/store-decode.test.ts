@@ -1,5 +1,9 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeSystemScheduleSnapshot } from './store-decode.js';
+import { SystemScheduleStore } from './store.js';
 import { parseEverySchedule } from '../every-schedule.js';
 
 const entry = {
@@ -40,8 +44,42 @@ describe('system schedule store decoding', () => {
     expect(decodeSystemScheduleSnapshot({ version: 1, entries: [{ ...entry, weekday: 7 }] }).ok).toBe(false);
   });
 
+  it('decodes version-2 snapshots with and without paused entries', () => {
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [entry] })).toEqual({
+      ok: true, snapshot: { version: 2, entries: [entry] },
+    });
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...entry, paused: true }] })).toEqual({
+      ok: true, snapshot: { version: 2, entries: [{ ...entry, paused: true }] },
+    });
+  });
+
+  it('rejects paused in a version-1 entry', () => {
+    expect(decodeSystemScheduleSnapshot({ version: 1, entries: [{ ...entry, paused: true }] }).ok).toBe(false);
+  });
+
+  it('rejects a non-true paused value in a version-2 entry', () => {
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...entry, paused: false }] }).ok).toBe(false);
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...entry, paused: 1 }] }).ok).toBe(false);
+  });
+
+  it('rejects a paused one-shot in a version-2 entry', () => {
+    const oneShot = { ...entry, recurring: false, timeOfDay: undefined };
+    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [{ ...oneShot, paused: true }] }).ok).toBe(false);
+  });
+
   it('distinguishes unsupported schema versions', () => {
-    expect(decodeSystemScheduleSnapshot({ version: 2, entries: [] })).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
+    expect(decodeSystemScheduleSnapshot({ version: 3, entries: [] })).toEqual({ ok: false, kind: 'unsupported-version', version: 3 });
     expect(decodeSystemScheduleSnapshot([]).ok).toBe(false);
+  });
+
+  it('round-trips a paused entry through a version-2 store with all fields intact', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-paused-store-'));
+    try {
+      const paused = { ...entry, paused: true as const };
+      expect(new SystemScheduleStore(root).save({ version: 2, entries: [paused] })).toEqual({ ok: true });
+      expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 2, entries: [paused] } });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

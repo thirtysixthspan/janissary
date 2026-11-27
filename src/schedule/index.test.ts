@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { formatLateDuration, formatSchedule } from './display.js';
 import { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
-import { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
+import { nextOccurrenceOfTime, nextWeekday, computeNextRun, nextFutureRun } from './time.js';
 import { parseScheduleCommand } from './index.js';
+import { SYSTEM_SCHEDULE_USAGE } from './usage.js';
 import type { ScheduleEntry } from './types.js';
 
 // Tuesday, June 23 2026, 2:00pm local.
@@ -84,6 +85,24 @@ describe('next-run math', () => {
   it('computeNextRun rolls clock-time recurrences forward', () => {
     const entry = { timeOfDay: { hour: 13, minute: 0 }, recurring: true } as ScheduleEntry;
     expect(new Date(computeNextRun(entry, NOW)).getDate()).toBe(24);
+  });
+
+  it('nextFutureRun advances interval entries from now', () => {
+    const entry = { intervalMs: 300_000, recurring: true, nextRun: 0 } as ScheduleEntry;
+    const result = nextFutureRun(entry, NOW);
+    expect(result).toBe(NOW.getTime() + 300_000);
+    expect(result).toBeGreaterThan(NOW.getTime());
+  });
+
+  it('nextFutureRun returns the first future occurrence for stale clock-time entries', () => {
+    const daily = { timeOfDay: { hour: 15, minute: 0 }, recurring: true, nextRun: 0 } as ScheduleEntry;
+    expect(nextFutureRun(daily, NOW)).toBe(new Date(2026, 5, 23, 15, 0, 0, 0).getTime());
+
+    const weekday = { timeOfDay: { hour: 9, minute: 0 }, weekday: 1, recurring: true, nextRun: 0 } as ScheduleEntry;
+    const monday = nextFutureRun(weekday, NOW);
+    expect(monday).toBeGreaterThan(NOW.getTime());
+    expect(new Date(monday).getDay()).toBe(1);
+    expect(monday).toBe(new Date(2026, 5, 29, 9, 0, 0, 0).getTime());
   });
 });
 
@@ -196,10 +215,33 @@ describe('parseScheduleCommand', () => {
     expect(parseScheduleCommand('SYSTEM LiSt', NOW)).toEqual({ scope: 'system', action: 'list' });
     expect(parseScheduleCommand('system CANCEL deploy', NOW)).toEqual({ scope: 'system', action: 'cancel', id: 'deploy' });
     expect(parseScheduleCommand('system CLEAR', NOW)).toEqual({ scope: 'system', action: 'clear' });
+    expect(parseScheduleCommand('system PAUSE deploy', NOW)).toEqual({ scope: 'system', action: 'pause', id: 'deploy' });
+    expect(parseScheduleCommand('system RESUME deploy', NOW)).toEqual({ scope: 'system', action: 'resume', id: 'deploy' });
+  });
+
+  it('reserves pause as a system verb and rejects every other shape after it', () => {
+    expect(parseScheduleCommand('system pause ping', NOW)).toEqual({ scope: 'system', action: 'pause', id: 'ping' });
+    for (const line of [
+      'system pause', 'system pause ping extra', 'system pause ping every 5m script deploy',
+      'system pause every 5m script deploy',
+    ]) expect(parseScheduleCommand(line, NOW)).toEqual({ error: SYSTEM_SCHEDULE_USAGE });
+  });
+
+  it('reserves resume as a system verb and rejects every other shape after it', () => {
+    expect(parseScheduleCommand('system resume ping', NOW)).toEqual({ scope: 'system', action: 'resume', id: 'ping' });
+    for (const line of [
+      'system resume', 'system resume ping extra', 'system resume ping every 5m script deploy',
+      'system resume every 5m script deploy',
+    ]) expect(parseScheduleCommand(line, NOW)).toEqual({ error: SYSTEM_SCHEDULE_USAGE });
+  });
+
+  it('uses the exact system usage line with pause and resume', () => {
+    expect(SYSTEM_SCHEDULE_USAGE).toBe('Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system pause <name> | schedule system resume <name> | schedule system clear');
+    expect(parseScheduleCommand('system resume ping', NOW)).toEqual({ scope: 'system', action: 'resume', id: 'ping' });
   });
 
   it('uses the system usage message for malformed grammar and invalid script names', () => {
-    const usage = 'Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system clear';
+    const usage = 'Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system pause <name> | schedule system resume <name> | schedule system clear';
     for (const line of [
       'system list extra', 'system cancel', 'system clear extra', 'system deploy at nope script deploy',
       'system deploy at 3pm', 'system deploy at 3pm script bad_Name', 'system deploy at 3pm script deploy extra',

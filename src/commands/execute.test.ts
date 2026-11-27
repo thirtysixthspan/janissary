@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -58,6 +58,22 @@ describe('execute command', () => {
 
     expect(batches).toEqual([['pwd', 'false', ' echo done']]);
     expect(events).toEqual(['ensure', 'enqueue']);
+  });
+
+  it('runs a runscript immediately when its only schedule is paused', async () => {
+    const state = setup('echo deploy\n');
+    const paused = { id: 'deploy', key: '1', script: 'deploy', command: 'script deploy', spec: 'every 5m', nextRun: Date.now(), recurring: true, paused: true as const };
+    const resumeByKey = vi.fn();
+    const managers = {
+      ...state.managers,
+      systemSchedule: { list: () => [paused], resumeByKey },
+    } as never;
+
+    await command.run('execute deploy', { label: 'janus', index: 0 }, managers);
+
+    expect(state.batches).toEqual([['echo deploy']]);
+    expect(state.events).toEqual(['ensure', 'enqueue']);
+    expect(resumeByKey).not.toHaveBeenCalled();
   });
 
   it('succeeds on an empty script without adding queue rows', async () => {
