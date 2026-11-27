@@ -51,7 +51,7 @@
 | `files cursor` | `files cursor <path>` restores the cursor |
 | `files expand` | `files expand <path>` expands a directory |
 | `files select` | `files select <path>` restores the selection |
-| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out |
+| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, `--no-mcp`, or `--no-auto-resume` to opt out |
 | `harness capture` | `harness capture <name>` saves a screen capture |
 | `help` | `help` lists the commands; use a help subcommand for a page or the key bindings |
 | `help <command>` | Show one command's usage, use cases, and examples |

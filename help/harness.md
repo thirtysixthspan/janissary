@@ -6,7 +6,7 @@ Launch `claude`, `opencode`, or `codex` with optional settings. Workspace, brows
 
 `harness`
 
-`harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]`
+`harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--no-mcp] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]`
 
 `harness capture <name>`
 
@@ -33,3 +33,5 @@ In the New harness dialog, the **Model** field accepts only a blank field for th
 The **Effort** dropdown in the dialog offers a default, which adds no `--effort` flag, plus `low`, `medium`, `high`, `xhigh`, and `max`.
 
 `--auto-resume` is supported only by `opencode` and `codex`. Passing it to another harness is refused with `--auto-resume is only supported for the opencode and codex harnesses.`
+
+MCP injection is on by default, giving the harness the Janissary MCP server connection. `--no-mcp` opts out, and the negative form wins if both forms appear.
