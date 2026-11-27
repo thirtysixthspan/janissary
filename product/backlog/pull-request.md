@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop a first start with an `mcpPort` override from persisting the override as the project's saved port.
-
-Existing Issue: When `.janissary/mcp.json` does not exist and `mcpPort` is set, `McpManager.start` binds the override and then saves `{ port: <override>, token }`, so the hand-edited port becomes the persisted one and keeps being used after the override is removed, contrary to the plan's preserved behavior that an override binds "without being written back" and to the reachable first-start draw. Severity: 4/10
-
-Existing Risk: 4/10 - A user who briefly sets `mcpPort` (for example to a port in the 65280 to 65535 band, or one that later conflicts) and then deletes the key keeps that port forever, so confined harnesses cannot reach the server or it fails to start, with nothing pointing back at the old override.
-
-Proposal Risk: 1/10 - The override stays a pure runtime choice and the saved port is always one the reachable draw produced, so only a hand-edited `mcp.json` can still pin an unusual port.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "never persist an mcpPort override as the saved MCP port on a first start". In `src/mcp/manager.ts`, when there is no saved state and `getConfig().mcpPort` is set, persist the token without a port (make `port` optional in `State` and `decodeState`, so a token-only file is valid), and leave the port to be drawn with `reserveReachablePort()` and saved on the first start that runs without an override; a start with saved state keeps today's behavior. Add a test to `src/mcp/manager.test.ts` that sets `mcpPort` with no state file, starts and disposes, then clears `mcpPort` and starts again, asserting the second start's port is not the override, lies below `BROWSER_PORT_BAND_FIRST`, reuses the first start's token, and is what `mcp.json` now holds. The existing "persists the chosen port and token", "uses mcpPort instead of the saved port without writing it back" and taken-port tests in that file must keep passing, and `product/specs/mcp-server.md` should say an override is never saved.
-
-
 * Reserve a saved or overridden MCP port in the shared pool on every start, not only on the first.
 
 Existing Issue: `McpManager.start` reserves its port in the shared `reserved` set only when it draws a fresh one; on every later start the saved port, and any `mcpPort` override, is bound with a no-op `release` and never entered into the set, so browser guards in the same process can still draw the port the server is listening on. Severity: 3/10

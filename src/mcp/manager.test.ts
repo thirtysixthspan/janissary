@@ -7,6 +7,7 @@ import { getConfig } from '../config.js';
 import { loopbackReachable } from '../http-test-fixture.js';
 import type { Managers } from '../managers.js';
 import { deliverNotification } from '../notifications/deliver.js';
+import { BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST } from '../sandbox/browser/ports.js';
 import type { Tab } from '../tab/types.js';
 import { McpManager } from './manager.js';
 
@@ -34,6 +35,19 @@ async function freePort(): Promise<number> {
   const { port } = address;
   await new Promise<void>((resolve) => { probe.close(() => resolve()); });
   return port;
+}
+
+async function freeBandPort(): Promise<number> {
+  for (let port = BROWSER_PORT_BAND_FIRST; port <= BROWSER_PORT_BAND_LAST; port++) {
+    const probe = createServer();
+    const bound = await new Promise<boolean>((resolve) => {
+      probe.once('error', () => resolve(false));
+      probe.listen(port, '127.0.0.1', () => resolve(true));
+    });
+    if (bound) await new Promise<void>((resolve) => { probe.close(() => resolve()); });
+    if (bound) return port;
+  }
+  throw new Error('no free port in the denied band');
 }
 
 let root: string;
@@ -99,6 +113,60 @@ describe.skipIf(!canReachLoopback)('McpManager', () => {
     expect(manager.localLaunch()?.token).toBe(saved.token);
     expect(readFileSync(file, 'utf8')).toBe(savedText);
     await manager.dispose();
+  });
+
+  it('saves only the token when a first start binds mcpPort, and draws a reachable port once it is removed', async () => {
+    const managers = fixtureManagers();
+    const override = await freeBandPort();
+    getConfig().mcpPort = override;
+    const first = new McpManager(managers, root);
+    await first.ready;
+    const firstStatus = first.status();
+    expect(firstStatus.status).toBe('running');
+    if (firstStatus.status !== 'running') throw new Error('expected a running server');
+    expect(firstStatus.port).toBe(override);
+    const token = first.localLaunch()?.token;
+    const file = path.join(root, '.janissary', 'mcp.json');
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ token });
+    first.dispose();
+
+    delete getConfig().mcpPort;
+    const second = new McpManager(managers, root);
+    await second.ready;
+    try {
+      const status = second.status();
+      expect(status.status).toBe('running');
+      if (status.status !== 'running') throw new Error('expected a running server');
+      expect(status.port).not.toBe(override);
+      expect(status.port).toBeLessThan(BROWSER_PORT_BAND_FIRST);
+      expect(second.localLaunch()?.token).toBe(token);
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ port: status.port, token });
+    } finally {
+      second.dispose();
+    }
+  });
+
+  it('binds mcpPort over a token-only state file without changing it', async () => {
+    const managers = fixtureManagers();
+    const file = path.join(root, '.janissary', 'mcp.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    const savedText = JSON.stringify({ token: 'saved-token' });
+    writeFileSync(file, savedText);
+    const override = await freePort();
+    getConfig().mcpPort = override;
+
+    const manager = new McpManager(managers, root);
+    await manager.ready;
+    try {
+      const status = manager.status();
+      expect(status.status).toBe('running');
+      if (status.status !== 'running') throw new Error('expected a running server');
+      expect(status.port).toBe(override);
+      expect(manager.localLaunch()?.token).toBe('saved-token');
+      expect(readFileSync(file, 'utf8')).toBe(savedText);
+    } finally {
+      manager.dispose();
+    }
   });
 
   it('records one failure notification and stays down when the port is taken', async () => {

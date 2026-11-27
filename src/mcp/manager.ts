@@ -24,10 +24,14 @@ export type McpStatus =
 
 export type McpLaunch = { url: string; token: string };
 
-type State = { port: number; token: string };
+type State = { port?: number; token: string };
 
 function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isPort(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 65_535;
 }
 
 function decodeState(value: string): State | undefined {
@@ -36,8 +40,8 @@ function decodeState(value: string): State | undefined {
     if (typeof parsed !== 'object' || parsed === null) return undefined;
     const { port, token } = parsed as Record<string, unknown>;
     if (typeof token !== 'string' || token === '') return undefined;
-    if (typeof port !== 'number' || !Number.isSafeInteger(port) || port < 1 || port > 65_535) return undefined;
-    return { port, token };
+    if (port === undefined) return { token };
+    return isPort(port) ? { port, token } : undefined;
   } catch {
     return undefined;
   }
@@ -58,6 +62,13 @@ function loadState(file: string): { state?: State; error?: string } {
 function saveState(file: string, state: State): void {
   mkdirSync(path.dirname(file), { recursive: true });
   atomicWriteFile(file, `${JSON.stringify(state, undefined, 2)}\n`, STATE_MODE);
+}
+
+function stateToSave(
+  state: State | undefined, override: number | undefined, bound: number, token: string,
+): State | undefined {
+  if (override !== undefined) return state ? undefined : { token };
+  return state?.port === undefined ? { port: bound, token } : undefined;
 }
 
 async function listen(port: number, token: string, managers: Managers) {
@@ -139,7 +150,8 @@ export class McpManager {
       const { state, error } = loadState(this.stateFile);
       if (error) throw new Error(error);
       const token = state?.token ?? makeToken();
-      const configured = getConfig().mcpPort ?? state?.port;
+      const override = getConfig().mcpPort;
+      const configured = override ?? state?.port;
       const chosen = configured === undefined
         ? reserveReachablePort()
         : { port: configured, release: () => {} };
@@ -152,7 +164,8 @@ export class McpManager {
           return;
         }
         try {
-          if (!state) saveState(this.stateFile, { port: listener.port, token });
+          const next = stateToSave(state, override, listener.port, token);
+          if (next) saveState(this.stateFile, next);
         } catch (error_) {
           listener.server.close();
           await listener.handler.close();
