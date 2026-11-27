@@ -267,6 +267,48 @@ describe('HarnessLaunchDialog', () => {
     expect((second.getByLabelText(/E2E browser/) as HTMLInputElement).checked).toBe(false);
   });
 
+  it('renders the MCP server checkbox, defaulted on', () => {
+    const { getByLabelText } = renderDialog();
+    expect((getByLabelText(/MCP server/) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('unchecking the MCP server checkbox appends --no-mcp to the built command', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    fireEvent.click(getByLabelText(/MCP server/));
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command', params: { text: 'harness claude --no-mcp --no-auto-resume' },
+    });
+  });
+
+  it('checking Offline clears and disables the MCP server checkbox', () => {
+    const { getByLabelText } = renderDialog();
+    fireEvent.click(getByLabelText(/Offline/));
+    const mcp = getByLabelText(/MCP server/) as HTMLInputElement;
+    expect(mcp.checked).toBe(false);
+    expect(mcp.disabled).toBe(true);
+  });
+
+  it('unchecking Offline re-enables and rechecks the MCP server checkbox', () => {
+    const { getByLabelText } = renderDialog();
+    const offline = getByLabelText(/Offline/);
+    fireEvent.click(offline);
+    fireEvent.click(offline);
+    const mcp = getByLabelText(/MCP server/) as HTMLInputElement;
+    expect(mcp.disabled).toBe(false);
+    expect(mcp.checked).toBe(true);
+  });
+
+  it('adds no --no-mcp to an offline command even when the MCP checkbox was cleared', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    fireEvent.click(getByLabelText(/MCP server/));
+    fireEvent.click(getByLabelText(/Offline/));
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command', params: { text: 'harness claude --offline --no-auto-resume' },
+    });
+  });
+
   it('builds no --model for blank or whitespace-only text', () => {
     const { getByText, getByLabelText, send } = renderDialog();
     fireEvent.click(getByText('Create'));
