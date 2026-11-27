@@ -10,7 +10,7 @@ row, and the one place its behavior differs (the connections panel is shown, not
 
 ```
 harness
-harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]
+harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--no-mcp] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]
 harness capture <name>
 harness transcript <name>
 ```

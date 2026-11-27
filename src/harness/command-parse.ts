@@ -12,7 +12,7 @@ import { isValidGroupSelector } from '../tab/groups.js';
 // positionally — four consecutive booleans followed by four consecutive optional strings, where a
 // transposition typechecks and ships.
 export type HarnessLaunch = {
-  name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
+  name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean; mcp: boolean;
   label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress; group?: string;
 };
 
@@ -112,13 +112,14 @@ function parseHarnessFlags(
   name: string,
   remote: RemoteAddress | undefined,
 ): {
-  workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
+  workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean; mcp: boolean;
   model?: string; effort?: string; label?: string; group?: string;
 } | { error: string } {
   const noWorkspace = tokens.some((t) => t.toLowerCase() === '--no-workspace');
   const workspace = remote !== undefined || !noWorkspace;
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
   const browser = tokens.every((t) => t.toLowerCase() !== '--no-browser');
+  const mcp = tokens.every((t) => t.toLowerCase() !== '--no-mcp');
   const noAutoApprove = tokens.some((t) => t.toLowerCase() === '--no-auto-approve');
   const requestedAutoApprove = tokens.some((t) => t === '-y' || t === '--yes');
   const autoApprove = supportsHarnessAutoApprove(name) && !noAutoApprove;
@@ -138,10 +139,10 @@ function parseHarnessFlags(
   const effort = findFlagValue(tokens, '--effort');
   if (effort !== undefined && typeof effort !== 'string') return effort;
   const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { workspace, offline, autoApprove, browser, autoResume, model, effort };
+  if (asIndex === -1) return { workspace, offline, autoApprove, browser, autoResume, mcp, model, effort };
   const label = tokens[asIndex + 1];
   if (!label) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> as <label>.`) };
-  return { workspace, offline, autoApprove, browser, autoResume, model, effort, label };
+  return { workspace, offline, autoApprove, browser, autoResume, mcp, model, effort, label };
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
@@ -158,7 +159,7 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
 
 /**
  * Parse a `harness <name> [as <label>] [on <address>] [-w|--workspace] [--offline] [-y|--yes]
- * [-b|--browser|--no-browser] [--model <name>] [--effort <level>]` command, validating the harness name against
+ * [-b|--browser|--no-browser] [--no-mcp] [--model <name>] [--effort <level>]` command, validating the harness name against
  * the known set.
  * `on <address>` runs the harness on another host over one ssh session and implies `-w`, since the
  * remote server does nothing but workspaced launches (see `product/specs/remote-server.md`).
@@ -175,6 +176,9 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
  * `--no-auto-approve`. It applies to every harness, with or without a workspace, and is deliberately
  * not turned off by `--offline`: both apply, and the offline profile then denies the harness the
  * network route to its own browser.
+ * `--no-mcp` opts out of the per-launch MCP server config, winning if both it and any positive form were
+ * present. Like the browser it is not turned off by `--offline` here: the effective-MCP rule is applied
+ * at spawn.
  * `--model <name>` selects a model, validated by the caller against the harness's catalog.
  * `--effort <level>` selects an effort level, passed through verbatim with no validation.
  * `--auto-resume` confirms the default that a recognized subscription-limit screen schedules its own

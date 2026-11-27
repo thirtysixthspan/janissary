@@ -1,4 +1,5 @@
 import { shellQuote } from '../shell/quote.js';
+import { mcpArgs } from './mcp-args.js';
 
 // The embeddable AI coding harnesses, mapped to the binary that launches each. In the web app a
 // harness runs in a PTY rendered as an inline terminal card (see src/controller.ts).
@@ -42,7 +43,7 @@ const LAUNCH_ARGS: Record<string, string> = {
 // effort level translated to that harness's own flag (see effortArg).
 // `buildHarnessCommand('codex', 'gpt-5', 'high')` →
 // `codex $(…probe…) --model 'gpt-5' -c 'model_reasoning_effort=high'` (see LAUNCH_ARGS).
-export function buildHarnessCommand(name: string, model?: string, effort?: string): string {
+export function buildHarnessCommand(name: string, model?: string, effort?: string, mcp = false): string {
   const program = HARNESS_COMMANDS[name];
   const parts = [program];
   const launchArgs = LAUNCH_ARGS[name];
@@ -50,5 +51,10 @@ export function buildHarnessCommand(name: string, model?: string, effort?: strin
   if (model) parts.push(`--model ${shellQuote(model)}`);
   const effortFlag = effort ? effortArg(name, effort) : undefined;
   if (effortFlag) parts.push(effortFlag);
+  if (mcp) {
+    const fragment = mcpArgs(name);
+    if (name === 'opencode') parts.unshift(fragment);
+    else parts.push(fragment);
+  }
   return parts.join(' ');
 }
