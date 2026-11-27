@@ -965,6 +965,12 @@ the remote host, so the remote harness sees the same question panel and the same
 error text as any other harness. A harness launched without MCP gets no endpoint and no MCP
 variables in its environment.
 
+Arguments cross the session as one encoded JSON value, so the local side reads exactly what the
+far-side harness sent. A call whose arguments are not valid JSON is answered on the spot with an
+error naming the bad arguments: no question is opened, and the call id is left unclaimed, so a later
+valid call using that id starts a fresh question and receives its own answer rather than replaying
+the error.
+
 #### Run clones
 
 Once the main workspace is ready, the far side also owns a service that can make additional shallow

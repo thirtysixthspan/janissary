@@ -3,6 +3,7 @@ import type * as Http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolExecutor } from '../mcp/tools.js';
 import { spawnPty } from '../pty.js';
+import { decodeFrame, encodeFrame } from './protocol.js';
 import type { ServerFrame } from './protocol-frames.js';
 import { FarSideMcp } from './serve-mcp.js';
 import { RemoteProcesses } from './serve-processes.js';
@@ -104,7 +105,9 @@ describe('the far-side MCP endpoint', () => {
 
     const frame = relayedCall();
     expect(frame.tool).toBe('question');
-    expect(JSON.parse(Buffer.from(frame.args, 'base64').toString('utf8'))).toEqual(ARGS);
+    const wire = decodeFrame(encodeFrame(frame));
+    if (wire.type !== 'mcp-call') throw new Error('expected an mcp-call');
+    expect(JSON.parse(wire.args)).toEqual(ARGS);
     expect(httpMock.server.listen).toHaveBeenCalledWith(expect.any(Number), '127.0.0.1');
 
     processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'yes', isError: false });

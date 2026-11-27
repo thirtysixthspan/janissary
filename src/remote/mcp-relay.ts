@@ -22,9 +22,15 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
         if (existing.result !== undefined) answer(frame.call, existing.result);
         return;
       }
+      let args: Record<string, unknown>;
+      try {
+        args = JSON.parse(frame.args) as Record<string, unknown>;
+      } catch {
+        answer(frame.call, { text: `Malformed MCP arguments: ${frame.args}`, isError: true });
+        return;
+      }
       const entry: Pending = {};
       pending.set(frame.call, entry);
-      const args = JSON.parse(frame.args) as Record<string, unknown>;
       const settle = (result: ToolResult): void => {
         entry.result = result;
         answer(frame.call, result);

@@ -150,7 +150,7 @@ export class FarSideMcp {
     const call = randomUUID();
     const frame: CallFrame = {
       type: 'mcp-call', call, tool,
-      args: Buffer.from(JSON.stringify(args)).toString('base64'),
+      args: JSON.stringify(args),
     };
     const onAbort = () => {
       this.pending.delete(call);

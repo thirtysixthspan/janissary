@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the local MCP relay accept the arguments the far side actually sends so a remote question no longer throws and poisons its call id.
-
-Existing Issue: `FarSideMcp.relay` in `src/remote/serve-mcp.ts` sets `mcp-call.args` to base64 of JSON and then `encodeFrame` base64-encodes that field again, so the new `JSON.parse(frame.args)` in `src/remote/mcp-relay.ts` throws on every real call, and because the pending entry is inserted before the parse it stays result-less and later re-sends are silently dropped. Severity: 9/10
-
-Existing Risk: 9/10 - Every real remote MCP question fails before it reaches `createLocalExecutor`: the throw escapes `RemoteChannel.dispatch` through the PTY `onData` callback, and the far side eventually fails the call with a not-connected error when its grace window ends.
-
-Proposal Risk: 2/10 - Sending plain JSON from the far side matches how every other binary field is produced, and catching parse errors in the relay keeps a malformed frame local, with codec-level and malformed-input tests pinning both ends.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "stop double-encoding mcp-call args and make the relay reject malformed frames". In `src/remote/serve-mcp.ts`, change `FarSideMcp.relay` to put `JSON.stringify(args)` (plain text) in the `mcp-call` frame and let the codec's `BINARY_FIELDS['mcp-call']` entry in `src/remote/base64-fields.ts` do the single base64 pass, the same way the local side sends `mcp-result.text` in `src/remote/mcp-relay.ts`. In `src/remote/mcp-relay.ts`, move `pending.set` after a successful `JSON.parse`, and wrap the parse in a try/catch that settles the call with an `isError` result whose text names the malformed arguments, so a bad frame never throws out of `handle()` and never leaves a result-less entry that silences re-sends. Update `src/remote/serve-mcp.test.ts` to assert the encoded wire form via `encodeFrame`/`decodeFrame` instead of inspecting the raw `send` mock frame — its `Buffer.from(frame.args, 'base64')` assertion currently pins the double encoding — and add a malformed-args case to `src/remote/mcp-relay.test.ts` asserting an `isError` result and that a later valid call with the same id is not deduplicated away. The `mcpHarness` test in `src/remote/manager.test.ts` builds frames directly with `encodeFrame`, so it cannot detect the double encoding and must stay as-is.
-
-
 * Add a remote-launch test that exercises the false-when-server-down MCP decision instead of passing the flag by hand.
 
 Existing Issue: The two spawn-MCP-flag tests added to `src/remote/manager.test.ts` call `createRemotePtySession` with a literal `mcp: false` or `mcp: true`, so they check pass-through into the spawn frame but never exercise the `mcp.enabled` decision in `HarnessTabSpawn.spawnTab` that the spec says must be false when the local server is down. Severity: 4/10

@@ -53,6 +53,25 @@ describe('createMcpRelay', () => {
     });
   });
 
+  it('answers malformed arguments as an error and lets a later valid call with the same id register', async () => {
+    const { relay, call, register, send, answer } = fixture();
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool: 'question', args: '{not json' });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: 'Malformed MCP arguments: {not json', isError: true,
+    });
+    expect(register).not.toHaveBeenCalled();
+
+    send.mockClear();
+    call('call-1');
+    expect(answer('3000')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: '3000', isError: false,
+    }));
+    expect(register).toHaveBeenCalledTimes(1);
+  });
+
   it('clears the map on channel close so a re-send registers a fresh question', () => {
     const { call, register, relay } = fixture();
     call('call-1');
