@@ -6,7 +6,7 @@ Janissary runs a local-only MCP server so AI harnesses can put a question to the
 
 The server runs inside the main Janissary process, listens on loopback only, and serves plain HTTP with no TLS certificate. Every request must carry the server's bearer token; one server-wide token authenticates every harness. That token is a credential of its own, separate from the application's live URL and session token, which harnesses are never given (see [[harness]]). A request with a missing or wrong token is refused, as is a request whose `Origin` is rejected or whose POST body is not JSON.
 
-On its first start in a project the server picks a free loopback port and saves it beside the token under `.janissary/`; every later start reuses both. A hand-edited `mcpPort` key overrides the saved port (see [[application-config]]). A port that is already taken stops the server from starting while Janissary itself runs normally, and records one notification reading `MCP server failed to start: <reason>`, with the failure reason verbatim (see [[notifications]]).
+On its first start in a project the server picks a free loopback port below the band the sandbox denies to confined harnesses, so workspaced harnesses can always reach it, and saves it beside the token under `.janissary/`; every later start reuses both. A hand-edited `mcpPort` key overrides the saved port (see [[application-config]]). A port that is already taken stops the server from starting while Janissary itself runs normally, and records one notification reading `MCP server failed to start: <reason>`, with the failure reason verbatim (see [[notifications]]).
 
 ### The `question` tool
 

@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { atomicWriteFile } from '../atomic-write.js';
+import { reserveReachablePort } from '../browser/e2e-ports.js';
 import { getConfig } from '../config.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
@@ -138,24 +139,33 @@ export class McpManager {
       const { state, error } = loadState(this.stateFile);
       if (error) throw new Error(error);
       const token = state?.token ?? makeToken();
-      const port = getConfig().mcpPort ?? state?.port ?? 0;
-      const listener = await listen(port, token, managers);
-      if (this.disposed) {
-        listener.server.close();
-        await listener.handler.close();
-        return;
-      }
+      const configured = getConfig().mcpPort ?? state?.port;
+      const chosen = configured === undefined
+        ? reserveReachablePort()
+        : { port: configured, release: () => {} };
       try {
-        if (!state) saveState(this.stateFile, { port: listener.port, token });
-      } catch (error_) {
-        listener.server.close();
-        await listener.handler.close();
-        throw error_;
+        const listener = await listen(chosen.port, token, managers);
+        if (this.disposed) {
+          listener.server.close();
+          await listener.handler.close();
+          chosen.release();
+          return;
+        }
+        try {
+          if (!state) saveState(this.stateFile, { port: listener.port, token });
+        } catch (error_) {
+          listener.server.close();
+          await listener.handler.close();
+          throw error_;
+        }
+        this.server = listener.server;
+        this.handler = listener.handler;
+        this.port = listener.port;
+        this.launch = { url: `http://${LOOPBACK}:${listener.port}${MCP_PATH}`, token };
+      } catch (error) {
+        chosen.release();
+        throw error;
       }
-      this.server = listener.server;
-      this.handler = listener.handler;
-      this.port = listener.port;
-      this.launch = { url: `http://${LOOPBACK}:${listener.port}${MCP_PATH}`, token };
     } catch (error) {
       this.failure = reasonOf(error);
       this.recordFailure(managers);

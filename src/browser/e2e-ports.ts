@@ -90,3 +90,19 @@ export function allocateBrowserPorts(): BrowserPorts {
     release: () => { reserved.delete(guardPort); reserved.delete(browserPort); },
   };
 }
+
+// The local MCP server also binds a loopback port confined harnesses must reach, and persists it
+// for the life of the project. It draws from the same guard range and the same reservation set as
+// browser guards: a separate pool would let a guard claim the port the server is already listening
+// on. `claimPort` normalizes the draw, so a value landing in the denied band still yields a port
+// below it.
+export type ReservedPort = {
+  port: number;
+  release: () => void;
+};
+
+export function reserveReachablePort(): ReservedPort {
+  const port = claimPort(randomInt(FIRST_PORT, FIRST_PORT + GUARD_COUNT), FIRST_PORT, GUARD_COUNT);
+  if (port === undefined) throw exhausted('harness-reachable', FIRST_PORT, GUARD_COUNT);
+  return { port, release: () => { reserved.delete(port); } };
+}
