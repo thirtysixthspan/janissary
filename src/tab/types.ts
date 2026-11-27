@@ -86,6 +86,9 @@ export type HarnessView = {
   // listens, cleared when one is reported gone. It is what tells a browser in use apart from an
   // endpoint nothing has connected to yet, which the metadata row's browser flag reads.
   browserRunning?: boolean;
+  // Set once the harness first calls the MCP server, and left set for the tab's life: it lights the
+  // metadata row's MCP flag green.
+  mcpUsed?: boolean;
   // Set once auto-approve has injected an approval into a `-y` tab's permission prompt, local or
   // remote, and left set for the tab's life: it lights the metadata row's auto-approve flag green.
   autoApproved?: boolean;
