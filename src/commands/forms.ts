@@ -11,6 +11,7 @@ export const COMMAND_FORMS: Readonly<Record<string, ApplicationCommandDeclaratio
   files: { name: 'files', forms: ['files', 'files expand', 'files collapse', 'files cursor', 'files anchor', 'files select'] },
   harness: { name: 'harness', forms: ['harness'] }, hist: { name: 'hist', forms: ['hist'] },
   layout: { name: 'layout', forms: ['layout', 'layout window', 'layout sidebar', 'layout split', 'layout reporting', 'layout show'] },
+  mcp: { name: 'mcp', forms: ['mcp'] },
   next: { name: 'next', forms: ['next'] }, notifications: { name: 'notifications', forms: ['notifications', 'notifications left', 'notifications right', 'notifications clear'] },
   notify: { name: 'notify', forms: ['notify'] }, open: { name: 'open', forms: ['open', 'open external', 'open page'] },
   play: { name: 'play', forms: ['play'] }, plugins: { name: 'plugins', forms: ['plugins', 'plugins list'] },

@@ -74,6 +74,7 @@
 | `layout sidebar` | `layout sidebar left\|right <width>` sets a sidebar's width |
 | `layout split` | `layout split <percent>` sets the left pane's share of the center area |
 | `layout window` | `layout window <width> <height>` sets the application window size |
+| `mcp` | Print the local MCP server's state as a key/value block, never the token |
 | `models` | Open the model catalog |
 | `models left` | Dock the model catalog in the left sidebar |
 | `models right` | Dock the model catalog in the right sidebar |
