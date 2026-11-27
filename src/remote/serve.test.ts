@@ -13,18 +13,28 @@ import { wireShutdown, CHANNEL_SIGNALS } from './serve-start.js';
 import { WorkspaceManager } from '../workspace/manager.js';
 import { RemoteChannel } from './channel/index.js';
 import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake, REMOTE_PROTOCOL_VERSION } from './protocol.js';
-import type { ServerFrame } from './protocol-frames.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import type { PromptHandlers } from '../acp/types.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { provisionRemoteWorkspace, type ProvisionedWorkspace } from './serve-provision.js';
 import type * as ProvisionModule from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
+import type * as Crypto from 'node:crypto';
 import { createConnection, createServer } from 'node:net';
 import { readFileSync } from 'node:fs';
 
 // Only the process spawners are faked: every other part of this file drives the real server against
 // a real clone, and the credential a spawn is handed is the one thing that has no other observable.
 vi.mock('../pty.js');
+
+const cryptoMock = vi.hoisted(() => ({ port: undefined as number | undefined }));
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof Crypto>();
+  return {
+    ...actual,
+    randomInt: (min: number, max: number) => cryptoMock.port ?? actual.randomInt(min, max),
+  };
+});
 
 // The ACP agent is faked for the same reason, plus one of its own: `shutdown` must kill it *before*
 // the clone is removed, and that ordering is only observable from inside the kill.
@@ -557,6 +567,35 @@ describe('RemoteServer', () => {
     expect(frames.find((frame) => frame.type === 'session-state-result')?.processes).toEqual([]);
     expect(exit).not.toHaveBeenCalled();
     server.shutdown(0);
+  });
+
+  it('reports a failed shared MCP endpoint to a later harness before exiting it', async () => {
+    const blocker = createServer();
+    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', () => resolve()));
+    const address = blocker.address();
+    if (address === null || typeof address === 'string') throw new Error('expected a bound blocker port');
+    cryptoMock.port = address.port;
+    const { server, frames, exit } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'mcp-collision' })}\n`);
+      await waitForWorkspaceReady(frames);
+      const spawnFrame = (id: string) => (server as unknown as {
+        spawn: (frame: Extract<ClientFrame, { type: 'spawn' }>) => void;
+      }).spawn({ ...SPAWN_FRAME, id, mcp: true });
+      spawnFrame('r1');
+      await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'output' && frame.id === 'r1' && frame.data.includes('MCP endpoint could not bind'))).toBe(true));
+      spawnFrame('r2');
+
+      expect(frames).toContainEqual({
+        type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind'),
+      });
+      expect(frames).toContainEqual({ type: 'exit', id: 'r2', exitCode: 1 });
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      cryptoMock.port = undefined;
+      blocker.close();
+      server.shutdown(0);
+    }
   });
 
   // A peer that has not provisioned is holding nothing, which is a fact worth stating: answering

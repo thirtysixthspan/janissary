@@ -77,8 +77,11 @@ export class FarSideMcp {
     this.server.listen(this.port, LOOPBACK);
   }
 
-  launch(): McpLaunch {
-    if (this.failure !== undefined) throw new Error(this.failure);
+  launch(id: string = this.id): McpLaunch {
+    if (this.failure !== undefined) {
+      this.send({ type: 'output', id, data: `${this.failure}\n` });
+      throw new Error(this.failure);
+    }
     return { url: `http://${LOOPBACK}:${this.port}${MCP_PATH}`, token: this.token };
   }
 

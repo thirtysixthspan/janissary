@@ -3,6 +3,7 @@ import type * as Http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolExecutor } from '../mcp/tools.js';
 import { spawnPty } from '../pty.js';
+import type { ServerFrame } from './protocol-frames.js';
 import { FarSideMcp } from './serve-mcp.js';
 import { RemoteProcesses } from './serve-processes.js';
 
@@ -162,6 +163,37 @@ describe('the far-side MCP endpoint', () => {
     const after = new FarSideMcp(vi.fn(), 'after');
     expect(Number(new URL(after.launch().url).port)).toBe(port);
     after.dispose();
+    cryptoMock.randomInt = undefined;
+    blocker.close();
+  });
+
+  it('reports the stored bind failure to a later harness that asks for the failed endpoint', async () => {
+    vi.useRealTimers();
+    const actual = await vi.importActual<typeof Http>('node:http');
+
+    const probe = new FarSideMcp(vi.fn(), 'probe');
+    const port = Number(new URL(probe.launch().url).port);
+    probe.dispose();
+    cryptoMock.randomInt = () => port;
+
+    const blocker = actual.createServer();
+    await new Promise<void>((resolve) => blocker.listen(port, '127.0.0.1', () => resolve()));
+
+    const { promise: reported, resolve: report } = Promise.withResolvers<void>();
+    const frames: ServerFrame[] = [];
+    const collisionSend = vi.fn((frame: ServerFrame) => { frames.push(frame); report(); });
+    httpMock.createServer.mockImplementationOnce((handler: Http.RequestListener) => actual.createServer(handler));
+
+    const mcp = new FarSideMcp(collisionSend, 'r1');
+    await reported;
+
+    expect(() => mcp.launch('r2')).toThrow(/MCP endpoint could not bind/);
+    expect(frames).toEqual([
+      { type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') },
+      { type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind') },
+    ]);
+
+    mcp.dispose();
     cryptoMock.randomInt = undefined;
     blocker.close();
   });
