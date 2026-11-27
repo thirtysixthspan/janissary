@@ -960,6 +960,13 @@ endpoint does not leave its port claimed. Every harness that later asks for MCP 
 receives the stored reason in its own tab before the same exit-code-1 refusal, so none closes without
 being told why; the first, colliding harness's report is unchanged.
 
+A harness waiting for that bind already holds its process id. A second launch with the same id is
+ignored, as it is for a running process. Closing the tab, or ending the session, before the bind
+settles means the harness never starts: no process is left running on the remote host, and the tab
+is answered with exit code 1, as any launch that could not start is. Input typed and resizes made
+during the wait are not lost. Once the harness starts, it gets the latest size and then the input in
+the order it was typed.
+
 The endpoint serves the same question tool a local harness sees. Each call is passed back to the
 local Janissary over the session's existing connection, where the question is put to the human, and
 the answer travels back to the harness that asked for it. Nothing about an MCP call is answered on

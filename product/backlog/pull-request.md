@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle frames that arrive while an MCP harness spawn is still waiting for its endpoint to bind, so a kill, input, resize or shutdown in that window is not lost.
-
-Existing Issue: `RemoteProcesses.spawn` now awaits `FarSideMcp.launch()` before it inserts the entry, so a `kill`, `input` or `resize` for that id, or a `killAll` from shutdown, that is processed during the await finds no entry and is dropped, and the PTY is spawned afterwards anyway; the duplicate-id guard is also checked only before the await. Severity: 4/10
-
-Existing Risk: 3/10 - A tab closed or a session shut down right after an MCP harness launch leaves a harness process running on the remote host with nothing local attached to it, and early keystrokes are silently discarded.
-
-Proposal Risk: 1/10 - A pending-spawn record makes every frame in the window either apply after the spawn or cancel it, leaving only ordinary spawn failures, which the existing exit-code-1 path already reports.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "make the far side honor kill, input, resize and killAll that arrive while an MCP spawn awaits its endpoint bind". In `src/remote/serve-processes.ts`, record an id in a pending-spawn map before awaiting `endpoint.launch(frame.id)` and treat a second spawn with that id as a duplicate; have `kill(id)` and `killAll()` mark a pending id cancelled so the continuation skips `spawnPty` and emits `{ type: 'exit', id, exitCode: 1 }` (or nothing for `killAll`, matching how it ends live entries), and buffer `input` and the latest `resize` for a pending id and replay them once the entry exists. Also check after the await that `this.mcp` is still the endpoint that was awaited, since `killAll` disposes it. Restore the comment above `spawnPty`'s environment build so it states how the await is made safe instead of only that the bind is awaited. Add tests to `src/remote/serve-mcp.test.ts` that hold the `listening` event (the `httpMock.server.on` fake already allows that), send `kill`, `input` and `killAll` during the hold, then release it and assert no `spawnPty` call for the killed id and that buffered input reaches the writer for the live one. The non-MCP synchronous path pinned by `src/remote/serve-processes.test.ts` and the collision tests in `src/remote/serve-mcp.test.ts` and `src/remote/serve.test.ts` must keep passing unchanged.
-
-
 * Draw the far-side MCP endpoint's port from the shared reachable-port pool instead of a private copy of the allocator.
 
 Existing Issue: `src/remote/serve-mcp.ts` has its own `claimPort`, its own `reserved` set, and hard-coded `FIRST_PORT` and `PORT_COUNT = 16_128` duplicating `src/browser/e2e-ports.ts`, so a remote `-b` harness's browser guard, allocated in the same `remote-serve` process from the same 49152 to 65279 range, can be handed the port the MCP endpoint is listening on. Severity: 4/10

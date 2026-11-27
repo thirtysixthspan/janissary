@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolExecutor } from '../mcp/tools.js';
 import { spawnPty } from '../pty.js';
 import { decodeFrame, encodeFrame } from './protocol.js';
-import type { ServerFrame } from './protocol-frames.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { FarSideMcp } from './serve-mcp.js';
 import { RemoteProcesses } from './serve-processes.js';
 
@@ -457,5 +457,81 @@ describe('the far-side MCP endpoint', () => {
 
     await expect(answer).rejects.toThrow('Janissary is not connected.');
     expect(relayedCalls().map((frame) => frame.call)).toEqual([original.call, original.call]);
+  });
+});
+
+// Frames for a harness keep arriving while its spawn waits on the endpoint's bind. Holding the
+// `listening` event keeps the spawn in that window for as long as each test needs.
+describe('an MCP spawn waiting on its endpoint bind', () => {
+  const SPAWN: Extract<ClientFrame, { type: 'spawn' }> = {
+    type: 'spawn', id: 'r1', program: 'opencode', command: 'opencode', mode: 'pty',
+    harness: 'opencode', cols: 80, rows: 24, mcp: true,
+  };
+  const CANCELLED = 'Spawn r1 was cancelled before it started.';
+
+  function holdBind(): { processes: RemoteProcesses; release: () => void } {
+    let listening: (() => void) | undefined;
+    httpMock.server.on.mockImplementationOnce(() => {});
+    httpMock.server.on.mockImplementationOnce((_event: string, handler: () => void) => { listening = handler; });
+    const processes = new RemoteProcesses(send, '/remote/workspace', 'build', {}, () => online);
+    return { processes, release: () => listening?.() };
+  }
+
+  it('starts no harness for a spawn killed during the wait, and frees its id', async () => {
+    const { processes, release } = holdBind();
+
+    const spawned = processes.spawn(SPAWN);
+    processes.kill('r1');
+    release();
+
+    await expect(spawned).rejects.toThrow(CANCELLED);
+    expect(spawnPty).not.toHaveBeenCalled();
+    expect(processes.states()).toEqual([]);
+
+    await processes.spawn(SPAWN);
+    expect(spawnPty).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts no harness for a spawn pending when killAll runs', async () => {
+    const { processes, release } = holdBind();
+
+    const spawned = processes.spawn(SPAWN);
+    processes.killAll();
+    release();
+
+    await expect(spawned).rejects.toThrow(CANCELLED);
+    expect(spawnPty).not.toHaveBeenCalled();
+    expect(processes.states()).toEqual([]);
+  });
+
+  it('applies input in order and the latest resize once the harness starts', async () => {
+    const write = vi.fn();
+    const resize = vi.fn();
+    vi.mocked(spawnPty).mockReturnValue({ id: 'pty1', program: 'opencode', write, resize, kill: vi.fn() });
+    const { processes, release } = holdBind();
+
+    const spawned = processes.spawn(SPAWN);
+    processes.input('r1', 'he');
+    processes.resize('r1', 100, 40);
+    processes.input('r1', 'llo');
+    processes.resize('r1', 120, 50);
+    expect(spawnPty).not.toHaveBeenCalled();
+    release();
+    await spawned;
+
+    expect(write.mock.calls).toEqual([['he'], ['llo']]);
+    expect(resize.mock.calls).toEqual([[120, 50]]);
+  });
+
+  it('refuses a second spawn with the same id during the wait', async () => {
+    const { processes, release } = holdBind();
+
+    const first = processes.spawn(SPAWN);
+    expect(processes.spawn(SPAWN)).toBeUndefined();
+    release();
+    await first;
+
+    expect(spawnPty).toHaveBeenCalledTimes(1);
+    expect(processes.states()).toHaveLength(1);
   });
 });
