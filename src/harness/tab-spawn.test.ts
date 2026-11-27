@@ -187,4 +187,37 @@ describe('HarnessTabSpawn MCP environment', () => {
     const args = (registerRemotePty as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
     expect(args[2]).toMatchObject({ command: expect.stringContaining('--mcp-config'), harness: 'claude' });
   });
+
+  it('forwards mcp false for a remote launch while the local server is down', async () => {
+    const { managers } = makeManagers();
+    withMcp(managers, undefined);
+    const { registerRemotePty, ready } = remoteManagers(managers);
+    expect(new HarnessManager(managers).run('harness claude on devbox --no-browser')).toBeUndefined();
+    ready('/srv/ws');
+    await vi.advanceTimersByTimeAsync(0);
+    const args = (registerRemotePty as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(args[2]).toMatchObject({ mcp: false });
+  });
+
+  it('forwards mcp false for a remote launch with --offline', async () => {
+    const { managers } = makeManagers();
+    withMcp(managers, MCP);
+    const { registerRemotePty, ready } = remoteManagers(managers);
+    expect(new HarnessManager(managers).run('harness claude on devbox --no-browser --offline')).toBeUndefined();
+    ready('/srv/ws');
+    await vi.advanceTimersByTimeAsync(0);
+    const args = (registerRemotePty as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(args[2]).toMatchObject({ mcp: false });
+  });
+
+  it('forwards mcp true for a remote launch when the local MCP server is up', async () => {
+    const { managers } = makeManagers();
+    withMcp(managers, MCP);
+    const { registerRemotePty, ready } = remoteManagers(managers);
+    expect(new HarnessManager(managers).run('harness claude on devbox --no-browser')).toBeUndefined();
+    ready('/srv/ws');
+    await vi.advanceTimersByTimeAsync(0);
+    const args = (registerRemotePty as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(args[2]).toMatchObject({ mcp: true });
+  });
 });

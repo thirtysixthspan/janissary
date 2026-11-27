@@ -1063,13 +1063,13 @@ describe('remote spawn MCP flag', () => {
     return frames;
   }
 
-  it('sends no mcp true for a remote launch with no local MCP server', () => {
+  it('sends no mcp true in the spawn frame when the caller supplies a false flag', () => {
     const spawn = spawnFrames(false).find((frame) => frame.type === 'spawn');
     expect(spawn).toBeDefined();
     expect(spawn).not.toHaveProperty('mcp', true);
   });
 
-  it('sends mcp true only when the launch decided the far side starts an endpoint', () => {
+  it('forwards a supplied true flag into the spawn frame', () => {
     const spawn = spawnFrames(true).find((frame) => frame.type === 'spawn');
     expect(spawn).toMatchObject({ mcp: true });
   });
