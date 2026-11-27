@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request's completion testing step so it drives a shell tab instead of the agent command bar
-
-Existing Issue: The description's How to verify step 6 names no place to type, and Tab in the agent command bar shows no suggestions, so a reviewer following it sees state-aware completion as broken. Severity: 2/10
-
-Existing Risk: 2/10 - A reviewer records a false failure against working server completion and sends the fixer to change code that already passes its tests.
-
-Proposal Risk: 1/10 - The correction adds only the shell-tab context and the single-match caveat, leaving the implementation and its behavior untouched.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2253 "Correct the completion testing step to use a shell tab". Step D6, source description How to verify step 6, verbatim: "Complete the verbs and their names. Do: Type `schedule system ` and press Tab; then type `schedule system pause ` and Tab; then `schedule system resume ` and Tab. Expect: The verb suggestions include `cancel`, `clear`, `list`, `pause` and `resume`; after `pause` only active recurring names appear and after `resume` only paused names appear (`src/completion/system-schedule.ts:21-29`; pinned by `src/completion/index.test.ts` › `offers pause and resume at the verb slot beside the existing verbs`, `offers only active recurring names after pause, never a paused one` and `offers only paused names after resume, never an active one`)." Observed on commit 7fcb90ec: typing those lines in the agent command bar and pressing Tab produced no picker; typing the same lines in a shell tab produced `cancel, clear, list, pause, resume`, `alpha, ping` after pause and `beta, nightly` after resume with ping and alpha active and nightly and beta paused. The cause is that `web/src/plugins/shell/useShellCompletion.ts` is the only client sending the `complete` intent and `web/src/plugins/shell/ShellCompletionPicker.tsx` renders matches only when more than one candidate exists, while `web/src/shared/command-bar/useCommandBarKeys.ts` has no Tab completion for application commands. The step should read: "Complete the verbs and their names in a shell tab. Do: Open a shell tab, type `schedule system ` and press Tab; then type `schedule system pause ` and Tab; then `schedule system resume ` and Tab. Expect: The completion picker lists `cancel`, `clear`, `list`, `pause` and `resume`; with at least two active recurring rows it lists only those active names after `pause`, and with at least two paused rows it lists only those paused names after `resume` (`src/completion/system-schedule.ts:21-29`; pinned by the three `src/completion/index.test.ts` cases named above). A single match is filled in directly without a picker." A regression check is that a reviewer following the corrected step sees the five verbs and the state-aware name lists on the first attempt.
-
-
 * Correct the failed-save testing step so it makes the schedules directory unwritable rather than the store file
 
 Existing Issue: The description's How to verify step 13 chmods only `system-schedules.json`, but the manager saves by writing a temporary file beside it and renaming, so the save succeeds and the expected error line never appears. Severity: 3/10
