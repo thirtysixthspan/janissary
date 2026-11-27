@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Handle the functionality gap where a call re-sent inside the grace window is left unwatched, so a second link loss hangs it indefinitely.
+
+Existing Issue: After the link watcher starts grace on a detected drop, a successful re-send stops grace but never restarts the watcher, so calls still awaiting an answer have no timer if the link drops a second time. Severity: 7/10
+
+Existing Risk: 7/10 - A flapping link re-sends a question, the human leaves the panel open, and the link drops again before the answer arrives; the tool call then hangs forever with no `Janissary is not connected.` error, which is the exact failure this repair set out to remove.
+
+Proposal Risk: 2/10 - Restarting the watcher on successful re-send restores detection of a second drop, and the existing 60-tick expiry and id-preserving re-send already settle the call; the only residual hazard is the one-second polling gap before detection, which the watcher cadence already accepts elsewhere.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "restart the link watcher after a successful in-window re-send so a second link drop still fails held calls". In src/remote/serve-mcp.ts, graceTick()'s successful-resend branch sets detached to false, calls stopGrace(), and returns, leaving the watch interval that watchLink() cleared at detection stopped for good; add this.watchLink() to that branch so a restored link with still-pending calls keeps watching, relying on the existing guard in watchLink() to prevent a second interval from starting. The delivered === false branch in relay() already stops the watcher before starting grace, so leave it unchanged; no other timer or state change is needed. In src/remote/serve-mcp.test.ts, add a case that relays a call while linked using linkSend, flips online to false so the watcher starts grace, restores online long enough for the single re-send, flips online back to false without sending an mcp-result, advances the remaining 60 seconds, and asserts the executor rejects with Janissary is not connected. and that the original call id remains the only id sent. No existing test covers a second drop after an in-window recovery, so this case is not redundant with the two added in this change. The grace paragraphs in product/specs/mcp-server.md and product/specs/remote-server.md already claim the window starts whenever the link drops for a waiting call, so no spec edit is needed once the code enforces it.
