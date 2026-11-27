@@ -4,6 +4,8 @@ import type { Tab } from '../tab/types.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
 import { HarnessManager } from './manager.js';
 import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
+import { parseRemoteAddress } from '../remote/address.js';
+import type { SpawnTabOptions } from './spawn-options.js';
 
 const MCP = { url: 'http://127.0.0.1:51234/mcp', token: 'tok-123' };
 const terminalRuntimeManagers: TerminalRuntimeManager[] = [];
@@ -122,6 +124,18 @@ function remoteManagers(managers: Managers): { registerRemotePty: ReturnType<typ
   return { registerRemotePty, ready: (cwd) => handlers!.onReady(cwd) };
 }
 
+// The options `startSessionAttach` hands over for a harness it is adopting under a recorded spawn id.
+function attachOptions(mcp: boolean): SpawnTabOptions {
+  const remote = parseRemoteAddress('devbox');
+  if ('error' in remote) throw new Error(remote.error);
+  return {
+    name: 'claude', label: 'claude', cwd: '/srv/ws', workspaceDir: undefined, offline: false,
+    group: 1, groupColor: '#111', dotColor: '#222', autoApprove: false, autoResume: false, browser: false,
+    remote, mcp, resumePtyId: 'rpty7',
+    resume: { session: '11111111-2222-3333-4444-555555555555', workspaceDir: '/srv/ws', onResult: vi.fn() },
+  };
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   mocks.spawnEnvCalls.length = 0;
@@ -208,6 +222,27 @@ describe('HarnessTabSpawn MCP environment', () => {
     await vi.advanceTimersByTimeAsync(0);
     const args = (registerRemotePty as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
     expect(args[2]).toMatchObject({ mcp: false });
+  });
+
+  it('keeps the MCP flag off for an attach recorded without MCP while the local server runs', async () => {
+    const { managers, tabs } = makeManagers();
+    withMcp(managers, MCP);
+    const { registerRemotePty, ready } = remoteManagers(managers);
+    new HarnessManager(managers).attachRemote(attachOptions(false));
+    expect(tabs.at(-1)).toMatchObject({ label: 'claude', mcp: false });
+    ready('/srv/ws');
+    await vi.advanceTimersByTimeAsync(0);
+    const args = (registerRemotePty as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(args[2]).toMatchObject({ mcp: false });
+    expect(args[3]).toBe('rpty7');
+  });
+
+  it('shows the MCP flag for an attach recorded with MCP while the local server is down', () => {
+    const { managers, tabs } = makeManagers();
+    withMcp(managers, undefined);
+    remoteManagers(managers);
+    new HarnessManager(managers).attachRemote(attachOptions(true));
+    expect(tabs.at(-1)).toMatchObject({ label: 'claude', mcp: true });
   });
 
   it('forwards mcp true for a remote launch when the local MCP server is up', async () => {

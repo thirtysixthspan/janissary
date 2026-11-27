@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Carry each remote harness's MCP launch decision through a session attach so the rebuilt tab shows the right MCP flag.
-
-Existing Issue: `startSessionAttach` in `src/sessions/attach.ts` calls `attachRemote` with no `mcp` field and `offline: false`, and `RemoteProcessState` and `spawnFrameState` carry no `mcp`, so `HarnessTabSpawn.spawnTab` marks the rebuilt tab `mcp` whenever the local server is running, even for a far harness launched with `--no-mcp` or `--offline` that has no MCP config, and hides the flag for an MCP harness when the local server is down. Severity: 3/10
-
-Existing Risk: 3/10 - After an Attach the metadata row claims MCP for a harness that cannot reach any server, or denies it for one that can, contradicting the tabs spec's rule that a tab not launched with MCP config shows no MCP flag.
-
-Proposal Risk: 1/10 - The flag reports the far process's real launch, leaving only the already documented reset of the in-use green to plain across an attach.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "carry the remote spawn's mcp flag into the session record and the attach path". Add `mcp?: boolean` to `RemoteProcessState` in `src/remote/protocol-frames.ts` and copy it in `spawnFrameState` in `src/remote/process-state.ts` the way `autoApprove` is copied; in `src/sessions/attach.ts` read it (and the recorded `offline`) from the matching process and pass it to `attachRemote`. In `src/harness/tab-spawn.ts`, for an attach (`options.resumePtyId` set) take `tab.mcp` from the recorded flag rather than from `localLaunch()`, since the far side already holds its endpoint. Check the session-state decoder accepts the new optional field, add a codec round-trip case in `src/remote/protocol.test.ts`, and add tests that an attach of a process recorded with `mcp: false` yields `tab.mcp === false` while the local server runs and one recorded with `mcp: true` yields `true`. The existing `src/harness/tab-spawn.test.ts` launch-decision cases must keep passing.
-
-
 * Make a corrupt or unreadable MCP state file a reported, recoverable failure and document it.
 
 Existing Issue: A `.janissary/mcp.json` that fails to parse or decode keeps the server down on every start with the reason `invalid MCP state file`, which names no file and suggests no fix, and `product/specs/mcp-server.md` describes neither this edge case nor its exact message. Severity: 3/10

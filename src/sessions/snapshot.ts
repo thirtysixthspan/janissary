@@ -78,7 +78,7 @@ function processOf(
   managers: Managers,
   state: {
     id: string; mode: 'pty' | 'pipe'; harness?: string; agentName?: string; autoApprove?: boolean;
-    autoResume?: boolean; shell?: { nonce: string }; offline?: boolean; cwd?: string;
+    autoResume?: boolean; mcp?: boolean; shell?: { nonce: string }; offline?: boolean; cwd?: string;
   },
   launchLabel: string,
 ): RemoteSessionProcess | undefined {
@@ -87,6 +87,8 @@ function processOf(
       id: state.id, label: launchLabel, kind: 'harness' as RemoteProcessKind, harness: state.harness,
       ...(state.autoApprove !== undefined && { autoApprove: state.autoApprove }),
       ...(state.autoResume !== undefined && { autoResume: state.autoResume }),
+      ...(state.mcp !== undefined && { mcp: state.mcp }),
+      ...(state.offline !== undefined && { offline: state.offline }),
     };
   }
   if (state.shell && state.agentName && state.offline !== undefined) {

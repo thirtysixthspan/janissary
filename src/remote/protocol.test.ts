@@ -1036,7 +1036,7 @@ describe('session-state frames', () => {
     const frame = {
       type: 'session-state-result',
       processes: [
-        { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude' },
+        { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', mcp: false },
         { id: 'spawn-2', program: 'bash', mode: 'pipe', agentName: 'bekir' },
         { id: 'spawn-3', program: 'zsh', mode: 'pty', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/ws/src', autoResume: true },
       ],
@@ -1067,6 +1067,10 @@ describe('session-state frames', () => {
     {
       what: 'a process with an invalid shell nonce',
       record: { type: 'session-state-result', processes: [{ id: 'a', program: 'zsh', mode: 'pty', shell: { nonce: 'bad' } }] },
+    },
+    {
+      what: 'a process whose MCP flag is not a boolean',
+      record: { type: 'session-state-result', processes: [{ id: 'a', program: 'claude', mode: 'pty', harness: 'claude', mcp: 'yes' }] },
     },
   ])('refuses $what by name', ({ record }) => {
     expect(decodeFrame(JSON.stringify(record))).toEqual({
@@ -1136,7 +1140,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'attach-result': { type: 'attach-result', accepted: true, truncated: true },
   'session-state-result': {
     type: 'session-state-result',
-    processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, agentName: 'bekir' }],
+    processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, mcp: true, agentName: 'bekir' }],
   },
   'workspace-ready': {
     type: 'workspace-ready', dir: '/srv/ws/claude', notice: 'isolation on', cleaned: '/srv/ws/claude',

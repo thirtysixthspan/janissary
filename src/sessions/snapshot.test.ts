@@ -159,6 +159,12 @@ describe('recordOf process rows', () => {
     expect(record?.processes[0]).toMatchObject({ autoApprove: true, autoResume: true });
   });
 
+  it('records the MCP decision and offline mode a harness was launched with', () => {
+    const record = recordOf(managers([harnessTab('claude')]), withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude', mcp: false, offline: true }]), 7);
+
+    expect(record?.processes).toEqual([{ id: 'p1', label: 'claude', kind: 'harness', harness: 'claude', mcp: false, offline: true }]);
+  });
+
   it('records a shell nonce and offline mode with its live cwd from tab runtime', () => {
     const shell = tab('claude', {
       plugin: { id: 'shell' } as never,

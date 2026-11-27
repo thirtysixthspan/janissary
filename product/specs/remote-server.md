@@ -406,7 +406,8 @@ A browser-exit frame's message is optional but, when present, must be a nonempty
 newlines, which JSON escaping keeps from being read as the end of a frame. A session-state reply
 must carry an array of process entries, each with a nonempty spawn id and program and a declared
 mode, and an auto-approve setting that is either absent or a boolean — a valid setting is kept, not
-dropped on the way in. `autoResume` follows the same rule. A shell process carries a `shell` object
+dropped on the way in. `autoResume` follows the same rule, and so does `mcp`, the MCP decision a
+harness process was launched with, which an attach uses to show the rebuilt tab's MCP flag. A shell process carries a `shell` object
 with a 32-character lowercase hexadecimal nonce, an optional offline flag, and an optional working
 directory; the decoder preserves these fields and refuses malformed shell metadata. One malformed
 entry makes the whole reply malformed rather than shortening the list, because a

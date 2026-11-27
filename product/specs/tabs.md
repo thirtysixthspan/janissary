@@ -218,6 +218,13 @@ for a local tab and a remote one alike. A remote reconnect does not change eithe
 connection plug reports the reconnect, and the flag keeps reporting the launch and first use. A tab
 not launched with MCP config shows no MCP flag at all.
 
+A remote harness tab rebuilt by attaching from the Sessions tab reports the far harness's own
+launch: it shows the MCP flag when that harness was launched with MCP config and no flag when it was
+launched with `--no-mcp`, with `--offline`, or while the local server was down, whatever the local
+MCP server's state at attach time. The
+flag starts plain after the attach, even if the harness had already called the server, and turns
+green on its next call.
+
 Harness and shell tabs also show a file-navigator button (a folder icon) in an action group at
 the right edge of the metadata row. Its tooltip is "Open file navigator in this workspace" when the
 tab is workspaced and "Open file navigator here" otherwise. Every other metadata button joins that

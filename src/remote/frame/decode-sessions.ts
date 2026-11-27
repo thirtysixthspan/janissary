@@ -10,7 +10,7 @@ import { isShellMarkerNonce } from '../../value-guards.js';
 
 function decodeProcessState(value: unknown): RemoteProcessState | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
-  const { id, program, mode, harness, autoApprove, autoResume, agentName, shell, offline, cwd } = value as Record<string, unknown>;
+  const { id, program, mode, harness, autoApprove, autoResume, mcp, agentName, shell, offline, cwd } = value as Record<string, unknown>;
   const shellRecord = typeof shell === 'object' && shell !== null && !Array.isArray(shell)
     ? shell as Record<string, unknown> : undefined;
   const shellNonce = shellRecord?.nonce;
@@ -18,6 +18,7 @@ function decodeProcessState(value: unknown): RemoteProcessState | undefined {
     || !optionalNonEmptyString(harness)
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
     || !(autoResume === undefined || typeof autoResume === 'boolean')
+    || !(mcp === undefined || typeof mcp === 'boolean')
     || !(shell === undefined || isShellMarkerNonce(shellNonce))
     || !(offline === undefined || typeof offline === 'boolean') || !(cwd === undefined || nonEmptyString(cwd))
     || !optionalNonEmptyString(agentName)) return;
@@ -26,6 +27,7 @@ function decodeProcessState(value: unknown): RemoteProcessState | undefined {
     ...(harness !== undefined && { harness }),
     ...(autoApprove !== undefined && { autoApprove }),
     ...(autoResume !== undefined && { autoResume }),
+    ...(mcp !== undefined && { mcp }),
     ...(agentName !== undefined && { agentName }),
     ...(shell !== undefined && { shell: { nonce: shellNonce as string } }),
     ...(offline !== undefined && { offline }),

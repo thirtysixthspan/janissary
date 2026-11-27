@@ -47,7 +47,12 @@ export class HarnessTabSpawn {
     tab.autoResume = autoResume;
     tab.browser = options.browser;
     const launch = this.managers.mcp?.localLaunch();
-    const mcp: McpDecision = { enabled: options.mcp !== false && !offline && launch !== undefined, launch };
+    // An attach adopting a recorded process reports how that process was launched; the far side
+    // already holds its endpoint, so the local server's current state has no say in it.
+    const enabled = options.resumePtyId === undefined
+      ? options.mcp !== false && !offline && launch !== undefined
+      : options.mcp === true;
+    const mcp: McpDecision = { enabled, launch };
     tab.mcp = mcp.enabled;
     // Deliberately left with no `workspaceDir`: a remote tab's clone lives on the other host, and
     // `src/tab/cleanup.ts` reads that field to schedule a recursive delete of the *local* path.

@@ -83,6 +83,18 @@ describe('remote session store round trip', () => {
     expect(loadRemoteSessions()).toEqual([shell]);
   });
 
+  it('persists a harness process\'s MCP decision and offline mode', () => {
+    project();
+    const entry = record({
+      activity: Date.now(),
+      processes: [{ id: 'spawn-1', label: 'claude', kind: 'harness', harness: 'claude', mcp: true, offline: true }],
+    });
+
+    saveRemoteSessions([entry]);
+
+    expect(loadRemoteSessions()).toEqual([entry]);
+  });
+
   it('writes the record under the project\'s own .janissary directory', () => {
     const dir = project();
     saveRemoteSessions([record({ activity: Date.now() })]);
@@ -128,6 +140,11 @@ describe('remote session store parsing', () => {
 
   it('refuses a record whose process entries are malformed', () => {
     const text = JSON.stringify([record({ processes: [{ id: 'spawn-1' }] as never })]);
+    expect(parseRemoteSessions(text)).toEqual([]);
+  });
+
+  it('refuses a record whose process MCP flag is not a boolean', () => {
+    const text = JSON.stringify([record({ processes: [{ id: 'spawn-1', label: 'claude', kind: 'harness', mcp: 'yes' }] as never })]);
     expect(parseRemoteSessions(text)).toEqual([]);
   });
 

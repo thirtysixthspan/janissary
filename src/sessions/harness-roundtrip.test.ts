@@ -187,6 +187,24 @@ describe('harness sessions round trip', () => {
     expect(notify).not.toHaveBeenCalledWith(expect.anything(), 'remote-session-terminated', expect.anything(), expect.anything());
   });
 
+  // Launched while the local server was down, so the far harness has no MCP config. A server that
+  // comes up before the attach must not make the rebuilt tab, or the record written after it, claim one.
+  it('keeps a harness launched without MCP flagged off through an attach once the local server runs', async () => {
+    const h = await launch();
+    expect(managers.tab.byLabel('claude')?.mcp).toBe(false);
+    managers.mcp = { localLaunch: () => ({ url: 'http://127.0.0.1:51234/mcp', token: 'tok-123' }) } as unknown as Managers['mcp'];
+    for (let cycle = 0; cycle < 2; cycle++) {
+      expect(managers.sessions.detach('claude')).toBe(true);
+      expect(saved.records[0]?.processes[0]).toMatchObject({ kind: 'harness', mcp: false });
+      expect(managers.sessions.attach(SESSION)).toBe(true);
+      await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);
+      expect(managers.tab.harnessTab('claude')?.harness.status).toBe('running');
+      expect(managers.tab.byLabel('claude')?.mcp).toBe(false);
+    }
+    expect(h.processes.states()[0]).toMatchObject({ mcp: false });
+    expect(h.remoteSpawns).toHaveBeenCalledOnce();
+  });
+
   it('ignores an old transport exit delivered after the harness has been restored', async () => {
     const h = await launch();
     const old = h.transports[0];

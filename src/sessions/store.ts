@@ -36,6 +36,9 @@ export type RemoteSessionProcess = {
   harness?: string;
   autoApprove?: boolean;
   autoResume?: boolean;
+  // Whether the far harness was launched with MCP config. An attach shows the MCP flag from this,
+  // not from whether the local server happens to be running when it reattaches.
+  mcp?: boolean;
   shell?: { nonce: string };
   offline?: boolean;
   cwd?: string;
@@ -88,6 +91,7 @@ function isProcess(value: unknown): value is RemoteSessionProcess {
     && (value.harness === undefined || (typeof value.harness === 'string' && value.harness.length > 0))
     && (value.autoApprove === undefined || typeof value.autoApprove === 'boolean')
     && (value.autoResume === undefined || typeof value.autoResume === 'boolean')
+    && (value.mcp === undefined || typeof value.mcp === 'boolean')
     && (value.shell === undefined || (isRecord(value.shell) && isZshHookNonce(value.shell.nonce)))
     && (value.offline === undefined || typeof value.offline === 'boolean')
     && (value.cwd === undefined || (typeof value.cwd === 'string' && value.cwd.length > 0))

@@ -345,6 +345,7 @@ export type RemoteProcessState = {
   harness?: string;
   autoApprove?: boolean;
   autoResume?: boolean;
+  mcp?: boolean;
   agentName?: string;
   shell?: { nonce: string };
   offline?: boolean;

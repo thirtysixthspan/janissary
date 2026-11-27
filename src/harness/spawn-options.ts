@@ -25,7 +25,8 @@ export interface SpawnTabOptions {
   // two variables the harness drives it through. Owned by the tab's `HarnessRuntime`, so it is
   // stopped by the same disposal the reader and recorder go through.
   browser: boolean;
-  // The `--no-mcp` opt-out from the parser. Absent on an attach, which reads as the default opt-in.
+  // The `--no-mcp` opt-out from the parser. On an attach that adopts a recorded process
+  // (`resumePtyId` set), it is instead the far harness's recorded MCP launch, taken as is.
   mcp?: boolean;
   model?: string;
   effort?: string;
