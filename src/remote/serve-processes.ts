@@ -67,7 +67,7 @@ export class RemoteProcesses {
       return;
     }
     const endpoint = this.mcp ??= new FarSideMcp((out) => {
-      if (this.linked()) return this.send(out);
+      if (out.type === 'mcp-cancel' || this.linked()) return this.send(out);
       return false;
     }, frame.id, () => this.linked());
     return (async () => {

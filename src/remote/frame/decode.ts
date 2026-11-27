@@ -96,6 +96,11 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
     if (!nonEmptyString(call) || !nonEmptyString(tool) || !nonEmptyString(args)) return malformed('mcp-call');
     return { type: 'mcp-call', call, tool, args: Buffer.from(args, 'base64').toString('utf8') };
   }
+  case 'mcp-cancel': {
+    const { call } = record;
+    if (!nonEmptyString(call)) return malformed('mcp-cancel');
+    return { type: 'mcp-cancel', call };
+  }
   case 'acp-tool-step': { return decodeAcpToolStep(record); }
   case 'acp-run-end': { return decodeAcpRunEnd(record); }
   case 'acp-chunk': { return decodeAcpText(type, record); }

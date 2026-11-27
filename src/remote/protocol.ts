@@ -273,7 +273,9 @@
 // Version 49 adds the `mcp-call` and `mcp-result` frames: the far side asks the local janissary to
 // execute one MCP tool call and answers with its result, both correlated by `call`. A version-48
 // peer would refuse both as unknown frames only after the handshake had passed, so the exact-version
-// handshake refuses that pairing first.
+// handshake refuses that pairing first. It also adds `mcp-cancel`, keyed by the same call id, so a
+// caller that abandons a question withdraws it locally instead of leaving the panel and the tab's
+// queue stuck; this stays in version 49 because both peers of this feature set understand the frame.
 export const REMOTE_PROTOCOL_VERSION = 49;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it

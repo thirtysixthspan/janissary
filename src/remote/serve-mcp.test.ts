@@ -67,6 +67,12 @@ function relayedCalls(): Array<Extract<ServerFrame, { type: 'mcp-call' }>> {
   );
 }
 
+function cancelFrames(): Array<Extract<ServerFrame, { type: 'mcp-cancel' }>> {
+  return send.mock.calls.map(([sent]) => sent).filter(
+    (sent): sent is Extract<ServerFrame, { type: 'mcp-cancel' }> => sent.type === 'mcp-cancel',
+  );
+}
+
 function spawnHarness(mcp: boolean, env?: Record<string, string>): RemoteProcesses {
   const processes = new RemoteProcesses(send, '/remote/workspace', 'build', {}, () => online);
   processes.spawn({
@@ -117,6 +123,7 @@ describe('the far-side MCP endpoint', () => {
 
     processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'yes', isError: false });
     await expect(answer).resolves.toEqual({ text: 'yes', isError: false });
+    expect(cancelFrames()).toEqual([]);
   });
 
   it('withholds the MCP address until the endpoint is listening', async () => {
@@ -175,6 +182,21 @@ describe('the far-side MCP endpoint', () => {
     await expect(answer).rejects.toThrow('MCP call cancelled.');
     processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'late', isError: false });
     expect(send.mock.calls.filter(([sent]) => sent.type === 'mcp-call')).toHaveLength(1);
+  });
+
+  it('sends a cancel frame for a call the caller aborts', async () => {
+    spawnHarness(true);
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    const controller = new AbortController();
+
+    const answer = executor('question', ARGS, controller.signal);
+    await vi.advanceTimersByTimeAsync(0);
+    const frame = relayedCall();
+    controller.abort();
+
+    await expect(answer).rejects.toThrow('MCP call cancelled.');
+    expect(cancelFrames()).toEqual([{ type: 'mcp-cancel', call: frame.call }]);
   });
 
   it('reports a real port collision without crashing the session', async () => {
@@ -284,6 +306,9 @@ describe('the far-side MCP endpoint', () => {
     await expect(first).rejects.toThrow('Janissary is not connected.');
     await expect(second).rejects.toThrow('Janissary is not connected.');
     expect(relayedCalls()).toEqual([]);
+    const cancels = cancelFrames();
+    expect(cancels).toHaveLength(2);
+    expect(new Set(cancels.map((frame) => frame.call)).size).toBe(2);
   });
 
   it('fails a call made while detached at once with the detach error', async () => {

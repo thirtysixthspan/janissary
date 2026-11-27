@@ -311,6 +311,7 @@ export type ServerFrame =
   // side sends no `acp-tool-step` for it.
   | { type: 'acp-tool-request'; id: string; request: number; command: string }
   | { type: 'mcp-call'; call: string; tool: string; args: string }
+  | { type: 'mcp-cancel'; call: string }
   // A step the far side completed on its own: a workspace-tool run (`workspace: true`) or a gate
   // refusal (`workspace: false`). `refused` is present only as `'disabled'`, for a disabled or
   // agent-off refusal. `command` and `result` are base64-encoded free text, and an empty `result` is
@@ -372,5 +373,5 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'agent-resolve-result': true, 'run-clone-result': true,
   'acp-ready': true, 'acp-session-started': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
   'acp-run-end': true,
-  'acp-activity': true, 'acp-closed': true, 'acp-error': true, 'mcp-call': true,
+  'acp-activity': true, 'acp-closed': true, 'acp-error': true, 'mcp-call': true, 'mcp-cancel': true,
 };

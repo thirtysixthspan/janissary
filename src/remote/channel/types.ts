@@ -47,7 +47,7 @@ export type NavigatorListener = {
 // `root-refused` are the provisioning answer too, for a project root that is missing or unusable.
 export type ChannelFrame = Extract<ServerFrame, {
   type: 'workspace-ready' | 'workspace-failed' | 'name-in-use' | 'clone-offer' | 'root-refused' | 'transcript'
-    | 'browser-exited' | 'browser-started' | 'attach-result' | 'session-state-result' | 'mcp-call';
+    | 'browser-exited' | 'browser-started' | 'attach-result' | 'session-state-result' | 'mcp-call' | 'mcp-cancel';
 }>;
 
 // The same list as data, keyed by the union so a frame added to `ChannelFrame` without an entry here
@@ -55,7 +55,7 @@ export type ChannelFrame = Extract<ServerFrame, {
 const CHANNEL_FRAME_KEYS: Record<ChannelFrame['type'], true> = {
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, 'clone-offer': true, 'root-refused': true,
   transcript: true, 'browser-exited': true, 'browser-started': true, 'attach-result': true, 'session-state-result': true,
-  'mcp-call': true,
+  'mcp-call': true, 'mcp-cancel': true,
 };
 
 export const CHANNEL_FRAME_TYPES: ReadonlySet<string> = new Set(Object.keys(CHANNEL_FRAME_KEYS));

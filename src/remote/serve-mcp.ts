@@ -123,6 +123,7 @@ export class FarSideMcp {
   private fail(call: string, message: string): void {
     const entry = this.pending.get(call);
     if (!entry) return;
+    this.send({ type: 'mcp-cancel', call });
     this.pending.delete(call);
     entry.signal.removeEventListener('abort', entry.onAbort);
     entry.reject(new Error(message));
@@ -181,6 +182,7 @@ export class FarSideMcp {
       args: JSON.stringify(args),
     };
     const onAbort = () => {
+      this.send({ type: 'mcp-cancel', call });
       this.pending.delete(call);
       reject(new Error('MCP call cancelled.'));
     };

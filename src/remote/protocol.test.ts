@@ -144,6 +144,13 @@ describe('mcp call and result codec', () => {
     expect(roundTrip(frame)).toEqual(frame);
   });
 
+  it('round-trips a cancel with its call id plain on the wire', () => {
+    const frame: RemoteFrame = { type: 'mcp-cancel', call };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual({ type: 'mcp-cancel', call });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
   it.each([
     ['a call without a correlation id', { type: 'mcp-call', tool: 'file read', args }],
     ['a call without a tool name', { type: 'mcp-call', call, args }],
@@ -152,6 +159,8 @@ describe('mcp call and result codec', () => {
     ['a result without text', { type: 'mcp-result', call, isError: false }],
     ['a result without an error flag', { type: 'mcp-result', call, text }],
     ['a result with a non-boolean error flag', { type: 'mcp-result', call, text, isError: 'yes' }],
+    ['a cancel without a correlation id', { type: 'mcp-cancel' }],
+    ['a cancel with an empty correlation id', { type: 'mcp-cancel', call: '' }],
   ])('refuses %s', (_label, record) => {
     expect(decodeFrame(JSON.stringify(record))).toEqual({
       error: expect.stringContaining(`Malformed remote frame "${String(record.type)}"`),
@@ -1313,7 +1322,7 @@ describe('admitted frame types', () => {
       'acp-activity', 'acp-chunk', 'acp-closed', 'acp-error', 'acp-ready', 'acp-run-end', 'acp-session-started',
       'acp-tool-request', 'acp-tool-step', 'acp-turn',
       'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
-      'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'mcp-call', 'name-in-use',
+      'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'mcp-call', 'mcp-cancel', 'name-in-use',
       'output', 'resume-cancel', 'resume-event', 'root-refused', 'run-clone-result', 'session-state-result', 'shell-history', 'transcript',
       'workspace-failed', 'workspace-ready',
     ]);

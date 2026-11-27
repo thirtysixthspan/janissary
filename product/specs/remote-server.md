@@ -352,7 +352,7 @@ Protocol version 47 adds `acp-session-started`, a server-only frame carrying a t
 
 Protocol version 48 adds the read-only `list-directory`, `stat-path`, `path-exists`, `head-lines`, and `tail-lines` operations, so typed `file list`, `file stat`, `file exists`, `file head`, and `file tail` on a remote tab run against the remote clone and answer with finished output text rather than raw navigator data. The first three carry a `path`, the last two a `path` and a `count`; any other argument shape is an invalid request. The far side validates containment and the secret rules before formatting and answers `{ text }` with the finished output, so local and remote wording cannot drift. A version-47 peer would refuse the new operations as unknown only after the handshake had passed, so the exact-version handshake refuses that pairing first.
 
-Protocol version 49 adds the `mcp-call` and `mcp-result` frames, the request-and-answer pair for passing an MCP tool call back to the local Janissary process to execute over the session's existing connection. `mcp-call` carries a correlation id, a tool name, and the arguments as base64-encoded JSON; `mcp-result` carries the same correlation id, the result text as base64, and whether the call was an error. The launch frame also carries an `mcp` flag so the far side starts its own endpoint for that harness; a remote launch never receives the local server's connection details, and a remote harness launched while the local server is not running is given no MCP. A version-48 peer would refuse both frames as unknown only after the handshake had passed, so the exact-version handshake refuses that pairing first.
+Protocol version 49 adds the `mcp-call` and `mcp-result` frames, the request-and-answer pair for passing an MCP tool call back to the local Janissary process to execute over the session's existing connection. `mcp-call` carries a correlation id, a tool name, and the arguments as base64-encoded JSON; `mcp-result` carries the same correlation id, the result text as base64, and whether the call was an error. Version 49 also admits `mcp-cancel`, which carries just that correlation id and tells the local side the caller has abandoned the call; it needs no encoded payload. A cancellation for an unknown id or for a call already answered changes nothing. The frame belongs to version 49 rather than a new version because both peers of this feature set already speak it. The launch frame also carries an `mcp` flag so the far side starts its own endpoint for that harness; a remote launch never receives the local server's connection details, and a remote harness launched while the local server is not running is given no MCP. A version-48 peer would refuse these frames as unknown only after the handshake had passed, so the exact-version handshake refuses that pairing first.
 
 Version 47 is one version for the whole feature set, not one bump per frame; version 48 has since taken the next bump, so 47 is no longer unreleased. The run-clone request and its answer, and the optional workspace selectors on `acp-open` and `agent-resolve`, belong to this same version and do not move the constant: a peer that speaks 47 already refuses any older one at the handshake, and bumping again would split peers that support the same frames. The comment above the protocol version records these frames and fields as extensions of 47 and the five new file operations as version 48.
 
@@ -972,6 +972,15 @@ far-side harness sent. A call whose arguments are not valid JSON is answered on 
 error naming the bad arguments: no question is opened, and the call id is left unclaimed, so a later
 valid call using that id starts a fresh question and receives its own answer rather than replaying
 the error.
+
+A call the harness abandons withdraws its question on the local tab. The far side sends a
+cancellation naming that call when the harness cancels the request and when the grace window expires
+with no link, before its own tool call fails. The local side aborts the pending question, so the
+panel closes, `Question from <tab> withdrawn` is recorded, and the next queued question for that tab
+appears. A cancellation arriving after the human answered changes nothing and records no withdrawal.
+Cancellations travel even while the link is down, so one issued during an outage is delivered on a
+later attach; calls themselves are still withheld during an outage and open no question for a later
+attach.
 
 #### Run clones
 

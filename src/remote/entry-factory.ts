@@ -142,6 +142,7 @@ export function createRemoteEntry({
         }
         case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
         case 'mcp-call': { mcpRelay.handle(frame); break; }
+        case 'mcp-cancel': { mcpRelay.cancel(frame); break; }
         case 'browser-exited': { notifyBrowserGone(managers, frame.id, frame.message); break; }
         case 'browser-started': { notifyBrowserStarted(managers, frame.id); break; }
         default: { transcript.push(frame.blocks); }

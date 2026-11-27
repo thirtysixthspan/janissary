@@ -1021,7 +1021,7 @@ function mcpHarness() {
   write.mockClear();
   return {
     questions,
-    send: (frame: Extract<ServerFrame, { type: 'mcp-call' }>) => transport?.onData(`${encodeFrame(frame)}\n`),
+    send: (frame: ServerFrame) => transport?.onData(`${encodeFrame(frame)}\n`),
     sent: () => write.mock.calls.map(([data]: [string]) => String(data)).join(''),
     dispose: () => remote.dispose(),
   };
@@ -1045,6 +1045,24 @@ describe('RemoteManager mcp-call dispatch', () => {
     await vi.waitFor(() => expect(h.sent()).toContain('"type":"mcp-result"'));
     expect(h.sent()).toContain('"call":"call-9"');
     expect(h.sent()).toContain(Buffer.from('4242').toString('base64'));
+    h.dispose();
+  });
+
+  it('withdraws a pending question on a cancel frame and shows the next queued one', async () => {
+    const h = mcpHarness();
+    h.send({
+      type: 'mcp-call', call: 'call-10', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'First?' }),
+    });
+    h.send({
+      type: 'mcp-call', call: 'call-11', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Second?' }),
+    });
+    expect(h.questions.pendingFor('asker')?.question).toBe('First?');
+
+    h.send({ type: 'mcp-cancel', call: 'call-10' });
+
+    await vi.waitFor(() => expect(h.questions.pendingFor('asker')?.question).toBe('Second?'));
     h.dispose();
   });
 });

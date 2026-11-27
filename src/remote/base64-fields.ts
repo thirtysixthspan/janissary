@@ -64,6 +64,7 @@ export const BINARY_FIELDS: Record<RemoteFrame['type'], readonly BinaryField[]> 
   'acp-turn': [{ field: 'display', shape: 'text' }],
   'acp-tool-request': [{ field: 'command', shape: 'text' }],
   'mcp-call': [{ field: 'args', shape: 'text' }],
+  'mcp-cancel': [],
   'acp-tool-step': [
     { field: 'command', shape: 'text' },
     { field: 'result', shape: 'text' },

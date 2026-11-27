@@ -1,10 +1,13 @@
 import type { Managers } from '../managers.js';
-import { Questions } from '../questions.js';
+import { deliverNotification } from '../notifications/deliver.js';
+import { QUESTION_CANCELLED, Questions } from '../questions.js';
 import type { Tab } from '../tab/types.js';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RemoteChannel } from './channel/index.js';
 import type { ChannelTransport } from './channel/types.js';
 import { createMcpRelay } from './mcp-relay.js';
+
+vi.mock('../notifications/deliver.js', () => ({ deliverNotification: vi.fn() }));
 
 function fixture() {
   const tabs = [{
@@ -14,7 +17,7 @@ function fixture() {
   const questions = new Questions();
   const register = vi.spyOn(questions, 'register');
   const managers = {
-    tab: { tabs, byLabel: (label: string) => tabs.find((tab) => tab.label === label) },
+    tab: { tabs, byLabel: (label: string) => tabs.find((tab) => tab.label === label), cur: () => tabs[0] },
     questions,
   } as unknown as Managers;
   const send = vi.fn();
@@ -35,6 +38,8 @@ function fixture() {
   const answer = (text: string) => questions.answer('asker', questions.pendingFor('asker')!.id, text);
   return { questions, register, send, relay, call, answer, channel };
 }
+
+beforeEach(() => { vi.mocked(deliverNotification).mockClear(); });
 
 describe('createMcpRelay', () => {
   it('attaches a re-sent call to the in-flight question instead of registering a second', () => {
@@ -92,5 +97,55 @@ describe('createMcpRelay', () => {
     call('call-1');
 
     expect(register).toHaveBeenCalledTimes(2);
+  });
+
+  it('withdraws an unanswered question on cancel and shows the next queued one', async () => {
+    const { call, relay, register, questions, send } = fixture();
+    call('call-1', 'First?');
+    call('call-2', 'Second?');
+    expect(questions.pendingFor('asker')?.question).toBe('First?');
+
+    relay.cancel({ type: 'mcp-cancel', call: 'call-1' });
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith({
+      type: 'mcp-result', call: 'call-1', text: QUESTION_CANCELLED, isError: false,
+    }));
+    expect(questions.pendingFor('asker')?.question).toBe('Second?');
+    expect(register).toHaveBeenCalledTimes(2);
+    expect(deliverNotification).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(deliverNotification).mock.calls[0]?.[1]).toMatchObject({
+      event: 'question-withdrawn',
+      tabLabel: 'asker',
+      message: 'Question from asker withdrawn',
+    });
+  });
+
+  it('ignores a cancel after the answer and still replays the stored result', async () => {
+    const { call, relay, answer, register, send } = fixture();
+    call('call-1');
+    expect(answer('3000')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith({
+      type: 'mcp-result', call: 'call-1', text: '3000', isError: false,
+    }));
+    send.mockClear();
+
+    relay.cancel({ type: 'mcp-cancel', call: 'call-1' });
+    call('call-1');
+
+    expect(deliverNotification).not.toHaveBeenCalled();
+    expect(register).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: '3000', isError: false,
+    });
+  });
+
+  it('ignores a cancel for a call it never registered', () => {
+    const { call, relay, questions } = fixture();
+    call('call-1');
+
+    relay.cancel({ type: 'mcp-cancel', call: 'missing' });
+
+    expect(questions.pendingFor('asker')?.question).toBe('Which port?');
+    expect(deliverNotification).not.toHaveBeenCalled();
   });
 });
