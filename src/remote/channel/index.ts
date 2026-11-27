@@ -99,6 +99,7 @@ export class RemoteChannel {
   }
 
   close(): void {
+    this.handlers.onFinalClose?.();
     this.shutdownDrain.cancel();
     this.state = 'closed';
     this.settleAcp();
@@ -107,6 +108,7 @@ export class RemoteChannel {
   }
 
   disconnect(): void {
+    this.handlers.onFinalClose?.();
     this.state = 'closed';
     this.settleAcp();
     this.agentRequests.failAll('Remote session detached.');
@@ -121,6 +123,7 @@ export class RemoteChannel {
   }
 
   finish(): void {
+    this.handlers.onFinalClose?.();
     this.agentRequests.failAll('Remote session ended.');
     for (const id of this.router.spawnedIds()) this.send({ type: 'kill', id });
     for (const id of this.acpSessions.keys()) this.send({ type: 'acp-close', id });
@@ -169,6 +172,7 @@ export class RemoteChannel {
       return;
     }
     this.state = 'closed';
+    this.handlers.onFinalClose?.();
     this.router.clear();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
@@ -237,6 +241,7 @@ export class RemoteChannel {
   }
 
   private fail(message: string): void {
+    this.handlers.onFinalClose?.();
     this.state = 'closed';
     this.settleAcp();
     this.agentRequests.failAll(message);

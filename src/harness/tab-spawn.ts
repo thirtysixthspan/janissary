@@ -105,7 +105,9 @@ export class HarnessTabSpawn {
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
       const id = channel
-        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove, autoResume }, options.resumePtyId)
+        ? this.managers.pty.registerRemotePty(label, channel, {
+          program, command, harness: name, offline, browser, autoApprove, autoResume, mcp: mcp.enabled,
+        }, options.resumePtyId)
         : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
        this.managers.terminalRuntime.install(
          id,

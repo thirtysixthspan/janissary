@@ -3,6 +3,10 @@ import { RemoteManager, type RemoteLaunchHandlers } from './manager.js';
 import { remoteCaptureCommand, remoteServeCommand } from './entry-factory.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import type { RemoteChannel } from './channel/index.js';
+import { createRemotePtySession } from './pty-session.js';
+import { Questions } from '../questions.js';
 import { notify } from '../notifications/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
@@ -986,5 +990,87 @@ describe('joined plugin tab remote target', () => {
     expect(tab.remote).toBeUndefined();
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
     emit.mockRestore();
+  });
+});
+
+function mcpHarness() {
+  let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
+  const write = vi.fn();
+  const tabs = [{
+    label: 'asker',
+    harness: { name: 'claude', program: 'claude', ptyId: 'rpty1', status: 'running' },
+  }] as unknown as Tab[];
+  const questions = new Questions();
+  const managers = {
+    pty: {
+      spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
+        transport = handlers;
+        return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill: vi.fn() };
+      }),
+      reassignTransports: vi.fn(),
+    },
+    sessions: { dropSession: vi.fn() },
+    tab: {
+      findIndex: vi.fn(() => -1), closeTab: vi.fn(), tabs, byLabel: vi.fn(), cur: () => ({ label: 'creator' }),
+    },
+    questions,
+  } as unknown as Managers;
+  const remote = new RemoteManager(managers);
+  remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
+  transport?.onData(`${encodeHandshake()}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  write.mockClear();
+  return {
+    questions,
+    send: (frame: Extract<ServerFrame, { type: 'mcp-call' }>) => transport?.onData(`${encodeFrame(frame)}\n`),
+    sent: () => write.mock.calls.map(([data]: [string]) => String(data)).join(''),
+    dispose: () => remote.dispose(),
+  };
+}
+
+describe('RemoteManager mcp-call dispatch', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('runs the local executor and answers with the correlated result', async () => {
+    const h = mcpHarness();
+    const register = vi.spyOn(h.questions, 'register');
+    h.send({
+      type: 'mcp-call', call: 'call-9', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Port?' }),
+    });
+
+    expect(register).toHaveBeenCalledOnce();
+    const pending = h.questions.pendingFor('asker');
+    expect(pending?.question).toBe('Port?');
+    expect(h.questions.answer('asker', pending!.id, '4242')).toBe(true);
+    await vi.waitFor(() => expect(h.sent()).toContain('"type":"mcp-result"'));
+    expect(h.sent()).toContain('"call":"call-9"');
+    expect(h.sent()).toContain(Buffer.from('4242').toString('base64'));
+    h.dispose();
+  });
+});
+
+describe('remote spawn MCP flag', () => {
+  function spawnFrames(flag?: boolean): ClientFrame[] {
+    const frames: ClientFrame[] = [];
+    const channel = {
+      attach: vi.fn(),
+      send: (frame: ClientFrame) => { frames.push(frame); },
+    } as unknown as RemoteChannel;
+    createRemotePtySession(channel, {} as Managers, {
+      id: 'rpty1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24,
+      ...(flag !== undefined && { mcp: flag }),
+    }, () => {});
+    return frames;
+  }
+
+  it('sends no mcp true for a remote launch with no local MCP server', () => {
+    const spawn = spawnFrames(false).find((frame) => frame.type === 'spawn');
+    expect(spawn).toBeDefined();
+    expect(spawn).not.toHaveProperty('mcp', true);
+  });
+
+  it('sends mcp true only when the launch decided the far side starts an endpoint', () => {
+    const spawn = spawnFrames(true).find((frame) => frame.type === 'spawn');
+    expect(spawn).toMatchObject({ mcp: true });
   });
 });

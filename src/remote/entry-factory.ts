@@ -19,6 +19,7 @@ import {
 } from './manager-reports.js';
 import type { RemoteLaunchHandlers } from './manager.js';
 import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
+import { createMcpRelay } from './mcp-relay.js';
 import { createRemoteTranscriptSource } from './transcript-source.js';
 
 export type RemoteEntryFactoryOptions = {
@@ -71,6 +72,7 @@ export function createRemoteEntry({
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = createDeferred<string>();
   void ready.catch(() => {});
   const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
+  const mcpRelay = createMcpRelay(managers, (frame) => deferred.channel?.send(frame));
   const terminal = (data: string) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data });
   // A clone offer waiting for its y/n, answered by keystrokes typed into the placeholder.
   let offer: CloneOfferText | undefined;
@@ -139,6 +141,7 @@ export function createRemoteEntry({
           break;
         }
         case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
+        case 'mcp-call': { mcpRelay.handle(frame); break; }
         case 'browser-exited': { notifyBrowserGone(managers, frame.id, frame.message); break; }
         case 'browser-started': { notifyBrowserStarted(managers, frame.id); break; }
         default: { transcript.push(frame.blocks); }
@@ -153,6 +156,7 @@ export function createRemoteEntry({
         entry.handlers.get(label)?.onFailed(message);
       },
       onClose: () => channelClosed(entry),
+      onFinalClose: () => mcpRelay.clear(),
       onProcesses: sessionsChanged,
       onSessionExit: (_id, owner, harness) => {
         terminateRemoteProcess(managers, entry, owner ?? label, harness);

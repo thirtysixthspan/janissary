@@ -36,6 +36,7 @@ export type RemotePtyOptions = {
   // Whether the far side should recognize a subscription-limit screen on this harness and report it.
   // Same shape as autoApprove: a fact the far side acts on, meaningful only alongside `harness`.
   autoResume?: boolean;
+  mcp?: boolean;
 };
 
 /**
@@ -52,7 +53,7 @@ export function createRemotePtySession(
   options: RemotePtyOptions,
   onExit: (exitCode: number) => void,
 ): PtySession {
-  const { id, program, command, harness, cwd, shell, launch, env, offline, browser, cols, rows, agentName, autoApprove, autoResume } = options;
+  const { id, program, command, harness, cwd, shell, launch, env, offline, browser, cols, rows, agentName, autoApprove, autoResume, mcp } = options;
   let attaching = true;
   const pending: Array<() => void> = [];
   const deliver = (callback: () => void) => {
@@ -120,7 +121,7 @@ export function createRemotePtySession(
     pending.length = 0;
   });
   channel.send({
-    type: 'spawn', id, program, command, mode: 'pty', harness, cwd, shell, launch, env, cols, rows, offline, browser, autoApprove, autoResume,
+    type: 'spawn', id, program, command, mode: 'pty', harness, cwd, shell, launch, env, cols, rows, offline, browser, autoApprove, autoResume, mcp,
     ...(agentName && { agentName }),
   });
   return {
