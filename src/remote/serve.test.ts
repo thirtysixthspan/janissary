@@ -605,7 +605,8 @@ describe('RemoteServer', () => {
 
   it('reports a failed shared MCP endpoint to a later harness before exiting it', async () => {
     const probe = new FarSideMcp(vi.fn(), 'probe');
-    const port = Number(new URL(probe.launch().url).port);
+    const probeLaunch = await probe.launch();
+    const port = Number(new URL(probeLaunch.url).port);
     await new Promise<void>((resolve) => setImmediate(resolve));
     probe.dispose();
     cryptoMock.port = port;
@@ -616,11 +617,11 @@ describe('RemoteServer', () => {
       server.receive(`${encodeFrame({ type: 'provision', label: 'mcp-collision' })}\n`);
       await waitForWorkspaceReady(frames);
       const spawnFrame = (id: string) => (server as unknown as {
-        spawn: (frame: Extract<ClientFrame, { type: 'spawn' }>) => void;
+        spawn: (frame: Extract<ClientFrame, { type: 'spawn' }>) => Promise<void>;
       }).spawn({ ...SPAWN_FRAME, id, mcp: true });
-      spawnFrame('r1');
+      await spawnFrame('r1');
       await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'output' && frame.id === 'r1' && frame.data.includes('MCP endpoint could not bind'))).toBe(true));
-      spawnFrame('r2');
+      await spawnFrame('r2');
 
       expect(frames).toContainEqual({
         type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind'),

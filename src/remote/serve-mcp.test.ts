@@ -16,7 +16,12 @@ const mcpMock = vi.hoisted(() => ({
   close: vi.fn(async () => {}),
 }));
 const httpMock = vi.hoisted(() => ({
-  server: { listening: true, listen: vi.fn(), close: vi.fn(), on: vi.fn() },
+  server: {
+    listening: true,
+    listen: vi.fn(),
+    close: vi.fn(),
+    on: vi.fn((event: string, handler: () => void) => { if (event === 'listening') handler(); }),
+  },
   createServer: vi.fn(),
 }));
 
@@ -114,12 +119,30 @@ describe('the far-side MCP endpoint', () => {
     await expect(answer).resolves.toEqual({ text: 'yes', isError: false });
   });
 
-  it('mints its own token that matches nothing the spawn frame carried', () => {
+  it('withholds the MCP address until the endpoint is listening', async () => {
+    let listening!: () => void;
+    httpMock.server.on.mockImplementationOnce(() => {});
+    httpMock.server.on.mockImplementationOnce((_event: string, handler: () => void) => { listening = handler; });
+
+    const mcp = new FarSideMcp(vi.fn(), 'r1');
+    let published: string | undefined;
+    const launching = (async () => { const launched = await mcp.launch(); published = launched.url; })();
+    await Promise.resolve();
+
+    expect(published).toBeUndefined();
+    listening();
+    await launching;
+    expect(published).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+    mcp.dispose();
+  });
+
+  it('mints its own token that matches nothing the spawn frame carried', async () => {
     spawnHarness(true, {
       JANISSARY_MCP_TOKEN: LOCAL_TOKEN,
       JANISSARY_MCP_URL: 'http://127.0.0.1:1/mcp',
       LOCAL_SECRET: LOCAL_TOKEN,
     });
+    await vi.advanceTimersByTimeAsync(0);
     const env = vi.mocked(spawnPty).mock.calls[0]?.[7] as Record<string, string>;
 
     expect(env.JANISSARY_MCP_TOKEN).toMatch(/^[A-Za-z0-9_-]{32}$/);
@@ -159,28 +182,28 @@ describe('the far-side MCP endpoint', () => {
     const actual = await vi.importActual<typeof Http>('node:http');
 
     const probe = new FarSideMcp(vi.fn(), 'probe');
-    const port = Number(new URL(probe.launch().url).port);
+    const probeLaunch = await probe.launch();
+    const port = Number(new URL(probeLaunch.url).port);
     probe.dispose();
     cryptoMock.randomInt = () => port;
 
     const blocker = actual.createServer();
     await new Promise<void>((resolve) => blocker.listen(port, '127.0.0.1', () => resolve()));
 
-    const { promise: reported, resolve: report } = Promise.withResolvers<void>();
-    const collisionSend = vi.fn(() => report());
+    const collisionSend = vi.fn();
     httpMock.createServer.mockImplementationOnce((handler: Http.RequestListener) => actual.createServer(handler));
 
     const mcp = new FarSideMcp(collisionSend, 'r1');
-    await reported;
+    await expect(mcp.launch()).rejects.toThrow(/MCP endpoint could not bind/);
 
     expect(collisionSend).toHaveBeenCalledWith({
       type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE'),
     });
-    expect(() => mcp.launch()).toThrow(/MCP endpoint could not bind/);
 
     mcp.dispose();
     const after = new FarSideMcp(vi.fn(), 'after');
-    expect(Number(new URL(after.launch().url).port)).toBe(port);
+    const afterLaunch = await after.launch();
+    expect(Number(new URL(afterLaunch.url).port)).toBe(port);
     after.dispose();
     cryptoMock.randomInt = undefined;
     blocker.close();
@@ -191,7 +214,8 @@ describe('the far-side MCP endpoint', () => {
     const actual = await vi.importActual<typeof Http>('node:http');
 
     const probe = new FarSideMcp(vi.fn(), 'probe');
-    const port = Number(new URL(probe.launch().url).port);
+    const probeLaunch = await probe.launch();
+    const port = Number(new URL(probeLaunch.url).port);
     probe.dispose();
     cryptoMock.randomInt = () => port;
 
@@ -206,7 +230,7 @@ describe('the far-side MCP endpoint', () => {
     const mcp = new FarSideMcp(collisionSend, 'r1');
     await reported;
 
-    expect(() => mcp.launch('r2')).toThrow(/MCP endpoint could not bind/);
+    await expect(mcp.launch('r2')).rejects.toThrow(/MCP endpoint could not bind/);
     expect(frames).toEqual([
       { type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') },
       { type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind') },

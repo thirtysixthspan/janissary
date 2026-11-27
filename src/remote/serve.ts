@@ -130,7 +130,7 @@ export class RemoteServer {
     case 'shutdown': { this.shutdown(0); return; }
     case 'provision': { void this.provision(frame); return; }
     case 'clone-answer': { if (!this.offer?.answer(frame.accept)) this.refuse('Unexpected remote frame "clone-answer".'); return; }
-    case 'spawn': { this.spawn(frame); return; }
+    case 'spawn': { void this.spawn(frame); return; }
     // Retained before it is delivered, so what the peer replays is in the order it saw the two
     // directions — which is what pairs a command with the output it produced.
     case 'input': { this.peer?.input(frame); this.provisioned?.processes.input(frame.id, frame.data); return; }
@@ -210,13 +210,13 @@ export class RemoteServer {
     return true;
   }
 
-  private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
+  private async spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): Promise<void> {
     if (!this.requireWorkspace()) return;
     this.peer?.track(frame);
     // A process that will not start is that process's failure, not the session's: it answers as an
     // exit, which also drops what the peer tracked a line above, and every other frame keeps working.
     try {
-      this.provisioned?.processes.spawn(frame);
+      await this.provisioned?.processes.spawn(frame);
     } catch {
       this.emit({ type: 'exit', id: frame.id, exitCode: 1 });
       return;

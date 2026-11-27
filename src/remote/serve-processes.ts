@@ -10,6 +10,7 @@ import type { ScreenCapture } from '../harness/screen.js';
 import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
 import { spawnFrameState } from './process-state.js';
 import { FarSideMcp } from './serve-mcp.js';
+import type { McpLaunch } from '../mcp/manager.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
@@ -55,10 +56,24 @@ export class RemoteProcesses {
     private linked: () => boolean = () => true,
   ) {}
 
-  spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
+  spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): Promise<void> | undefined {
     if (this.entries.has(frame.id)) return;
-    const entry = frame.mode === 'pipe' ? this.spawnPipe(frame.id, frame.agentName) : this.spawnPty(frame);
-    this.entries.set(frame.id, { ...entry, frame });
+    if (frame.mode === 'pipe') {
+      this.entries.set(frame.id, { ...this.spawnPipe(frame.id, frame.agentName), frame });
+      return;
+    }
+    if (frame.mcp !== true) {
+      this.entries.set(frame.id, { ...this.spawnPty(frame), frame });
+      return;
+    }
+    const endpoint = this.mcp ??= new FarSideMcp((out) => {
+      if (this.linked()) return this.send(out);
+      return false;
+    }, frame.id, () => this.linked());
+    return (async () => {
+      const mcp = await endpoint.launch(frame.id);
+      this.entries.set(frame.id, { ...this.spawnPty(frame, mcp), frame });
+    })();
   }
 
   // One entry per process still running, in spawn order. An exited process has already been removed
@@ -106,17 +121,13 @@ export class RemoteProcesses {
     this.zshStartup.dispose();
   }
 
-  private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>): ProcessResources {
+  private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>, mcp?: McpLaunch): ProcessResources {
     const shell = frame.shell;
     const cwd = shell === undefined ? this.workspaceDir : this.shellCwd(frame.cwd);
     // The remote builds its own copy of the harness environment, browser and MCP endpoint included:
     // both name ports and mints tokens on this host, so neither could have been computed on the other
-    // side and shipped over. Because it needs no await, the caller's synchronous insert into `entries`
-    // is untouched and there is no kill-before-spawn race to guard.
-    const mcp = frame.mcp === true ? (this.mcp ??= new FarSideMcp((out) => {
-      if (this.linked()) return this.send(out);
-      return false;
-    }, frame.id, () => this.linked())).launch(frame.id) : undefined;
+    // side and shipped over. `spawn` awaits the endpoint bind first, so the URL placed here is one
+    // this host actually bound.
     const spawnEnv = frame.harness === undefined
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({

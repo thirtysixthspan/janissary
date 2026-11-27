@@ -65,6 +65,7 @@ export class FarSideMcp {
   private ticks = 0;
   private detached = false;
   private failure?: string;
+  private readonly ready: Promise<void>;
 
   constructor(
     private readonly send: (frame: ServerFrame) => boolean | void,
@@ -81,17 +82,24 @@ export class FarSideMcp {
       }
       void guarded(request, response);
     });
-    this.server.on('error', (error: Error) => {
-      this.failure = `MCP endpoint could not bind to ${LOOPBACK}:${this.port}: ${error.message}`;
-      this.send({ type: 'output', id: this.id, data: `${this.failure}\n` });
+    this.ready = new Promise<void>((resolve, reject) => {
+      this.server.on('error', (error: Error) => {
+        this.failure = `MCP endpoint could not bind to ${LOOPBACK}:${this.port}: ${error.message}`;
+        this.send({ type: 'output', id: this.id, data: `${this.failure}\n` });
+        reject(new Error(this.failure));
+      });
+      this.server.on('listening', () => resolve());
     });
+    void this.ready.catch(() => {});
     this.server.listen(this.port, LOOPBACK);
   }
 
-  launch(id: string = this.id): McpLaunch {
-    if (this.failure !== undefined) {
+  async launch(id: string = this.id): Promise<McpLaunch> {
+    try {
+      await this.ready;
+    } catch (error: unknown) {
       this.send({ type: 'output', id, data: `${this.failure}\n` });
-      throw new Error(this.failure);
+      throw error;
     }
     return { url: `http://${LOOPBACK}:${this.port}${MCP_PATH}`, token: this.token };
   }

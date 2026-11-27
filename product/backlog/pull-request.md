@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that a far-side bind collision never publishes an unbound address.
-
-Existing Issue: The description says the far-side endpoint "refuses to publish an unbound address", but src/remote/serve-mcp.ts calls listen() asynchronously and launch() checks the recorded failure synchronously, so the first harness that collides with an occupied loopback port is handed a URL for a port that never bound while the EADDRINUSE reason reaches its tab only later as an output frame. Severity: 7/10
-
-Existing Risk: 7/10 - A remote harness starts with a dead MCP URL and sends its bearer token to whatever process actually holds the port, and the user sees the failure only after the launch has already gone out.
-
-Proposal Risk: 3/10 - Binding before the address is published and pinning both first-collision and later-harness paths leaves only a small start-up delay on the far side.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the description's claim that a far-side bind collision never publishes an unbound address". In src/remote/serve-mcp.ts keep the 'error' listener that records the reason before listen(), but expose the bind outcome as a promise resolved on 'listening' and rejected on 'error', and have launch() await it so a failed bind throws before any URL is returned; keep the stored reason so later harnesses still get it through output frames. In src/remote/serve-processes.ts create or launch the endpoint before harnessSpawnEnv builds the environment so a failed bind never places an unbound URL in a harness's variables, leaving RemoteServer.spawn's existing exit-code-1 branch to report it. Change src/remote/serve-mcp.test.ts's real-collision test to assert no address is published on the first collision without first awaiting the output frame, keep the later-harness test, and keep src/remote/serve.test.ts's shared-endpoint collision test passing. Rewrite the description sentence only after the code makes it true.
-
-
 * Deliver the plan's caller-abort withdrawal for remote MCP questions, which currently leaves the local panel and queue stuck.
 
 Existing Issue: src/remote/mcp-relay.ts executes each relayed call with a fresh AbortController that is never aborted, and src/remote/serve-mcp.ts removes an aborted or grace-expired call only from its own pending map, so a remote caller that gives up leaves the local question registered, its panel open, no `Question from <tab> withdrawn` line, and the next queued question blocked. Severity: 7/10

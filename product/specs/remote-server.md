@@ -951,13 +951,14 @@ machine: it is not sent in the launch request, does not appear in the harness's 
 never accepted as the far-side endpoint's credential. Only loopback clients can reach the endpoint,
 and its address and token stay the same while the session is detached or reconnecting.
 
-Exactly one endpoint is claimed per remote process. If another process on the host already holds
-that loopback port, the collision is a contained failure of that endpoint: the reason is reported
-back over the session, the harness is refused an endpoint address rather than given one that was
-never bound, and the remote session and its other tabs keep running. A failed endpoint does not
-leave its port claimed. Every harness that later asks for MCP on that session receives the stored
-reason in its own tab before its refusal, so none closes without being told why; the first,
-colliding harness's report is unchanged.
+Exactly one endpoint is claimed per remote process. Its address and token reach a harness only after
+the loopback port has bound, so no harness starts with an address nothing serves. If another process
+on the host already holds that port, the collision is a contained failure of that endpoint: the
+reason is reported back over the session, the colliding harness is refused with exit code 1 rather
+than given an unbound address, and the remote session and its other tabs keep running. A failed
+endpoint does not leave its port claimed. Every harness that later asks for MCP on that session
+receives the stored reason in its own tab before the same exit-code-1 refusal, so none closes without
+being told why; the first, colliding harness's report is unchanged.
 
 The endpoint serves the same question tool a local harness sees. Each call is passed back to the
 local Janissary over the session's existing connection, where the question is put to the human, and
