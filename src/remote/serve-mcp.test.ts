@@ -62,7 +62,7 @@ function relayedCalls(): Array<Extract<ServerFrame, { type: 'mcp-call' }>> {
 }
 
 function spawnHarness(mcp: boolean, env?: Record<string, string>): RemoteProcesses {
-  const processes = new RemoteProcesses(send, '/remote/workspace', 'build');
+  const processes = new RemoteProcesses(send, '/remote/workspace', 'build', {}, () => online);
   processes.spawn({
     type: 'spawn', id: 'r1', program: 'opencode', command: 'opencode', mode: 'pty',
     harness: 'opencode', cols: 80, rows: 24, ...(mcp && { mcp: true }), ...(env && { env }),
@@ -271,9 +271,12 @@ describe('the far-side MCP endpoint', () => {
     await vi.advanceTimersByTimeAsync(60_000);
     await expect(held).rejects.toThrow('Janissary is not connected.');
 
+    send.mockClear();
+
     const later = executor('question', ARGS, new AbortController().signal);
     void later.catch(() => {});
     await expect(later).rejects.toThrow('Janissary is not connected.');
+    expect(send).not.toHaveBeenCalled();
     expect(relayedCalls()).toEqual([]);
   });
 

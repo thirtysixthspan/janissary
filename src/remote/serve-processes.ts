@@ -116,7 +116,7 @@ export class RemoteProcesses {
     const mcp = frame.mcp === true ? (this.mcp ??= new FarSideMcp((out) => {
       if (this.linked()) return this.send(out);
       return false;
-    }, frame.id)).launch(frame.id) : undefined;
+    }, frame.id, () => this.linked())).launch(frame.id) : undefined;
     const spawnEnv = frame.harness === undefined
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({

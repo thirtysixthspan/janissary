@@ -68,6 +68,7 @@ export class FarSideMcp {
   constructor(
     private readonly send: (frame: ServerFrame) => boolean | void,
     private readonly id: string,
+    private readonly linked: () => boolean = () => true,
   ) {
     this.handler = createHandler(this.relay);
     const guarded: NodeHandler = guard(toNodeHandler(this.handler), this.token);
@@ -145,6 +146,7 @@ export class FarSideMcp {
 
   private relay: ToolExecutor = (tool, args, signal) => new Promise<ToolResult>((resolve, reject) => {
     if (signal.aborted) { reject(new Error('MCP call cancelled.')); return; }
+    if (this.detached && !this.linked()) { reject(new Error(NOT_CONNECTED)); return; }
     const call = randomUUID();
     const frame: CallFrame = {
       type: 'mcp-call', call, tool,
@@ -155,7 +157,6 @@ export class FarSideMcp {
       reject(new Error('MCP call cancelled.'));
     };
     const delivered = this.send(frame);
-    if (delivered === false && this.detached) { reject(new Error(NOT_CONNECTED)); return; }
     this.pending.set(call, { signal, onAbort, resolve, reject, frame });
     signal.addEventListener('abort', onAbort, { once: true });
     if (delivered === false) { this.startGrace(); return; }

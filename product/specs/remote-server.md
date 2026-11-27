@@ -701,8 +701,9 @@ call, and each answer reaches its harness as usual; a call made while the link i
 way. A held call stays with the endpoint rather than being queued for replay to a later attach, so it
 is delivered once, to the harness that asked, and cannot be answered by a different session. If the
 window ends with no link, every waiting call fails with `Janissary is not connected.`, and
-calls made after that fail at once with the same text until a link returns. Once one does, calls relay
-normally again.
+calls made after that fail at once with the same text until a link returns. Such a refused call is
+never sent over the session, so it leaves no question behind for a later attach and cannot run in
+another session. Once the link returns, calls relay normally again.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
