@@ -2,7 +2,7 @@ import type { RemoteFrame } from '../protocol-frames.js';
 import {
   decodeAcpRun, decodeAcpRunEnd, decodeAcpToolRequest, decodeAcpToolResult, decodeAcpToolStep, decodeAcpTurn,
 } from './decode-acp-run.js';
-import { malformed, type DecodeResult } from './decode-shared.js';
+import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
 import {
   decodeAgentResolve, decodeAgentResolveResult, decodeRunClone, decodeRunCloneResult,
@@ -84,8 +84,18 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-open': { return decodeAcpOpen(record); }
   case 'acp-run': { return decodeAcpRun(record); }
   case 'acp-tool-result': { return decodeAcpToolResult(record); }
+  case 'mcp-result': {
+    const { call, text, isError } = record;
+    if (!nonEmptyString(call) || typeof text !== 'string' || typeof isError !== 'boolean') return malformed('mcp-result');
+    return { type: 'mcp-result', call, text: Buffer.from(text, 'base64').toString('utf8'), isError };
+  }
   case 'acp-turn': { return decodeAcpTurn(record); }
   case 'acp-tool-request': { return decodeAcpToolRequest(record); }
+  case 'mcp-call': {
+    const { call, tool, args } = record;
+    if (!nonEmptyString(call) || !nonEmptyString(tool) || !nonEmptyString(args)) return malformed('mcp-call');
+    return { type: 'mcp-call', call, tool, args: Buffer.from(args, 'base64').toString('utf8') };
+  }
   case 'acp-tool-step': { return decodeAcpToolStep(record); }
   case 'acp-run-end': { return decodeAcpRunEnd(record); }
   case 'acp-chunk': { return decodeAcpText(type, record); }

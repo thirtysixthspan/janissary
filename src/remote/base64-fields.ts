@@ -32,6 +32,7 @@ export const BINARY_FIELDS: Record<RemoteFrame['type'], readonly BinaryField[]> 
   'acp-open': [],
   'acp-run': [{ field: 'text', shape: 'text' }],
   'acp-tool-result': [{ field: 'output', shape: 'text' }],
+  'mcp-result': [{ field: 'text', shape: 'text' }],
   'acp-cancel': [],
   'acp-close': [],
   // Server frames.
@@ -62,6 +63,7 @@ export const BINARY_FIELDS: Record<RemoteFrame['type'], readonly BinaryField[]> 
   'acp-chunk': [{ field: 'text', shape: 'text' }],
   'acp-turn': [{ field: 'display', shape: 'text' }],
   'acp-tool-request': [{ field: 'command', shape: 'text' }],
+  'mcp-call': [{ field: 'args', shape: 'text' }],
   'acp-tool-step': [
     { field: 'command', shape: 'text' },
     { field: 'result', shape: 'text' },

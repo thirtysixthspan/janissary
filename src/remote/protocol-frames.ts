@@ -190,6 +190,7 @@ export type ClientFrame =
   }
   | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
   | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }
+  | { type: 'mcp-result'; call: string; text: string; isError: boolean }
   | { type: 'acp-cancel'; id: string }
   | { type: 'acp-close'; id: string };
 
@@ -305,6 +306,7 @@ export type ServerFrame =
   // so the pair can be matched. The local side records and displays that step itself, so the far
   // side sends no `acp-tool-step` for it.
   | { type: 'acp-tool-request'; id: string; request: number; command: string }
+  | { type: 'mcp-call'; call: string; tool: string; args: string }
   // A step the far side completed on its own: a workspace-tool run (`workspace: true`) or a gate
   // refusal (`workspace: false`). `refused` is present only as `'disabled'`, for a disabled or
   // agent-off refusal. `command` and `result` are base64-encoded free text, and an empty `result` is
@@ -355,7 +357,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true, 'run-clone': true,
-  'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
+  'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true, 'mcp-result': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
@@ -366,5 +368,5 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'agent-resolve-result': true, 'run-clone-result': true,
   'acp-ready': true, 'acp-session-started': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
   'acp-run-end': true,
-  'acp-activity': true, 'acp-closed': true, 'acp-error': true,
+  'acp-activity': true, 'acp-closed': true, 'acp-error': true, 'mcp-call': true,
 };
