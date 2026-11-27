@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
-import { PluginActionsHeader, newTabIcon, type TabPluginClientCapabilities } from '../api';
+import { fireIntent, PluginActionsHeader, newTabIcon, type TabPluginClientCapabilities } from '../api';
 import { canPauseRow, nextSelection } from './schedules-keys';
 import { sectionSchedules } from './schedules-sections';
 import { ScheduleSection } from './SchedulesRows';
@@ -57,14 +57,14 @@ export function SchedulesTab({
       const identity = pendingDelete.owner === 'system'
         ? { tab: pendingDelete.tab, owner: 'system', key: pendingDelete.key }
         : { tab: pendingDelete.tab };
-      void capabilities.intent('cancel', { ...identity, id: pendingDelete.id });
+      fireIntent(capabilities, 'cancel', { ...identity, id: pendingDelete.id });
     }
     setPendingDelete(null);
   };
 
   const togglePause = (entry: ScheduleRow) => {
     if (entry.owner !== 'system') return;
-    void capabilities.intent(entry.paused ? 'resume' : 'pause', {
+    fireIntent(capabilities, entry.paused ? 'resume' : 'pause', {
       tab: entry.tab, owner: 'system', key: entry.key, id: entry.id,
     });
     containerRef.current?.focus();

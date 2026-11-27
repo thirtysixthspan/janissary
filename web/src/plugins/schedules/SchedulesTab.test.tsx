@@ -370,6 +370,17 @@ describe('SchedulesTab pause and resume', () => {
 
   const identity = { tab: 'system', owner: 'system', key: 'ping', id: 'ping' };
 
+  function rejectingCapabilities(reason: string) {
+    const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>()
+      .mockRejectedValue(new Error(reason));
+    const capabilities: TabPluginClientCapabilities = {
+      ...makeCapabilities().capabilities,
+      intent: async <Result,>(name: string, payload: unknown) =>
+        intent(name, payload) as Promise<Result>,
+    };
+    return { capabilities, intent };
+  }
+
   it('offers the control only on recurring system rows, in both layouts', () => {
     const entries = [
       recurringSystem(),
@@ -415,6 +426,34 @@ describe('SchedulesTab pause and resume', () => {
 
     expect(intent).toHaveBeenCalledTimes(1);
     expect(intent).toHaveBeenCalledWith('resume', identity);
+  });
+
+  it.each([
+    { action: 'pause', label: 'Pause schedule ping', paused: false },
+    { action: 'resume', label: 'Resume schedule ping', paused: true },
+  ] as const)('consumes a rejected $action intent without changing the row or raising an unhandled error', async ({ action, label, paused }) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const { capabilities, intent } = rejectingCapabilities('could not save system schedules');
+      const entry = recurringSystem(paused ? { paused: true, next: 'paused' } : {});
+      const { container } = render(<SchedulesTab payload={{ entries: [entry] }} capabilities={capabilities} />);
+      const before = container.querySelector('.schedules-row')!.textContent;
+
+      fireEvent.click(screen.getByLabelText(label));
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+
+      expect(intent).toHaveBeenCalledWith(action, identity);
+      expect(container.querySelector('.schedules-row')!.textContent).toBe(before);
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+      expect(warn).toHaveBeenCalledWith(`Plugin intent "${action}" failed: could not save system schedules`);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+      warn.mockRestore();
+    }
   });
 
   it('counts a double-click on the control as one press without focusing the owner', () => {
