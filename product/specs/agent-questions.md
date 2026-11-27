@@ -42,4 +42,4 @@ Questions are in-memory state. They are not persisted or restored.
 
 ### Cancellation
 
-Cancellation, owning-tab closure, and server shutdown return `Question cancelled.` to the waiting agent. There is no shell command, external HTTP endpoint, timeout, or caller-supplied default.
+Cancellation, owning-tab closure, and server shutdown return `Question cancelled.` to the waiting agent. Harnesses can ask through the local MCP endpoint at `http://127.0.0.1:<port>/mcp`, with the same cancellation result. There is no timeout or caller-supplied default.

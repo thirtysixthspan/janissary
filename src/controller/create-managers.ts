@@ -23,6 +23,7 @@ import { MonitorManager } from '../monitor/manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { Questions } from '../questions.js';
+import { McpManager } from '../mcp/manager.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { TabPluginHost } from '../plugins/host.js';
@@ -63,6 +64,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
       notify(managers, 'question', label, undefined, { openTab: label });
     }
   });
+  managers.mcp = new McpManager(managers, projectDir);
   managers.conversations = new ConversationsManager(managers, { projectDir });
   managers.models = new ModelCatalogManager(managers, { projectDir });
   managers.sessions = new SessionsManager(managers);
