@@ -254,6 +254,23 @@ describe('HarnessTabMeta', () => {
     expect(flag.querySelector('svg[data-icon="globe"]')).not.toBeNull();
   });
 
+  it('renders the MCP flag as a server glyph with its accessible label', () => {
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['mcp']} />);
+    const flag = getByRole('img', { name: 'MCP server' });
+    expect(flag).toHaveAttribute('title', 'MCP server');
+    expect(flag.querySelector('svg[data-icon="server"]')).not.toBeNull();
+    expect(flag).toHaveClass('tab-flag');
+    expect(flag).not.toHaveClass('tab-flag--active');
+  });
+
+  it('renders the MCP-in-use flag as the same server, marked active for its green highlight', () => {
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['mcpInUse']} />);
+    const flag = getByRole('img', { name: 'MCP server in use' });
+    expect(flag).toHaveAttribute('title', 'MCP server in use');
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
+    expect(flag.querySelector('svg[data-icon="server"]')).not.toBeNull();
+  });
+
   it('renders all three flag icons together in the order the server sent them', () => {
     const { container } = render(
       <HarnessTabMeta cwd="~/project" flags={['workspaced', 'autoApprove', 'browser']} />,

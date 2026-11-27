@@ -404,6 +404,33 @@ describe('buildTabView', () => {
     });
   });
 
+  describe('MCP flag', () => {
+    const flagsOf = (tab: ReturnType<typeof makeTab>) => buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags;
+
+    function mcpTab() {
+      const tab = makeTab('claude', '#fff');
+      tab.mcp = true;
+      tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' };
+      return tab;
+    }
+
+    it('reports \'mcp\' for a harness tab launched with MCP config before any use', () => {
+      expect(flagsOf(mcpTab())).toEqual(['mcp']);
+    });
+
+    it('reports \'mcpInUse\' in place of \'mcp\' once the harness first calls the MCP server', () => {
+      const tab = mcpTab();
+      tab.harness!.mcpUsed = true;
+      expect(flagsOf(tab)).toEqual(['mcpInUse']);
+    });
+
+    it('reports neither flag for a tab not launched with MCP config, even once its harness uses the server', () => {
+      const tab = makeTab('claude', '#fff');
+      tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running', mcpUsed: true };
+      expect(flagsOf(tab)).toEqual([]);
+    });
+  });
+
   it('produces an empty flags array when neither workspaceDir nor autoApprove is set', () => {
     const tab = makeTab('agent-1', '#fff');
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
