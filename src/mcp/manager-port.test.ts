@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import type * as NodeCrypto from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -129,6 +129,78 @@ describe.skipIf(!canReachLoopback)('McpManager first-start port selection', () =
       } finally {
         browser.release();
       }
+      manager.dispose();
+    } finally {
+      await new Promise<void>((resolve) => { blocker.close(() => resolve()); });
+    }
+  });
+});
+
+function writeSavedPort(port: number): void {
+  const dir = path.join(root, '.janissary');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, 'mcp.json'), JSON.stringify({ port, token: 'saved-token' }));
+}
+
+function guardPortFor(drawn: number): number {
+  vi.mocked(randomInt).mockReturnValue(drawn as never);
+  const browser = allocateBrowserPorts();
+  browser.release();
+  return browser.guardPort;
+}
+
+async function runningOn(manager: McpManager, port: number): Promise<void> {
+  await manager.ready;
+  const status = manager.status();
+  expect(status.status).toBe('running');
+  if (status.status !== 'running') throw new Error('expected a running server');
+  expect(status.port).toBe(port);
+}
+
+describe.skipIf(!canReachLoopback)('McpManager port reservation on later starts', () => {
+  it('reserves a reused saved port so a guard draw landing on it is handed another', async () => {
+    const { drawn, port } = await freeBandDraw();
+    writeSavedPort(port);
+    const manager = new McpManager(fixtureManagers(), root);
+    try {
+      await runningOn(manager, port);
+      expect(guardPortFor(drawn)).not.toBe(port);
+    } finally {
+      manager.dispose();
+    }
+  });
+
+  it('reserves an mcpPort override so a guard draw landing on it is handed another', async () => {
+    const { drawn, port } = await freeBandDraw();
+    getConfig().mcpPort = port;
+    const manager = new McpManager(fixtureManagers(), root);
+    try {
+      await runningOn(manager, port);
+      expect(guardPortFor(drawn)).not.toBe(port);
+    } finally {
+      manager.dispose();
+    }
+  });
+
+  it('returns the saved port to the pool when the server is disposed', async () => {
+    const { drawn, port } = await freeBandDraw();
+    writeSavedPort(port);
+    const manager = new McpManager(fixtureManagers(), root);
+    await runningOn(manager, port);
+    manager.dispose();
+    expect(guardPortFor(drawn)).toBe(port);
+  });
+
+  it('returns the saved port to the pool when it is already occupied', async () => {
+    const { drawn, port } = await freeBandDraw();
+    writeSavedPort(port);
+    const blocker = createServer();
+    await new Promise<void>((resolve) => { blocker.listen(port, '127.0.0.1', resolve); });
+    try {
+      const manager = new McpManager(fixtureManagers(), root);
+      await manager.ready;
+      expect(manager.localLaunch()).toBeUndefined();
+      expect(guardPortFor(drawn)).toBe(port);
       manager.dispose();
     } finally {
       await new Promise<void>((resolve) => { blocker.close(() => resolve()); });

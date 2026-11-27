@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reserve a saved or overridden MCP port in the shared pool on every start, not only on the first.
-
-Existing Issue: `McpManager.start` reserves its port in the shared `reserved` set only when it draws a fresh one; on every later start the saved port, and any `mcpPort` override, is bound with a no-op `release` and never entered into the set, so browser guards in the same process can still draw the port the server is listening on. Severity: 3/10
-
-Existing Risk: 3/10 - On any start after the first, a `-b` harness launch has a small chance of drawing the MCP server's port for its guard, whose bind then fails and tears down that tab's browser, which is the collision requirement 6a's shared reservation exists to prevent.
-
-Proposal Risk: 1/10 - The server's port is reserved for its lifetime however it was chosen, so only a foreign process can still collide, which the guard already reports.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "reserve a saved or overridden MCP server port in the shared browser-guard pool". In `src/browser/e2e-ports.ts`, add an exported helper beside `reserveReachablePort` that reserves a specific port (adding it to `reserved` only when it is not already there, and returning a `release` that deletes it only if this call added it), and in `src/mcp/manager.ts` use it for the `configured` branch instead of `{ port: configured, release: () => {} }`, keeping the existing release calls on a failed bind, a disposal before publication and a persistence failure. A port outside the guard range can be reserved harmlessly because nothing else draws it. Add a case to `src/mcp/manager-port.test.ts` that writes a saved state naming a guard-range port, starts the manager, forces `randomInt` to that port and asserts `allocateBrowserPorts().guardPort` differs from it; the existing reuse and override tests in `src/mcp/manager.test.ts` must keep passing.
-
-
 * Carry each remote harness's MCP launch decision through a session attach so the rebuilt tab shows the right MCP flag.
 
 Existing Issue: `startSessionAttach` in `src/sessions/attach.ts` calls `attachRemote` with no `mcp` field and `offline: false`, and `RemoteProcessState` and `spawnFrameState` carry no `mcp`, so `HarnessTabSpawn.spawnTab` marks the rebuilt tab `mcp` whenever the local server is running, even for a far harness launched with `--no-mcp` or `--offline` that has no MCP config, and hides the flag for an MCP harness when the local server is down. Severity: 3/10

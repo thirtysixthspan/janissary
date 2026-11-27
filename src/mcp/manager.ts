@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import { atomicWriteFile } from '../atomic-write.js';
-import { reserveReachablePort } from '../browser/e2e-ports.js';
+import { reservePort, reserveReachablePort } from '../browser/e2e-ports.js';
 import { getConfig } from '../config.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
@@ -102,6 +102,7 @@ export class McpManager {
   private launch?: McpLaunch;
   private port?: number;
   private failure?: string;
+  private releasePort?: () => void;
   private disposed = false;
   private readonly stateFile: string;
   readonly ready: Promise<void>;
@@ -128,6 +129,8 @@ export class McpManager {
     this.server = undefined;
     this.handler = undefined;
     this.launch = undefined;
+    this.releasePort?.();
+    this.releasePort = undefined;
     if (server?.listening) server.close();
     void handler?.close();
   }
@@ -154,7 +157,7 @@ export class McpManager {
       const configured = override ?? state?.port;
       const chosen = configured === undefined
         ? reserveReachablePort()
-        : { port: configured, release: () => {} };
+        : reservePort(configured);
       try {
         const listener = await listen(chosen.port, token, managers);
         if (this.disposed) {
@@ -174,6 +177,7 @@ export class McpManager {
         this.server = listener.server;
         this.handler = listener.handler;
         this.port = listener.port;
+        this.releasePort = chosen.release;
         this.launch = { url: `http://${LOOPBACK}:${listener.port}${MCP_PATH}`, token };
       } catch (error) {
         chosen.release();

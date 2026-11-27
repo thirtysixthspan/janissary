@@ -96,7 +96,8 @@ export function allocateBrowserPorts(): BrowserPorts {
 // life of that process. Both draw from the same guard range and the same reservation set as browser
 // guards: a separate pool would let a guard claim the port an endpoint is already listening on.
 // `claimPort` normalizes the draw, so a value landing in the denied band still yields a port below
-// it.
+// it. A caller that already knows its port, such as the MCP server reusing its saved port or an
+// `mcpPort` override, reserves that exact port with `reservePort` instead of drawing one.
 export type ReservedPort = {
   port: number;
   release: () => void;
@@ -105,5 +106,14 @@ export type ReservedPort = {
 export function reserveReachablePort(): ReservedPort {
   const port = claimPort(randomInt(FIRST_PORT, FIRST_PORT + GUARD_COUNT), FIRST_PORT, GUARD_COUNT);
   if (port === undefined) throw exhausted('harness-reachable', FIRST_PORT, GUARD_COUNT);
+  return { port, release: () => { reserved.delete(port); } };
+}
+
+// A port someone else already holds stays theirs: this reservation adds nothing, so its release
+// must not free the earlier holder's. A port outside the guard range is accepted as is, because no
+// draw ever walks to it.
+export function reservePort(port: number): ReservedPort {
+  if (reserved.has(port)) return { port, release: () => {} };
+  reserved.add(port);
   return { port, release: () => { reserved.delete(port); } };
 }
