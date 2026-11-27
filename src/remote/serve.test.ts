@@ -479,6 +479,39 @@ describe('RemoteServer', () => {
     expect(exit).toHaveBeenCalledWith(0);
   });
 
+  it('reflects stdout writability and the detach flag before a peer exists', async () => {
+    const { server, frames } = makeServer();
+    expect(server.linked()).toBe(true);
+    const writable = vi.spyOn(process.stdout, 'writable', 'get').mockReturnValue(false);
+    try {
+      expect(server.linked()).toBe(false);
+    } finally { writable.mockRestore(); }
+    server.receive(`${encodeFrame({ type: 'provision', label: 'link-state-no-peer' })}\n`);
+    await waitForWorkspaceReady(frames);
+    server.detach();
+    expect(server.linked()).toBe(false);
+    server.shutdown(0);
+  });
+
+  it('delegates its link state to a real peer once one exists', async () => {
+    const { server } = makeServer();
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    (server as unknown as { peer: DetachedPeer }).peer = peer;
+    try {
+      expect(server.linked()).toBe(peer.linked());
+      peer.detach();
+      expect(server.linked()).toBe(false);
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+        expect(server.linked()).toBe(true);
+      } finally { socket.destroy(); }
+    } finally { peer.dispose(); }
+    expect(server.linked()).toBe(false);
+  });
+
   it('refuses a frame outside the union', () => {
     const { server, frames } = makeServer();
     server.receive(`${JSON.stringify({ type: 'exec', id: 'r1' })}\n`);
@@ -1204,6 +1237,23 @@ describe('RemoteServer — settling the root', () => {
 });
 
 describe('detached peer rendezvous', () => {
+  it('reports its link state across start, attach, detach, and dispose', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    expect(peer.linked()).toBe(false);
+    await peer.start(vi.fn());
+    expect(peer.linked()).toBe(true);
+    peer.detach();
+    expect(peer.linked()).toBe(false);
+    const output: string[] = [];
+    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+    try {
+      await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+      expect(peer.linked()).toBe(true);
+    } finally { socket.destroy(); }
+    peer.dispose();
+    expect(peer.linked()).toBe(false);
+  });
+
   it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through terminal hangup and a fresh remote-serve process', async (mode) => {
     const script = `
       import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};
