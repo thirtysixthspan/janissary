@@ -1239,18 +1239,19 @@ describe('RemoteServer — settling the root', () => {
 describe('detached peer rendezvous', () => {
   it('reports its link state across start, attach, detach, and dispose', async () => {
     const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
-    expect(peer.linked()).toBe(false);
-    await peer.start(vi.fn());
-    expect(peer.linked()).toBe(true);
-    peer.detach();
-    expect(peer.linked()).toBe(false);
-    const output: string[] = [];
-    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
     try {
-      await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+      expect(peer.linked()).toBe(false);
+      await peer.start(vi.fn());
       expect(peer.linked()).toBe(true);
-    } finally { socket.destroy(); }
-    peer.dispose();
+      peer.detach();
+      expect(peer.linked()).toBe(false);
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+        expect(peer.linked()).toBe(true);
+      } finally { socket.destroy(); }
+    } finally { peer.dispose(); }
     expect(peer.linked()).toBe(false);
   });
 
