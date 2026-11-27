@@ -73,6 +73,8 @@ export class DetachedPeer {
     writePeerRecord(this.record, { pid: process.pid, socket: this.socketPath, label, version: REMOTE_PROTOCOL_VERSION });
   }
 
+  linked(): boolean { return !this.stopped && this.sink !== undefined; }
+
   emit(frame: ServerFrame): void {
     if (this.stopped) return;
     if (frame.type === 'transcript' || frame.type === 'output') this.history.record(frame);

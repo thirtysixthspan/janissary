@@ -298,4 +298,43 @@ describe('the far-side MCP endpoint', () => {
     processes.mcpResult({ type: 'mcp-result', call: calls[0]!.call, text: 'yes', isError: false });
     await expect(next).resolves.toEqual({ text: 'yes', isError: false });
   });
+
+  it('holds, re-sends and expires calls through the production link callback without stubbing send', async () => {
+    let linked = true;
+    const processes = new RemoteProcesses(send, '/remote/workspace', 'build', {}, () => linked);
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'opencode', command: 'opencode', mode: 'pty',
+      harness: 'opencode', cols: 80, rows: 24, mcp: true,
+    });
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    const calls = () => send.mock.calls.map(([sent]) => sent)
+      .filter((sent): sent is Extract<ServerFrame, { type: 'mcp-call' }> => sent.type === 'mcp-call');
+
+    linked = false;
+    const first = executor('question', ARGS, new AbortController().signal);
+    const second = executor('question', ARGS, new AbortController().signal);
+    void first.catch(() => {});
+    void second.catch(() => {});
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(calls()).toEqual([]);
+
+    linked = true;
+    await vi.advanceTimersByTimeAsync(1000);
+    const resent = calls();
+    expect(resent).toHaveLength(2);
+    expect(new Set(resent.map((frame) => frame.call)).size).toBe(2);
+
+    for (const frame of resent) {
+      processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'yes', isError: false });
+    }
+    await expect(first).resolves.toEqual({ text: 'yes', isError: false });
+    await expect(second).resolves.toEqual({ text: 'yes', isError: false });
+
+    linked = false;
+    const held = executor('question', ARGS, new AbortController().signal);
+    void held.catch(() => {});
+    await vi.advanceTimersByTimeAsync(60_000);
+    await expect(held).rejects.toThrow('Janissary is not connected.');
+  });
 });

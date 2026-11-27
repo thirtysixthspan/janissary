@@ -49,6 +49,7 @@ export class RemoteServer {
   // A terminate attach is never relayed: what the local side sends after it is dropped, not written
   // into a parked peer that may speak another protocol version.
   private terminating = false;
+  private detached = false;
 
   constructor(
     private pathArgument: string | undefined,
@@ -191,6 +192,7 @@ export class RemoteServer {
       peer: this.peer,
       idle: () => !this.provisioned && !this.stopping,
       stopping: () => this.stopping,
+      linked: () => this.linked(),
       provisioned: (workspace) => { this.provisioned = workspace; },
     }, frame.label, frame.tokens ?? {}, frame.identity ?? {}, cloned, frame.depth);
   }
@@ -222,6 +224,12 @@ export class RemoteServer {
     if (frame.harness !== undefined) this.transcripts.follow(frame.harness, this.provisioned?.dir);
   }
 
+  linked(): boolean {
+    return this.peer === undefined
+      ? process.stdout.writable && !this.detached
+      : this.peer.linked();
+  }
+
   // Give up the transport while leaving the session running: the peer holds its workspace and its
   // processes and waits out `REMOTE_DETACH_TIMEOUT_MS` for someone to attach. Raised by SIGHUP and
   // by stdin/stdout going away, which are the same event seen from two directions.
@@ -231,6 +239,7 @@ export class RemoteServer {
   // was never settled: there is no peer to park, only a pending offer or clone to cancel.
   detach(): void {
     if (this.relay || this.root === undefined) { this.shutdown(0); return; }
+    this.detached = true;
     this.buffer = '';
     this.provisioned?.acp.detachRuns();
     this.peer?.detach();

@@ -698,7 +698,9 @@ MCP calls a remote harness makes through the far-side server hold through a lost
 grace window, whatever the reason. A deliberate Detach gives the far side no signal, so it sees the
 same link loss as any other interruption. A link that returns inside the window re-sends every waiting
 call, and each answer reaches its harness as usual; a call made while the link is down waits the same
-way. If the window ends with no link, every waiting call fails with `Janissary is not connected.`, and
+way. A held call stays with the endpoint rather than being queued for replay to a later attach, so it
+is delivered once, to the harness that asked, and cannot be answered by a different session. If the
+window ends with no link, every waiting call fails with `Janissary is not connected.`, and
 calls made after that fail at once with the same text until a link returns. Once one does, calls relay
 normally again.
 

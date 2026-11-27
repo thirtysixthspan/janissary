@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Connect the far-side grace window to a real no-link signal so a lost session actually holds and expires calls
-
-Existing Issue: The only production `FarSideMcp` construction passes `RemoteProcesses.send`, which originates from `RemoteServer.emit` (`writeFrame` or the detached-peer wrapper) and always returns `void`, so `delivered === false` never occurs outside the test stub and the grace timer, re-send path, and detach error are unreachable in a real session. Severity: 9/10
-
-Existing Risk: 9/10 - A real link loss leaves calls queued in the detached peer's replay buffer with no 60-second expiry and no `Janissary is not connected.` answer, so a harness can wait indefinitely or be answered later by a different session after an attach.
-
-Proposal Risk: 3/10 - The signal becomes explicit and testable, though the far side still has to agree with the peer's own replay policy so a held call is not delivered twice.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "wire the far-side MCP grace window to a real no-link signal". Add `linked(): boolean` to `DetachedPeer` in `src/remote/serve-detach.ts`, returning true only while its sink is installed by `accept()` and it is not stopped; `detach()` clears that sink. Thread a `linked` predicate from `RemoteServer` in `src/remote/serve.ts` — the peer's `linked()` once a peer exists, and stdout writability plus a flag set by `detach()` before that — through `ProvisionContext` in `src/remote/serve-provision.ts` into `RemoteProcesses` in `src/remote/serve-processes.ts` (defaulted so existing test callers need no change), and change the spawn site's callback passed to `FarSideMcp` to return `false` without emitting the frame when the link is down, so the peer's replay buffer does not also queue it. Keep the `boolean | void` signature already declared in `src/remote/serve-mcp.ts` and leave its timer logic intact. Add a test in `src/remote/serve-mcp.test.ts` that drives the grace path through that production callback by flipping the link state instead of stubbing `send`, asserting the same outcomes the fake-send tests assert: no delivery while down, re-send with unchanged `call` ids after recovery, and the `Janissary is not connected.` rejection after the window. Inspect the attach replay in `src/remote/serve-detach.ts` for duplicate `mcp-call` frames, since a held call must execute once.
-
-
 * Stop a detached far-side call from emitting its frame before the immediate not-connected rejection
 
 Existing Issue: `FarSideMcp.relay` calls `this.send(frame)` before checking `delivered === false && this.detached`, so a call made after the grace window emits and may be queued for replay even though its promise is rejected with `Janissary is not connected.` Severity: 6/10
