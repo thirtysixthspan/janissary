@@ -88,6 +88,74 @@ describe('createMcpRelay', () => {
     expect(register).toHaveBeenCalledTimes(1);
   });
 
+  it('answers null arguments with the malformed-arguments error and leaves no pending call', () => {
+    const { relay, register, send } = fixture();
+    const args = 'null';
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool: 'question', args });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: `Malformed MCP arguments: ${args}`, isError: true,
+    });
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('answers string arguments with the malformed-arguments error and leaves no pending call', () => {
+    const { relay, register, send } = fixture();
+    const args = '"just a string"';
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool: 'question', args });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: `Malformed MCP arguments: ${args}`, isError: true,
+    });
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('answers array arguments with the malformed-arguments error and lets a later valid call with the same id register', async () => {
+    const { relay, call, register, send, answer } = fixture();
+    const args = '[{"tab":"asker"}]';
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool: 'question', args });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: `Malformed MCP arguments: ${args}`, isError: true,
+    });
+    expect(register).not.toHaveBeenCalled();
+
+    send.mockClear();
+    call('call-1');
+    expect(answer('3000')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: '3000', isError: false,
+    }));
+    expect(register).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers number arguments with the malformed-arguments error and leaves no pending call', () => {
+    const { relay, register, send } = fixture();
+    const args = '42';
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool: 'question', args });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: `Malformed MCP arguments: ${args}`, isError: true,
+    });
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('answers boolean arguments with the malformed-arguments error and leaves no pending call', () => {
+    const { relay, register, send } = fixture();
+    const args = 'true';
+
+    relay.handle({ type: 'mcp-call', call: 'call-1', tool: 'question', args });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: `Malformed MCP arguments: ${args}`, isError: true,
+    });
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it('clears the map on channel close so a re-send registers a fresh question', () => {
     const { call, register, channel } = fixture();
     call('call-1');

@@ -30,6 +30,10 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
         answer(frame.call, { text: `Malformed MCP arguments: ${frame.args}`, isError: true });
         return;
       }
+      if (typeof args !== 'object' || args === null || Array.isArray(args)) {
+        answer(frame.call, { text: `Malformed MCP arguments: ${frame.args}`, isError: true });
+        return;
+      }
       const controller = new AbortController();
       const entry: Pending = { controller };
       pending.set(frame.call, entry);
