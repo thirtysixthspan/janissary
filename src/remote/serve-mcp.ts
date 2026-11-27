@@ -54,8 +54,12 @@ export class FarSideMcp {
   private readonly server: Server;
   private readonly handler: McpHttpHandler;
   private readonly pending = new Map<string, Pending>();
+  private failure?: string;
 
-  constructor(private readonly send: (frame: ServerFrame) => void) {
+  constructor(
+    private readonly send: (frame: ServerFrame) => void,
+    private readonly id: string,
+  ) {
     this.handler = createHandler(this.relay);
     const guarded: NodeHandler = guard(toNodeHandler(this.handler), this.token);
     this.server = createServer((request, response) => {
@@ -66,10 +70,15 @@ export class FarSideMcp {
       }
       void guarded(request, response);
     });
+    this.server.on('error', (error: Error) => {
+      this.failure = `MCP endpoint could not bind to ${LOOPBACK}:${this.port}: ${error.message}`;
+      this.send({ type: 'output', id: this.id, data: `${this.failure}\n` });
+    });
     this.server.listen(this.port, LOOPBACK);
   }
 
   launch(): McpLaunch {
+    if (this.failure !== undefined) throw new Error(this.failure);
     return { url: `http://${LOOPBACK}:${this.port}${MCP_PATH}`, token: this.token };
   }
 

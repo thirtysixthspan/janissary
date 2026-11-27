@@ -1,7 +1,9 @@
+import type * as Crypto from 'node:crypto';
 import type * as Http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolExecutor } from '../mcp/tools.js';
 import { spawnPty } from '../pty.js';
+import { FarSideMcp } from './serve-mcp.js';
 import { RemoteProcesses } from './serve-processes.js';
 
 // The far side's endpoint is exercised through the executor the real handler factory is handed.
@@ -12,14 +14,24 @@ const mcpMock = vi.hoisted(() => ({
   close: vi.fn(async () => {}),
 }));
 const httpMock = vi.hoisted(() => ({
-  server: { listening: true, listen: vi.fn(), close: vi.fn() },
+  server: { listening: true, listen: vi.fn(), close: vi.fn(), on: vi.fn() },
   createServer: vi.fn(),
 }));
 
+const cryptoMock = vi.hoisted(() => ({
+  randomInt: undefined as ((min: number, max: number) => number) | undefined,
+}));
 vi.mock('node:http', async (importOriginal) => {
   const actual = await importOriginal<typeof Http>();
   httpMock.createServer.mockImplementation(() => httpMock.server);
   return { ...actual, createServer: httpMock.createServer };
+});
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof Crypto>();
+  return {
+    ...actual,
+    randomInt: (min: number, max: number) => cryptoMock.randomInt?.(min, max) ?? actual.randomInt(min, max),
+  };
 });
 vi.mock('../mcp/handler.js', () => ({
   createHandler: (executor: ToolExecutor) => {
@@ -56,6 +68,7 @@ beforeEach(() => {
   httpMock.createServer.mockClear();
   httpMock.server.listen.mockClear();
   httpMock.server.close.mockClear();
+  httpMock.server.on.mockClear();
   vi.mocked(spawnPty).mockReset().mockReturnValue({
     id: 'pty1', program: 'opencode', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
   });
@@ -119,5 +132,37 @@ describe('the far-side MCP endpoint', () => {
     await expect(answer).rejects.toThrow('MCP call cancelled.');
     processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'late', isError: false });
     expect(send.mock.calls.filter(([sent]) => sent.type === 'mcp-call')).toHaveLength(1);
+  });
+
+  it('reports a real port collision without crashing the session', async () => {
+    vi.useRealTimers();
+    const actual = await vi.importActual<typeof Http>('node:http');
+
+    const probe = new FarSideMcp(vi.fn(), 'probe');
+    const port = Number(new URL(probe.launch().url).port);
+    probe.dispose();
+    cryptoMock.randomInt = () => port;
+
+    const blocker = actual.createServer();
+    await new Promise<void>((resolve) => blocker.listen(port, '127.0.0.1', () => resolve()));
+
+    const { promise: reported, resolve: report } = Promise.withResolvers<void>();
+    const collisionSend = vi.fn(() => report());
+    httpMock.createServer.mockImplementationOnce((handler: Http.RequestListener) => actual.createServer(handler));
+
+    const mcp = new FarSideMcp(collisionSend, 'r1');
+    await reported;
+
+    expect(collisionSend).toHaveBeenCalledWith({
+      type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE'),
+    });
+    expect(() => mcp.launch()).toThrow(/MCP endpoint could not bind/);
+
+    mcp.dispose();
+    const after = new FarSideMcp(vi.fn(), 'after');
+    expect(Number(new URL(after.launch().url).port)).toBe(port);
+    after.dispose();
+    cryptoMock.randomInt = undefined;
+    blocker.close();
   });
 });

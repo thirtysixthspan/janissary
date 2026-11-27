@@ -112,7 +112,7 @@ export class RemoteProcesses {
     // both name ports and mints tokens on this host, so neither could have been computed on the other
     // side and shipped over. Because it needs no await, the caller's synchronous insert into `entries`
     // is untouched and there is no kill-before-spawn race to guard.
-    const mcp = frame.mcp === true ? (this.mcp ??= new FarSideMcp(this.send)).launch() : undefined;
+    const mcp = frame.mcp === true ? (this.mcp ??= new FarSideMcp(this.send, frame.id)).launch() : undefined;
     const spawnEnv = frame.harness === undefined
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({
