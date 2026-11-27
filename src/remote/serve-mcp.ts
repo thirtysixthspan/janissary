@@ -61,6 +61,7 @@ export class FarSideMcp {
   private readonly handler: McpHttpHandler;
   private readonly pending = new Map<string, Pending>();
   private grace?: ReturnType<typeof setInterval>;
+  private watch?: ReturnType<typeof setInterval>;
   private ticks = 0;
   private detached = false;
   private failure?: string;
@@ -107,6 +108,7 @@ export class FarSideMcp {
     reserved.delete(this.port);
     if (this.server.listening) this.server.close();
     this.stopGrace();
+    this.stopWatch();
     void this.handler.close();
   }
 
@@ -132,15 +134,33 @@ export class FarSideMcp {
     this.ticks = 0;
   }
 
+  private graceTick(): void {
+    if (this.resend()) { this.detached = false; this.stopGrace(); return; }
+    if (++this.ticks >= GRACE_TICKS) {
+      this.stopGrace();
+      this.detached = true;
+      for (const call of this.pending.keys()) this.fail(call, NOT_CONNECTED);
+    }
+  }
+
   private startGrace(): void {
     if (this.grace !== undefined) return;
-    this.grace = setInterval(() => {
-      if (this.resend()) { this.detached = false; this.stopGrace(); return; }
-      if (++this.ticks >= GRACE_TICKS) {
-        this.stopGrace();
-        this.detached = true;
-        for (const call of this.pending.keys()) this.fail(call, NOT_CONNECTED);
-      }
+    this.grace = setInterval(() => this.graceTick(), GRACE_TICK_MS);
+  }
+
+  private stopWatch(): void {
+    if (this.watch !== undefined) clearInterval(this.watch);
+    this.watch = undefined;
+  }
+
+  private watchLink(): void {
+    if (this.watch !== undefined) return;
+    this.watch = setInterval(() => {
+      if (this.pending.size === 0) { this.stopWatch(); return; }
+      if (this.linked()) return;
+      this.stopWatch();
+      this.startGrace();
+      this.graceTick();
     }, GRACE_TICK_MS);
   }
 
@@ -159,7 +179,7 @@ export class FarSideMcp {
     const delivered = this.send(frame);
     this.pending.set(call, { signal, onAbort, resolve, reject, frame });
     signal.addEventListener('abort', onAbort, { once: true });
-    if (delivered === false) { this.startGrace(); return; }
+    if (delivered === false) { this.stopWatch(); this.startGrace(); return; }
     if (this.grace !== undefined || this.detached) {
       this.detached = false;
       this.stopGrace();
@@ -167,5 +187,6 @@ export class FarSideMcp {
         if (id !== call) this.send(entry.frame);
       }
     }
+    this.watchLink();
   });
 }

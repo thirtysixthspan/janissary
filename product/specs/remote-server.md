@@ -695,8 +695,9 @@ than always clearing it, and the far side's own duplicate-suppression is realign
 a later change back to the pre-attach state is not mistaken for a repeat and dropped.
 
 MCP calls a remote harness makes through the far-side server hold through a lost link for a 60-second
-grace window, whatever the reason. A deliberate Detach gives the far side no signal, so it sees the
-same link loss as any other interruption. A link that returns inside the window re-sends every waiting
+grace window, whatever the reason. The window starts when the link drops, including for a call already
+delivered to the local side and still waiting for an answer. A deliberate Detach gives the far side no
+signal, so it sees the same link loss as any other interruption. A link that returns inside the window re-sends every waiting
 call, and each answer reaches its harness as usual; a call made while the link is down waits the same
 way. A held call stays with the endpoint rather than being queued for replay to a later attach, so it
 is delivered once, to the harness that asked, and cannot be answered by a different session. If the
