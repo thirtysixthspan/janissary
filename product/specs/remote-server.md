@@ -694,6 +694,14 @@ receives the current busy snapshot once per running process, carrying its real u
 than always clearing it, and the far side's own duplicate-suppression is realigned to that snapshot so
 a later change back to the pre-attach state is not mistaken for a repeat and dropped.
 
+MCP calls a remote harness makes through the far-side server hold through a lost link for a 60-second
+grace window, whatever the reason. A deliberate Detach gives the far side no signal, so it sees the
+same link loss as any other interruption. A link that returns inside the window re-sends every waiting
+call, and each answer reaches its harness as usual; a call made while the link is down waits the same
+way. If the window ends with no link, every waiting call fails with `Janissary is not connected.`, and
+calls made after that fail at once with the same text until a link returns. Once one does, calls relay
+normally again.
+
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
 writes, and every mutation execute on the remote against the provisioned workspace. Every accepted

@@ -15,14 +15,20 @@ const FIRST_PORT = 49_152;
 // Stop short of the e2e browser band at the tail of the dynamic range. Those ports are denied to
 // confined harnesses, and a question tool must stay reachable from one.
 const PORT_COUNT = 16_128;
+const GRACE_TICK_MS = 1000;
+const GRACE_TICKS = 60;
+const NOT_CONNECTED = 'Janissary is not connected.';
 const reserved = new Set<number>();
 
 type ResultFrame = Extract<ClientFrame, { type: 'mcp-result' }>;
+type CallFrame = Extract<ServerFrame, { type: 'mcp-call' }>;
 
 type Pending = {
   signal: AbortSignal;
   onAbort: () => void;
   resolve: (result: ToolResult) => void;
+  reject: (reason: Error) => void;
+  frame: CallFrame;
 };
 
 // `listen(0)` defers the bind behind a host lookup, so `address()` is null until the next tick and
@@ -54,10 +60,13 @@ export class FarSideMcp {
   private readonly server: Server;
   private readonly handler: McpHttpHandler;
   private readonly pending = new Map<string, Pending>();
+  private grace?: ReturnType<typeof setInterval>;
+  private ticks = 0;
+  private detached = false;
   private failure?: string;
 
   constructor(
-    private readonly send: (frame: ServerFrame) => void,
+    private readonly send: (frame: ServerFrame) => boolean | void,
     private readonly id: string,
   ) {
     this.handler = createHandler(this.relay);
@@ -96,21 +105,66 @@ export class FarSideMcp {
   dispose(): void {
     reserved.delete(this.port);
     if (this.server.listening) this.server.close();
+    this.stopGrace();
     void this.handler.close();
+  }
+
+  private fail(call: string, message: string): void {
+    const entry = this.pending.get(call);
+    if (!entry) return;
+    this.pending.delete(call);
+    entry.signal.removeEventListener('abort', entry.onAbort);
+    entry.reject(new Error(message));
+  }
+
+  private resend(): boolean {
+    let delivered = false;
+    for (const entry of this.pending.values()) {
+      if (this.send(entry.frame) !== false) delivered = true;
+    }
+    return delivered;
+  }
+
+  private stopGrace(): void {
+    if (this.grace !== undefined) clearInterval(this.grace);
+    this.grace = undefined;
+    this.ticks = 0;
+  }
+
+  private startGrace(): void {
+    if (this.grace !== undefined) return;
+    this.grace = setInterval(() => {
+      if (this.resend()) { this.detached = false; this.stopGrace(); return; }
+      if (++this.ticks >= GRACE_TICKS) {
+        this.stopGrace();
+        this.detached = true;
+        for (const call of this.pending.keys()) this.fail(call, NOT_CONNECTED);
+      }
+    }, GRACE_TICK_MS);
   }
 
   private relay: ToolExecutor = (tool, args, signal) => new Promise<ToolResult>((resolve, reject) => {
     if (signal.aborted) { reject(new Error('MCP call cancelled.')); return; }
     const call = randomUUID();
+    const frame: CallFrame = {
+      type: 'mcp-call', call, tool,
+      args: Buffer.from(JSON.stringify(args)).toString('base64'),
+    };
     const onAbort = () => {
       this.pending.delete(call);
       reject(new Error('MCP call cancelled.'));
     };
-    this.pending.set(call, { signal, onAbort, resolve });
+    const delivered = this.send(frame);
+    if (delivered === false && this.detached) { reject(new Error(NOT_CONNECTED)); return; }
+    this.pending.set(call, { signal, onAbort, resolve, reject, frame });
     signal.addEventListener('abort', onAbort, { once: true });
-    this.send({
-      type: 'mcp-call', call, tool,
-      args: Buffer.from(JSON.stringify(args)).toString('base64'),
-    });
+    if (delivered === false) { this.startGrace(); return; }
+    if (this.grace !== undefined || this.detached) {
+      this.detached = false;
+      this.stopGrace();
+      for (const [id, entry] of this.pending) {
+        if (id !== call) this.send(entry.frame);
+      }
+    }
   });
 }

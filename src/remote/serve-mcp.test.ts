@@ -46,6 +46,20 @@ const ARGS = { tab: 'build', kind: 'approve', question: 'Ship it?' };
 const LOCAL_TOKEN = 'local-persisted-token';
 
 let send: ReturnType<typeof vi.fn>;
+let online = true;
+let delivered: ServerFrame[] = [];
+
+function linkSend(frame: ServerFrame): boolean | undefined {
+  if (!online) return false;
+  delivered.push(frame);
+  return undefined;
+}
+
+function relayedCalls(): Array<Extract<ServerFrame, { type: 'mcp-call' }>> {
+  return delivered.filter(
+    (frame): frame is Extract<ServerFrame, { type: 'mcp-call' }> => frame.type === 'mcp-call',
+  );
+}
 
 function spawnHarness(mcp: boolean, env?: Record<string, string>): RemoteProcesses {
   const processes = new RemoteProcesses(send, '/remote/workspace', 'build');
@@ -65,6 +79,8 @@ function relayedCall() {
 beforeEach(() => {
   vi.useFakeTimers();
   send = vi.fn();
+  online = true;
+  delivered = [];
   mcpMock.executor = undefined;
   httpMock.createServer.mockClear();
   httpMock.server.listen.mockClear();
@@ -196,5 +212,90 @@ describe('the far-side MCP endpoint', () => {
     mcp.dispose();
     cryptoMock.randomInt = undefined;
     blocker.close();
+  });
+
+  it('holds in-flight and new calls through a link loss and re-sends them when it returns', async () => {
+    const processes = spawnHarness(true);
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    send.mockImplementation(linkSend);
+
+    online = false;
+    const first = executor('question', ARGS, new AbortController().signal);
+    const second = executor('question', ARGS, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(relayedCalls()).toEqual([]);
+
+    online = true;
+    await vi.advanceTimersByTimeAsync(1000);
+    const calls = relayedCalls();
+    expect(calls).toHaveLength(2);
+    expect(new Set(calls.map((frame) => frame.call)).size).toBe(2);
+
+    for (const frame of calls) {
+      processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'yes', isError: false });
+    }
+    await expect(first).resolves.toEqual({ text: 'yes', isError: false });
+    await expect(second).resolves.toEqual({ text: 'yes', isError: false });
+  });
+
+  it('fails every held call with the detach error when the grace window expires', async () => {
+    spawnHarness(true);
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    send.mockImplementation(linkSend);
+
+    online = false;
+    const first = executor('question', ARGS, new AbortController().signal);
+    const second = executor('question', ARGS, new AbortController().signal);
+    void first.catch(() => {});
+    void second.catch(() => {});
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(relayedCalls()).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(first).rejects.toThrow('Janissary is not connected.');
+    await expect(second).rejects.toThrow('Janissary is not connected.');
+    expect(relayedCalls()).toEqual([]);
+  });
+
+  it('fails a call made while detached at once with the detach error', async () => {
+    spawnHarness(true);
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    send.mockImplementation(linkSend);
+
+    online = false;
+    const held = executor('question', ARGS, new AbortController().signal);
+    void held.catch(() => {});
+    await vi.advanceTimersByTimeAsync(60_000);
+    await expect(held).rejects.toThrow('Janissary is not connected.');
+
+    const later = executor('question', ARGS, new AbortController().signal);
+    void later.catch(() => {});
+    await expect(later).rejects.toThrow('Janissary is not connected.');
+    expect(relayedCalls()).toEqual([]);
+  });
+
+  it('relays a new call normally once the link is back', async () => {
+    const processes = spawnHarness(true);
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    send.mockImplementation(linkSend);
+
+    online = false;
+    const held = executor('question', ARGS, new AbortController().signal);
+    void held.catch(() => {});
+    await vi.advanceTimersByTimeAsync(60_000);
+    await expect(held).rejects.toThrow('Janissary is not connected.');
+
+    online = true;
+    const next = executor('question', ARGS, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(0);
+    const calls = relayedCalls();
+    expect(calls).toHaveLength(1);
+
+    processes.mcpResult({ type: 'mcp-result', call: calls[0]!.call, text: 'yes', isError: false });
+    await expect(next).resolves.toEqual({ text: 'yes', isError: false });
   });
 });
