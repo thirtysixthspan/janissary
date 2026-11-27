@@ -429,6 +429,14 @@ while the band and the notification line keep the earlier death on record. Start
 The flag is available from both launch surfaces: the `harness` command and the **E2E browser**
 checkbox in the New harness dialog.
 
+### MCP server config
+
+A harness launched with MCP config gets the local server's connection details on the host where it runs. `JANISSARY_TAB` holds the tab's label, `JANISSARY_MCP_URL` holds the server URL, and `JANISSARY_MCP_TOKEN` holds the bearer token. The token goes in the environment, never in argv, so it does not show up in the process list or a transcript. The launch fragment names those variables rather than carrying their values, and the same fragment works on either host (see [[mcp-server]]).
+
+Claude needs two more overrides alongside them. `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS=0` keeps a waiting call in the foreground, and `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=0` stops its five-minute idle abort. They are launch settings only, so the server sends no heartbeat traffic just to keep a question open.
+
+MCP is off when the launch carries `--no-mcp` or `--offline`, or when the local server is not running. Then the launch has neither the fragment nor any injected variable. A remote launch has no local MCP variables either: the far host supplies its own URL and token, the way it supplies its own browser endpoint. One decision at launch drives both the fragment and the environment, so they cannot disagree.
+
 ### Launch prompt (`with <prompt>`)
 
 A trailing `with <prompt>` clause gives the new harness an initial prompt that is typed and

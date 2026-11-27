@@ -36,20 +36,30 @@ export type HarnessSpawnEnv = {
  * that serves it; the Chromium comes up when the harness first connects to it, which is why a `-b`
  * tab that never drives a browser never pays for one.
  *
- * With no browser requested the result is exactly `harnessEnv`'s, `undefined` and all, so the
- * non-`-b` path is byte-for-byte what it was before this existed.
+ * With no browser or MCP requested the result is exactly `harnessEnv`'s, `undefined` and all, so
+ * those paths are byte-for-byte what they were before this existed.
  */
 export function harnessSpawnEnv(
   options: {
     name: string; cwd: string; label: string; browser: boolean;
+    mcp?: { url: string; token: string };
     onBrowserGone: (message: string, log?: string) => void;
     onBrowserStarted: () => void;
   },
 ): HarnessSpawnEnv {
   const base = harnessEnv(options.name, options.cwd);
-  if (!options.browser) return { env: base };
+  const mcp = options.mcp === undefined ? undefined : {
+    JANISSARY_TAB: options.label,
+    JANISSARY_MCP_URL: options.mcp.url,
+    JANISSARY_MCP_TOKEN: options.mcp.token,
+    ...(options.name === 'claude' && {
+      CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS: '0',
+      CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT: '0',
+    }),
+  };
+  if (!options.browser) return mcp === undefined ? { env: base } : { env: { ...base, ...mcp } };
   const browser = startLazyE2EBrowserServer({
     label: options.label, onGone: options.onBrowserGone, onStarted: options.onBrowserStarted,
   });
-  return { env: { ...base, ...browser.env }, handle: browser.handle };
+  return { env: { ...base, ...browser.env, ...mcp }, handle: browser.handle };
 }

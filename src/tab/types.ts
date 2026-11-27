@@ -441,6 +441,9 @@ export type Tab = {
   // this tab and its endpoint injected into the harness's environment. Harness-only; set once at
   // spawn time, and kept so the metadata row can report it.
   browser?: boolean;
+  // Whether this harness tab was launched with MCP config. Harness-only; set once at spawn time
+  // from the effective decision, and kept so the metadata row can report it.
+  mcp?: boolean;
   // Set when new transcript content arrives on this tab while it is NOT the active tab; cleared
   // when the tab is activated. Drives the unread badge in the tab strip. In-memory only (like
   // scrollOffset).

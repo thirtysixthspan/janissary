@@ -25,6 +25,8 @@ export interface SpawnTabOptions {
   // two variables the harness drives it through. Owned by the tab's `HarnessRuntime`, so it is
   // stopped by the same disposal the reader and recorder go through.
   browser: boolean;
+  // The `--no-mcp` opt-out from the parser. Absent on an attach, which reads as the default opt-in.
+  mcp?: boolean;
   model?: string;
   effort?: string;
   // Set only for a workspace clone still in flight: the PTY spawn waits on it.

@@ -105,3 +105,67 @@ describe('harnessSpawnEnv with a browser', () => {
     expect(onBrowserStarted).toHaveBeenCalledTimes(1);
   });
 });
+
+const MCP = { url: 'http://127.0.0.1:51234/mcp', token: 'tok-123' };
+
+function mcpSpawnEnv(name: string, browser: boolean) {
+  return harnessSpawnEnv({
+    name, cwd: '/ws/proj', label: 'asker', browser, mcp: MCP,
+    onBrowserGone: vi.fn(), onBrowserStarted: vi.fn(),
+  });
+}
+
+describe('harnessSpawnEnv with MCP', () => {
+  // The tab label names the tab the harness is running in, and the URL and token come from the
+  // local manager. Claude's existing overrides sit alongside them, not instead of them.
+  it('adds the three variables and claude\'s two timeout overrides', () => {
+    expect(mcpSpawnEnv('claude', false).env).toEqual({
+      CLAUDE_CODE_TMPDIR: '/ws/proj/.janissary/temp',
+      DISABLE_AUTOUPDATER: '1',
+      JANISSARY_TAB: 'asker',
+      JANISSARY_MCP_URL: MCP.url,
+      JANISSARY_MCP_TOKEN: MCP.token,
+      CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS: '0',
+      CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT: '0',
+    });
+  });
+
+  it.each(['opencode', 'codex'])('adds only the three variables for %s', (name) => {
+    expect(mcpSpawnEnv(name, false).env).toEqual({
+      JANISSARY_TAB: 'asker',
+      JANISSARY_MCP_URL: MCP.url,
+      JANISSARY_MCP_TOKEN: MCP.token,
+    });
+  });
+
+  it('keeps claude\'s overrides and the browser variables when both are requested', () => {
+    expect(mcpSpawnEnv('claude', true).env).toEqual({
+      CLAUDE_CODE_TMPDIR: '/ws/proj/.janissary/temp',
+      DISABLE_AUTOUPDATER: '1',
+      ...BROWSER_ENV,
+      JANISSARY_TAB: 'asker',
+      JANISSARY_MCP_URL: MCP.url,
+      JANISSARY_MCP_TOKEN: MCP.token,
+      CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS: '0',
+      CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT: '0',
+    });
+  });
+
+  it('adds no MCP variables or claude timeout overrides without the option', () => {
+    const env = spawnEnv('claude', false).env;
+    expect(env).not.toHaveProperty('JANISSARY_TAB');
+    expect(env).not.toHaveProperty('JANISSARY_MCP_URL');
+    expect(env).not.toHaveProperty('JANISSARY_MCP_TOKEN');
+    expect(env).not.toHaveProperty('CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS');
+    expect(env).not.toHaveProperty('CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT');
+  });
+
+  it('adds no MCP variables to a browser-only launch', () => {
+    const env = spawnEnv('claude', true).env;
+    expect(env).toEqual({
+      CLAUDE_CODE_TMPDIR: '/ws/proj/.janissary/temp',
+      DISABLE_AUTOUPDATER: '1',
+      ...BROWSER_ENV,
+    });
+  });
+});
