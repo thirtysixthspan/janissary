@@ -139,6 +139,10 @@ export type ClientFrame =
     // use — the remote starts its own guard, its own confined browser, and its own workspace
     // directory, exactly as `harnessEnv`'s doc comment states the general rule.
     browser?: boolean;
+    // Whether this harness wants an MCP server. The far side starts its own endpoint for it and
+    // publishes that endpoint's own URL and token in the harness environment; the local side only
+    // carries the decision, never its own MCP connection details.
+    mcp?: boolean;
     // Whether this harness process should auto-approve its own permission gates on the far side.
     // Meaningful only alongside `harness`; ignored for a plain PTY takeover or inline terminal card.
     autoApprove?: boolean;

@@ -9,6 +9,7 @@ import { containedAbsolute } from '../path-containment.js';
 import type { ScreenCapture } from '../harness/screen.js';
 import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
 import { spawnFrameState } from './process-state.js';
+import { FarSideMcp } from './serve-mcp.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
@@ -39,9 +40,12 @@ type Entry = ProcessResources & { frame: Extract<ClientFrame, { type: 'spawn' }>
 // own leaves nothing running, exactly as a killed one does.
 type BrowserHandle = { close: () => void } | undefined;
 
+type McpResultFrame = Extract<ClientFrame, { type: 'mcp-result' }>;
+
 export class RemoteProcesses {
   private entries = new Map<string, Entry>();
   private zshStartup = new ZshStartupDirectory();
+  private mcp?: FarSideMcp;
 
   constructor(
     private send: (frame: ServerFrame) => void,
@@ -88,26 +92,32 @@ export class RemoteProcesses {
   // An id with no detection — a plain PTY, an agent process, or one already exited — is ignored.
   resumeDelivered(id: string): void { this.entries.get(id)?.detection?.delivered(); }
 
+  mcpResult(frame: McpResultFrame): void { this.mcp?.result(frame); }
+
   killAll(): void {
     for (const entry of this.entries.values()) {
       entry.kill();
       this.disposeResources(entry);
     }
     this.entries.clear();
+    this.mcp?.dispose();
+    this.mcp = undefined;
     this.zshStartup.dispose();
   }
 
   private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>): ProcessResources {
     const shell = frame.shell;
     const cwd = shell === undefined ? this.workspaceDir : this.shellCwd(frame.cwd);
-    // The remote builds its own copy of the harness environment, browser included: the endpoint
-    // names ports on this host, so it could not have been computed on the other side and shipped
-    // over. Because it needs no await, the caller's synchronous insert into `entries` is untouched
-    // and there is no kill-before-spawn race to guard.
+    // The remote builds its own copy of the harness environment, browser and MCP endpoint included:
+    // both name ports and mints tokens on this host, so neither could have been computed on the other
+    // side and shipped over. Because it needs no await, the caller's synchronous insert into `entries`
+    // is untouched and there is no kill-before-spawn race to guard.
+    const mcp = frame.mcp === true ? (this.mcp ??= new FarSideMcp(this.send)).launch() : undefined;
     const spawnEnv = frame.harness === undefined
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({
         name: frame.harness, cwd: this.workspaceDir, label: this.label, browser: frame.browser ?? false,
+        mcp,
         // The message travels with the frame: only this host saw the browser's own output, and the
         // tab that needs it is on the other side of the ssh transport.
         onBrowserGone: (message) => this.send({ type: 'browser-exited', id: frame.id, message }),
@@ -125,11 +135,13 @@ export class RemoteProcesses {
     // reach the browser recorded a line above. Give it back here or nothing will.
     let session;
     try {
+      // What this host publishes wins over overrides shipped in the frame: a local value naming a
+      // port or a token on this machine would point the harness somewhere it must not reach.
       const extraEnv = shell === undefined
-        ? (frame.env === undefined ? spawnEnv.env : { ...spawnEnv.env, ...frame.env })
+        ? (spawnEnv.env === undefined ? frame.env : { ...frame.env, ...spawnEnv.env })
         : {
-          ...spawnEnv.env,
           ...frame.env,
+          ...spawnEnv.env,
           ...shellStartupEnvironment(this.zshStartup.path(), shell.nonce, frame.env?.ZDOTDIR ?? process.env.ZDOTDIR),
         };
       session = spawnPty(

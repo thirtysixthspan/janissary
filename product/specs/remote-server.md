@@ -901,9 +901,9 @@ and closes the channel (and therefore the tab).
 ### `janus remote-serve [<project-dir>]`
 
 The far end. It runs attached inside an ordinary ssh session and speaks a framed protocol over that
-session's stdin and stdout. It takes no instance lock, starts no HTTP server, opens no window, and
-writes no log file; it is not addressable by `janus stop`, and it lives and dies with its ssh
-channel.
+session's stdin and stdout. It takes no instance lock, opens no window, and writes no log file; the
+only HTTP server it starts is a loopback MCP endpoint for a harness that asks for one. It is not
+addressable by `janus stop`, and it lives and dies with its ssh channel.
 
 With a directory argument it is rooted exactly there, with no upward walk. Without one it walks up
 from the ssh login directory looking for a git repository. Either way the root must be a git
@@ -922,11 +922,29 @@ ssh session before then ends the server instead of parking it, since there is no
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
 inside it, drives one ACP agent per tab sharing its channel, tails a harness transcript, reads and watches files inside
 that workspace, applies the navigator's filesystem mutations there, reads that workspace's own change set against
-`HEAD` for a diff tab, and removes the clone on exit. It
+`HEAD` for a diff tab, serves one loopback MCP endpoint to the harnesses that asked for it, and
+removes the clone on exit. It
 will not open tabs, serve paths outside the provisioned workspace, run anything outside that
 workspace, or accept a message outside its protocol. The ACP agent is killed before the clone is
 removed, so the clone is never taken out from under a live agent, and every one of them is killed —
 a shared channel's server holds one agent per tab using it.
+
+#### MCP on the far side
+
+A harness launched with MCP enabled gets its MCP endpoint on the remote host, inside that session's
+`janus remote-serve`, without naming a remote port or setting up an ssh forward before connecting.
+The remote mints its own bearer token for the endpoint and gives that endpoint and token to the
+harness in its launch environment. The local server's persisted token never leaves the local
+machine: it is not sent in the launch request, does not appear in the harness's environment, and is
+never accepted as the far-side endpoint's credential. Only loopback clients can reach the endpoint,
+and its address and token stay the same while the session is detached or reconnecting.
+
+The endpoint serves the same question tool a local harness sees. Each call is passed back to the
+local Janissary over the session's existing connection, where the question is put to the human, and
+the answer travels back to the harness that asked for it. Nothing about an MCP call is answered on
+the remote host, so the remote harness sees the same question panel and the same cancellation or
+error text as any other harness. A harness launched without MCP gets no endpoint and no MCP
+variables in its environment.
 
 #### Run clones
 

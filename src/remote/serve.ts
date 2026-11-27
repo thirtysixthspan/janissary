@@ -136,6 +136,7 @@ export class RemoteServer {
     case 'resize': { this.provisioned?.processes.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.provisioned?.processes.kill(frame.id); return; }
     case 'resume-ack': { this.provisioned?.processes.resumeDelivered(frame.id); return; }
+    case 'mcp-result': { this.provisioned?.processes.mcpResult(frame); return; }
     case 'capture-request': { answerCaptureRequest(frame, this.provisioned?.processes, this.lookupRoot(frame.origin), (f) => this.emit(f)); return; }
     case 'filesystem-open': {
       if (!this.provisioned) { this.refuse('No remote workspace has been provisioned.'); return; }
