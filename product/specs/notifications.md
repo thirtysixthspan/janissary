@@ -164,8 +164,10 @@ These event types can produce a notification line:
   (see [[agent-questions]]). The tab label on this line is a link that focuses the asking tab.
 - **`question-withdrawn`** — a question asked by an agent in a background tab is withdrawn before
   it is answered (see [[agent-questions]]). The line reads `Question from <tab> withdrawn`, naming
-  the tab the question came from. Like `question` it is explicit and has no config toggle, so it is
-  recorded even while that tab is active. It defaults to a desktop banner with the `warning` cue.
+  the tab the question came from. A question that has already been answered or cancelled produces
+  no withdrawal line, even if the request signal is aborted afterwards. Like `question` it is
+  explicit and has no config toggle, so it is recorded even while that tab is active. It defaults to
+  a desktop banner with the `warning` cue.
 - **`mcp-failed`** — the local MCP server could not start. The line reads
   `MCP server failed to start: <reason>`, carrying the failure reason verbatim, and one notification
   is recorded for the failure. It is explicit, has no config toggle, and is recorded even when its

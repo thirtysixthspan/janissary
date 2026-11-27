@@ -114,4 +114,17 @@ describe('createLocalExecutor', () => {
     });
     void second;
   });
+
+  it('does not notify when the signal aborts after the question was answered', async () => {
+    const { execute, questions } = fixture();
+    const controller = new AbortController();
+
+    const result = execute('question', { tab: 'build', kind: 'ask', question: 'Which port?' }, controller.signal);
+    questions.answer('build', questions.pendingFor('build')!.id, '3000');
+    await expect(result).resolves.toEqual({ text: '3000', isError: false });
+
+    controller.abort();
+
+    expect(deliverNotification).not.toHaveBeenCalled();
+  });
 });
