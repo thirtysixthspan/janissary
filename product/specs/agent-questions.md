@@ -28,6 +28,8 @@ The panel's controls keep Shift+Tab ahead of section navigation (see [[keyboard-
 
 Switching to a tab that already has a pending question moves keyboard focus to that panel's Cancel button, regardless of whether the question is a free-text or approval question — this is separate from, and takes priority over, the kind-based focus a question gets the moment it first opens.
 
+When a question on the current harness tab resolves — answered, cancelled, or withdrawn — while keyboard focus was inside the panel, focus returns to that harness tab's terminal. If focus has moved elsewhere in the meantime, such as the other pane's command line, it stays there. Opening a panel keeps the focus behavior described above; only the return after resolution is changed.
+
 ### Notifications
 
 Registering a question while its owning tab is not focused records `Question from <tab>` in the notifications feed when that feed is open, naming the tab as its tab strip does — its title when it has one, otherwise its label. It also marks the tab unread, so the tab strip shows its unread badge even while the asking agent's ACP query is still open awaiting the answer. This event has no configuration toggle. Its tab name is a link that focuses the asking tab.

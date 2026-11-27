@@ -99,8 +99,8 @@ export type TabViewBase = {
   // A file-navigator drop onto a harness reads it to type `$workspace/<name>/…` paths.
   workspaceDir?: string;
   // Identifiers of this tab's currently-active flags ('provisioning' or 'workspaced', 'autoApprove'
-  // or 'autoApproved', 'autoResume' or 'autoResuming', 'browser' or 'browserInUse'), for the metadata
-  // row's flag display. Empty when none are active.
+  // or 'autoApproved', 'autoResume' or 'autoResuming', 'browser' or 'browserInUse', 'mcp' or
+  // 'mcpInUse'), for the metadata row's flag display. Empty when none are active.
   flags?: string[];
   // Set when this tab's process runs on another host: the metadata row's leading host chip.
   remote?: RemoteTargetView;
