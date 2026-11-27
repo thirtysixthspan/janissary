@@ -92,10 +92,11 @@ export function allocateBrowserPorts(): BrowserPorts {
 }
 
 // The local MCP server also binds a loopback port confined harnesses must reach, and persists it
-// for the life of the project. It draws from the same guard range and the same reservation set as
-// browser guards: a separate pool would let a guard claim the port the server is already listening
-// on. `claimPort` normalizes the draw, so a value landing in the denied band still yields a port
-// below it.
+// for the life of the project; a `remote-serve` process's far-side MCP endpoint binds one for the
+// life of that process. Both draw from the same guard range and the same reservation set as browser
+// guards: a separate pool would let a guard claim the port an endpoint is already listening on.
+// `claimPort` normalizes the draw, so a value landing in the denied band still yields a port below
+// it.
 export type ReservedPort = {
   port: number;
   release: () => void;

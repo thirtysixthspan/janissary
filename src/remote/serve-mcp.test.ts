@@ -1,8 +1,10 @@
 import type * as Crypto from 'node:crypto';
 import type * as Http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { allocateBrowserPorts } from '../browser/e2e-ports.js';
 import type { ToolExecutor } from '../mcp/tools.js';
 import { spawnPty } from '../pty.js';
+import { BROWSER_PORT_BAND_FIRST, isBrowserBandPort } from '../sandbox/browser/ports.js';
 import { decodeFrame, encodeFrame } from './protocol.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { FarSideMcp } from './serve-mcp.js';
@@ -261,6 +263,60 @@ describe('the far-side MCP endpoint', () => {
     mcp.dispose();
     cryptoMock.randomInt = undefined;
     blocker.close();
+  });
+
+  // Other cases leave endpoints reserved, so each of these reads the port the endpoint actually got
+  // rather than assuming the forced draw landed on it.
+  async function endpointPort(mcp: FarSideMcp): Promise<number> {
+    const launched = await mcp.launch();
+    return Number(new URL(launched.url).port);
+  }
+
+  it('draws its port from the shared pool so a far-side browser guard cannot take it', async () => {
+    const mcp = new FarSideMcp(vi.fn(), 'r1');
+    try {
+      const port = await endpointPort(mcp);
+      cryptoMock.randomInt = () => port;
+      const browser = allocateBrowserPorts();
+      try {
+        expect(browser.guardPort).not.toBe(port);
+      } finally {
+        browser.release();
+      }
+    } finally {
+      cryptoMock.randomInt = undefined;
+      mcp.dispose();
+    }
+  });
+
+  it('returns its port to the shared pool when disposed', async () => {
+    const mcp = new FarSideMcp(vi.fn(), 'r1');
+    const port = await endpointPort(mcp);
+    mcp.dispose();
+    cryptoMock.randomInt = () => port;
+    try {
+      const browser = allocateBrowserPorts();
+      try {
+        expect(browser.guardPort).toBe(port);
+      } finally {
+        browser.release();
+      }
+    } finally {
+      cryptoMock.randomInt = undefined;
+    }
+  });
+
+  it('listens below the denied browser band when the draw lands inside it', async () => {
+    cryptoMock.randomInt = () => BROWSER_PORT_BAND_FIRST + 7;
+    try {
+      const mcp = new FarSideMcp(vi.fn(), 'r1');
+      const port = await endpointPort(mcp);
+      mcp.dispose();
+      expect(port).toBeLessThan(BROWSER_PORT_BAND_FIRST);
+      expect(isBrowserBandPort(port)).toBe(false);
+    } finally {
+      cryptoMock.randomInt = undefined;
+    }
   });
 
   it('holds in-flight and new calls through a link loss and re-sends them when it returns', async () => {

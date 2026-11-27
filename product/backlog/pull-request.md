@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Draw the far-side MCP endpoint's port from the shared reachable-port pool instead of a private copy of the allocator.
-
-Existing Issue: `src/remote/serve-mcp.ts` has its own `claimPort`, its own `reserved` set, and hard-coded `FIRST_PORT` and `PORT_COUNT = 16_128` duplicating `src/browser/e2e-ports.ts`, so a remote `-b` harness's browser guard, allocated in the same `remote-serve` process from the same 49152 to 65279 range, can be handed the port the MCP endpoint is listening on. Severity: 4/10
-
-Existing Risk: 3/10 - A far-side browser guard that draws the endpoint's port fails to bind and tears down that tab's browser, which is exactly the collision the local manager's fix avoided by sharing the pool, and the duplicated band arithmetic will drift if the browser band ever moves.
-
-Proposal Risk: 1/10 - One allocator and one reservation set serve both consumers, so the only remaining collision is with a foreign process, which the endpoint already reports as a contained bind failure.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "make FarSideMcp claim its port through reserveReachablePort so far-side browser guards cannot take it". In `src/remote/serve-mcp.ts`, delete the local `FIRST_PORT`, `PORT_COUNT`, `reserved` and `claimPort`, call `reserveReachablePort()` from `src/browser/e2e-ports.ts` in the constructor, keep the returned `release` on the instance, and call it from `dispose()` in place of `reserved.delete(this.port)`. Keep throwing when the pool is exhausted so `RemoteProcesses.spawn` still turns that into the exit-code-1 path. The collision tests in `src/remote/serve-mcp.test.ts` and `src/remote/serve.test.ts` force the port through a mocked `randomInt`; `reserveReachablePort` normalizes a draw with `claimPort`, so confirm those tests still land on the blocked port (a draw inside the guard range maps to itself) and adjust only the fixture if not. Add a test that constructs a `FarSideMcp` with `randomInt` forced to a value, then calls `allocateBrowserPorts()` with the same forced value and asserts the guard port differs from the endpoint's, mirroring `src/mcp/manager-port.test.ts`.
-
-
 * Stop a first start with an `mcpPort` override from persisting the override as the project's saved port.
 
 Existing Issue: When `.janissary/mcp.json` does not exist and `mcpPort` is set, `McpManager.start` binds the override and then saves `{ port: <override>, token }`, so the hand-edited port becomes the persisted one and keeps being used after the override is removed, contrary to the plan's preserved behavior that an override binds "without being written back" and to the reachable first-start draw. Severity: 4/10
