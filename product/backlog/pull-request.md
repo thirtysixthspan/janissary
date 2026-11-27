@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Handle the pending-question unread badge being suppressed while an agent's ACP query is still waiting for the answer.
-
-Existing Issue: The new question badge call goes through the shared unread helper, which refuses to badge a tab while an ACP prompt is set — exactly the state of an agent that has just asked a question and is blocked waiting for it — so the primary agent-question source raises no badge despite the spec line added in this same change claiming one. Severity: 8/10
-
-Existing Risk: 7/10 - An agent asks a question in a background tab, the user never sees the promised tab-strip badge and may miss the notification feed line, leaving the agent stalled until the user happens to visit the tab.
-
-Proposal Risk: 3/10 - Question badges would then coexist with the agent's busy dot, a deliberate exception to the general in-progress rule, but the badge is accurate because the agent is genuinely waiting on the human and the existing dwell clears it once the tab is visited.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "make pending questions badge their tab even while the agent's ACP query is open". In src/controller/create-managers.ts the Questions change callback calls managers.tab.markUnread(label), which reaches the shared markUnreadTab/isUnreadEligible helpers in src/tab/selection-operations.ts and src/tab/transcript/events.ts; those helpers suppress a badge whenever any ACP role has a prompt set, and that prompt stays set for the whole tool loop while a question it issued awaits an answer — it is only deleted by settleAcpPrompt in src/acp/response.ts after the loop in src/acp/drive-loop.ts finishes. Add a question-specific badge path that applies the dock, active-tab, and secondary-pane checks but not the awaiting-ACP check, and call it from that callback; leave every other markUnread caller on the current rule so shell output and streaming ACP content keep their documented behavior. Add a regression test in src/controller/create-managers.test.ts that puts a tab in the awaiting-ACP state (a prompt set on its ask role, as src/acp/manager.ts establishes when a prompt starts) and then registers a question through managers.questions, asserting the tab shows hasUnread; keep the existing background-tab and active-tab question tests unchanged. Align the unread sentence in product/specs/agent-questions.md with the resulting behavior and record the exception beside the awaiting-ACP suppression in product/specs/tabs.md.

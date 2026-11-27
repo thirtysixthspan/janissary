@@ -13,6 +13,8 @@ import { AcpRecordStore } from '../acp-records/store.js';
 import type { AcpRecordSource } from '../acp-records/types.js';
 import { createControllerTestProject } from './test-project.js';
 import type { AcpOptions } from '../acp/types.js';
+import type { AcpPendingPrompt } from '../acp/prompt-state.js';
+import { tabRuntime } from '../tab/runtime.js';
 import { executeAgentRun } from '../agent/execute.js';
 
 const acpMock = vi.hoisted(() => ({ connect: vi.fn() }));
@@ -76,6 +78,21 @@ describe('createManagers question-pending wiring', () => {
     void c.managers.questions.register({ tab: 'janus', kind: 'ask', question: 'ok?' });
     expect(c.view().find((t) => t.label === 'janus')?.hasUnread).toBe(false);
     expect(feedText(c)).not.toContain('Question from janus');
+  });
+
+  it('marks a background tab unread for a pending question while its ACP query awaits an answer', () => {
+    const c = makeController();
+    seedTestTab(c.managers.tab, 'bob');
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is the background tab
+    const bob = c.managers.tab.byLabel('bob')!;
+    const pending: AcpPendingPrompt = {
+      finish: () => {}, abort: new AbortController(), prompt: 'task', role: 'ask',
+      roleName: 'ask', commands: [], runningEntries: new Set(),
+    };
+    tabRuntime(bob).acpRoles = { ask: { prompt: pending } };
+    void c.managers.questions.register({ tab: 'bob', kind: 'ask', question: 'ok?' });
+    expect(c.view().find((t) => t.label === 'bob')?.hasUnread).toBe(true);
   });
 });
 

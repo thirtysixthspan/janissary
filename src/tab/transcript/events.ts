@@ -74,6 +74,15 @@ export function updateRunningEntry(
   messageBus.emit('state', { type: 'dirty', tab: label });
 }
 
+// The visibility half of unread eligibility: only a tab out of sight can carry the badge — a docked
+// tab is permanently visible chrome, and the active tab and the other pane's selection are being
+// looked at. Shared by the ordinary and question paths so they cannot drift on the rules they share.
+function isUnreadVisible(
+  tab: Tab, label: string, activeLabel: string | undefined, secondaryLabel?: string,
+): boolean {
+  return !tab.dock && label !== activeLabel && label !== secondaryLabel;
+}
+
 // Whether a tab is one the unread badge may be raised on. The badge is the app's record that a tab
 // holds something the user has not looked at, so only a tab that is out of sight can carry it: a
 // docked tab is permanently visible chrome, the active tab is the one being looked at, and so is the
@@ -88,7 +97,7 @@ export function isUnreadEligible(
   // working. Streaming ACP output and tool steps must not badge it until the query resolves, so a
   // prompt left set on any role is the one signal that suppresses the badge at raise time.
   const awaitingAcp = Object.values(tab.runtime?.acpRoles ?? {}).some((state) => state?.prompt !== undefined);
-  return !tab.dock && !awaitingAcp && label !== activeLabel && label !== secondaryLabel;
+  return !awaitingAcp && isUnreadVisible(tab, label, activeLabel, secondaryLabel);
 }
 
 // Raise the badge, and report whether this tab was eligible for it. The return value is what lets a
@@ -100,6 +109,18 @@ export function markUnreadTab(
 ): boolean {
   const tab = tabs.find((t) => t.label === label);
   if (!tab || !isUnreadEligible(tab, label, activeLabel, secondaryLabel)) return false;
+  tab.hasUnread = true;
+  return true;
+}
+
+// A pending question is the agent asking the human for attention, so it badges its tab even while the
+// agent's ACP prompt is still open awaiting the answer. Only the visibility rules apply here; every
+// other markUnread caller keeps the awaiting-ACP suppression above.
+export function markUnreadQuestionTab(
+  tabs: Tab[], label: string, activeLabel: string | undefined, secondaryLabel?: string,
+): boolean {
+  const tab = tabs.find((t) => t.label === label);
+  if (!tab || !isUnreadVisible(tab, label, activeLabel, secondaryLabel)) return false;
   tab.hasUnread = true;
   return true;
 }
