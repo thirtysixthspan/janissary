@@ -48,6 +48,19 @@ describe('createHandler', () => {
     expect(executor.mock.calls[0]?.[1]).toEqual({ tab: 'build', kind: 'ask', question: 'Which port?' });
   });
 
+  it('maps an executor-reported error to an error tool result', async () => {
+    const executor = vi.fn<ToolExecutor>(async () => ({ text: 'Denied', isError: true }));
+
+    const result = await capturedCallback(executor)(
+      { tab: 'build', kind: 'ask', question: 'Proceed?' },
+      context(new AbortController().signal),
+    );
+
+    expect(result).toEqual({ content: [{ type: 'text', text: 'Denied' }], isError: true });
+    expect(executor).toHaveBeenCalledOnce();
+    expect(executor.mock.calls[0]?.[0]).toBe('question');
+  });
+
   it.each([
     { label: 'invalid kind', args: { kind: 'maybe', question: 'Deploy?' }, message: QUESTION_ERROR.invalidKind },
     { label: 'empty question', args: { kind: 'ask', question: ' '.repeat(3) }, message: QUESTION_ERROR.emptyQuestion },
