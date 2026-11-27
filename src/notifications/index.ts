@@ -138,7 +138,9 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'system-schedule-fire': true,
   // Provider refreshes are deliberate actions whose outcomes remain visible while their tab is active.
   'models-refresh': true,
+  // The local MCP server could not start, which the user must see even while its own tab is active.
   'mcp-failed': true,
+  // A pending question was withdrawn; it must stay as visible as the `question` event it follows.
   'question-withdrawn': true,
 };
 
