@@ -135,7 +135,7 @@ export class FarSideMcp {
   }
 
   private graceTick(): void {
-    if (this.resend()) { this.detached = false; this.stopGrace(); return; }
+    if (this.resend()) { this.detached = false; this.stopGrace(); this.watchLink(); return; }
     if (++this.ticks >= GRACE_TICKS) {
       this.stopGrace();
       this.detached = true;

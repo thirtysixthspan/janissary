@@ -385,4 +385,28 @@ describe('the far-side MCP endpoint', () => {
     processes.mcpResult({ type: 'mcp-result', call: original.call, text: 'yes', isError: false });
     await expect(answer).resolves.toEqual({ text: 'yes', isError: false });
   });
+
+  it('fails a held call when the link drops a second time after an in-window re-send', async () => {
+    spawnHarness(true);
+    const executor = mcpMock.executor;
+    if (executor === undefined) throw new Error('expected a relaying executor');
+    send.mockImplementation(linkSend);
+
+    const answer = executor('question', ARGS, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(0);
+    const original = relayedCall();
+    void answer.catch(() => {});
+
+    online = false;
+    await vi.advanceTimersByTimeAsync(1000);
+
+    online = true;
+    await vi.advanceTimersByTimeAsync(1000);
+
+    online = false;
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    await expect(answer).rejects.toThrow('Janissary is not connected.');
+    expect(relayedCalls().map((frame) => frame.call)).toEqual([original.call, original.call]);
+  });
 });
