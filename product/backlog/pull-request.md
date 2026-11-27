@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Carry the spawn MCP flag through the far-side decoder so a remote harness actually starts its endpoint.
-
-Existing Issue: The commit adds `mcp` to the spawn frame in `src/remote/pty-session.ts`, but `decodeSpawn` in `src/remote/frame/decode-lifecycle.ts` neither validates nor returns `mcp`, so every spawn the far side decodes drops the flag before `RemoteProcesses.spawnPty` can read it. Severity: 9/10
-
-Existing Risk: 9/10 - The far-side MCP endpoint is never created, no harness receives MCP variables, no `mcp-call` is ever emitted, and the spec claim that the launch starts an endpoint is false for every real remote launch.
-
-Proposal Risk: 2/10 - The decoder change is one optional boolean mirroring `browser`, `autoApprove` and `autoResume`, with a codec round-trip test pinning it, so the only remaining risk is another decode path drifting.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "carry the spawn mcp flag through the far-side decoder". In `src/remote/frame/decode-lifecycle.ts`, add `mcp` to the fields destructured from the spawn record, validate it the same way as `browser`/`autoApprove`/`autoResume` (`mcp === undefined || typeof mcp === 'boolean'`), and spread `...(mcp !== undefined && { mcp })` into the returned frame so `RemoteProcesses.spawnPty` in `src/remote/serve-processes.ts` sees `frame.mcp === true` and launches `FarSideMcp`. Add a round-trip case to `src/remote/protocol.test.ts` beside the existing browser-flag spawn test that encodes and decodes a spawn with `mcp: true` and asserts the flag survives, plus one with `mcp: false` asserting an explicit false is preserved rather than dropped. Note that `src/remote/serve-mcp.test.ts` builds spawn frames directly and bypasses the codec, which is why the gap went unnoticed; an assertion through `decodeFrame` is what pins the real path. No change to `src/remote/base64-fields.ts` or `src/remote/protocol-frames.ts` is needed — the spawn field is not binary and the union already declares it.
-
-
 * Make the local MCP relay accept the arguments the far side actually sends so a remote question no longer throws and poisons its call id.
 
 Existing Issue: `FarSideMcp.relay` in `src/remote/serve-mcp.ts` sets `mcp-call.args` to base64 of JSON and then `encodeFrame` base64-encodes that field again, so the new `JSON.parse(frame.args)` in `src/remote/mcp-relay.ts` throws on every real call, and because the pending entry is inserted before the parse it stays result-less and later re-sends are silently dropped. Severity: 9/10

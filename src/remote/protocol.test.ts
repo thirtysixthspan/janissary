@@ -899,6 +899,30 @@ describe('frame codec', () => {
     });
   });
 
+  it('round-trips a spawn frame carrying mcp: true', () => {
+    const encoded = encodeFrame({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: true,
+    });
+    expect(decodeFrame(encoded)).toEqual({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: true,
+    });
+  });
+
+  it('round-trips an explicit mcp: false rather than dropping it', () => {
+    const encoded = encodeFrame({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: false,
+    });
+    const decoded = decodeFrame(encoded);
+    expect(decoded).toEqual({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: false,
+    });
+    expect(Object.hasOwn(decoded, 'mcp')).toBe(true);
+  });
+
   it('round-trips a browser-exited frame', () => {
     expect(decodeFrame(encodeFrame({ type: 'browser-exited', id: 'r1' }))).toEqual({
       type: 'browser-exited', id: 'r1',
