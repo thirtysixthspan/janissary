@@ -16,6 +16,8 @@ The human can issue the same two commands directly on any tab's command line, us
 
 A pending question appears in a panel on its owning tab. The panel identifies the tab, preserves the question text verbatim, and shows either a text field with a submit control or one button per approval option. Both forms include **Cancel**.
 
+The panel normally fits the tab body, with the question text scrolling while the title and controls stay in place. When the title and controls fill the fitted height — in a short docked sidebar or on a question with many approval options — the panel instead fills the tab body and scrolls as a whole, so the question text stays visible and reachable alongside the controls.
+
 The panel is non-modal. It does not trap global keyboard or pointer input, and the human can switch tabs or use unrelated controls while it remains pending. The panel is shown when its owning tab is active and remains associated with that tab across tab switches.
 
 For centre tabs, only the current tab's question appears, once in the app-owned panel. For docked plugin tabs on either side, the selected active body shows its own question even before any ACP response exists, with no terminal, command bar, or plugin hook required. Switching sidebar entries hides the old body's question; selecting it again restores a still-pending question. Resolved questions disappear. Answers and Cancel always use the question's own tab and id, not the current centre tab.

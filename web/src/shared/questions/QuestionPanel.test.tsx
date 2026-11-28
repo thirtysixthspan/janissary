@@ -1,5 +1,6 @@
 import React, { createRef } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PendingQuestionView } from '@shared/protocol';
@@ -132,6 +133,47 @@ describe('QuestionPanel', () => {
     const footer = container.querySelector('.question-panel-footer');
     expect(footer).toContainElement(screen.getByRole('button', { name: 'Submit' }));
     expect(footer).toContainElement(screen.getByRole('button', { name: 'Cancel' }));
+  });
+
+  it('keeps the question text visible and scrollable when a tall footer fills a short layer', () => {
+    const observers: ResizeObserverCallback[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) { observers.push(callback); }
+      observe() {}
+      disconnect() {}
+    });
+    try {
+      const { value } = client();
+      const question: PendingQuestionView = {
+        id: 'question-fit-overflow', tab: 'build', kind: 'approve',
+        question: 'Deploy to prod?', options: ['Yes', 'No', 'Later', 'Never'],
+      };
+      const { container } = render(<QuestionPanel question={question} client={value} />);
+      const layer = container.querySelector<HTMLElement>('.question-panel-layer')!;
+      const panel = container.querySelector<HTMLElement>('.question-panel')!;
+      const title = container.querySelector<HTMLElement>('.modal-title')!;
+      const footer = container.querySelector<HTMLElement>('.question-panel-footer')!;
+
+      Object.defineProperties(layer, {
+        clientWidth: { configurable: true, value: 400 },
+        clientHeight: { configurable: true, value: 200 },
+      });
+      Object.defineProperties(title, { offsetHeight: { configurable: true, value: 20 } });
+      Object.defineProperties(footer, { offsetHeight: { configurable: true, value: 175 } });
+      Object.defineProperties(panel, { scrollHeight: { configurable: true, value: 220 } });
+
+      act(() => { observers[0]([], {} as ResizeObserver); });
+
+      expect(panel).toHaveStyle({ height: '200px', overflowY: 'auto' });
+      expect(panel).toHaveClass('question-panel--overflow');
+      expect(container.querySelector('.question-panel-body')).toContainElement(screen.getByText('Deploy to prod?'));
+      expect(footer).toContainElement(screen.getByRole('button', { name: 'Cancel' }));
+      const theme = readFileSync('web/src/theme.css', 'utf8');
+      expect(theme).toContain('.question-panel--overflow .question-panel-content { flex: none; }');
+      expect(theme).toContain('.question-panel--overflow .question-panel-body { flex: none; }');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('is non-modal and does not trap unrelated input', async () => {

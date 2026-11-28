@@ -703,6 +703,8 @@ button.tab-recording { cursor: pointer; }
 .question-panel-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .question-panel-body { flex: 1; min-height: 0; overflow-y: auto; }
 .question-panel-footer { flex-shrink: 0; }
+.question-panel--overflow .question-panel-content { flex: none; }
+.question-panel--overflow .question-panel-body { flex: none; }
 .question-panel-text { margin-bottom: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .question-panel-form { display: flex; flex-direction: column; gap: 10px; }
 .question-panel-form input {

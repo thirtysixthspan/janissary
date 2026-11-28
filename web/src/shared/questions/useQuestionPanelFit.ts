@@ -4,7 +4,8 @@ import { fitPanelPercent } from './panel-fit';
 
 // Sizes a question panel to the smallest equal percentage of its layer that fits the content, up to
 // 90%. The search reads layout at candidate widths, then the chosen size is applied: the body scrolls
-// while the title and footer stay, unless the controls alone need more room than the 90% limit.
+// while the title and footer stay, unless the title and footer fill that size, in which case the
+// whole panel fills the layer and scrolls so the question text stays reachable.
 export function useQuestionPanelFit({
   layerRef,
   panelRef,
@@ -25,10 +26,6 @@ export function useQuestionPanelFit({
       const layerHeight = layer.clientHeight;
       if (layerWidth === 0 || layerHeight === 0) return;
 
-      const title = panel.querySelector<HTMLElement>('.modal-title');
-      const footer = panel.querySelector<HTMLElement>('.question-panel-footer');
-      const fixedHeight = (title?.offsetHeight ?? 0) + (footer?.offsetHeight ?? 0);
-
       const contentHeightAtWidth = (width: number) => {
         panel.style.height = 'auto';
         panel.style.width = `${width}px`;
@@ -36,11 +33,18 @@ export function useQuestionPanelFit({
       };
       const percent = fitPanelPercent(layerWidth, layerHeight, contentHeightAtWidth);
       const width = layerWidth * percent / 100;
-      const height = Math.min(layerHeight, Math.max(layerHeight * percent / 100, fixedHeight));
+      const fittedHeight = layerHeight * percent / 100;
+      const contentHeight = contentHeightAtWidth(width);
+
+      const title = panel.querySelector<HTMLElement>('.modal-title');
+      const footer = panel.querySelector<HTMLElement>('.question-panel-footer');
+      const fixedHeight = (title?.offsetHeight ?? 0) + (footer?.offsetHeight ?? 0);
+      const overflow = contentHeight > layerHeight || fixedHeight >= fittedHeight;
 
       panel.style.width = `${width}px`;
-      panel.style.height = `${height}px`;
-      panel.style.overflowY = fixedHeight > layerHeight ? 'auto' : 'hidden';
+      panel.style.height = `${overflow ? layerHeight : fittedHeight}px`;
+      panel.style.overflowY = overflow ? 'auto' : 'hidden';
+      panel.classList.toggle('question-panel--overflow', overflow);
     };
 
     measure();
