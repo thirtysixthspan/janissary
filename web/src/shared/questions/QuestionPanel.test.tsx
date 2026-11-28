@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PendingQuestionView } from '@shared/protocol';
@@ -65,6 +65,38 @@ describe('QuestionPanel', () => {
       method: 'answerQuestion',
       params: { tab: 'build', id: 'question-3', answer: null },
     });
+  });
+
+  it.each([
+    {
+      kind: 'ask',
+      question: { id: 'question-11', tab: 'build', kind: 'ask', question: 'What port?' } as PendingQuestionView,
+      role: 'textbox',
+      name: 'Answer',
+    },
+    {
+      kind: 'approve',
+      question: { id: 'question-12', tab: 'build', kind: 'approve', question: 'Deploy to prod?', options: ['Yes', 'No'] } as PendingQuestionView,
+      role: 'button',
+      name: 'Cancel',
+    },
+  ])('Escape on a $kind question sends answer: null and stops propagation', ({ question, role, name }) => {
+    const globalKeyDown = vi.fn();
+    globalThis.addEventListener('keydown', globalKeyDown);
+    try {
+      const { value, send } = client();
+      render(<QuestionPanel question={question} client={value} />);
+      const target = screen.getByRole(role, { name });
+      target.focus();
+      fireEvent.keyDown(target, { key: 'Escape' });
+      expect(send).toHaveBeenCalledWith({
+        method: 'answerQuestion',
+        params: { tab: question.tab, id: question.id, answer: null },
+      });
+      expect(globalKeyDown).not.toHaveBeenCalled();
+    } finally {
+      globalThis.removeEventListener('keydown', globalKeyDown);
+    }
   });
 
   it('is non-modal and does not trap unrelated input', async () => {
