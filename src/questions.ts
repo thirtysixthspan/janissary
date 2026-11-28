@@ -56,6 +56,8 @@ export class Questions {
       kind: entry.kind,
       question: entry.question,
       options: entry.options,
+      choices: entry.choices,
+      defaultOption: entry.defaultOption,
     };
   }
 
@@ -63,6 +65,7 @@ export class Questions {
     const entry = this.active.get(tab);
     if (!entry || entry.id !== id) return false;
     if (answer !== null && entry.kind === 'approve' && !entry.options?.includes(answer)) return false;
+    if (answer !== null && entry.kind === 'choose' && answer.trim() === '') return false;
     this.finish(entry, answer ?? QUESTION_CANCELLED);
     return true;
   }
