@@ -72,6 +72,18 @@ describe('createLocalExecutor', () => {
     await expect(result).resolves.toEqual({ text: '3000', isError: false });
   });
 
+  it('does not pass a restored harness question to a replacement tab using its rebuilt label', async () => {
+    const { managers, questions, tabs } = fixture();
+    const original = tabs[0]!;
+    const execute = createLocalExecutor(managers, { originalLabel: 'restored', label: original.label, harness: original.harness });
+    tabs[0] = { ...original, harness: { ...original.harness! } };
+
+    const result = await execute('question', { tab: 'restored', kind: 'ask', question: 'Which port?' }, new AbortController().signal);
+
+    expect(result).toEqual({ text: 'No tab named "restored".', isError: true });
+    expect(questions.pendingFor('build')).toBeUndefined();
+  });
+
   it('marks the harness view as using MCP and emits a dirty state before registering', async () => {
     const { execute, tabs } = fixture();
     const emit = vi.spyOn(messageBus, 'emit');

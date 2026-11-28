@@ -122,6 +122,7 @@ export function startSessionAttach(
       const creator = managers.tab.cur();
       const spawnId = spawnIdOf(record);
       const recorded = record.processes.find((process) => process.id === spawnId);
+      const mcp = recorded?.mcp ?? false;
       // The recorded `mcp` travels with the adopted spawn id: the far process already holds whatever
       // endpoint it was launched with. A record with no `mcp` describes a launch that had no MCP.
       managers.harness.attachRemote({
@@ -131,8 +132,8 @@ export function startSessionAttach(
         dotColor: distinctColor(managers.tab.tabs.map((tab) => tab.dotColor)),
         autoApprove: recorded?.autoApprove ?? false,
         autoResume: recorded?.autoResume ?? false,
-        browser: false, remote: address, resume: resumed,
-        ...(spawnId !== undefined && { resumePtyId: spawnId, mcp: recorded?.mcp ?? false }),
+        browser: false, remote: address, resume: { ...resumed, mcp },
+        ...(spawnId !== undefined && { resumePtyId: spawnId, mcp }),
       });
       return;
     }

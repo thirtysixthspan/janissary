@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { createLocalExecutor, MCP_CHANNEL_CLOSED } from '../mcp/executor.js';
+import { createLocalExecutor, MCP_CHANNEL_CLOSED, type RestoredMcpTab } from '../mcp/executor.js';
 import { validateQuestionArgs, type QuestionArgs } from '../mcp/question-tool.js';
 import { TOOLS, unknownToolError, type ToolResult } from '../mcp/tools.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
@@ -22,8 +22,8 @@ function decodeCall(frame: McpCallFrame): QuestionArgs | { error: string } {
   return validateQuestionArgs(args as Record<string, unknown>);
 }
 
-export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) => void) {
-  const execute = createLocalExecutor(managers);
+export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) => void, restoredTab?: RestoredMcpTab) {
+  const execute = createLocalExecutor(managers, restoredTab);
   const pending = new Map<string, Pending>();
 
   const answer = (call: string, result: ToolResult): void => {

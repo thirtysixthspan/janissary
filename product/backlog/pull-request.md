@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Route a restored remote harness's question to its rebuilt tab when Attach assigns that tab a different label.
-
-Existing Issue: A running remote harness keeps the original `JANISSARY_TAB`, but Attach can suffix the local label and the MCP executor then resolves the original label against the whole tab list. Severity: 6/10
-
-Existing Risk: 6/10 - A restored harness can open its question on an unrelated same-name tab and get an answer the user meant for that tab.
-
-Proposal Risk: 2/10 - The restored harness's original name is resolved within its own session, and deliberately naming another tab still uses the usual lookup.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Route a restored remote harness question to its rebuilt tab". Trace the original launch identity from `src/remote/serve-processes.ts` and the rebuilt label chosen by `startSessionAttach` in `src/sessions/attach.ts`. Pass the remote session's own launch-name mapping from `src/remote/entry-factory.ts` to the relay in `src/remote/mcp-relay.ts` so a call for its original launch label addresses the exact rebuilt tab even when the old name or an alias belongs to another tab. Preserve the existing arbitrary label and alias lookup for other explicitly named tabs and the untouched local HTTP route. Extend the remote harness round-trip or entry tests to cover an occupied old label through an attach, plus an explicit other-tab request. Update the MCP and sessions specs with the restored-tab behavior.
-
-
 * Require an MCP-enabled harness before its remote channel can deliver a question call to the local app.
 
 Existing Issue: `createRemoteEntry` dispatches MCP calls on every channel regardless of whether the session contains a harness authorized to use MCP. Severity: 6/10

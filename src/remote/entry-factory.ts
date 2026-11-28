@@ -72,7 +72,10 @@ export function createRemoteEntry({
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = createDeferred<string>();
   void ready.catch(() => {});
   const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
-  const mcpRelay = createMcpRelay(managers, (frame) => deferred.channel?.send(frame));
+  const restoredMcpTab = resume?.mcp === true
+    ? { originalLabel: resume.workspaceLabel ?? label, label, harness: managers.tab.byLabel(label)?.harness }
+    : undefined;
+  const mcpRelay = createMcpRelay(managers, (frame) => deferred.channel?.send(frame), restoredMcpTab);
   const terminal = (data: string) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data });
   // A clone offer waiting for its y/n, answered by keystrokes typed into the placeholder.
   let offer: CloneOfferText | undefined;

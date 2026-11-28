@@ -12,6 +12,7 @@ export type RemoteResume = {
   workspaceLabel?: string;
   workspaceDir: string;
   home?: string;
+  mcp?: boolean;
   // Told which way the peer answered. Accepted means "now ask what is still running there"; refused
   // establishes that the session is over and the record describes nothing.
   onResult: (accepted: boolean) => void;
