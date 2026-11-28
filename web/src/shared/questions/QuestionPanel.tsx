@@ -3,6 +3,7 @@ import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from '../ws/ws';
 import { ModalDialog } from '../ModalDialog';
 import { useAnswerButtons } from './useAnswerButtons';
+import { ChoiceQuestionForm } from './ChoiceQuestionForm';
 import type { QuestionPanelHandle } from '../tab/handles';
 import { useQuestionPanelFit } from './useQuestionPanelFit';
 
@@ -84,7 +85,7 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
                   <button className="modal-button" type="button" ref={(el) => { askButtons.getRef(1)(el); cancelRef.current = el; }} onClick={() => respond(null)}>Cancel</button>
                 </div>
               </form>
-            ) : (
+            ) : question.kind === 'approve' ? (
               <div className="question-panel-options" data-claims-shift-tab onKeyDown={options.onKeyDown}>
                 {question.options?.map((option, i) => (
                   <button className="modal-button" type="button" key={option} ref={options.getRef(i)} onClick={() => respond(option)}>
@@ -93,6 +94,13 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
                 ))}
                 <button className="modal-button" type="button" ref={(el) => { options.getRef(optionCount - 1)(el); cancelRef.current = el; }} onClick={() => respond(null)}>Cancel</button>
               </div>
+            ) : (
+              <ChoiceQuestionForm
+                key={question.id}
+                question={question}
+                onSubmit={(answer) => respond(answer)}
+                onCancel={() => respond(null)}
+              />
             )}
           </div>
         </div>

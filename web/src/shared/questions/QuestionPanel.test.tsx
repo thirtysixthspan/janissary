@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PendingQuestionView } from '@shared/protocol';
+import { CUSTOM_ANSWER_LABEL } from '@shared/shared/question-choice';
 import type { JanusClient } from '../ws/ws';
 import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from '../tab/handles';
@@ -11,6 +12,20 @@ import type { QuestionPanelHandle } from '../tab/handles';
 function client() {
   const send = vi.fn();
   return { value: { send } as unknown as JanusClient, send };
+}
+
+function chooseQuestion(overrides: Partial<PendingQuestionView> = {}): PendingQuestionView {
+  return {
+    id: 'question-choose',
+    tab: 'build',
+    kind: 'choose',
+    question: 'Pick one',
+    choices: [
+      { label: 'First', description: 'The first option' },
+      { label: 'Second', description: 'The second option' },
+    ],
+    ...overrides,
+  };
 }
 
 describe('QuestionPanel', () => {
@@ -281,5 +296,98 @@ describe('QuestionPanel', () => {
     expect(screen.getByRole('textbox', { name: 'Answer' })).toHaveFocus();
     ref.current?.focusCancel();
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('preselects the default choice, enables Submit, and submits the listed label verbatim', async () => {
+    const { value, send } = client();
+    render(<QuestionPanel question={chooseQuestion({ defaultOption: 'First' })} client={value} />);
+
+    expect(screen.getByRole('radio', { name: 'First' })).toBeChecked();
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    expect(submit).toBeEnabled();
+
+    await userEvent.click(submit);
+    expect(send).toHaveBeenCalledWith({
+      method: 'answerQuestion',
+      params: { tab: 'build', id: 'question-choose', answer: 'First' },
+    });
+  });
+
+  it('renders a first choice with no default and disables Submit until one is selected', () => {
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    expect(screen.getByRole('radio', { name: 'First' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Second' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  });
+
+  it('shows each choice description beneath its label', () => {
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    expect(screen.getByText('The first option')).toBeInTheDocument();
+    expect(screen.getByText('The second option')).toBeInTheDocument();
+  });
+
+  it('submits the typed alternative trimmed', async () => {
+    const { value, send } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    await userEvent.click(screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL }));
+    await userEvent.type(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL }), '  my answer  ');
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    expect(submit).toBeEnabled();
+
+    await userEvent.click(submit);
+    expect(send).toHaveBeenCalledWith({
+      method: 'answerQuestion',
+      params: { tab: 'build', id: 'question-choose', answer: 'my answer' },
+    });
+  });
+
+  it('keeps typed alternative text while switching selections', async () => {
+    const { value, send } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    const custom = screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL });
+    const field = screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL });
+    await userEvent.click(custom);
+    await userEvent.type(field, 'draft');
+    await userEvent.click(screen.getByRole('radio', { name: 'First' }));
+    expect(field).toHaveValue('draft');
+    await userEvent.click(custom);
+    expect(field).toHaveValue('draft');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(send).toHaveBeenCalledWith({
+      method: 'answerQuestion',
+      params: { tab: 'build', id: 'question-choose', answer: 'draft' },
+    });
+  });
+
+  it('sends no answer while nothing valid is selected', async () => {
+    const { value, send } = client();
+    const { container } = render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    expect(submit).toBeDisabled();
+    fireEvent.submit(container.querySelector('form')!);
+    expect(send).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL }));
+    await userEvent.type(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL }), ' '.repeat(3));
+    expect(submit).toBeDisabled();
+    fireEvent.submit(container.querySelector('form')!);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('names the radio group after the question and the custom field after its label', () => {
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    expect(screen.getByRole('group', { name: 'Pick one' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL })).toBeInTheDocument();
   });
 });
