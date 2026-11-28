@@ -53,7 +53,7 @@ export class SessionRouter {
   // read of the channel's state — an ordinary channel (no attach in flight) drops instead.
   private holding = false;
 
-  constructor(private handlers: SessionRouterHandlers) {}
+  constructor(private handlers: SessionRouterHandlers, private restoringMcpPtyId?: string) {}
 
   // An attach is under way: hold what arrives for ids whose tabs are still being built. Opened by
   // the channel the moment its handshake will speak for an existing session, closed by
@@ -86,16 +86,30 @@ export class SessionRouter {
   discardUnclaimed(): void {
     this.pending.clear();
     this.holding = false;
+    this.restoringMcpPtyId = undefined;
   }
 
-  record(frame: SpawnFrame): void { this.spawned.set(frame.id, frame); }
+  record(frame: SpawnFrame): void {
+    if (frame.id === this.restoringMcpPtyId) this.restoringMcpPtyId = undefined;
+    this.spawned.set(frame.id, frame);
+  }
 
-  forget(id: string): void { this.spawned.delete(id); }
+  forget(id: string): void {
+    if (id === this.restoringMcpPtyId) this.restoringMcpPtyId = undefined;
+    this.spawned.delete(id);
+  }
 
   spawnedIds(): string[] { return [...this.spawned.keys()]; }
 
   spawnedProcesses(): RemoteProcessState[] {
     return [...this.spawned.values()].map((frame) => spawnFrameState(frame));
+  }
+
+  hasMcpHarness(): boolean {
+    if (this.restoringMcpPtyId !== undefined) return true;
+    return [...this.spawned.values()].some((frame) =>
+      frame.mode === 'pty' && frame.harness !== undefined && frame.mcp === true && frame.offline !== true,
+    );
   }
 
   output(frame: OutputFrame): void {
@@ -148,6 +162,7 @@ export class SessionRouter {
   exit(frame: ExitFrame): void {
     const listener = this.sessions.get(frame.id);
     const spawned = this.spawned.get(frame.id);
+    this.forget(frame.id);
     // An id this channel neither has a listener for nor spawned itself belongs to a process started
     // before this janissary existed — an attach whose tabs are still being built. Outside that
     // window there is nothing the frame could be delivered to, so it is dropped.
@@ -156,7 +171,6 @@ export class SessionRouter {
       return;
     }
     this.sessions.delete(frame.id);
-    this.spawned.delete(frame.id);
     if (spawned && (spawned.harness || spawned.mode === 'pipe' || spawned.shell !== undefined)) {
       this.handlers.onSessionExit?.(frame.id, spawned.agentName, spawned.harness !== undefined);
     }
@@ -173,7 +187,6 @@ export class SessionRouter {
   clear(): void {
     this.sessions.clear();
     this.spawned.clear();
-    this.pending.clear();
-    this.holding = false;
+    this.discardUnclaimed();
   }
 }

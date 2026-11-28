@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Require an MCP-enabled harness before its remote channel can deliver a question call to the local app.
-
-Existing Issue: `createRemoteEntry` dispatches MCP calls on every channel regardless of whether the session contains a harness authorized to use MCP. Severity: 6/10
-
-Existing Risk: 6/10 - A remote session with no MCP-enabled harness can exercise a local question capability the user opted out of granting.
-
-Proposal Risk: 2/10 - A session with an eligible harness keeps its existing shared-endpoint access, including when that harness is restored from its launch record.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Gate incoming MCP calls on the remote harness launch decision". Use locally known harness spawn state from `src/remote/channel/index.ts` and the recorded attach path in `src/harness/tab-spawn.ts` to authorize MCP dispatch in `src/remote/entry-factory.ts`. Refuse calls before the relay executor is invoked when the session has no eligible harness, without losing cancellation and cleanup for a call already accepted. Preserve explicit cross-tab targeting for an allowed caller and make the existing fake-channel success cases in `src/remote/manager.test.ts` register an eligible harness. Add a defensive test that a channel lacking the grant leaves the question queue untouched, and record the channel policy in the remote and MCP specs.
-
-
 * Bound how long a live remote session remembers completed MCP results.
 
 Existing Issue: The local relay keeps the text and ID of every settled MCP call until the remote channel ends. Severity: 4/10

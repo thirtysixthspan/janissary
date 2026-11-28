@@ -993,7 +993,9 @@ describe('joined plugin tab remote target', () => {
   });
 });
 
-function mcpHarness() {
+type McpHarnessLaunch = Pick<Extract<ClientFrame, { type: 'spawn' }>, 'harness' | 'mcp' | 'offline'>;
+
+function mcpHarness(launch?: McpHarnessLaunch) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const write = vi.fn();
   const tabs = [{
@@ -1016,11 +1018,18 @@ function mcpHarness() {
     questions,
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
-  remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
+  const channel = remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
   transport?.onData(`${encodeHandshake()}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  if (launch) {
+    channel.send({
+      type: 'spawn', id: 'rpty1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+      agentName: 'creator', ...launch,
+    });
+  }
   write.mockClear();
   return {
     questions,
+    killHarness: () => channel.send({ type: 'kill', id: 'rpty1' }),
     send: (frame: ServerFrame) => transport?.onData(`${encodeFrame(frame)}\n`),
     sent: () => write.mock.calls.map(([data]: [string]) => String(data)).join(''),
     dispose: () => remote.dispose(),
@@ -1031,7 +1040,7 @@ describe('RemoteManager mcp-call dispatch', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('runs the local executor and answers with the correlated result', async () => {
-    const h = mcpHarness();
+    const h = mcpHarness({ harness: 'claude', mcp: true });
     const register = vi.spyOn(h.questions, 'register');
     h.send({
       type: 'mcp-call', call: 'call-9', tool: 'question',
@@ -1049,7 +1058,7 @@ describe('RemoteManager mcp-call dispatch', () => {
   });
 
   it('withdraws a pending question on a cancel frame and shows the next queued one', async () => {
-    const h = mcpHarness();
+    const h = mcpHarness({ harness: 'claude', mcp: true });
     h.send({
       type: 'mcp-call', call: 'call-10', tool: 'question',
       args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'First?' }),
@@ -1059,10 +1068,45 @@ describe('RemoteManager mcp-call dispatch', () => {
       args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Second?' }),
     });
     expect(h.questions.pendingFor('asker')?.question).toBe('First?');
+    h.killHarness();
+    h.send({
+      type: 'mcp-call', call: 'after-kill', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Still running?' }),
+    });
+    expect(h.sent()).toContain(encodeFrame({
+      type: 'mcp-result', call: 'after-kill', text: 'MCP is not enabled for this remote session.', isError: true,
+    }));
 
     h.send({ type: 'mcp-cancel', call: 'call-10' });
 
-    await vi.waitFor(() => expect(h.questions.pendingFor('asker')?.question).toBe('Second?'));
+    await vi.waitFor(() => expect(h.sent()).toContain(encodeFrame({
+      type: 'mcp-result', call: 'call-10', text: 'Question cancelled.', isError: false,
+    })));
+    expect(h.questions.pendingFor('asker')?.question).toBe('Second?');
+    h.send({ type: 'mcp-cancel', call: 'call-11' });
+    await vi.waitFor(() => expect(h.questions.pendingFor('asker')).toBeUndefined());
+    h.dispose();
+  });
+
+  it.each([
+    { scenario: 'no recorded launch' },
+    { scenario: 'MCP turned off', launch: { harness: 'claude', mcp: false } },
+    { scenario: 'an offline harness', launch: { harness: 'claude', mcp: true, offline: true } },
+    { scenario: 'no harness process', launch: { mcp: true } },
+  ])('refuses a question with $scenario before registration', ({ launch }) => {
+    const h = mcpHarness(launch);
+    const register = vi.spyOn(h.questions, 'register');
+
+    h.send({
+      type: 'mcp-call', call: 'refused', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Port?' }),
+    });
+
+    expect(register).not.toHaveBeenCalled();
+    expect(h.questions.pendingFor('asker')).toBeUndefined();
+    expect(h.sent()).toContain(encodeFrame({
+      type: 'mcp-result', call: 'refused', text: 'MCP is not enabled for this remote session.', isError: true,
+    }));
     h.dispose();
   });
 });

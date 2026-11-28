@@ -54,6 +54,7 @@ function harness() {
   const frames: ClientFrame[] = [];
   const remoteKills = vi.fn();
   const remoteSpawns = vi.fn();
+  let attachReplay: ServerFrame | undefined;
   const emit = (frame: ServerFrame) => {
     const transport = transports.at(-1);
     if (transport?.connected) transport.handlers.onData(transport.id, `${encodeFrame(frame)}\n`);
@@ -86,7 +87,15 @@ function harness() {
         frames.push(frame as ClientFrame);
         switch (frame.type) {
           case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
-          case 'attach': { setTimeout(() => { emit({ type: 'attach-result', accepted: true }); }, 0); break; }
+          case 'attach': {
+            setTimeout(() => {
+              emit({ type: 'attach-result', accepted: true });
+              const replay = attachReplay;
+              attachReplay = undefined;
+              if (replay) emit(replay);
+            }, 0);
+            break;
+          }
           case 'session-state': { setTimeout(() => { emit({ type: 'session-state-result', processes: processes.states() }); }, 0); break; }
           case 'spawn': { processes.spawn(frame); break; }
           case 'kill': { processes.kill(frame.id); break; }
@@ -107,7 +116,10 @@ function harness() {
   managers.sessions = new SessionsManager(managers);
   managers.questions = new Questions();
   wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
-  return { transports, frames, processes, remoteKills, remoteSpawns, emit };
+  return {
+    transports, frames, processes, remoteKills, remoteSpawns, emit,
+    replayOnAttach: (frame: ServerFrame) => { attachReplay = frame; },
+  };
 }
 
 beforeEach(() => {
@@ -222,9 +234,18 @@ describe('harness sessions round trip', () => {
     expect(managers.sessions.detach('claude')).toBe(true);
     await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);
     seedTestTab(managers.tab, 'claude').title = 'claude-2';
+    h.replayOnAttach({
+      type: 'mcp-call', call: 'replay', tool: 'question',
+      args: JSON.stringify({ tab: 'claude', kind: 'ask', question: 'While restoring?' }),
+    });
     expect(managers.sessions.attach(SESSION)).toBe(true);
     await vi.advanceTimersByTimeAsync(10);
     expect(managers.tab.harnessTab('claude-2')?.harness.status).toBe('running');
+    const replay = managers.questions.pendingFor('claude-2');
+    expect(replay?.question).toBe('While restoring?');
+    expect(managers.questions.answer('claude-2', replay!.id, 'Ready')).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.frames).toContainEqual({ type: 'mcp-result', call: 'replay', text: 'Ready', isError: false });
     seedTestTab(managers.tab, 'reviews').title = 'Review desk';
 
     h.emit({

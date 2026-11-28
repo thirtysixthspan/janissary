@@ -72,9 +72,9 @@ export function createRemoteEntry({
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = createDeferred<string>();
   void ready.catch(() => {});
   const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
-  const restoredMcpTab = resume?.mcp === true
-    ? { originalLabel: resume.workspaceLabel ?? label, label, harness: managers.tab.byLabel(label)?.harness }
-    : undefined;
+  const restoredMcpTab = resume?.mcpPtyId === undefined
+    ? undefined
+    : { originalLabel: resume.workspaceLabel ?? label, label, harness: managers.tab.byLabel(label)?.harness };
   const mcpRelay = createMcpRelay(managers, (frame) => deferred.channel?.send(frame), restoredMcpTab);
   const terminal = (data: string) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data });
   // A clone offer waiting for its y/n, answered by keystrokes typed into the placeholder.
@@ -144,7 +144,11 @@ export function createRemoteEntry({
           break;
         }
         case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
-        case 'mcp-call': { mcpRelay.handle(frame); break; }
+        case 'mcp-call': {
+          if (channel.allowsMcpCalls()) mcpRelay.handle(frame);
+          else channel.send({ type: 'mcp-result', call: frame.call, text: 'MCP is not enabled for this remote session.', isError: true });
+          break;
+        }
         case 'mcp-cancel': { mcpRelay.cancel(frame); break; }
         case 'browser-exited': { notifyBrowserGone(managers, frame.id, frame.message); break; }
         case 'browser-started': { notifyBrowserStarted(managers, frame.id); break; }
@@ -166,7 +170,7 @@ export function createRemoteEntry({
         terminateRemoteProcess(managers, entry, owner ?? label, harness);
         sessionsChanged();
       },
-    },
+    }, resume?.mcpPtyId,
   );
   deferred.channel = channel;
   if (resume) channel.sessionId = resume.session;
