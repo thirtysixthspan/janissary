@@ -698,16 +698,14 @@ than always clearing it, and the far side's own duplicate-suppression is realign
 a later change back to the pre-attach state is not mistaken for a repeat and dropped.
 
 MCP calls a remote harness makes through the far-side server hold through a lost link for a 60-second
-grace window, whatever the reason. The window starts when the link drops, including for a call already
-delivered to the local side and still waiting for an answer. A deliberate Detach gives the far side no
-signal, so it sees the same link loss as any other interruption. A link that returns inside the window re-sends every waiting
-call, and each answer reaches its harness as usual; a call made while the link is down waits the same
-way. A held call stays with the endpoint rather than being queued for replay to a later attach, so it
-is delivered once, to the harness that asked, and cannot be answered by a different session. If the
-window ends with no link, every waiting call fails with `Janissary is not connected.`, and
-calls made after that fail at once with the same text until a link returns. Such a refused call is
-never sent over the session, so it leaves no question behind for a later attach and cannot run in
-another session. Once the link returns, calls relay normally again.
+grace window, whether or not a call is pending when the link drops. An intentional Detach starts the
+same window. A call made during an outage has the time remaining in that window. If the link returns
+in time, the endpoint sends each waiting call with its original identifier immediately after the
+attach replay. The local session reuses any existing question for that identifier, and only the
+harness that asked receives the answer. If the window ends with no link, every waiting call fails
+with `Janissary is not connected.`. Later calls fail at once with the same text and leave no question
+behind until a link returns. A successful attach ends the outage even when the endpoint is idle, so a
+later loss starts a new 60-second window.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and

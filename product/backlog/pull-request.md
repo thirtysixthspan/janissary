@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - The restored harness's original name is resolved within it
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Route a restored remote harness question to its rebuilt tab". Trace the original launch identity from `src/remote/serve-processes.ts` and the rebuilt label chosen by `startSessionAttach` in `src/sessions/attach.ts`. Pass the remote session's own launch-name mapping from `src/remote/entry-factory.ts` to the relay in `src/remote/mcp-relay.ts` so a call for its original launch label addresses the exact rebuilt tab even when the old name or an alias belongs to another tab. Preserve the existing arbitrary label and alias lookup for other explicitly named tabs and the untouched local HTTP route. Extend the remote harness round-trip or entry tests to cover an occupied old label through an attach, plus an explicit other-tab request. Update the MCP and sessions specs with the restored-tab behavior.
 
 
-* Start and reset the remote MCP grace window on actual link transitions, including outages with no pending calls.
-
-Existing Issue: `FarSideMcp` observes link loss only while calls are pending and clears its expired-detach flag only when a call happens to arrive while the link is back. Severity: 6/10
-
-Existing Risk: 6/10 - A question can wait another minute after a long idle outage, fail immediately during a later outage, or miss a brief recovery that happened between polls.
-
-Proposal Risk: 2/10 - Outage timing follows the session's link state, with one window per outage and one re-send per pending call on recovery.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Track the MCP grace window across idle link transitions". Connect the authoritative attach and detach transitions in `src/remote/serve-detach.ts` and the pre-peer path in `src/remote/serve.ts` to the endpoint lifecycle through `src/remote/serve-provision.ts` and `src/remote/serve-processes.ts`. Have `src/remote/serve-mcp.ts` time the interval from the loss itself, reset on recovery even when no call is pending, and preserve in-flight IDs and cancellation. Add cases in `src/remote/serve-mcp.test.ts` for the first call late in an idle outage, an idle recovery followed by a new drop, and recovery before a polling interval would have elapsed. Keep the existing grace, repeated-loss and resent-ID assertions, and align the MCP and remote-server specs with the timing.
-
-
 * Return the remote MCP port to the shared pool as soon as its listener fails to bind.
 
 Existing Issue: A far-side bind failure caches its error for later spawns but leaves the failed port reserved until the entire remote process shuts down. Severity: 4/10

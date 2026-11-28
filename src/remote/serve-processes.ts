@@ -49,6 +49,7 @@ export class RemoteProcesses {
   private entries = new Map<string, Entry>();
   private zshStartup = new ZshStartupDirectory();
   private mcp?: FarSideMcp;
+  private disconnectedAt?: number;
   private pending = new PendingSpawns();
 
   constructor(
@@ -56,7 +57,6 @@ export class RemoteProcesses {
     private workspaceDir: string,
     private label: string,
     private tokens: ProjectTokens = {},
-    private linked: () => boolean = () => true,
   ) {}
 
   spawn(frame: SpawnFrame): Promise<void> | undefined {
@@ -73,10 +73,7 @@ export class RemoteProcesses {
       this.entries.set(frame.id, { ...this.spawnPty(frame), frame });
       return;
     }
-    const endpoint = this.mcp ??= new FarSideMcp((out) => {
-      if (out.type === 'mcp-cancel' || this.linked()) return this.send(out);
-      return false;
-    }, frame.id, () => this.linked());
+    const endpoint = this.mcp ??= new FarSideMcp(this.send, frame.id, this.disconnectedAt);
     this.pending.begin(frame.id);
     return this.spawnWithMcp(frame, endpoint);
   }
@@ -138,6 +135,11 @@ export class RemoteProcesses {
   resumeDelivered(id: string): void { this.entries.get(id)?.detection?.delivered(); }
 
   mcpResult(frame: McpResultFrame): void { this.mcp?.result(frame); }
+
+  linkChanged(disconnectedAt: number | undefined): void {
+    this.disconnectedAt = disconnectedAt;
+    this.mcp?.linkChanged(disconnectedAt);
+  }
 
   killAll(): void {
     this.pending.cancelAll();

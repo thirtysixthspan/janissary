@@ -9,8 +9,7 @@ import type { ToolExecutor, ToolResult } from '../mcp/tools.js';
 import { makeToken } from '../security.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
-const GRACE_TICK_MS = 1000;
-const GRACE_TICKS = 60;
+const GRACE_MS = 60_000;
 const NOT_CONNECTED = 'Janissary is not connected.';
 
 type ResultFrame = Extract<ClientFrame, { type: 'mcp-result' }>;
@@ -43,17 +42,15 @@ export class FarSideMcp {
   private readonly server: Server;
   private readonly handler: McpHttpHandler;
   private readonly pending = new Map<string, Pending>();
-  private grace?: ReturnType<typeof setInterval>;
-  private watch?: ReturnType<typeof setInterval>;
-  private ticks = 0;
-  private detached = false;
+  private grace?: ReturnType<typeof setTimeout>;
+  private disconnectedAt?: number;
   private failure?: string;
   private readonly ready: Promise<void>;
 
   constructor(
-    private readonly send: (frame: ServerFrame) => boolean | void,
+    private readonly send: (frame: ServerFrame) => void,
     private readonly id: string,
-    private readonly linked: () => boolean = () => true,
+    disconnectedAt?: number,
   ) {
     this.handler = createHandler(this.relay);
     this.server = createMcpServer(this.handler, this.token);
@@ -66,6 +63,7 @@ export class FarSideMcp {
     });
     void this.ready.catch(() => {});
     this.server.listen(this.port, MCP_HOST);
+    this.linkChanged(disconnectedAt);
   }
 
   async launch(id: string = this.id): Promise<McpLaunch> {
@@ -86,11 +84,25 @@ export class FarSideMcp {
     entry.resolve({ text: frame.text, isError: frame.isError });
   }
 
+  linkChanged(disconnectedAt: number | undefined): void {
+    if (this.disconnectedAt === disconnectedAt) return;
+    const previousDrop = this.disconnectedAt;
+    this.disconnectedAt = disconnectedAt;
+    this.stopGrace();
+    const now = performance.now();
+    if (previousDrop !== undefined && now - previousDrop >= GRACE_MS) this.expirePending();
+    if (disconnectedAt === undefined) {
+      for (const entry of this.pending.values()) this.send(entry.frame);
+      return;
+    }
+    const remaining = GRACE_MS - (now - disconnectedAt);
+    if (remaining > 0) this.grace = setTimeout(() => this.expirePending(), remaining);
+  }
+
   dispose(): void {
     this.reservation.release();
     if (this.server.listening) this.server.close();
     this.stopGrace();
-    this.stopWatch();
     void this.handler.close();
   }
 
@@ -103,53 +115,22 @@ export class FarSideMcp {
     entry.reject(new Error(message));
   }
 
-  private resend(): boolean {
-    let delivered = false;
-    for (const entry of this.pending.values()) {
-      if (this.send(entry.frame) !== false) delivered = true;
-    }
-    return delivered;
-  }
-
   private stopGrace(): void {
-    if (this.grace !== undefined) clearInterval(this.grace);
+    clearTimeout(this.grace);
     this.grace = undefined;
-    this.ticks = 0;
   }
 
-  private graceTick(): void {
-    if (this.resend()) { this.detached = false; this.stopGrace(); this.watchLink(); return; }
-    if (++this.ticks >= GRACE_TICKS) {
-      this.stopGrace();
-      this.detached = true;
-      for (const call of this.pending.keys()) this.fail(call, NOT_CONNECTED);
-    }
-  }
-
-  private startGrace(): void {
-    if (this.grace !== undefined) return;
-    this.grace = setInterval(() => this.graceTick(), GRACE_TICK_MS);
-  }
-
-  private stopWatch(): void {
-    if (this.watch !== undefined) clearInterval(this.watch);
-    this.watch = undefined;
-  }
-
-  private watchLink(): void {
-    if (this.watch !== undefined) return;
-    this.watch = setInterval(() => {
-      if (this.pending.size === 0) { this.stopWatch(); return; }
-      if (this.linked()) return;
-      this.stopWatch();
-      this.startGrace();
-      this.graceTick();
-    }, GRACE_TICK_MS);
+  private expirePending(): void {
+    this.stopGrace();
+    for (const call of this.pending.keys()) this.fail(call, NOT_CONNECTED);
   }
 
   private relay: ToolExecutor = (tool, args, signal) => new Promise<ToolResult>((resolve, reject) => {
     if (signal.aborted) { reject(new Error('MCP call cancelled.')); return; }
-    if (this.detached && !this.linked()) { reject(new Error(NOT_CONNECTED)); return; }
+    if (this.disconnectedAt !== undefined && performance.now() - this.disconnectedAt >= GRACE_MS) {
+      reject(new Error(NOT_CONNECTED));
+      return;
+    }
     const call = randomUUID();
     const frame: CallFrame = {
       type: 'mcp-call', call, tool,
@@ -160,17 +141,8 @@ export class FarSideMcp {
       this.pending.delete(call);
       reject(new Error('MCP call cancelled.'));
     };
-    const delivered = this.send(frame);
     this.pending.set(call, { signal, onAbort, resolve, reject, frame });
     signal.addEventListener('abort', onAbort, { once: true });
-    if (delivered === false) { this.stopWatch(); this.startGrace(); return; }
-    if (this.grace !== undefined || this.detached) {
-      this.detached = false;
-      this.stopGrace();
-      for (const [id, entry] of this.pending) {
-        if (id !== call) this.send(entry.frame);
-      }
-    }
-    this.watchLink();
+    if (this.disconnectedAt === undefined) this.send(frame);
   });
 }

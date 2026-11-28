@@ -116,11 +116,11 @@ describe('runRemoteServer', () => {
     expect(server.detach).not.toHaveBeenCalled();
   });
 
-  it('hooks stdio so frames, a closed stdin, and a stream error all reach the server', () => {
+  it('hooks stdio so frames, stream closure, and stream errors all reach the server', () => {
     const { io } = harness();
     runRemoteServer(undefined);
     expect(io.stdinOn.mock.calls.map(([event]) => event)).toEqual(['data', 'end', 'error']);
-    expect(io.stdoutOn.mock.calls.map(([event]) => event)).toEqual(['error']);
+    expect(io.stdoutOn.mock.calls.map(([event]) => event)).toEqual(['error', 'close']);
     expect(io.resume).toHaveBeenCalledOnce();
   });
 

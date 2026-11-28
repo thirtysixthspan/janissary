@@ -41,6 +41,7 @@ export class DetachedPeer {
     // the query to it. Defaulted so every existing caller (including every test) needs no change.
     private getCapture: (id: string) => { text: string; capturedAt: number } | undefined = () => { /* no detection pipeline wired */ },
     private currentBusyStates: () => Iterable<{ id: string; busy: boolean; unread: boolean }> = () => [],
+    private linkChanged: (linked: boolean) => void = () => {},
   ) {
     this.record = peerRecordPath(root, session);
   }
@@ -110,10 +111,12 @@ export class DetachedPeer {
 
   detach(): void {
     if (this.stopped) return;
+    const wasLinked = this.linked();
     this.sink = undefined;
     this.socket?.destroy();
     this.socket = undefined;
     this.expiry ??= setTimeout(this.expired, REMOTE_DETACH_TIMEOUT_MS);
+    if (wasLinked) this.linkChanged(false);
   }
 
   dispose(): void {
@@ -169,6 +172,7 @@ export class DetachedPeer {
       this.pending = [];
       this.pendingBytes = 0;
       for (const busyFrame of busyTransitionFrames(this.currentBusyStates())) socket.write(`${encodeFrame(busyFrame)}\n`);
+      this.linkChanged(true);
       this.receive(buffer.slice(newline + 1));
     });
     socket.on('close', () => {

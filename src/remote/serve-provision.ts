@@ -37,7 +37,6 @@ export type ProvisionContext = {
   // A workspace is already provisioned here, or this server is shutting down.
   idle: () => boolean;
   stopping: () => boolean;
-  linked?: () => boolean;
   provisioned: (workspace: ProvisionedWorkspace) => void;
 };
 
@@ -102,7 +101,7 @@ export async function provisionRemoteWorkspace(
   const runClones = new RemoteRunClones(workspaces, tokens, label);
   context.provisioned({
     dir: result.dir,
-    processes: new RemoteProcesses(emit, result.dir, label, tokens, context.linked),
+    processes: new RemoteProcesses(emit, result.dir, label, tokens),
     files: new RemoteFileNavigators(emit, result.dir, new LocalFileSystemPort(), tokens),
     acp: new RemoteAcp(emit, result.dir, tokens, (selector) => runClones.lookup(selector)),
     runClones,
