@@ -1,13 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { spawn as spawnNativePty } from 'node-pty';
+import * as config from '../config.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
 import { HarnessManager } from './manager.js';
 import { TerminalRuntimeManager } from '../terminal-runtime/manager.js';
 import { parseRemoteAddress } from '../remote/address.js';
+import { PseudoterminalManager } from '../pseudoterminal-manager.js';
+import { RemoteProcesses } from '../remote/serve-processes.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 
 const MCP = { url: 'http://127.0.0.1:51234/mcp', token: 'tok-123' };
+const REMOTE_MCP = { url: 'http://127.0.0.1:51235/mcp', token: 'remote-fixture-token' };
 const terminalRuntimeManagers: TerminalRuntimeManager[] = [];
 type RemoteHandlers = { onReady: (dir: string, notice?: string) => void };
 type SpawnEnvOptions = {
@@ -18,6 +23,14 @@ type SpawnEnvOptions = {
 
 const mocks = vi.hoisted(() => ({ spawnEnvCalls: [] as SpawnEnvOptions[] }));
 
+vi.mock('node-pty', () => ({ spawn: vi.fn() }));
+vi.mock('../pty-reap.js', () => ({ reapProcessGroup: vi.fn() }));
+vi.mock('../remote/serve-mcp.js', () => ({
+  FarSideMcp: class {
+    async launch() { return REMOTE_MCP; }
+    dispose() {}
+  },
+}));
 vi.mock('./scratch-dir.js', () => ({
   claudeTmpDir: vi.fn((cwd: string) => `${cwd}/.janissary/temp`),
   harnessEnv: vi.fn((name: string, cwd: string) => (name === 'claude'
@@ -147,6 +160,92 @@ afterEach(() => {
   terminalRuntimeManagers.length = 0;
   vi.useRealTimers();
   vi.clearAllMocks();
+});
+
+describe('MCP variables in the effective harness PTY environment', () => {
+  const inheritedMcp = {
+    JANISSARY_TAB: 'parent-fixture-tab',
+    JANISSARY_MCP_URL: 'http://127.0.0.1:51236/mcp',
+    JANISSARY_MCP_TOKEN: 'parent-fixture-token',
+  };
+
+  function nativeEnvironment() {
+    const env = vi.mocked(spawnNativePty).mock.calls.at(-1)?.[2]?.env;
+    if (!env) throw new Error('Expected node-pty to receive an environment');
+    return env;
+  }
+
+  function expectMcpEnvironment(launch: typeof MCP | undefined, label: string) {
+    const env = nativeEnvironment();
+    if (!launch) {
+      for (const variable of Object.keys(inheritedMcp)) expect(env).not.toHaveProperty(variable);
+      return;
+    }
+    expect(env).toMatchObject({
+      JANISSARY_TAB: label,
+      JANISSARY_MCP_URL: launch.url,
+      JANISSARY_MCP_TOKEN: launch.token,
+    });
+  }
+
+  beforeEach(() => {
+    for (const [variable, value] of Object.entries(inheritedMcp)) vi.stubEnv(variable, value);
+    vi.stubEnv('JANISSARY_TEST_PRESERVED', 'keep-ambient');
+    const unconfined = { ...config.getConfig(), sandboxWorkspaces: false };
+    vi.spyOn(config, 'getConfig').mockReturnValue(unconfined);
+    vi.mocked(spawnNativePty).mockReturnValue({
+      pid: 1, onData: vi.fn(), onExit: vi.fn(), write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
+    } as unknown as ReturnType<typeof spawnNativePty>);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it.each([false, true])('uses the local launch decision with MCP enabled=%s', (enabled) => {
+    const { managers } = makeManagers();
+    withMcp(managers, MCP);
+    const terminals = new PseudoterminalManager(managers);
+    managers.pty = terminals;
+    try {
+      expect(new HarnessManager(managers).run(`harness claude --no-workspace -b${enabled ? '' : ' --no-mcp'}`)).toBeUndefined();
+      expectMcpEnvironment(enabled ? MCP : undefined, 'claude');
+      expect(nativeEnvironment()).toMatchObject({
+        JANISSARY_TEST_PRESERVED: 'keep-ambient',
+        CLAUDE_CODE_TMPDIR: '/project/.janissary/temp',
+        DISABLE_AUTOUPDATER: '1',
+        JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok',
+        JANISSARY_PLAYWRIGHT: '/pw/index.js',
+      });
+    } finally {
+      terminals.dispose();
+    }
+  });
+
+  it.each([false, true])('uses the far-side launch decision with MCP enabled=%s', async (enabled) => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'remote-claude');
+    try {
+      await processes.spawn({
+        type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude',
+        cols: 80, rows: 24, mcp: enabled,
+        env: {
+          JANISSARY_TAB: 'forwarded-fixture-tab',
+          JANISSARY_MCP_URL: 'http://127.0.0.1:51237/mcp',
+          JANISSARY_MCP_TOKEN: 'forwarded-fixture-token',
+          JANISSARY_TEST_FORWARDED: 'keep-forwarded',
+        },
+      });
+      expectMcpEnvironment(enabled ? REMOTE_MCP : undefined, 'remote-claude');
+      expect(nativeEnvironment()).toMatchObject({
+        JANISSARY_TEST_PRESERVED: 'keep-ambient',
+        JANISSARY_TEST_FORWARDED: 'keep-forwarded',
+        CLAUDE_CODE_TMPDIR: '/remote/workspace/.janissary/temp',
+      });
+    } finally {
+      processes.killAll();
+    }
+  });
 });
 
 describe('HarnessTabSpawn MCP environment', () => {

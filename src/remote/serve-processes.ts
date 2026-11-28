@@ -10,6 +10,7 @@ import { buildHarnessDetection, type HarnessDetection } from './serve-processes-
 import { spawnFrameState } from './process-state.js';
 import { FarSideMcp } from './serve-mcp.js';
 import { PendingSpawns } from './serve-pending-spawns.js';
+import { withoutMcpEnvironment } from '../mcp/environment.js';
 import { spawnPipeProcess } from './serve-pipe-process.js';
 import type { McpLaunch } from '../mcp/manager.js';
 import type { ProjectTokens } from '../project/tokens.js';
@@ -186,10 +187,13 @@ export class RemoteProcesses {
     try {
       // What this host publishes wins over overrides shipped in the frame: a local value naming a
       // port or a token on this machine would point the harness somewhere it must not reach.
+      const incomingEnv = frame.env === undefined || frame.harness === undefined
+        ? frame.env : withoutMcpEnvironment(frame.env);
+      const launch = frame.launch ?? (shell === undefined ? undefined : { shell: 'zsh', args: [] });
       const extraEnv = shell === undefined
-        ? (spawnEnv.env === undefined ? frame.env : { ...frame.env, ...spawnEnv.env })
+        ? (spawnEnv.env === undefined ? incomingEnv : { ...incomingEnv, ...spawnEnv.env })
         : {
-          ...frame.env,
+          ...incomingEnv,
           ...spawnEnv.env,
           ...shellStartupEnvironment(this.zshStartup.path(), shell.nonce, frame.env?.ZDOTDIR ?? process.env.ZDOTDIR),
         };
@@ -211,7 +215,7 @@ export class RemoteProcesses {
         frame.rows,
         { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
         extraEnv,
-        frame.launch ?? (shell === undefined ? undefined : { shell: 'zsh', args: [] }),
+        frame.harness === undefined ? launch : { ...launch, harness: true },
       );
     } catch (error) {
       browser?.close();

@@ -1,8 +1,8 @@
 import { shellQuote } from '../shell/quote.js';
+import { MCP_ENV } from '../mcp/environment.js';
 
 const SERVER_NAME = 'janissary';
-const URL_VAR = 'JANISSARY_MCP_URL';
-const TOKEN_VAR = 'JANISSARY_MCP_TOKEN';
+const { url: URL_VAR, token: TOKEN_VAR } = MCP_ENV;
 const WEEK_MS = 604_800_000;
 const WEEK_SECONDS = 604_800;
 

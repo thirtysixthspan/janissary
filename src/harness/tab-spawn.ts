@@ -113,7 +113,7 @@ export class HarnessTabSpawn {
         ? this.managers.pty.registerRemotePty(label, channel, {
           program, command, harness: name, offline, browser, autoApprove, autoResume, mcp: mcp.enabled,
         }, options.resumePtyId)
-        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
+        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env, { harness: true });
        this.managers.terminalRuntime.install(
          id,
          label,

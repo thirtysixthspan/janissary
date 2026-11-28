@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - A session with an eligible harness keeps its existing shar
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Gate incoming MCP calls on the remote harness launch decision". Use locally known harness spawn state from `src/remote/channel/index.ts` and the recorded attach path in `src/harness/tab-spawn.ts` to authorize MCP dispatch in `src/remote/entry-factory.ts`. Refuse calls before the relay executor is invoked when the session has no eligible harness, without losing cancellation and cleanup for a call already accepted. Preserve explicit cross-tab targeting for an allowed caller and make the existing fake-channel success cases in `src/remote/manager.test.ts` register an eligible harness. Add a defensive test that a channel lacking the grant leaves the question queue untouched, and record the channel policy in the remote and MCP specs.
 
 
-* Clear ambient MCP credentials from a harness launch when MCP injection is disabled.
-
-Existing Issue: A launch with MCP disabled omits the MCP overlay, but the underlying PTY environment still inherits any existing MCP variables from the launching process on the pass-through sandbox path. Severity: 5/10
-
-Existing Risk: 5/10 - An opted-out or offline harness in a nested Janissary process can retain another session's MCP credentials and tab name.
-
-Proposal Risk: 2/10 - Launches gain these variables only through the application's current launch decision, while other PTY environment and explicitly enabled MCP are preserved.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Remove inherited MCP variables from opted-out harness launches". Trace `harnessSpawnEnv` in `src/harness/scratch-dir.ts`, the merge in `src/pty.ts`, and unconfined and confined environment handling in `src/sandbox/index.ts` and `src/sandbox/environment.ts`. Strip inherited MCP URL, token and tab identity at the launch boundary before overlaying an explicitly configured endpoint, including for far-side harnesses. Keep unrelated env keys and the browser and Claude launch overrides. Verify the effective spawn environment with a harmless ambient fixture for local and remote opt-out, then prove an enabled launch still gets the endpoint it was assigned. Update the harness spec.
-
-
 * Bound how long a live remote session remembers completed MCP results.
 
 Existing Issue: The local relay keeps the text and ID of every settled MCP call until the remote channel ends. Severity: 4/10

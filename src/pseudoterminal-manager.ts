@@ -1,4 +1,4 @@
-import { spawnPty, type PtyLaunch, type PtySession } from './pty.js';
+import { spawnPty, type LocalPtyLaunch, type PtySession } from './pty.js';
 import type { SandboxOptions } from './sandbox/index.js';
 import { messageBus } from './bus.js';
 import { getProjectTokens } from './project/tokens.js';
@@ -27,7 +27,7 @@ export class PseudoterminalManager {
   // tab whose body is a shell rather than a program run through one.
   spawn(
     label: string, program: string, command: string, cwd: string,
-    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv, launch?: PtyLaunch,
+    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv, launch?: LocalPtyLaunch,
   ): string {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),

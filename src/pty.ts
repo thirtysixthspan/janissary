@@ -2,6 +2,7 @@ import * as pty from 'node-pty';
 import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
 import { shellCommandArgs } from './shell/startup.js';
 import { reapProcessGroup } from './pty-reap.js';
+import { withoutMcpEnvironment } from './mcp/environment.js';
 
 // A live pseudo-terminal backing an inline xterm.js card (an interactive program like vim/less
 // or an AI harness like claude/codex). Bytes flow out through the manager's `onData`; keystrokes
@@ -29,6 +30,8 @@ export type PtyLaunch = {
   args?: string[];
 };
 
+export type LocalPtyLaunch = PtyLaunch & { harness?: true };
+
 let counter = 0;
 
 /**
@@ -51,12 +54,13 @@ export function spawnPty(
   rows = 24,
   sandbox?: SandboxOptions,
   extraEnv?: NodeJS.ProcessEnv,
-  launch?: PtyLaunch,
+  launch?: LocalPtyLaunch,
 ): PtySession {
   const id = `pty${++counter}`;
   const shell = launch?.shell || process.env.SHELL || 'bash';
+  const inheritedEnv = launch?.harness ? withoutMcpEnvironment(process.env) : undefined;
   const { command: file, args, env } = sandboxSpawn(
-    { ...sandbox, selfBinaryHint: program }, shell, launch?.args ?? shellCommandArgs(shell, command),
+    { ...sandbox, selfBinaryHint: program }, shell, launch?.args ?? shellCommandArgs(shell, command), inheritedEnv,
   );
   const proc = pty.spawn(file, args, {
     name: 'xterm-256color',

@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { startLazyE2EBrowserServer, type E2EBrowserHandle } from '../browser/e2e-server.js';
+import { MCP_ENV } from '../mcp/environment.js';
 
 // Experimental: the claude CLI's own scratch/cwd-tracking files default to /tmp. Pointing
 // CLAUDE_CODE_TMPDIR at a project-local directory instead means a sandboxed harness tab doesn't
@@ -49,9 +50,9 @@ export function harnessSpawnEnv(
 ): HarnessSpawnEnv {
   const base = harnessEnv(options.name, options.cwd);
   const mcp = options.mcp === undefined ? undefined : {
-    JANISSARY_TAB: options.label,
-    JANISSARY_MCP_URL: options.mcp.url,
-    JANISSARY_MCP_TOKEN: options.mcp.token,
+    [MCP_ENV.tab]: options.label,
+    [MCP_ENV.url]: options.mcp.url,
+    [MCP_ENV.token]: options.mcp.token,
     ...(options.name === 'claude' && {
       CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS: '0',
       CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT: '0',

@@ -438,7 +438,7 @@ A harness launched with MCP config gets the local server's connection details on
 
 Claude needs two more overrides alongside them. `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS=0` keeps a waiting call in the foreground, and `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=0` stops its five-minute idle abort. They are launch settings only, so the server sends no heartbeat traffic just to keep a question open.
 
-MCP is off when the launch carries `--no-mcp` or `--offline`, or when the local server is not running. Then the launch has neither the fragment nor any injected variable. A remote launch has no local MCP variables either: the far host supplies its own URL and token, the way it supplies its own browser endpoint. One decision at launch drives both the fragment and the environment, so they cannot disagree. The opt-out is available from both launch surfaces: the `harness` command and the **MCP server** checkbox in the New harness dialog.
+MCP is off when the launch carries `--no-mcp` or `--offline`, or when the local server is not running. Then the launch has neither the fragment nor any MCP environment variable. Each local or remote harness launch drops inherited values for `JANISSARY_TAB`, `JANISSARY_MCP_URL` and `JANISSARY_MCP_TOKEN`. The far host also drops forwarded values for those three variables. When MCP is enabled, the host running the harness supplies its own endpoint, token, and tab name. One decision at launch drives both the fragment and the environment, so they cannot disagree. The opt-out is available from both launch surfaces: the `harness` command and the **MCP server** checkbox in the New harness dialog.
 
 ### Launch prompt (`with <prompt>`)
 
