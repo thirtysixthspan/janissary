@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the MCP server spec's statement that a state file without a port is invalid, which the token-only state the server now writes contradicts.
-
-Existing Issue: The Server section of the MCP server spec says a state file that "holds no valid token and port" fails with `invalid MCP state file <path>; ...`, yet the server writes a token-only file on a first start under `mcpPort` and reads such a file back as valid saved state, as the paragraph just above it says. Severity: 2/10
-
-Existing Risk: 3/10 - A later change that follows the failure paragraph could tighten the decoder to require a port, which would turn every project first started under an `mcpPort` override into a permanent MCP start failure, or a user could be told to delete a healthy file.
-
-Proposal Risk: 1/10 - Only spec wording changes; wording that is still wrong would show up as a mismatch against the token-only cases the manager tests already pin.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the MCP server spec's invalid-state-file wording so a token-only file is valid". In the Server section of `product/specs/mcp-server.md`, the broken-state-file paragraph gives the `invalid MCP state file <path>; delete it and restart Janissary to replace it` reason for "a file that isn't valid JSON, or holds no valid token and port". `decodeState` in `src/mcp/manager.ts` refuses a file only when it is not a JSON object, has no non-empty string `token`, or has a `port` key that is not a whole number from 1 to 65535; a missing `port` is valid and leads to a fresh reachable draw. Reword that clause to state those three cases and that a token-only file is valid saved state, leaving both reason texts and the rest of the paragraph unchanged. No code or test changes: "binds mcpPort over a token-only state file without changing it" and "names the state file and the remedy when it is not valid JSON" in `src/mcp/manager.test.ts` already pin both sides of the rule. Verify by reading the paragraph against `decodeState`.
-
-
 * Correct the MCP server spec's claim that a local call with a non-string option gets the `options must be a list of strings.` tool error.
 
 Existing Issue: The `question` tool section of the MCP server spec lists `options must be a list of strings.` among the exact texts a call receives, but on the local HTTP path the SDK checks the zod input schema before the tool callback runs and answers a non-string option with its own `Input validation error: Invalid arguments for tool question: ...` text, so only relayed remote calls ever get the listed sentence. Severity: 3/10
