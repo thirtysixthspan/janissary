@@ -620,13 +620,16 @@ describe('RemoteServer', () => {
         spawn: (frame: Extract<ClientFrame, { type: 'spawn' }>) => Promise<void>;
       }).spawn({ ...SPAWN_FRAME, id, mcp: true });
       await spawnFrame('r1');
-      await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'output' && frame.id === 'r1' && frame.data.includes('MCP endpoint could not bind'))).toBe(true));
       await spawnFrame('r2');
 
-      expect(frames).toContainEqual({
-        type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind'),
-      });
-      expect(frames).toContainEqual({ type: 'exit', id: 'r2', exitCode: 1 });
+      const refusals = frames.filter((frame) => (frame.type === 'output' && frame.data.includes('MCP endpoint could not bind'))
+        || (frame.type === 'exit' && (frame.id === 'r1' || frame.id === 'r2')));
+      expect(refusals).toEqual([
+        { type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') },
+        { type: 'exit', id: 'r1', exitCode: 1 },
+        { type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind') },
+        { type: 'exit', id: 'r2', exitCode: 1 },
+      ]);
       expect(exit).not.toHaveBeenCalled();
     } finally {
       cryptoMock.port = undefined;

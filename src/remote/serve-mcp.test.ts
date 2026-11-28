@@ -220,9 +220,9 @@ describe('the far-side MCP endpoint', () => {
     const mcp = new FarSideMcp(collisionSend, 'r1');
     await expect(mcp.launch()).rejects.toThrow(/MCP endpoint could not bind/);
 
-    expect(collisionSend).toHaveBeenCalledWith({
-      type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE'),
-    });
+    expect(collisionSend.mock.calls).toEqual([
+      [{ type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') }],
+    ]);
 
     mcp.dispose();
     const after = new FarSideMcp(vi.fn(), 'after');
@@ -246,14 +246,12 @@ describe('the far-side MCP endpoint', () => {
     const blocker = actual.createServer();
     await new Promise<void>((resolve) => blocker.listen(port, '127.0.0.1', () => resolve()));
 
-    const { promise: reported, resolve: report } = Promise.withResolvers<void>();
     const frames: ServerFrame[] = [];
-    const collisionSend = vi.fn((frame: ServerFrame) => { frames.push(frame); report(); });
+    const collisionSend = vi.fn((frame: ServerFrame) => { frames.push(frame); });
     httpMock.createServer.mockImplementationOnce((handler: Http.RequestListener) => actual.createServer(handler));
 
     const mcp = new FarSideMcp(collisionSend, 'r1');
-    await reported;
-
+    await expect(mcp.launch('r1')).rejects.toThrow(/MCP endpoint could not bind/);
     await expect(mcp.launch('r2')).rejects.toThrow(/MCP endpoint could not bind/);
     expect(frames).toEqual([
       { type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') },

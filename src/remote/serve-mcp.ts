@@ -71,7 +71,6 @@ export class FarSideMcp {
     this.ready = new Promise<void>((resolve, reject) => {
       this.server.on('error', (error: Error) => {
         this.failure = `MCP endpoint could not bind to ${LOOPBACK}:${this.port}: ${error.message}`;
-        this.send({ type: 'output', id: this.id, data: `${this.failure}\n` });
         reject(new Error(this.failure));
       });
       this.server.on('listening', () => resolve());

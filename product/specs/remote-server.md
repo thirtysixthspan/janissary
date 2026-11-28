@@ -959,7 +959,8 @@ reason is reported back over the session, the colliding harness is refused with 
 than given an unbound address, and the remote session and its other tabs keep running. A failed
 endpoint does not leave its port claimed. Every harness that later asks for MCP on that session
 receives the stored reason in its own tab before the same exit-code-1 refusal, so none closes without
-being told why; the first, colliding harness's report is unchanged.
+being told why. Each refused harness, the colliding one included, is told exactly once: the reason
+reaches a tab only when that harness's launch is refused, never also when the bind itself fails.
 
 A harness waiting for that bind already holds its process id. A second launch with the same id is
 ignored, as it is for a running process. Closing the tab, or ending the session, before the bind

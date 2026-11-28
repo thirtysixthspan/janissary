@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Report a far-side MCP bind failure once to the harness that collided, not twice.
-
-Existing Issue: `FarSideMcp`'s `error` listener sends the bind-failure `output` frame to its constructing harness's id, and `launch(frame.id)` then sends the same stored reason to that same id again, so the first colliding harness's tab shows `MCP endpoint could not bind ...` twice. Severity: 2/10
-
-Existing Risk: 2/10 - The duplicate line is confusing but harmless, and it contradicts the spec's statement that the first harness's report is unchanged while later harnesses receive the stored reason.
-
-Proposal Risk: 1/10 - Each harness gets exactly one line, so the only remaining risk is a later caller bypassing `launch`, which a count assertion would catch.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "send the far-side MCP bind failure once per harness". In `src/remote/serve-mcp.ts`, stop the constructor's `error` listener from sending an `output` frame and let `launch(id)` be the only sender of the stored reason, or track which ids have been told and skip a repeat; either way every refused harness still receives the reason before `RemoteServer.spawn` emits exit code 1. Tighten "reports a real port collision without crashing the session" in `src/remote/serve-mcp.test.ts` and "reports a failed shared MCP endpoint to a later harness before exiting it" in `src/remote/serve.test.ts` to assert exactly one `output` frame for `r1` and one for `r2`.
-
-
 * Correct the description's How to verify step that asks the reader to stop the local MCP server.
 
 Existing Issue: How to verify step 9 says "stop the local MCP server before a third launch", but nothing in the app stops a running server (the `mcp` command only reports status), and the test it cites for that case covers a remote launch rather than the local launch the step describes. Severity: 2/10
