@@ -995,7 +995,7 @@ describe('joined plugin tab remote target', () => {
 
 type McpHarnessLaunch = Pick<Extract<ClientFrame, { type: 'spawn' }>, 'harness' | 'mcp' | 'offline'>;
 
-function mcpHarness(launch?: McpHarnessLaunch) {
+function mcpHarness(launch?: McpHarnessLaunch, session?: string) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const write = vi.fn();
   const tabs = [{
@@ -1019,7 +1019,7 @@ function mcpHarness(launch?: McpHarnessLaunch) {
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const channel = remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
-  transport?.onData(`${encodeHandshake()}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  transport?.onData(`${encodeHandshake(session)}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   if (launch) {
     channel.send({
       type: 'spawn', id: 'rpty1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
@@ -1032,6 +1032,7 @@ function mcpHarness(launch?: McpHarnessLaunch) {
     killHarness: () => channel.send({ type: 'kill', id: 'rpty1' }),
     send: (frame: ServerFrame) => transport?.onData(`${encodeFrame(frame)}\n`),
     sent: () => write.mock.calls.map(([data]: [string]) => String(data)).join(''),
+    transport: () => transport,
     dispose: () => remote.dispose(),
   };
 }
@@ -1055,6 +1056,41 @@ describe('RemoteManager mcp-call dispatch', () => {
     expect(h.sent()).toContain('"call":"call-9"');
     expect(h.sent()).toContain(Buffer.from('4242').toString('base64'));
     h.dispose();
+  });
+
+  it.each([
+    { peer: 'a peer reporting its pending ids', mcpPending: ['call-9'] },
+    { peer: 'an earlier version-49 peer', mcpPending: undefined },
+  ])('replays a settled question after a timed-out attach with $peer', async ({ mcpPending }) => {
+    vi.useFakeTimers();
+    const h = mcpHarness({ harness: 'claude', mcp: true }, RECORDED_SESSION);
+    try {
+      const call: ServerFrame = {
+        type: 'mcp-call', call: 'call-9', tool: 'question',
+        args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Port?' }),
+      };
+      const register = vi.spyOn(h.questions, 'register');
+      h.send(call);
+      const pending = h.questions.pendingFor('asker');
+      if (!pending) throw new Error('expected a pending question');
+      h.transport()?.onExit();
+      expect(h.questions.answer('asker', pending.id, '4242')).toBe(true);
+      await vi.advanceTimersByTimeAsync(15_750);
+      expect(h.sent()).not.toContain('"type":"mcp-result"');
+
+      h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
+      h.send({ type: 'attach-result', accepted: true, ...(mcpPending && { mcpPending }) });
+      h.send(call);
+
+      expect(h.sent()).toContain(encodeFrame({
+        type: 'mcp-result', call: 'call-9', text: '4242', isError: false,
+      }));
+      expect(register).toHaveBeenCalledOnce();
+      expect(h.questions.pendingFor('asker')).toBeUndefined();
+    } finally {
+      h.dispose();
+      vi.useRealTimers();
+    }
   });
 
   it('withdraws a pending question on a cancel frame and shows the next queued one', async () => {

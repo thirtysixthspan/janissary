@@ -137,6 +137,8 @@ export class RemoteProcesses {
 
   mcpResult(frame: McpResultFrame): void { this.mcp?.result(frame); }
 
+  mcpPendingCalls(): string[] | undefined { return this.mcp?.replayableCalls(); }
+
   linkChanged(disconnectedAt: number | undefined): void {
     this.disconnectedAt = disconnectedAt;
     this.mcp?.linkChanged(disconnectedAt);

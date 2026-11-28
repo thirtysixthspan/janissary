@@ -42,6 +42,7 @@ export class DetachedPeer {
     private getCapture: (id: string) => { text: string; capturedAt: number } | undefined = () => { /* no detection pipeline wired */ },
     private currentBusyStates: () => Iterable<{ id: string; busy: boolean; unread: boolean }> = () => [],
     private linkChanged: (linked: boolean) => void = () => {},
+    private mcpPendingCalls?: () => string[] | undefined,
   ) {
     this.record = peerRecordPath(root, session);
   }
@@ -162,7 +163,12 @@ export class DetachedPeer {
       clearTimeout(this.expiry);
       this.expiry = undefined;
       this.sink = (chunk) => { socket.write(chunk); };
-      this.emit({ type: 'attach-result', accepted: true, ...((this.dropped || this.history.truncated) && { truncated: true }) });
+      const mcpPending = this.mcpPendingCalls?.();
+      this.emit({
+        type: 'attach-result', accepted: true,
+        ...((this.dropped || this.history.truncated) && { truncated: true }),
+        ...(mcpPending !== undefined && { mcpPending }),
+      });
       this.dropped = false;
       const history = this.history.frames(classified.restore === true);
       for (const replay of history) socket.write(`${encodeFrame(replay)}\n`);

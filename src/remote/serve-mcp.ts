@@ -83,10 +83,16 @@ export class FarSideMcp {
 
   result(frame: ResultFrame): void {
     const entry = this.pending.get(frame.call);
-    if (!entry) return;
-    this.pending.delete(frame.call);
-    entry.signal.removeEventListener('abort', entry.onAbort);
-    entry.resolve({ text: frame.text, isError: frame.isError });
+    if (entry) {
+      this.pending.delete(frame.call);
+      entry.signal.removeEventListener('abort', entry.onAbort);
+      entry.resolve({ text: frame.text, isError: frame.isError });
+    }
+    this.send({ type: 'mcp-cancel', call: frame.call, received: true });
+  }
+
+  replayableCalls(): string[] {
+    return this.graceExpired() ? [] : [...this.pending.keys()];
   }
 
   linkChanged(disconnectedAt: number | undefined): void {
@@ -136,9 +142,13 @@ export class FarSideMcp {
     for (const call of this.pending.keys()) this.fail(call, NOT_CONNECTED);
   }
 
+  private graceExpired(): boolean {
+    return this.disconnectedAt !== undefined && performance.now() - this.disconnectedAt >= GRACE_MS;
+  }
+
   private relay: ToolExecutor = (tool, args, signal) => new Promise<ToolResult>((resolve, reject) => {
     if (signal.aborted) { reject(new Error('MCP call cancelled.')); return; }
-    if (this.disconnectedAt !== undefined && performance.now() - this.disconnectedAt >= GRACE_MS) {
+    if (this.graceExpired()) {
       reject(new Error(NOT_CONNECTED));
       return;
     }

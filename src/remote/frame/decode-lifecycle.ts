@@ -55,6 +55,20 @@ export function decodeAttach(record: Record<string, unknown>): DecodeResult {
   };
 }
 
+export function decodeAttachResult(record: Record<string, unknown>): DecodeResult {
+  const { accepted, truncated, mcpPending } = record;
+  if (typeof accepted !== 'boolean') return malformed('attach-result');
+  if (truncated !== undefined && typeof truncated !== 'boolean') return malformed('attach-result');
+  if (mcpPending !== undefined && (!Array.isArray(mcpPending) || !mcpPending.every(nonEmptyString))) {
+    return malformed('attach-result');
+  }
+  return {
+    type: 'attach-result', accepted,
+    ...(truncated !== undefined && { truncated }),
+    ...(mcpPending !== undefined && { mcpPending }),
+  };
+}
+
 export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
   const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume, mcp, shell, cwd } = record;
   const launch = decodeLaunch(record.launch);

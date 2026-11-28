@@ -7,8 +7,6 @@ import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 type McpCallFrame = Extract<ServerFrame, { type: 'mcp-call' }>;
 type McpCancelFrame = Extract<ServerFrame, { type: 'mcp-cancel' }>;
 
-type Pending = { result?: ToolResult; controller?: AbortController };
-
 function decodeCall(frame: McpCallFrame): QuestionArgs | { error: string } {
   const malformed = { error: `Malformed MCP arguments: ${frame.args}` };
   let args: unknown;
@@ -24,7 +22,8 @@ function decodeCall(frame: McpCallFrame): QuestionArgs | { error: string } {
 
 export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) => void, restoredTab?: RestoredMcpTab) {
   const execute = createLocalExecutor(managers, restoredTab);
-  const pending = new Map<string, Pending>();
+  const pending = new Map<string, AbortController>();
+  const settled = new Map<string, ToolResult>();
 
   const answer = (call: string, result: ToolResult): void => {
     send({ type: 'mcp-result', call, text: result.text, isError: result.isError });
@@ -32,23 +31,20 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
 
   return {
     handle(frame: McpCallFrame): void {
-      const existing = pending.get(frame.call);
-      if (existing) {
-        if (existing.result !== undefined) answer(frame.call, existing.result);
-        return;
-      }
+      const result = settled.get(frame.call);
+      if (result) { answer(frame.call, result); return; }
+      if (pending.has(frame.call)) return;
       const args = decodeCall(frame);
       if ('error' in args) {
         answer(frame.call, { text: args.error, isError: true });
         return;
       }
       const controller = new AbortController();
-      const entry: Pending = { controller };
-      pending.set(frame.call, entry);
+      pending.set(frame.call, controller);
       const settle = (result: ToolResult): void => {
-        if (pending.get(frame.call) !== entry) return;
-        entry.controller = undefined;
-        entry.result = result;
+        if (pending.get(frame.call) !== controller) return;
+        pending.delete(frame.call);
+        settled.set(frame.call, result);
         answer(frame.call, result);
       };
       void execute(frame.tool, args, controller.signal).then(settle, (error: unknown) => {
@@ -56,12 +52,20 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
       });
     },
     cancel(frame: McpCancelFrame): void {
-      pending.get(frame.call)?.controller?.abort();
+      if (frame.received) settled.delete(frame.call);
+      else pending.get(frame.call)?.abort();
+    },
+    reconcile(replayable: readonly string[]): void {
+      const candidates = new Set(replayable);
+      for (const call of settled.keys()) {
+        if (!candidates.has(call)) settled.delete(call);
+      }
     },
     clear(): void {
-      const entries = [...pending.values()].toReversed();
+      const controllers = [...pending.values()].toReversed();
       pending.clear();
-      for (const entry of entries) entry.controller?.abort(MCP_CHANNEL_CLOSED);
+      settled.clear();
+      for (const controller of controllers) controller.abort(MCP_CHANNEL_CLOSED);
     },
   };
 }

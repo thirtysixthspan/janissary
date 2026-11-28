@@ -1265,6 +1265,29 @@ describe('detached peer rendezvous', () => {
     expect(peer.linked()).toBe(false);
   });
 
+  it('delivers the pending MCP ids on the accepted attach before replaying frames', async () => {
+    const pendingCalls = () => ['call-9'];
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn(),
+      undefined, undefined, undefined, pendingCalls);
+    try {
+      await peer.start(vi.fn());
+      peer.detach();
+      peer.emit({ type: 'transcript', blocks: ['Buffered output'] });
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+          { type: 'attach-result', accepted: true, mcpPending: ['call-9'] },
+          { type: 'transcript', blocks: ['Buffered output'] },
+        ]));
+      } finally {
+        socket.destroy();
+      }
+    } finally {
+      peer.dispose();
+    }
+  });
+
   it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through terminal hangup and a fresh remote-serve process', async (mode) => {
     const script = `
       import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};

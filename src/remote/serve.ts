@@ -208,7 +208,7 @@ export class RemoteServer {
     if (!this.listening) return true;
     this.peer = await startPeer(root, this.sessionId, (data) => this.receive(data), () => this.shutdown(0),
       (id) => this.provisioned?.processes.latestCapture(id), () => this.provisioned?.processes.busyStates() ?? [],
-      (linked) => this.linkChanged(linked));
+      (linked) => this.linkChanged(linked), () => this.provisioned?.processes.mcpPendingCalls());
     if (!this.peer) { this.shutdown(1); return false; }
     this.emit = (frame) => this.peer?.emit(frame);
     if (this.disconnectedAt !== undefined) this.peer.detach();

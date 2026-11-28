@@ -205,7 +205,7 @@ export type ServerFrame =
   // gone, not that this attempt failed — which is the distinction `src/remote/attach.ts` turns
   // into an ended tab instead of another round of backoff. `truncated` says the peer's replay buffer
   // overflowed while it waited, so what follows is missing its oldest output.
-  | { type: 'attach-result'; accepted: boolean; truncated?: boolean }
+  | { type: 'attach-result'; accepted: boolean; truncated?: boolean; mcpPending?: string[] }
   // The answer to `session-state`: one entry per process still running in the workspace. An empty
   // list is a real answer and not a failure — it says the peer is holding a workspace with nothing
   // in it, which is the one case the local side ends rather than attaches.
@@ -311,7 +311,7 @@ export type ServerFrame =
   // side sends no `acp-tool-step` for it.
   | { type: 'acp-tool-request'; id: string; request: number; command: string }
   | { type: 'mcp-call'; call: string; tool: string; args: string }
-  | { type: 'mcp-cancel'; call: string }
+  | { type: 'mcp-cancel'; call: string; received?: true }
   // A step the far side completed on its own: a workspace-tool run (`workspace: true`) or a gate
   // refusal (`workspace: false`). `refused` is present only as `'disabled'`, for a disabled or
   // agent-off refusal. `command` and `result` are base64-encoded free text, and an empty `result` is

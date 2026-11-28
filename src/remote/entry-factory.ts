@@ -113,6 +113,7 @@ export function createRemoteEntry({
       onFrame: (frame) => {
         switch (frame.type) {
         case 'attach-result': {
+          if (frame.accepted && frame.mcpPending !== undefined) mcpRelay.reconcile(frame.mcpPending);
           handleAttachResult(managers, entry, frame, label, resume, state,
             () => reportTruncatedReplay(managers, entry));
           break;
@@ -194,7 +195,7 @@ export function createRemoteEntry({
     channel, transcript, address, labels: new Set([label]), runRefs: new Set(), handlers: new Map([[label, handlers]]),
     ready, resolveReady, rejectReady, settled: false, closed: false,
     launchLabel: label, workspaceLabel: resume?.workspaceLabel ?? label,
-    attach: new Attach(connect, () => channel.close()),
+    attach: new Attach(connect, () => deferred.session?.kill()),
   };
   connect();
   return entry;

@@ -70,6 +70,76 @@ describe('createMcpRelay', () => {
     });
   });
 
+  it('releases an acknowledged result without cancelling a still-pending question', async () => {
+    const { call, answer, relay, register, questions, send } = fixture();
+    call('done');
+    expect(answer('Original answer')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledOnce());
+    call('pending', 'Still waiting?');
+    const active = questions.pendingFor('asker');
+
+    relay.cancel({ type: 'mcp-cancel', call: 'pending', received: true });
+    relay.cancel({ type: 'mcp-cancel', call: 'done', received: true });
+    send.mockClear();
+    call('done', 'New question?');
+
+    expect(questions.pendingFor('asker')).toEqual(active);
+    expect(register).toHaveBeenCalledTimes(3);
+    expect(send).not.toHaveBeenCalled();
+    expect(answer('Finally')).toBe(true);
+    expect(questions.pendingFor('asker')?.question).toBe('New question?');
+  });
+
+  it('retains a long-running answer over repeated replay snapshots and retires an omitted result', async () => {
+    vi.useFakeTimers();
+    const { call, answer, relay, register, questions, send, channel } = fixture();
+    try {
+      call('abandoned', 'First?');
+      expect(answer('Old answer')).toBe(true);
+      await vi.advanceTimersByTimeAsync(0);
+      call('kept', 'Long-running question?');
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(answer('Retained answer')).toBe(true);
+      await vi.advanceTimersByTimeAsync(0);
+      call('active', 'Unanswered?');
+      send.mockClear();
+
+      for (let reconnects = 0; reconnects < 2; reconnects++) {
+        await vi.advanceTimersByTimeAsync(59_999);
+        relay.reconcile(['kept']);
+        call('kept');
+      }
+
+      expect(register).toHaveBeenCalledTimes(3);
+      expect(questions.pendingFor('asker')?.question).toBe('Unanswered?');
+      expect(send.mock.calls).toEqual(Array.from({ length: 2 }, () => [{
+        type: 'mcp-result', call: 'kept', text: 'Retained answer', isError: false,
+      }]));
+
+      send.mockClear();
+      call('abandoned', 'Fresh question?');
+      expect(register).toHaveBeenCalledTimes(4);
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      channel.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears a completed replay result on final channel close', async () => {
+    const { call, answer, send, channel, questions } = fixture();
+    call('call-1');
+    expect(answer('Original answer')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledOnce());
+
+    channel.close();
+    send.mockClear();
+    call('call-1', 'Fresh question?');
+
+    expect(questions.pendingFor('asker')?.question).toBe('Fresh question?');
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('answers malformed arguments as an error and lets a later valid call with the same id register', async () => {
     const { relay, call, register, send, answer } = fixture();
 

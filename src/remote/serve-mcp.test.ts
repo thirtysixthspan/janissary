@@ -112,10 +112,12 @@ describe('the far-side MCP endpoint', () => {
     if (wire.type !== 'mcp-call') throw new Error('expected an mcp-call');
     expect(JSON.parse(wire.args)).toEqual(ARGS);
     expect(httpMock.server.listen).toHaveBeenCalledWith(expect.any(Number), '127.0.0.1');
+    expect(processes.mcpPendingCalls()).toEqual([frame.call]);
 
     processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'yes', isError: false });
     await expect(answer).resolves.toEqual({ text: 'yes', isError: false });
-    expect(cancelFrames()).toEqual([]);
+    expect(processes.mcpPendingCalls()).toEqual([]);
+    expect(cancelFrames()).toEqual([{ type: 'mcp-cancel', call: frame.call, received: true }]);
   });
 
   it('withholds the MCP address until the endpoint is listening', async () => {
@@ -160,7 +162,7 @@ describe('the far-side MCP endpoint', () => {
     expect(processes.states()).toHaveLength(1);
   });
 
-  it('drops an aborted call and sends nothing further for it', async () => {
+  it('acknowledges a late result without restoring an aborted call', async () => {
     const processes = spawnHarness(true);
     const executor = mcpMock.executor;
     if (executor === undefined) throw new Error('expected a relaying executor');
@@ -174,6 +176,11 @@ describe('the far-side MCP endpoint', () => {
     await expect(answer).rejects.toThrow('MCP call cancelled.');
     processes.mcpResult({ type: 'mcp-result', call: frame.call, text: 'late', isError: false });
     expect(send.mock.calls.filter(([sent]) => sent.type === 'mcp-call')).toHaveLength(1);
+    expect(processes.mcpPendingCalls()).toEqual([]);
+    expect(cancelFrames()).toEqual([
+      { type: 'mcp-cancel', call: frame.call },
+      { type: 'mcp-cancel', call: frame.call, received: true },
+    ]);
   });
 
   it('sends a cancel frame for a call the caller aborts', async () => {
@@ -505,10 +512,13 @@ describe('the far-side MCP endpoint', () => {
 
     processes.linkChanged(performance.now());
     void answer.catch(() => {});
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(processes.mcpPendingCalls()).toEqual([original.call]);
+    await vi.advanceTimersByTimeAsync(1);
 
     await expect(answer).rejects.toThrow('Janissary is not connected.');
     expect(relayedCalls()).toEqual([original]);
+    expect(processes.mcpPendingCalls()).toEqual([]);
   });
 
   it('re-sends an in-flight call once with its original id when the link returns inside the window', async () => {

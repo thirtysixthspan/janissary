@@ -151,6 +151,26 @@ describe('mcp call and result codec', () => {
     expect(decodeFrame(encoded)).toEqual(frame);
   });
 
+  it('round-trips a received-result acknowledgement on the existing cancellation frame', () => {
+    const frame: RemoteFrame = { type: 'mcp-cancel', call, received: true };
+    expect(JSON.parse(encodeFrame(frame))).toEqual(frame);
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips an empty attach snapshot distinctly from one without metadata', () => {
+    expect(roundTrip({ type: 'attach-result', accepted: true, mcpPending: [] }))
+      .toEqual({ type: 'attach-result', accepted: true, mcpPending: [] });
+    expect(roundTrip({ type: 'attach-result', accepted: true }))
+      .toEqual({ type: 'attach-result', accepted: true });
+  });
+
+  it.each([{ mcpPending: 'call-1' }, { mcpPending: [''] }, { mcpPending: [5] }])(
+    'refuses malformed attach pending metadata $mcpPending', ({ mcpPending }) => {
+      expect(decodeFrame(JSON.stringify({ type: 'attach-result', accepted: true, mcpPending })))
+        .toEqual({ error: 'Malformed remote frame "attach-result".' });
+    },
+  );
+
   it.each([
     ['a call without a correlation id', { type: 'mcp-call', tool: 'file read', args }],
     ['a call without a tool name', { type: 'mcp-call', call, args }],
@@ -161,6 +181,7 @@ describe('mcp call and result codec', () => {
     ['a result with a non-boolean error flag', { type: 'mcp-result', call, text, isError: 'yes' }],
     ['a cancel without a correlation id', { type: 'mcp-cancel' }],
     ['a cancel with an empty correlation id', { type: 'mcp-cancel', call: '' }],
+    ['a cancel with a malformed received flag', { type: 'mcp-cancel', call, received: false }],
   ])('refuses %s', (_label, record) => {
     expect(decodeFrame(JSON.stringify(record))).toEqual({
       error: expect.stringContaining(`Malformed remote frame "${String(record.type)}"`),
@@ -1138,7 +1159,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'mcp-result': { type: 'mcp-result', call: 'call-1', text: 'first\nsecond', isError: true },
   'acp-close': { type: 'acp-close', id: 'racp1' },
   'acp-cancel': { type: 'acp-cancel', id: 'racp1' },
-  'attach-result': { type: 'attach-result', accepted: true, truncated: true },
+  'attach-result': { type: 'attach-result', accepted: true, truncated: true, mcpPending: ['call-1'] },
   'session-state-result': {
     type: 'session-state-result',
     processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, mcp: true, agentName: 'bekir' }],
@@ -1180,7 +1201,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'acp-turn': { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'first\nsecond' },
   'acp-tool-request': { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'file read\nnotes.txt' },
   'mcp-call': { type: 'mcp-call', call: 'call-1', tool: 'file read', args: '{"path":"notes.txt"}' },
-  'mcp-cancel': { type: 'mcp-cancel', call: 'call-1' },
+  'mcp-cancel': { type: 'mcp-cancel', call: 'call-1', received: true },
   'acp-tool-step': {
     type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false, refused: 'disabled',
   },

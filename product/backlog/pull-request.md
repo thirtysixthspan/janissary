@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Bound how long a live remote session remembers completed MCP results.
-
-Existing Issue: The local relay keeps the text and ID of every settled MCP call until the remote channel ends. Severity: 4/10
-
-Existing Risk: 4/10 - A long-lived session accumulates obsolete answers in memory even after the far side has no reason to re-send their calls.
-
-Proposal Risk: 2/10 - In-flight questions and still-replayable results survive a reconnect, while expired results are reclaimed without retaining call text indefinitely.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Retire completed remote MCP results after their replay lifetime". Split in-flight state from settled replay state in `src/remote/mcp-relay.ts` and use an expiry or acknowledgement that preserves re-sends within the `src/remote/serve-mcp.ts` grace contract. Keep cleanup owned by the channel and avoid expiring an active question or replaying a result as a new question within the supported window. Extend relay tests for short in-window replays, eviction beyond the replay lifetime, and final-close cleanup. Document the supported replay lifetime in the remote-server spec.
-
-
 * Correct the pull request description's stale and missing source anchors.
 
 Existing Issue: The shared-listener refactor moved the cited manager and far-side code, and the description's verification actions have no source or test anchors of their own. Severity: 3/10

@@ -20,7 +20,7 @@ import {
 } from './decode-acp.js';
 import { decodeProvision } from './decode-provision.js';
 import {
-  decodeAddressedData, decodeAttach, decodeBrowserExited, decodeBrowserStarted, decodeExit, decodeKill, decodeNameInUse,
+  decodeAddressedData, decodeAttach, decodeAttachResult, decodeBrowserExited, decodeBrowserStarted, decodeExit, decodeKill, decodeNameInUse,
   decodeResize, decodeSpawn, decodeTranscript, decodeWorkspaceFailed, decodeWorkspaceReady,
 } from './decode-lifecycle.js';
 
@@ -37,14 +37,7 @@ function unhandledRemoteFrame(type: never): never {
 export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<string, unknown>): DecodeResult {
   switch (type) {
   case 'attach': { return decodeAttach(record); }
-  case 'attach-result': {
-    if (typeof record.accepted !== 'boolean') return malformed(type);
-    if (record.truncated !== undefined && typeof record.truncated !== 'boolean') return malformed(type);
-    return {
-      type, accepted: record.accepted,
-      ...(record.truncated !== undefined && { truncated: record.truncated }),
-    };
-  }
+  case 'attach-result': { return decodeAttachResult(record); }
   case 'session-state': { return { type }; }
   case 'session-state-result': { return decodeSessionStateResult(record); }
   case 'shutdown': { return { type }; }
@@ -97,9 +90,9 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
     return { type: 'mcp-call', call, tool, args: Buffer.from(args, 'base64').toString('utf8') };
   }
   case 'mcp-cancel': {
-    const { call } = record;
-    if (!nonEmptyString(call)) return malformed('mcp-cancel');
-    return { type: 'mcp-cancel', call };
+    const { call, received } = record;
+    if (!nonEmptyString(call) || (received !== undefined && received !== true)) return malformed(type);
+    return { type, call, ...(received === true && { received }) };
   }
   case 'acp-tool-step': { return decodeAcpToolStep(record); }
   case 'acp-run-end': { return decodeAcpRunEnd(record); }

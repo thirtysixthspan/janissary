@@ -276,6 +276,8 @@
 // handshake refuses that pairing first. It also adds `mcp-cancel`, keyed by the same call id, so a
 // caller that abandons a question withdraws it locally instead of leaving the panel and the tab's
 // queue stuck; this stays in version 49 because both peers of this feature set understand the frame.
+// An optional `received: true` on that frame acknowledges a result, and an accepted attach can
+// carry `mcpPending` to reconcile results whose acknowledgements were lost with the transport.
 // A `session-state-result` process also reports its spawn's optional `mcp` flag, so an attach
 // rebuilds the tab from the far harness's own launch rather than from the local server's state.
 export const REMOTE_PROTOCOL_VERSION = 49;
