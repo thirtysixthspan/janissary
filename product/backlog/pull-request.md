@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's How to verify step that asks the reader to stop the local MCP server.
-
-Existing Issue: How to verify step 9 says "stop the local MCP server before a third launch", but nothing in the app stops a running server (the `mcp` command only reports status), and the test it cites for that case covers a remote launch rather than the local launch the step describes. Severity: 2/10
-
-Existing Risk: 2/10 - A tester cannot perform the step as written and may report the server-down launch path as unverified or improvise a different setup.
-
-Proposal Risk: 1/10 - The step describes a setup that exists and cites the matching test, leaving only the usual gap between a test and a manual run.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "make How to verify step 9's server-down launch performable and anchor it to the local test". Edit the pull request body so the third launch is set up the way the server can actually be down, by holding the persisted MCP port with another process before starting the app (as step 10 does), and cite "passes no MCP variables or fragment while the local server is down" in `src/harness/tab-spawn.test.ts` beside the existing remote test. Make no code change.
-
-
 * Correct the description's code anchors that point at lines which do not hold the cited behavior.
 
 Existing Issue: Several of the description's line anchors miss their claims: `src/mcp/manager.ts:159-162` for the failure notification and `src/mcp/manager.ts:98-99` for the `mcpPort` override (both the constructor or unrelated lines, while the logic is in `start` and `recordFailure`), `src/remote/serve-mcp.ts:167-170` for the detached refusal and `:167-181` for sending `mcp-call` (the link watcher, while both are in `relay`), `src/remote/serve-mcp.ts:91-97` for replaying the stored reason (the `listening` handler, while the replay is in `launch`), and the off-by-a-few `src/remote/protocol.ts:277` and `src/remote/entry-factory.ts:159`. Severity: 2/10
