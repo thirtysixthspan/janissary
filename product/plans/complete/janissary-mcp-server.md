@@ -95,6 +95,10 @@ Remote
 - A per-endpoint bind-outcome promise settled by `listening`/`error` lets `launch()` observe a bind that completes after construction returns; endpoint creation and launch move ahead of `harnessSpawnEnv` so the harness environment is built only from a resolved launch and a failed bind becomes a failed spawn rather than a dead address.
 - Remote cancellation travels as an `mcp-cancel` server frame within version 49, not a new version: the far side sends it from the abort listener and `fail()`, the relay aborts that call's controller, and the local executor's existing settlement guard decides whether a withdrawal is recorded; the frame is exempt from the detached link gate so an expiry while detached is queued for attach, and channel close still drops entries without sending a cancel.
 - The pull request description documents this remote cancellation path: the version-49 frame list names `mcp-cancel` beside `mcp-call` and `mcp-result`, and it states that a caller abort or a grace-window expiry withdraws the local question, closes its panel, records `Question from <tab> withdrawn` and promotes the next queued question while an answered call is unaffected.
+- The PR's later repairs are part of the delivered behavior: saved MCP state is secured to mode `0600`, inherited MCP credentials are removed before opted-out launches, restored remote harnesses route to their rebuilt tab, and remote calls are accepted only for eligible MCP-enabled harnesses.
+- Question settlement is synchronous with queue removal, focus returns only when the question panel owned focus, and final channel close removes only that channel's active and queued questions.
+- Far-side link transitions start and reset the grace window even while idle. Bind failures return the port reservation immediately. Settled results remain replayable while the far side reports their IDs at attach, and are retired on receipt or reconciliation; a timed-out attach attempt does not clear the channel.
+- The remote approval flow requires an online MCP-enabled harness and the user selects `approve` for the approval panel. A late abort after settlement preserves the answer.
 
 ## Preserved behavior
 
@@ -202,6 +206,12 @@ The delivered server is built in these layers, each self-contained and green on 
 - `src/remote/serve.test.ts`: the shared-endpoint collision test awaits both spawns and keeps the first harness's bind report, the second harness's stored reason and exit code 1, and an unaffected server.
 - `src/remote/protocol.test.ts`: `mcp-cancel` appears in the admitted server-frame list, an encoded frame decodes back to its call id, a field-free frame is refused as malformed, and the version stays 49.
 - `src/remote/manager.test.ts`: an inbound `mcp-cancel` frame over a real channel withdraws the local question and promotes the next queued one, proving the classifier and entry-factory routing.
+- `src/remote/serve-mcp.test.ts`, `src/remote/mcp-relay.test.ts`, `src/remote/serve.test.ts` and `src/remote/protocol.test.ts`: grace timing across idle disconnect/reconnect transitions; port release on bind failure; original-label routing after Attach collisions; accepted versus rejected remote MCP calls; completed-result receipts, attach reconciliation, repeated in-window reconnects and timed-out attach retries; field-free optional version-49 frames remain decodable.
+- `src/mcp/manager.test.ts` and `src/atomic-write.test.ts`: reused credential files are secured before binding and atomic replacements retain private permissions.
+- `src/harness/tab-spawn.test.ts`: inherited local and forwarded MCP environment values are removed for opted-out, offline and unavailable-server launches, while enabled launches receive the assigned endpoint.
+- `src/remote/manager.test.ts`: real HTTP question approval, panel cancellation and disconnect release through the MCP listener.
+- `src/remote/protocol.test.ts`: the exhaustive frame fixture includes `mcp-cancel` and the existing resume frame variants.
+- `web/src/useQuestionFocusReturn.test.tsx`: mounted-panel focus restoration, explicit blur to the document, unrelated focus ownership and tab switching.
 
 ## Out of scope
 
@@ -216,6 +226,7 @@ The delivered server is built in these layers, each self-contained and green on 
 - A new config key, port range or CLI flag for the reachable-port draw, and any migration of ports already persisted in a project — a saved band port is still used verbatim.
 - A protocol version bump for `mcp-cancel`, a new cancellation API in the MCP SDK, or any change to how a harness times out its own tool call.
 - Any change to the one-endpoint-per-session lifetime, the far side's hold/re-send/grace timings, its token, or the local manager's own collision handling.
+- User and developer documentation outside `product/specs/` and `help/`.
 - Change-set statistics, commit counts or SHAs in the pull request description.
 
 ## Verification
