@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the description's code anchors that point at lines which do not hold the cited behavior.
-
-Existing Issue: Several of the description's line anchors miss their claims: `src/mcp/manager.ts:159-162` for the failure notification and `src/mcp/manager.ts:98-99` for the `mcpPort` override (both the constructor or unrelated lines, while the logic is in `start` and `recordFailure`), `src/remote/serve-mcp.ts:167-170` for the detached refusal and `:167-181` for sending `mcp-call` (the link watcher, while both are in `relay`), `src/remote/serve-mcp.ts:91-97` for replaying the stored reason (the `listening` handler, while the replay is in `launch`), and the off-by-a-few `src/remote/protocol.ts:277` and `src/remote/entry-factory.ts:159`. Severity: 2/10
-
-Existing Risk: 2/10 - A reviewer who follows an anchor lands on unrelated code and either wastes time or concludes the claim is unsupported.
-
-Proposal Risk: 1/10 - Anchors that name the right function and a test stay checkable, leaving only the ordinary drift of line numbers as the branch moves.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the description's line anchors that miss their claims". In the pull request body, replace each anchor listed above with the lines at the current head that hold the behavior: `recordFailure` and the final catch of `start` in `src/mcp/manager.ts` for the failure notice, the `getConfig().mcpPort ?? state?.port` line of `start` for the override, `relay` in `src/remote/serve-mcp.ts` for the detached refusal and the `mcp-call` send, `launch` for the stored-reason replay, the `REMOTE_PROTOCOL_VERSION = 49` line in `src/remote/protocol.ts`, and the `onFinalClose` line in `src/remote/entry-factory.ts`. Where a named test already pins the claim, keep the test anchor beside the line. Make no code change.
-
-
 * Correct the harness help page's description of the MCP opt-out, which refers to a positive form that does not exist.
 
 Existing Issue: `help/harness.md` says "`--no-mcp` opts out, and the negative form wins if both forms appear", but the command has no documented positive MCP flag (an `--mcp` token is silently ignored like any unknown word), and the page never says that `--offline` also turns MCP off. Severity: 2/10
