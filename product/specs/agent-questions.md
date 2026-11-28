@@ -28,7 +28,7 @@ The panel's controls keep Shift+Tab ahead of section navigation (see [[keyboard-
 
 Switching to a tab that already has a pending question moves keyboard focus to that panel's Cancel button, regardless of whether the question is a free-text or approval question — this is separate from, and takes priority over, the kind-based focus a question gets the moment it first opens.
 
-When a question on the current harness tab resolves — answered, cancelled, or withdrawn — while keyboard focus was inside the panel, focus returns to that harness tab's terminal. If focus has moved elsewhere in the meantime, such as the other pane's command line, it stays there. Opening a panel keeps the focus behavior described above; only the return after resolution is changed.
+When a question on the current harness tab resolves while keyboard focus is inside the panel, focus returns to that harness tab's terminal. This applies to answers, cancellations, and withdrawals. Focus stays where the user moved it if it already left the panel, including when the page body holds focus after a control loses focus.
 
 ### Notifications
 

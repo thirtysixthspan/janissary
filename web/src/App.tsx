@@ -184,7 +184,7 @@ export function App({ client }: { client: JanusClient }) {
   useNavigatorSelectionsCollector(client);
 
   useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef, saveWalkOpenRef);
-  useQuestionFocusReturn(currentRef, harnessHandles, inputReference);
+  const onQuestionPanelRemove = useQuestionFocusReturn(currentRef, harnessHandles, inputReference);
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference), keyboardCapturedRef);
 
@@ -239,7 +239,7 @@ export function App({ client }: { client: JanusClient }) {
             reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
             splitPct={splitPct} setSplitPct={setSplitPct}
             focusLeft={focusLeft} focusRight={focusRight}
-            harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
+            harnessHandles={harnessHandles} questionPanelRef={questionPanelRef} onQuestionPanelRemove={onQuestionPanelRemove}
             tabHandles={tabHandles}
             dirtyPluginTabs={dirtyPluginTabs} registerPluginDirtyHandle={registerPluginDirtyHandle}
             getPluginTabState={getPluginTabState}

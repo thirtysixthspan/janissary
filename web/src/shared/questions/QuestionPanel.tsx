@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from '../ws/ws';
 import { ModalDialog } from '../ModalDialog';
@@ -8,14 +8,23 @@ import type { QuestionPanelHandle } from '../tab/handles';
 export const QuestionPanel = forwardRef<QuestionPanelHandle, {
   question: PendingQuestionView;
   client: JanusClient;
-}>(function QuestionPanel({ question, client }, ref) {
+  onBeforeRemove?: (hadFocus: boolean) => void;
+}>(function QuestionPanel({ question, client, onBeforeRemove }, ref) {
   const [answer, setAnswer] = useState('');
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const optionCount = (question.options?.length ?? 0) + 1;
   const options = useAnswerButtons(optionCount);
   const askButtons = useAnswerButtons(2);
 
   useImperativeHandle(ref, () => ({ focusCancel: () => cancelRef.current?.focus() }), []);
+
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !onBeforeRemove) return;
+    // Layout cleanup runs before removing the focused element resets focus to the body.
+    return () => { onBeforeRemove(dialog.contains(dialog.ownerDocument.activeElement)); };
+  }, [onBeforeRemove]);
 
   useEffect(() => {
     if (question.kind === 'approve') cancelRef.current?.focus();
@@ -29,7 +38,7 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
   };
 
   return (
-    <ModalDialog title={`Question from ${question.tab}`} modal={false} className="question-panel">
+    <ModalDialog dialogRef={dialogRef} title={`Question from ${question.tab}`} modal={false} className="question-panel">
       <div className="question-panel-text">{question.question}</div>
       {question.kind === 'ask' ? (
         <form

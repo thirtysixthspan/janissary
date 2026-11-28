@@ -79,17 +79,6 @@ Proposal Risk: 2/10 - Launches gain these variables only through the application
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Remove inherited MCP variables from opted-out harness launches". Trace `harnessSpawnEnv` in `src/harness/scratch-dir.ts`, the merge in `src/pty.ts`, and unconfined and confined environment handling in `src/sandbox/index.ts` and `src/sandbox/environment.ts`. Strip inherited MCP URL, token and tab identity at the launch boundary before overlaying an explicitly configured endpoint, including for far-side harnesses. Keep unrelated env keys and the browser and Claude launch overrides. Verify the effective spawn environment with a harmless ambient fixture for local and remote opt-out, then prove an enabled launch still gets the endpoint it was assigned. Update the harness spec.
 
 
-* Preserve the user's focus when a pending question disappears after focus already left its panel.
-
-Existing Issue: `useQuestionFocusReturn` remembers the tab's pending question but treats focus on `document.body` after removal as proof that the question panel owned it. Severity: 4/10
-
-Existing Risk: 4/10 - A question ending asynchronously can steal focus back to the terminal after the user previously left the panel.
-
-Proposal Risk: 2/10 - Focus returns only after removal of the current harness's focused question, and queued or switched panels keep their handoff behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Track whether the disappearing question panel actually held focus". Connect real question-panel focus ownership from `web/src/shared/questions/QuestionPanel.tsx` and `web/src/MountedViewLayers.tsx` to the focus handoff in `web/src/useQuestionFocusReturn.ts` and `web/src/App.tsx`. Respect focus that already moved away even when it now rests on the body, and preserve the existing panel focus and tab-switch behavior. Extend the focus tests to exercise an actual mounted panel, deliberate blur to the body, and a different element holding focus, then reflect that behavior in the questions spec.
-
-
 * Bound how long a live remote session remembers completed MCP results.
 
 Existing Issue: The local relay keeps the text and ID of every settled MCP call until the remote channel ends. Severity: 4/10
