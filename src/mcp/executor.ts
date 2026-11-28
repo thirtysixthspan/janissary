@@ -5,6 +5,8 @@ import { QUESTION_ERROR, type QuestionArgs } from './question-tool.js';
 import { byLabelOrAlias } from '../tab/lookup.js';
 import type { ToolExecutor } from './tools.js';
 
+export const MCP_CHANNEL_CLOSED = Symbol('MCP channel closed');
+
 export function createLocalExecutor(managers: Managers): ToolExecutor {
   return async (_name, args, signal) => {
     const { tab: requested, kind, question, options } = args as QuestionArgs;
@@ -16,7 +18,9 @@ export function createLocalExecutor(managers: Managers): ToolExecutor {
     const answer = await managers.questions.register(
       { tab: label, kind, question, options },
       signal,
-      () => notify(managers, 'question-withdrawn', label),
+      () => {
+        if (signal.reason !== MCP_CHANNEL_CLOSED) notify(managers, 'question-withdrawn', label);
+      },
     );
     return { text: answer, isError: false };
   };

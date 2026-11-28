@@ -558,6 +558,8 @@ A refused attachment for a missing session, a recorded peer process that no long
 
 Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
 
+When a remote channel closes for good, Janissary drops its outstanding MCP questions even if their target tabs stay open. The next question from a different caller appears without a withdrawal notice or a reply to the closed channel. A recoverable transport drop keeps outstanding questions during the MCP reconnect window.
+
 A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.

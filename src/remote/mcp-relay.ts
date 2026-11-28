@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { createLocalExecutor } from '../mcp/executor.js';
+import { createLocalExecutor, MCP_CHANNEL_CLOSED } from '../mcp/executor.js';
 import { validateQuestionArgs, type QuestionArgs } from '../mcp/question-tool.js';
 import { TOOLS, unknownToolError, type ToolResult } from '../mcp/tools.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
@@ -46,6 +46,7 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
       const entry: Pending = { controller };
       pending.set(frame.call, entry);
       const settle = (result: ToolResult): void => {
+        if (pending.get(frame.call) !== entry) return;
         entry.controller = undefined;
         entry.result = result;
         answer(frame.call, result);
@@ -57,6 +58,10 @@ export function createMcpRelay(managers: Managers, send: (frame: ClientFrame) =>
     cancel(frame: McpCancelFrame): void {
       pending.get(frame.call)?.controller?.abort();
     },
-    clear(): void { pending.clear(); },
+    clear(): void {
+      const entries = [...pending.values()].toReversed();
+      pending.clear();
+      for (const entry of entries) entry.controller?.abort(MCP_CHANNEL_CLOSED);
+    },
   };
 }

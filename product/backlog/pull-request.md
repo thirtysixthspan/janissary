@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - The restored harness's original name is resolved within it
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Route a restored remote harness question to its rebuilt tab". Trace the original launch identity from `src/remote/serve-processes.ts` and the rebuilt label chosen by `startSessionAttach` in `src/sessions/attach.ts`. Pass the remote session's own launch-name mapping from `src/remote/entry-factory.ts` to the relay in `src/remote/mcp-relay.ts` so a call for its original launch label addresses the exact rebuilt tab even when the old name or an alias belongs to another tab. Preserve the existing arbitrary label and alias lookup for other explicitly named tabs and the untouched local HTTP route. Extend the remote harness round-trip or entry tests to cover an occupied old label through an attach, plus an explicit other-tab request. Update the MCP and sessions specs with the restored-tab behavior.
 
 
-* Withdraw a remote caller's outstanding questions when its channel is finished and their target tabs stay open.
-
-Existing Issue: `createMcpRelay.clear` discards the call map without removing its outstanding entries from the shared question queue, whose usual tab-close cleanup cannot reach a surviving target tab. Severity: 6/10
-
-Existing Risk: 6/10 - A question with no remaining caller stays on screen and can block later questions directed at the same tab.
-
-Proposal Risk: 2/10 - Final close removes only the departing channel's requests, while ordinary reconnect retains its calls and unrelated requests stay queued.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Release surviving tab questions on remote channel final close". Make `clear` in `src/remote/mcp-relay.ts` release its live registrations without emitting a withdrawal notice or a result on final close, preserving the source plan's silent-close rule. Distinguish a final close from caller cancellation at the registration boundary in `src/mcp/executor.ts` and reuse the per-entry cancellation in `src/questions.ts`. Ignore old settlements after clearing the corresponding relay entry. In `src/remote/mcp-relay.test.ts`, assert a final close removes this channel's active and queued questions from another tab that stays open, promotes an unrelated request, and is idempotent. Preserve the in-flight re-send and later attach tests and update the remote MCP spec.
-
-
 * Start and reset the remote MCP grace window on actual link transitions, including outages with no pending calls.
 
 Existing Issue: `FarSideMcp` observes link loss only while calls are pending and clears its expired-detach flag only when a call happens to arrive while the link is back. Severity: 6/10

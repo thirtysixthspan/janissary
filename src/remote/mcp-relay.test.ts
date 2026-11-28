@@ -10,11 +10,12 @@ import { createMcpRelay } from './mcp-relay.js';
 vi.mock('../notifications/deliver.js', () => ({ deliverNotification: vi.fn() }));
 
 function fixture() {
-  const tabs = [{
-    label: 'asker',
-    harness: { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' },
-  }] as unknown as Tab[];
-  const questions = new Questions();
+  const tabs = [
+    { label: 'asker', harness: { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' } },
+    { label: 'survivor' },
+  ] as unknown as Tab[];
+  const changes = vi.fn();
+  const questions = new Questions(changes);
   const register = vi.spyOn(questions, 'register');
   const managers = {
     tab: { tabs, byLabel: (label: string) => tabs.find((tab) => tab.label === label), cur: () => tabs[0] },
@@ -31,12 +32,12 @@ function fixture() {
     onClose: vi.fn(),
     onFinalClose: () => relay.clear(),
   });
-  const call = (id: string, question = 'Which port?') => relay.handle({
+  const call = (id: string, question = 'Which port?', tab = 'asker') => relay.handle({
     type: 'mcp-call', call: id, tool: 'question',
-    args: JSON.stringify({ tab: 'asker', kind: 'ask', question }),
+    args: JSON.stringify({ tab, kind: 'ask', question }),
   });
   const answer = (text: string) => questions.answer('asker', questions.pendingFor('asker')!.id, text);
-  return { questions, register, send, relay, call, answer, channel };
+  return { questions, changes, register, send, relay, call, answer, channel };
 }
 
 beforeEach(() => { vi.mocked(deliverNotification).mockClear(); });
@@ -192,15 +193,44 @@ describe('createMcpRelay', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
-  it('clears the map on channel close so a re-send registers a fresh question', () => {
-    const { call, register, channel } = fixture();
+  it('clears the map on channel close so a re-send registers a fresh question', async () => {
+    const { call, register, channel, questions, answer, send } = fixture();
     call('call-1');
 
     channel.close();
     channel.close();
-    call('call-1');
+    call('call-1', 'Fresh question?');
 
     expect(register).toHaveBeenCalledTimes(2);
+    expect(questions.pendingFor('asker')?.question).toBe('Fresh question?');
+    expect(answer('Fresh answer')).toBe(true);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledExactlyOnceWith({
+      type: 'mcp-result', call: 'call-1', text: 'Fresh answer', isError: false,
+    }));
+  });
+
+  it('silently releases only its own questions from a surviving tab on final close', async () => {
+    const { call, channel, changes, questions, send } = fixture();
+    call('call-1', 'First?', 'survivor');
+    call('call-2', 'Second?', 'survivor');
+    const unrelated = questions.register({ tab: 'survivor', kind: 'ask', question: 'Unrelated?' });
+    expect(questions.pendingFor('survivor')?.question).toBe('First?');
+    changes.mockClear();
+
+    channel.close();
+    channel.close();
+
+    expect(changes.mock.calls).toEqual([
+      ['survivor', undefined],
+      ['survivor', expect.objectContaining({ question: 'Unrelated?' })],
+    ]);
+    const pending = questions.pendingFor('survivor');
+    expect(pending?.question).toBe('Unrelated?');
+    expect(questions.answer('survivor', pending!.id, 'Still here')).toBe(true);
+    await expect(unrelated).resolves.toBe('Still here');
+    expect(questions.pendingFor('survivor')).toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+    expect(deliverNotification).not.toHaveBeenCalled();
   });
 
   it('withdraws an unanswered question on cancel and shows the next queued one', async () => {
