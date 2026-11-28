@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - Outage timing follows the session's link state, with one w
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Track the MCP grace window across idle link transitions". Connect the authoritative attach and detach transitions in `src/remote/serve-detach.ts` and the pre-peer path in `src/remote/serve.ts` to the endpoint lifecycle through `src/remote/serve-provision.ts` and `src/remote/serve-processes.ts`. Have `src/remote/serve-mcp.ts` time the interval from the loss itself, reset on recovery even when no call is pending, and preserve in-flight IDs and cancellation. Add cases in `src/remote/serve-mcp.test.ts` for the first call late in an idle outage, an idle recovery followed by a new drop, and recovery before a polling interval would have elapsed. Keep the existing grace, repeated-loss and resent-ID assertions, and align the MCP and remote-server specs with the timing.
 
 
-* Keep the user's answer when an MCP request aborts after that question has already settled.
-
-Existing Issue: `createLocalExecutor` considers a question pending until its awaiting promise resumes and then replaces its result whenever the signal is aborted. Severity: 5/10
-
-Existing Risk: 5/10 - An answer or panel cancellation can be followed in the same event turn by a false withdrawal notification, and a selected answer can be lost.
-
-Proposal Risk: 2/10 - Cancellation and answer use one settlement decision for each question, including when the next queued question is already visible.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Preserve an MCP answer when a late abort races the promise continuation". Use the queue entry's synchronous settlement in `src/questions.ts` to determine whether an abort actually removed that entry, and remove the duplicate post-await override in `src/mcp/executor.ts`. Preserve the existing `Questions.register` contract for ACP callers. Extend `src/mcp/executor.test.ts` and `src/remote/mcp-relay.test.ts` so a same-turn answer and late abort retains the original result and produces no withdrawal, while a true abort removes a pending entry and promotes its successor. Reflect the settlement order in the MCP spec.
-
-
 * Return the remote MCP port to the shared pool as soon as its listener fails to bind.
 
 Existing Issue: A far-side bind failure caches its error for later spawns but leaves the failed port reserved until the entire remote process shuts down. Severity: 4/10

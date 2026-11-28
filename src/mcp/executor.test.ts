@@ -115,16 +115,18 @@ describe('createLocalExecutor', () => {
     void second;
   });
 
-  it('does not notify when the signal aborts after the question was answered', async () => {
+  it.each([
+    { action: 'answered', answer: '3000', text: '3000' },
+    { action: 'cancelled in the panel', answer: null, text: QUESTION_CANCELLED },
+  ])('keeps the result when the signal aborts immediately after the question was $action', async ({ answer, text }) => {
     const { execute, questions } = fixture();
     const controller = new AbortController();
 
     const result = execute('question', { tab: 'build', kind: 'ask', question: 'Which port?' }, controller.signal);
-    questions.answer('build', questions.pendingFor('build')!.id, '3000');
-    await expect(result).resolves.toEqual({ text: '3000', isError: false });
-
+    expect(questions.answer('build', questions.pendingFor('build')!.id, answer)).toBe(true);
     controller.abort();
 
+    await expect(result).resolves.toEqual({ text, isError: false });
     expect(deliverNotification).not.toHaveBeenCalled();
   });
 });

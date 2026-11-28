@@ -27,7 +27,7 @@ A question raised on a tab that is not focused marks that tab unread and records
 
 ### Cancellation and withdrawal
 
-An MCP cancellation or a closed connection from the calling harness aborts its registered question and withdraws the panel. The next queued question for that tab, if any, then appears. Withdrawal records a notification reading `Question from <tab> withdrawn` (see [[notifications]]). A question that was answered or cancelled by the human does not record it: only the caller's abandoned request withdraws a question. A remote harness's cancellation reaches the local side over the session, including one issued because the link stayed down past the grace window; a cancellation that arrives after the answer has no effect. When a question on the current harness tab resolves while focus was inside the panel, focus returns to that tab's terminal (see [[agent-questions]]).
+An MCP cancellation or a closed connection from the calling harness aborts its registered question and withdraws the panel. The next queued question for that tab, if any, then appears. Withdrawal records a notification reading `Question from <tab> withdrawn` (see [[notifications]]). Once the human answers or cancels from the panel, that result is final. A caller cancellation that arrives before the reply is sent still preserves the panel's result and produces no withdrawal. A remote harness's cancellation reaches the local side over the session, including one issued because the link stayed down past the grace window. When a question on the current harness tab resolves while focus was inside the panel, focus returns to that tab's terminal (see [[agent-questions]]).
 
 ### `mcp` command
 

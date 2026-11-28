@@ -224,16 +224,16 @@ describe('createMcpRelay', () => {
     });
   });
 
-  it('ignores a cancel after the answer and still replays the stored result', async () => {
+  it('ignores a cancel in the same turn as the answer and still replays the stored result', async () => {
     const { call, relay, answer, register, send } = fixture();
     call('call-1');
     expect(answer('3000')).toBe(true);
-    await vi.waitFor(() => expect(send).toHaveBeenCalledWith({
+    relay.cancel({ type: 'mcp-cancel', call: 'call-1' });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledExactlyOnceWith({
       type: 'mcp-result', call: 'call-1', text: '3000', isError: false,
     }));
     send.mockClear();
 
-    relay.cancel({ type: 'mcp-cancel', call: 'call-1' });
     call('call-1');
 
     expect(deliverNotification).not.toHaveBeenCalled();
