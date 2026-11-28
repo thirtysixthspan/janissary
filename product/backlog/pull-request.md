@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Declare the zod package the MCP tool registry imports, instead of relying on the copy the MCP SDK happens to hoist.
-
-Existing Issue: The MCP tool registry imports `z` from `zod` to build the `question` input schema, but `zod` appears nowhere in `package.json`, so the import resolves only because npm hoists the copy that `@modelcontextprotocol/server` and `@modelcontextprotocol/core` depend on. Severity: 4/10
-
-Existing Risk: 5/10 - An install layout that nests that copy instead of hoisting it, such as a later dependency that needs another zod major or a pruned production install, makes the import fail when `createManagers` loads the MCP manager, which stops the whole app from starting rather than just the MCP server, and `npm run knip` in the human gate already reports it as an unlisted dependency.
-
-Proposal Risk: 2/10 - The import then resolves from a declared, pinned dependency; what remains is keeping that pin inside the `^4.2.0` range the SDK accepts, where a mismatch would show as a second nested copy in the lockfile rather than a startup failure.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "declare zod as a direct dependency for the MCP tool registry". `src/mcp/tools.ts` imports `z` from `zod` to define `questionInputSchema`, which `src/mcp/handler.ts` hands to the SDK, while `package.json` lists no `zod` entry; `package-lock.json` resolves the hoisted `node_modules/zod` at 4.6.7, required at `^4.2.0` by `@modelcontextprotocol/server` and `@modelcontextprotocol/core`. Run `$janissary/scripts/run.mjs check-malicious-package zod@4.6.7` first and stop on a blocked or quarantined result. Then add `zod` to `dependencies` in `package.json` at exactly the locked 4.6.7, matching how the two MCP packages are pinned, and refresh `package-lock.json` so its root package lists the dependency without moving any resolved version. Do not change `src/mcp/tools.ts`. The existing `src/mcp/handler.test.ts` cases and "serves a tools/list call that returns exactly question" in `src/mcp/manager.test.ts` exercise the schema and must keep passing unchanged; confirm with `npm run knip` that `zod` is no longer reported as unlisted.
-
-
 * Share one loopback MCP listener between the local server and the far-side endpoint, and pin its path refusal with a test.
 
 Existing Issue: The local manager's `listen` and the far-side endpoint's constructor each build their own `node:http` server with the same `/mcp` path filter, the same 404 answer, the same `guard(toNodeHandler(handler), token)` wiring and their own copies of the loopback host, the path and the URL format, and no test exercises the 404 branch in either copy. Severity: 3/10
