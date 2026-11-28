@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that a call made while detached is rejected at once.
-
-Existing Issue: The description says "a call made while detached is rejected before any frame is sent with `Janissary is not connected.`", but `FarSideMcp.relay` rejects only after a grace window has already expired with no link; a call made in the first 60 seconds after a Detach, or after a Detach with no call pending, is held and waits a full window before it fails. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer or tester who relies on the sentence expects an immediate failure after Detach, sees a 60-second hold, and either files the correct behavior as a bug or approves a boundary the code does not draw.
-
-Proposal Risk: 1/10 - The description matches the spec's wording, so only the inherent subtlety of the two-phase refusal remains for a reader.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the description's claim that a call made while detached is rejected at once". Rewrite that sentence in the pull request body's What section to match `product/specs/mcp-server.md`: a call made while the link is down waits like one in flight, and only once a grace window has expired with no link do new calls fail at once with `Janissary is not connected.` until a link returns. Anchor it to `FarSideMcp.relay` in `src/remote/serve-mcp.ts` and to the tests "holds in-flight and new calls through a link loss and re-sends them when it returns" and "fails a call made while detached at once with the detach error" in `src/remote/serve-mcp.test.ts`. Make no code change.
-
-
 * Report a far-side MCP bind failure once to the harness that collided, not twice.
 
 Existing Issue: `FarSideMcp`'s `error` listener sends the bind-failure `output` frame to its constructing harness's id, and `launch(frame.id)` then sends the same stored reason to that same id again, so the first colliding harness's tab shows `MCP endpoint could not bind ...` twice. Severity: 2/10
