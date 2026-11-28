@@ -1,17 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
-import { toNodeHandler } from '@modelcontextprotocol/node';
+import type { Server } from 'node:http';
 import type { McpHttpHandler } from '@modelcontextprotocol/server';
 import { reserveReachablePort, type ReservedPort } from '../browser/e2e-ports.js';
-import { guard, type NodeHandler } from '../mcp/guard.js';
 import { createHandler } from '../mcp/handler.js';
+import { createMcpServer, MCP_HOST, mcpUrl } from '../mcp/listener.js';
 import type { McpLaunch } from '../mcp/manager.js';
 import type { ToolExecutor, ToolResult } from '../mcp/tools.js';
 import { makeToken } from '../security.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
-const LOOPBACK = '127.0.0.1';
-const MCP_PATH = '/mcp';
 const GRACE_TICK_MS = 1000;
 const GRACE_TICKS = 60;
 const NOT_CONNECTED = 'Janissary is not connected.';
@@ -59,24 +56,16 @@ export class FarSideMcp {
     private readonly linked: () => boolean = () => true,
   ) {
     this.handler = createHandler(this.relay);
-    const guarded: NodeHandler = guard(toNodeHandler(this.handler), this.token);
-    this.server = createServer((request, response) => {
-      if (request.url?.split('?', 1)[0] !== MCP_PATH) {
-        response.writeHead(404);
-        response.end('Not Found');
-        return;
-      }
-      void guarded(request, response);
-    });
+    this.server = createMcpServer(this.handler, this.token);
     this.ready = new Promise<void>((resolve, reject) => {
       this.server.on('error', (error: Error) => {
-        this.failure = `MCP endpoint could not bind to ${LOOPBACK}:${this.port}: ${error.message}`;
+        this.failure = `MCP endpoint could not bind to ${MCP_HOST}:${this.port}: ${error.message}`;
         reject(new Error(this.failure));
       });
       this.server.on('listening', () => resolve());
     });
     void this.ready.catch(() => {});
-    this.server.listen(this.port, LOOPBACK);
+    this.server.listen(this.port, MCP_HOST);
   }
 
   async launch(id: string = this.id): Promise<McpLaunch> {
@@ -86,7 +75,7 @@ export class FarSideMcp {
       this.send({ type: 'output', id, data: `${this.failure}\n` });
       throw error;
     }
-    return { url: `http://${LOOPBACK}:${this.port}${MCP_PATH}`, token: this.token };
+    return { url: mcpUrl(this.port), token: this.token };
   }
 
   result(frame: ResultFrame): void {

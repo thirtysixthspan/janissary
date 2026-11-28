@@ -1,7 +1,6 @@
-import { createServer, type Server } from 'node:http';
+import type { Server } from 'node:http';
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { toNodeHandler } from '@modelcontextprotocol/node';
 import { atomicWriteFile } from '../atomic-write.js';
 import { reservePort, reserveReachablePort } from '../browser/e2e-ports.js';
 import { getConfig } from '../config.js';
@@ -9,11 +8,9 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { makeToken } from '../security.js';
 import { createLocalExecutor } from './executor.js';
-import { guard, type NodeHandler } from './guard.js';
 import { createHandler } from './handler.js';
+import { createMcpServer, MCP_HOST, mcpUrl } from './listener.js';
 
-const LOOPBACK = '127.0.0.1';
-const MCP_PATH = '/mcp';
 const STATE_MODE = 0o600;
 const SYSTEM_LABEL = 'janus';
 const STATE_REMEDY = 'delete it and restart Janissary to replace it';
@@ -74,19 +71,11 @@ function stateToSave(
 
 async function listen(port: number, token: string, managers: Managers) {
   const handler = createHandler(createLocalExecutor(managers));
-  const guarded: NodeHandler = guard(toNodeHandler(handler), token);
-  const server = createServer((request, response) => {
-    if (request.url?.split('?', 1)[0] !== MCP_PATH) {
-      response.writeHead(404);
-      response.end('Not Found');
-      return;
-    }
-    void guarded(request, response);
-  });
+  const server = createMcpServer(handler, token);
   await new Promise<void>((resolve, reject) => {
     const onError = (error: Error) => { server.off('error', onError); reject(error); };
     server.once('error', onError);
-    server.listen(port, LOOPBACK, () => { server.off('error', onError); resolve(); });
+    server.listen(port, MCP_HOST, () => { server.off('error', onError); resolve(); });
   });
   const address = server.address();
   if (address === null || typeof address === 'string') {
@@ -170,7 +159,7 @@ export class McpManager {
         this.handler = listener.handler;
         this.port = listener.port;
         this.releasePort = chosen.release;
-        this.launch = { url: `http://${LOOPBACK}:${listener.port}${MCP_PATH}`, token };
+        this.launch = { url: mcpUrl(listener.port), token };
       } catch (error) {
         chosen.release();
         throw error;
