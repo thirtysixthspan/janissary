@@ -46,17 +46,6 @@ Proposal Risk: 1/10 - The generic suite checks the new frame while the focused c
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Add mcp-cancel to the exhaustive codec fixture". Add a fully populated cancellation frame to `FULLY_POPULATED_FRAMES` in `src/remote/protocol.test.ts`. Check the admitted-frame, malformed-frame, version-49 and base64 assertions and verify the new case runs through the normal table. This change reinforces the existing wire contract described in `product/specs/remote-server.md`.
 
 
-* Exercise real MCP question completion and cancellation across the HTTP adapter.
-
-Existing Issue: The manager's real-loopback suite covers only `tools/list`, while tests of question answers, cancellation, and signal forwarding call a mock handler or the executor directly. Severity: 4/10
-
-Existing Risk: 4/10 - The production HTTP adapter or SDK can regress blocking result delivery and caller disconnect without failing any question test.
-
-Proposal Risk: 2/10 - A gated real-loopback suite exercises the same HTTP question path while deterministic unit tests keep covering the fine-grained queue behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Cover question answer and disconnect through the real MCP listener". In `src/mcp/manager.test.ts` or a colocated integration suite using the existing loopback reachability helper, drive the real manager and handler with a real `Questions` queue. Assert a question call reaches the queue and receives the selected answer, a panel Cancel returns the documented result, and disconnect releases the active request and promotes a queued one. Use explicit response and listener cleanup and keep the existing mocked guard, handler and executor cases. Reflect the verified connection semantics in the MCP spec.
-
-
 * Correct the pull request description's stale and missing source anchors.
 
 Existing Issue: The shared-listener refactor moved the cited manager and far-side code, and the description's verification actions have no source or test anchors of their own. Severity: 3/10
