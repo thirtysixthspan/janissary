@@ -152,7 +152,7 @@ export function MountedViewLayers({
           />
         ))}
       {current?.pendingQuestion && (
-        <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} onBeforeRemove={onQuestionPanelRemove} />
+        <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} onBeforeRemove={onQuestionPanelRemove} pane={current.pane} />
       )}
     </>
   );

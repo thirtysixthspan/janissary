@@ -90,6 +90,22 @@ describe('useFocusOnTabSwitch', () => {
     expect(focus).not.toHaveBeenCalled();
   });
 
+  it('focuses nothing for a pending choose question so its own form sets focus', () => {
+    const focus = vi.fn();
+    const focusCancel = vi.fn();
+    const harnessHandles = refOf(new Map([['pty-1', { focus } as unknown as HarnessTabHandle]]));
+    const inputReference = refOf<HTMLTextAreaElement | null>({ focus } as unknown as HTMLTextAreaElement);
+    const currentRef = refOf<TabView | undefined>({
+      view: 'harness', harness: { ptyId: 'pty-1' }, pendingQuestion: { id: 'q1', tab: 't', kind: 'choose', question: 'Pick one' },
+    } as unknown as TabView);
+    const questionPanelRef = refOf<QuestionPanelHandle | null>({ focusCancel });
+
+    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, inputReference, questionPanelRef));
+
+    expect(focusCancel).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
   it('focuses nothing while suppressed and resumes on the next activeTab change after it clears', () => {
     const terminalFocus = vi.fn();
     const inputFocus = vi.fn();

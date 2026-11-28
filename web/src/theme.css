@@ -688,9 +688,23 @@ button.tab-recording { cursor: pointer; }
 }
 .modal-button:hover { background: var(--border); }
 .modal-button.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-.question-panel {
-  position: absolute; z-index: 50; top: 44px; right: 14px; width: min(420px, calc(100% - 28px));
+.question-panel-layer {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 0; min-height: 0; pointer-events: none; z-index: 50;
 }
+.sidebar-plugin .question-panel-layer { position: absolute; inset: 0; }
+.question-panel {
+  pointer-events: auto;
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  overflow: hidden;
+}
+.question-panel .modal-title { flex-shrink: 0; }
+.question-panel-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.question-panel-body { flex: 1; min-height: 0; overflow-y: auto; }
+.question-panel-footer { flex-shrink: 0; }
+.question-panel--overflow .question-panel-content { flex: none; }
+.question-panel--overflow .question-panel-body { flex: none; }
 .question-panel-text { margin-bottom: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .question-panel-form { display: flex; flex-direction: column; gap: 10px; }
 .question-panel-form input {
@@ -698,6 +712,18 @@ button.tab-recording { cursor: pointer; }
   padding: 5px 7px; font-family: var(--mono); font-size: 13px;
 }
 .question-panel-options { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.choice-question-form { display: flex; flex-direction: column; gap: 10px; }
+.choice-question-fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.choice-question-legend { padding: 0; margin-bottom: 4px; }
+.choice-question-row { display: flex; flex-direction: column; gap: 2px; }
+.choice-question-label { display: flex; align-items: center; gap: 6px; }
+.choice-question-description { padding-left: 20px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.choice-question-custom-field {
+  margin-left: 20px;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 5px 7px; font-family: var(--mono); font-size: 13px;
+}
+.choice-question-form .modal-actions { flex-shrink: 0; }
 .harness-launch .harness-launch-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .harness-launch-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
 .harness-launch-form label.harness-launch-check { flex-direction: row; align-items: center; gap: 6px; color: var(--fg); }
@@ -811,7 +837,7 @@ button.tab-recording { cursor: pointer; }
 .sidebar-body > .tabstrip { border-bottom: 1px solid var(--border); }
 /* A docked plugin tab: the host's own frame around a plugin body in a sidebar. Every docked plugin
    tab stays mounted, so the hidden ones are display:none rather than unmounted. */
-.sidebar-plugin { flex: 1; min-height: 0; flex-direction: column; }
+.sidebar-plugin { position: relative; flex: 1; min-height: 0; flex-direction: column; }
 .sidebar-plugin-header {
   display: flex; align-items: center; justify-content: flex-end;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);

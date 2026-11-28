@@ -62,13 +62,26 @@ export type HarnessLaunchView = {
   roleEntries: Array<Array<{ harness: string; model: string }>>;
 };
 
-export type QuestionKind = 'ask' | 'approve';
+export type QuestionKind = 'ask' | 'approve' | 'choose';
+
+// One selectable option in a single-choice question. `description` is an optional longer
+// explanation shown alongside the label.
+export type QuestionChoice = {
+  label: string;
+  description?: string;
+};
+
 export type PendingQuestionView = {
   id: string;
   tab: string;
   kind: QuestionKind;
   question: string;
+  // Approve questions only; never set for `choose` questions.
   options?: string[];
+  // Present only for `choose` questions: the ordered list of choices to render as options.
+  choices?: QuestionChoice[];
+  // Present only when the caller supplied a default selection, whose label is preselected.
+  defaultOption?: string;
 };
 
 // A tab as the client renders it: presentation metadata plus the already-flattened transcript

@@ -64,4 +64,63 @@ describe('Questions', () => {
     questions.answer('build', questions.pendingFor('build')!.id, 'second answer');
     await expect(second).resolves.toBe('second answer');
   });
+
+  it('projects choices and defaultOption through pendingFor and queue promotion', async () => {
+    const questions = new Questions();
+    const first = questions.register({ tab: 'build', kind: 'ask', question: 'First?' });
+    const choices = [{ label: 'Small' }, { label: 'Large', description: 'Bigger' }];
+    const second = questions.register({
+      tab: 'build',
+      kind: 'choose',
+      question: 'Size?',
+      choices,
+      defaultOption: 'Large',
+    });
+
+    questions.answer('build', questions.pendingFor('build')!.id, 'first answer');
+    await expect(first).resolves.toBe('first answer');
+    expect(questions.pendingFor('build')).toMatchObject({
+      kind: 'choose',
+      question: 'Size?',
+      choices,
+      defaultOption: 'Large',
+    });
+
+    questions.answer('build', questions.pendingFor('build')!.id, 'Small');
+    await expect(second).resolves.toBe('Small');
+  });
+
+  it('refuses a blank or whitespace-only choose answer and keeps the question open', async () => {
+    const questions = new Questions();
+    const result = questions.register({
+      tab: 'build',
+      kind: 'choose',
+      question: 'Size?',
+      choices: [{ label: 'Small' }, { label: 'Large' }],
+      defaultOption: 'Small',
+    });
+    const pending = questions.pendingFor('build')!;
+
+    expect(questions.answer('build', pending.id, '')).toBe(false);
+    expect(questions.answer('build', pending.id, ' '.repeat(3))).toBe(false);
+    expect(questions.pendingFor('build')?.id).toBe(pending.id);
+
+    expect(questions.answer('build', pending.id, 'Large')).toBe(true);
+    await expect(result).resolves.toBe('Large');
+  });
+
+  it('accepts a nonblank choose answer verbatim even when it is not a listed label', async () => {
+    const questions = new Questions();
+    const result = questions.register({
+      tab: 'build',
+      kind: 'choose',
+      question: 'Size?',
+      choices: [{ label: 'Small' }, { label: 'Large' }],
+    });
+    const pending = questions.pendingFor('build')!;
+
+    expect(questions.answer('build', pending.id, '  Custom  ')).toBe(true);
+    await expect(result).resolves.toBe('  Custom  ');
+    expect(questions.pendingFor('build')).toBeUndefined();
+  });
 });
