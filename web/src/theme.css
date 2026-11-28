@@ -688,9 +688,21 @@ button.tab-recording { cursor: pointer; }
 }
 .modal-button:hover { background: var(--border); }
 .modal-button.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-.question-panel {
-  position: absolute; z-index: 50; top: 44px; right: 14px; width: min(420px, calc(100% - 28px));
+.question-panel-layer {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 0; min-height: 0; pointer-events: none; z-index: 50;
 }
+.sidebar-plugin .question-panel-layer { position: absolute; inset: 0; }
+.question-panel {
+  pointer-events: auto;
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  overflow: hidden;
+}
+.question-panel .modal-title { flex-shrink: 0; }
+.question-panel-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.question-panel-body { flex: 1; min-height: 0; overflow-y: auto; }
+.question-panel-footer { flex-shrink: 0; }
 .question-panel-text { margin-bottom: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .question-panel-form { display: flex; flex-direction: column; gap: 10px; }
 .question-panel-form input {
@@ -811,7 +823,7 @@ button.tab-recording { cursor: pointer; }
 .sidebar-body > .tabstrip { border-bottom: 1px solid var(--border); }
 /* A docked plugin tab: the host's own frame around a plugin body in a sidebar. Every docked plugin
    tab stays mounted, so the hidden ones are display:none rather than unmounted. */
-.sidebar-plugin { flex: 1; min-height: 0; flex-direction: column; }
+.sidebar-plugin { position: relative; flex: 1; min-height: 0; flex-direction: column; }
 .sidebar-plugin-header {
   display: flex; align-items: center; justify-content: flex-end;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);

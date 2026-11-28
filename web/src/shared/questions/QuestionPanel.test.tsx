@@ -121,6 +121,19 @@ describe('QuestionPanel', () => {
     }
   });
 
+  it('keeps the controls reachable through a pointer-transparent layer', () => {
+    const { value } = client();
+    const question: PendingQuestionView = { id: 'question-fit', tab: 'build', kind: 'ask', question: 'What port?' };
+    const { container } = render(<QuestionPanel question={question} client={value} />);
+
+    expect(container.querySelector('.question-panel-layer')).toHaveStyle({ pointerEvents: 'none' });
+    expect(container.querySelector('.question-panel')).toHaveStyle({ pointerEvents: 'auto' });
+    expect(container.querySelector('.question-panel-body')).toContainElement(screen.getByText('What port?'));
+    const footer = container.querySelector('.question-panel-footer');
+    expect(footer).toContainElement(screen.getByRole('button', { name: 'Submit' }));
+    expect(footer).toContainElement(screen.getByRole('button', { name: 'Cancel' }));
+  });
+
   it('is non-modal and does not trap unrelated input', async () => {
     const behind = vi.fn();
     const { value } = client();
