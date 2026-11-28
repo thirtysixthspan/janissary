@@ -24,17 +24,6 @@ Proposal Risk: 2/10 - In-flight questions and still-replayable results survive a
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Retire completed remote MCP results after their replay lifetime". Split in-flight state from settled replay state in `src/remote/mcp-relay.ts` and use an expiry or acknowledgement that preserves re-sends within the `src/remote/serve-mcp.ts` grace contract. Keep cleanup owned by the channel and avoid expiring an active question or replaying a result as a new question within the supported window. Extend relay tests for short in-window replays, eviction beyond the replay lifetime, and final-close cleanup. Document the supported replay lifetime in the remote-server spec.
 
 
-* Put the cancellation frame into the protocol's exhaustive round-trip fixture.
-
-Existing Issue: `src/remote/protocol.test.ts` adds `mcp-cancel` to the protocol and standalone test but leaves it out of `FULLY_POPULATED_FRAMES`, whose mapped type requires every frame. Severity: 3/10
-
-Existing Risk: 3/10 - Type-aware checks of the test fail and the exhaustive suite silently omits the new frame during normal transpiled execution.
-
-Proposal Risk: 1/10 - The generic suite checks the new frame while the focused cancellation and rejection assertions still pin its special cases.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Add mcp-cancel to the exhaustive codec fixture". Add a fully populated cancellation frame to `FULLY_POPULATED_FRAMES` in `src/remote/protocol.test.ts`. Check the admitted-frame, malformed-frame, version-49 and base64 assertions and verify the new case runs through the normal table. This change reinforces the existing wire contract described in `product/specs/remote-server.md`.
-
-
 * Correct the pull request description's stale and missing source anchors.
 
 Existing Issue: The shared-listener refactor moved the cited manager and far-side code, and the description's verification actions have no source or test anchors of their own. Severity: 3/10
