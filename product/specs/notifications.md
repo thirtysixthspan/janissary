@@ -162,8 +162,9 @@ These event types can produce a notification line:
   `editor-tab.md`).
 - **`question`** — an ACP agent issues a question command while its owning tab is not focused
   (see [[agent-questions]]). The tab label on this line is a link that focuses the asking tab.
-- **`question-withdrawn`** — a question asked by an agent in a background tab is withdrawn before
-  it is answered (see [[agent-questions]]). The line reads `Question from <tab> withdrawn`, naming
+- **`question-withdrawn`** — the caller of a pending MCP question, local or relayed from a remote
+  harness, abandons it before it is answered, on whichever tab it was asked (see [[mcp-server]]).
+  The line reads `Question from <tab> withdrawn`, naming
   the tab the question came from. A question that has already been answered or cancelled produces
   no withdrawal line, even if the request signal is aborted afterwards. Like `question` it is
   explicit and has no config toggle, so it is recorded even while that tab is active. It defaults to

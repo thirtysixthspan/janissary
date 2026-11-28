@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the notifications spec's description of the withdrawn-question event, which says it only covers questions on background tabs.
-
-Existing Issue: The `question-withdrawn` entry in the notifications spec opens with "a question asked by an agent in a background tab is withdrawn before it is answered", while the MCP executor records the withdrawal for an abandoned question on any tab, active or not, and the same entry goes on to say the line is recorded even while that tab is active. Severity: 2/10
-
-Existing Risk: 2/10 - The entry states two contradictory rules for when the line appears, and a later change that follows its first sentence could add a background-only check the implementation never had, silently dropping withdrawal notices for the tab the user is looking at.
-
-Proposal Risk: 1/10 - Only the entry's opening sentence changes; a wording that still misstates the rule would show as a mismatch against the executor tests.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the notifications spec's question-withdrawn entry to cover every tab". `createLocalExecutor` in `src/mcp/executor.ts` calls `notify(managers, 'question-withdrawn', label)` from its abort handler whichever tab is active, and `EXPLICIT_EVENTS` in `src/notifications/index.ts` exempts the event from focus suppression. In the event list of `product/specs/notifications.md`, reword the first sentence of the `question-withdrawn` entry to say it is recorded when the caller of a pending MCP question, local or relayed from a remote harness, abandons it before it is answered, on whichever tab it was asked; keep the rest of the entry, including the answered-or-cancelled exception, the no-toggle rule and the `warning` cue, unchanged. No code or test changes: "withdraws an aborted question, shows the next queued question, and records one notification" and "does not notify when the signal aborts after the question was answered" in `src/mcp/executor.test.ts` pin the behavior the sentence describes.
-
-
 * Correct the remote-server spec's claim that the MCP endpoint is the only HTTP server `janus remote-serve` starts.
 
 Existing Issue: The `janus remote-serve` section of the remote-server spec now says "the only HTTP server it starts is a loopback MCP endpoint for a harness that asks for one", but the same process also starts a loopback e2e browser guard, a WebSocket server listening on its own port, for every harness it spawns with the browser flag set. Severity: 2/10
