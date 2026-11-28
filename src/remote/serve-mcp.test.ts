@@ -1,7 +1,7 @@
 import type * as Crypto from 'node:crypto';
 import type * as Http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { allocateBrowserPorts } from '../browser/e2e-ports.js';
+import { allocateBrowserPorts, reserveReachablePort } from '../browser/e2e-ports.js';
 import type { ToolExecutor } from '../mcp/tools.js';
 import { spawnPty } from '../pty.js';
 import { BROWSER_PORT_BAND_FIRST, isBrowserBandPort } from '../sandbox/browser/ports.js';
@@ -208,19 +208,38 @@ describe('the far-side MCP endpoint', () => {
     httpMock.createServer.mockImplementationOnce((handler: Http.RequestListener) => actual.createServer(handler));
 
     const mcp = new FarSideMcp(collisionSend, 'r1');
-    await expect(mcp.launch()).rejects.toThrow(/MCP endpoint could not bind/);
+    try {
+      await expect(mcp.launch()).rejects.toThrow(/MCP endpoint could not bind/);
+      expect(collisionSend.mock.calls).toEqual([
+        [{ type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') }],
+      ]);
 
-    expect(collisionSend.mock.calls).toEqual([
-      [{ type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') }],
-    ]);
+      const reclaimed = reserveReachablePort();
+      try {
+        expect(reclaimed.port).toBe(port);
+        mcp.dispose();
+        const later = reserveReachablePort();
+        try {
+          expect(later.port).not.toBe(port);
+        } finally {
+          later.release();
+        }
+      } finally {
+        reclaimed.release();
+      }
 
-    mcp.dispose();
-    const after = new FarSideMcp(vi.fn(), 'after');
-    const afterLaunch = await after.launch();
-    expect(Number(new URL(afterLaunch.url).port)).toBe(port);
-    after.dispose();
-    cryptoMock.randomInt = undefined;
-    blocker.close();
+      const after = new FarSideMcp(vi.fn(), 'after');
+      try {
+        const launch = await after.launch();
+        expect(Number(new URL(launch.url).port)).toBe(port);
+      } finally {
+        after.dispose();
+      }
+    } finally {
+      mcp.dispose();
+      cryptoMock.randomInt = undefined;
+      blocker.close();
+    }
   });
 
   it('reports the stored bind failure to a later harness that asks for the failed endpoint', async () => {

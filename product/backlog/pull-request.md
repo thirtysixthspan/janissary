@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - The restored harness's original name is resolved within it
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Route a restored remote harness question to its rebuilt tab". Trace the original launch identity from `src/remote/serve-processes.ts` and the rebuilt label chosen by `startSessionAttach` in `src/sessions/attach.ts`. Pass the remote session's own launch-name mapping from `src/remote/entry-factory.ts` to the relay in `src/remote/mcp-relay.ts` so a call for its original launch label addresses the exact rebuilt tab even when the old name or an alias belongs to another tab. Preserve the existing arbitrary label and alias lookup for other explicitly named tabs and the untouched local HTTP route. Extend the remote harness round-trip or entry tests to cover an occupied old label through an attach, plus an explicit other-tab request. Update the MCP and sessions specs with the restored-tab behavior.
 
 
-* Return the remote MCP port to the shared pool as soon as its listener fails to bind.
-
-Existing Issue: A far-side bind failure caches its error for later spawns but leaves the failed port reserved until the entire remote process shuts down. Severity: 4/10
-
-Existing Risk: 4/10 - A remote session keeps a guard port unavailable after the process that blocked it has gone, contrary to the remote-server spec.
-
-Proposal Risk: 1/10 - A failed listener releases its reservation once, while the stored refusal still explains later failed MCP launches.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Release the far-side MCP port on bind failure". Release the shared reservation from the pre-listen failure path in `src/remote/serve-mcp.ts`, ensure dispose cannot release a later holder's reservation, and keep `launch()` as the only sender of the stored bind error. In `src/remote/serve-mcp.test.ts`, assert that the shared pool can allocate the port after bind rejection and before endpoint disposal, and that a later refused launch still receives exactly one reason. Preserve the `src/remote/serve.test.ts` output-before-exit assertions and keep the remote spec's failed-port contract accurate.
-
-
 * Require an MCP-enabled harness before its remote channel can deliver a question call to the local app.
 
 Existing Issue: `createRemoteEntry` dispatches MCP calls on every channel regardless of whether the session contains a harness authorized to use MCP. Severity: 6/10

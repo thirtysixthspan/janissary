@@ -37,8 +37,8 @@ export class FarSideMcp {
   // and hold it until this listener is released: a far-side `-b` harness's guard can never be handed
   // the port this endpoint listens on. A collision with another process's bind is a launch failure on
   // this host, not something that travels over the session.
-  private readonly reservation: ReservedPort = reserveReachablePort();
-  private readonly port = this.reservation.port;
+  private reservation?: ReservedPort;
+  private readonly port: number;
   private readonly server: Server;
   private readonly handler: McpHttpHandler;
   private readonly pending = new Map<string, Pending>();
@@ -52,14 +52,19 @@ export class FarSideMcp {
     private readonly id: string,
     disconnectedAt?: number,
   ) {
+    this.reservation = reserveReachablePort();
+    this.port = this.reservation.port;
     this.handler = createHandler(this.relay);
     this.server = createMcpServer(this.handler, this.token);
     this.ready = new Promise<void>((resolve, reject) => {
+      let bound = false;
       this.server.on('error', (error: Error) => {
+        if (bound || this.failure !== undefined) return;
+        this.releaseReservation();
         this.failure = `MCP endpoint could not bind to ${MCP_HOST}:${this.port}: ${error.message}`;
         reject(new Error(this.failure));
       });
-      this.server.on('listening', () => resolve());
+      this.server.on('listening', () => { bound = true; resolve(); });
     });
     void this.ready.catch(() => {});
     this.server.listen(this.port, MCP_HOST);
@@ -100,10 +105,16 @@ export class FarSideMcp {
   }
 
   dispose(): void {
-    this.reservation.release();
+    this.releaseReservation();
     if (this.server.listening) this.server.close();
     this.stopGrace();
     void this.handler.close();
+  }
+
+  private releaseReservation(): void {
+    const reservation = this.reservation;
+    this.reservation = undefined;
+    reservation?.release();
   }
 
   private fail(call: string, message: string): void {

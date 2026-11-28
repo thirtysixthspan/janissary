@@ -957,11 +957,11 @@ Exactly one endpoint is claimed per remote process. Its address and token reach 
 the loopback port has bound, so no harness starts with an address nothing serves. If another process
 on the host already holds that port, the collision is a contained failure of that endpoint: the
 reason is reported back over the session, the colliding harness is refused with exit code 1 rather
-than given an unbound address, and the remote session and its other tabs keep running. A failed
-endpoint does not leave its port claimed. Every harness that later asks for MCP on that session
-receives the stored reason in its own tab before the same exit-code-1 refusal, so none closes without
-being told why. Each refused harness, the colliding one included, is told exactly once: the reason
-reaches a tab only when that harness's launch is refused, never also when the bind itself fails.
+than given an unbound address, and the remote session and its other tabs keep running. The endpoint
+returns the port to the shared reservation pool as soon as the bind fails. Every harness that later
+asks for MCP on that session receives the stored reason in its own tab before the same exit-code-1
+refusal, so none closes without being told why. Each refused harness, the colliding one included, is
+told exactly once. The reason reaches its tab when the launch is refused.
 
 A harness waiting for that bind already holds its process id. A second launch with the same id is
 ignored, as it is for a running process. Closing the tab, or ending the session, before the bind
