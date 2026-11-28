@@ -3,7 +3,7 @@ import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-l
 
 function fields(overrides: Partial<HarnessLaunchFields> = {}): HarnessLaunchFields {
   return {
-    name: 'claude', label: '', workspace: true, offline: false, browser: true,
+    name: 'claude', label: '', workspace: true, offline: false, browser: true, mcp: true,
     autoApprove: true, autoResume: true, model: '', effort: '', ...overrides,
   };
 }
@@ -47,6 +47,18 @@ describe('buildHarnessLaunchCommand', () => {
 
   it('appends nothing for the e2e browser when it is on, since that is the default', () => {
     expect(buildHarnessLaunchCommand(fields({ browser: true }))).toBe('harness claude');
+  });
+
+  it('adds --no-mcp when the MCP server is disabled', () => {
+    expect(buildHarnessLaunchCommand(fields({ mcp: false }))).toBe('harness claude --no-mcp');
+  });
+
+  it('appends nothing for the MCP server when it is on, since that is the default', () => {
+    expect(buildHarnessLaunchCommand(fields({ mcp: true }))).toBe('harness claude');
+  });
+
+  it('appends no redundant --no-mcp for an offline launch', () => {
+    expect(buildHarnessLaunchCommand(fields({ mcp: false, offline: true }))).toBe('harness claude --offline');
   });
 
   it('adds --model with the value verbatim (not quoted, so it round-trips through the parser)', () => {

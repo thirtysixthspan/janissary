@@ -34,6 +34,7 @@ describe('parseHarnessCommand — launch form', () => {
       autoApprove: true,
       browser: true,
       autoResume: true,
+      mcp: true,
     });
     expect(parseHarnessCommand('harness claude')).toEqual({
       name: 'claude',
@@ -42,6 +43,7 @@ describe('parseHarnessCommand — launch form', () => {
       autoApprove: true,
       browser: true,
       autoResume: false,
+      mcp: true,
     });
   });
 
@@ -123,6 +125,7 @@ describe('parseHarnessCommand — launch form', () => {
       autoApprove: true,
       browser: true,
       autoResume: true,
+      mcp: true,
       model: 'gpt-5',
       effort: 'low',
       label: 'bot',
@@ -188,6 +191,32 @@ describe('parseHarnessCommand — -b/--browser/--no-browser', () => {
   });
 });
 
+describe('parseHarnessCommand — --no-mcp', () => {
+  it('defaults to true when the flag is absent', () => {
+    expect(parseHarnessCommand('harness claude')).toMatchObject({ mcp: true });
+  });
+
+  it('turns mcp off with --no-mcp, in any case', () => {
+    expect(parseHarnessCommand('harness claude --no-mcp')).toMatchObject({ mcp: false });
+    expect(parseHarnessCommand('harness codex --NO-MCP')).toMatchObject({ mcp: false });
+  });
+
+  it('lets --no-mcp override a positive form', () => {
+    expect(parseHarnessCommand('harness opencode --mcp --no-mcp')).toMatchObject({ mcp: false });
+  });
+
+  it('stays on alongside --offline; the effective rule is applied at spawn', () => {
+    expect(parseHarnessCommand('harness claude -w --offline')).toMatchObject({ offline: true, mcp: true });
+    expect(parseHarnessCommand('harness claude -w --offline --no-mcp')).toMatchObject({ offline: true, mcp: false });
+  });
+
+  it('is not scanned inside a with <prompt> clause', () => {
+    expect(parseHarnessCommand('harness claude with try --no-mcp now')).toMatchObject({
+      mcp: true, prompt: 'try --no-mcp now',
+    });
+  });
+});
+
 describe('parseHarnessCommand — on <address> clause', () => {
   it('parses the address into its destination, bare host, and path', () => {
     expect(parseHarnessCommand('harness claude on admin@devbox:/srv/proj')).toMatchObject({
@@ -241,7 +270,7 @@ describe('parseHarnessCommand — on <address> clause', () => {
   // is never read as a clause.
   it('leaves an on inside a with <prompt> clause as prompt text', () => {
     expect(parseHarnessCommand('harness claude with turn it on devbox')).toEqual({
-      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: true, autoResume: false,
+      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: true, autoResume: false, mcp: true,
       prompt: 'turn it on devbox',
     });
   });
@@ -299,6 +328,7 @@ describe('parseHarnessCommand — with <prompt> clause', () => {
       autoApprove: true,
       browser: true,
       autoResume: false,
+      mcp: true,
       prompt: 'fix the -w flag',
     });
   });

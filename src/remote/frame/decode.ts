@@ -2,7 +2,7 @@ import type { RemoteFrame } from '../protocol-frames.js';
 import {
   decodeAcpRun, decodeAcpRunEnd, decodeAcpToolRequest, decodeAcpToolResult, decodeAcpToolStep, decodeAcpTurn,
 } from './decode-acp-run.js';
-import { malformed, type DecodeResult } from './decode-shared.js';
+import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
 import {
   decodeAgentResolve, decodeAgentResolveResult, decodeRunClone, decodeRunCloneResult,
@@ -20,7 +20,7 @@ import {
 } from './decode-acp.js';
 import { decodeProvision } from './decode-provision.js';
 import {
-  decodeAddressedData, decodeAttach, decodeBrowserExited, decodeBrowserStarted, decodeExit, decodeKill, decodeNameInUse,
+  decodeAddressedData, decodeAttach, decodeAttachResult, decodeBrowserExited, decodeBrowserStarted, decodeExit, decodeKill, decodeNameInUse,
   decodeResize, decodeSpawn, decodeTranscript, decodeWorkspaceFailed, decodeWorkspaceReady,
 } from './decode-lifecycle.js';
 
@@ -37,14 +37,7 @@ function unhandledRemoteFrame(type: never): never {
 export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<string, unknown>): DecodeResult {
   switch (type) {
   case 'attach': { return decodeAttach(record); }
-  case 'attach-result': {
-    if (typeof record.accepted !== 'boolean') return malformed(type);
-    if (record.truncated !== undefined && typeof record.truncated !== 'boolean') return malformed(type);
-    return {
-      type, accepted: record.accepted,
-      ...(record.truncated !== undefined && { truncated: record.truncated }),
-    };
-  }
+  case 'attach-result': { return decodeAttachResult(record); }
   case 'session-state': { return { type }; }
   case 'session-state-result': { return decodeSessionStateResult(record); }
   case 'shutdown': { return { type }; }
@@ -84,8 +77,23 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-open': { return decodeAcpOpen(record); }
   case 'acp-run': { return decodeAcpRun(record); }
   case 'acp-tool-result': { return decodeAcpToolResult(record); }
+  case 'mcp-result': {
+    const { call, text, isError } = record;
+    if (!nonEmptyString(call) || typeof text !== 'string' || typeof isError !== 'boolean') return malformed('mcp-result');
+    return { type: 'mcp-result', call, text: Buffer.from(text, 'base64').toString('utf8'), isError };
+  }
   case 'acp-turn': { return decodeAcpTurn(record); }
   case 'acp-tool-request': { return decodeAcpToolRequest(record); }
+  case 'mcp-call': {
+    const { call, tool, args } = record;
+    if (!nonEmptyString(call) || !nonEmptyString(tool) || !nonEmptyString(args)) return malformed('mcp-call');
+    return { type: 'mcp-call', call, tool, args: Buffer.from(args, 'base64').toString('utf8') };
+  }
+  case 'mcp-cancel': {
+    const { call, received } = record;
+    if (!nonEmptyString(call) || (received !== undefined && received !== true)) return malformed(type);
+    return { type, call, ...(received === true && { received }) };
+  }
   case 'acp-tool-step': { return decodeAcpToolStep(record); }
   case 'acp-run-end': { return decodeAcpRunEnd(record); }
   case 'acp-chunk': { return decodeAcpText(type, record); }

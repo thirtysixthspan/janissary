@@ -38,6 +38,7 @@ import { command as tasks } from './tasks.js';
 import { command as tab } from './tab.js';
 import { command as layout } from './layout.js';
 import { command as question } from './question.js';
+import { command as mcp } from './mcp.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 import { command as plugins } from './plugins.js';
 import { command as roles } from './roles.js';
@@ -86,6 +87,7 @@ export const coreCommands: Command[] = [
   tab,
   layout,
   question,
+  mcp,
   plugins,
   roles,
   monitors,

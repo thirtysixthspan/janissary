@@ -86,6 +86,9 @@ export type HarnessView = {
   // listens, cleared when one is reported gone. It is what tells a browser in use apart from an
   // endpoint nothing has connected to yet, which the metadata row's browser flag reads.
   browserRunning?: boolean;
+  // Set once the harness first calls the MCP server, and left set for the tab's life: it lights the
+  // metadata row's MCP flag green.
+  mcpUsed?: boolean;
   // Set once auto-approve has injected an approval into a `-y` tab's permission prompt, local or
   // remote, and left set for the tab's life: it lights the metadata row's auto-approve flag green.
   autoApproved?: boolean;
@@ -438,6 +441,9 @@ export type Tab = {
   // this tab and its endpoint injected into the harness's environment. Harness-only; set once at
   // spawn time, and kept so the metadata row can report it.
   browser?: boolean;
+  // Whether this harness tab was launched with MCP config. Harness-only; set once at spawn time
+  // from the effective decision, and kept so the metadata row can report it.
+  mcp?: boolean;
   // Set when new transcript content arrives on this tab while it is NOT the active tab; cleared
   // when the tab is activated. Drives the unread badge in the tab strip. In-memory only (like
   // scrollOffset).

@@ -185,3 +185,15 @@ describe('SessionRouter — shell process exit', () => {
     expect(onSessionExit).toHaveBeenCalledWith('harness1', undefined, true);
   });
 });
+
+describe('SessionRouter — restored MCP harness', () => {
+  it('retires eligibility when the recorded harness exits before adoption', () => {
+    const router = new SessionRouter({}, 'restored');
+    router.openHold();
+    expect(router.hasMcpHarness()).toBe(true);
+
+    router.exit({ type: 'exit', id: 'restored', exitCode: 0 });
+
+    expect(router.hasMcpHarness()).toBe(false);
+  });
+});

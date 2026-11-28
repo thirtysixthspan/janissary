@@ -14,15 +14,17 @@ function harness(write?: (data: string) => void) {
   const closes = vi.fn();
   const attached = vi.fn();
   const truncated = vi.fn();
+  const finalClose = vi.fn();
   const channel = new RemoteChannel(transport, {
     onTerminalData: (d) => { terminal.push(d); },
     onAttached: attached,
     onFrame: (f) => { frames.push(f); },
     onError: (m) => { errors.push(m); },
     onClose: closes,
+    onFinalClose: finalClose,
     onTruncatedReplay: truncated,
   });
-  return { channel, written, terminal, frames, errors, closes, attached, truncated, kill };
+  return { channel, written, terminal, frames, errors, closes, attached, truncated, kill, finalClose };
 }
 
 afterEach(() => vi.useRealTimers());
@@ -814,6 +816,37 @@ describe('RemoteChannel — closing', () => {
     expect(h.kill).toHaveBeenCalled();
   });
 });
+
+describe('RemoteChannel — final close cleanup', () => {
+  it.each(['close', 'disconnect', 'finish', 'fail', 'closed'] as const)(
+    'calls onFinalClose exactly once on %s', (phase) => {
+      const h = harness();
+      if (phase === 'fail') h.channel.receive(`${encodeHandshake()}\n`);
+      switch (phase) {
+      case 'close': { h.channel.close(); break; }
+      case 'disconnect': { h.channel.disconnect(); break; }
+      case 'finish': { h.channel.finish(); break; }
+      case 'fail': { h.channel.receive(`${JSON.stringify({ type: 'exec', id: 'r1' })}\n`); break; }
+      case 'closed': { h.channel.closed(); break; }
+      }
+      expect(h.finalClose).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('does not call onFinalClose when closed with a session id', () => {
+    const h = harness();
+    h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+    h.channel.closed();
+    expect(h.finalClose).not.toHaveBeenCalled();
+  });
+
+  it('does not call onFinalClose when the transport is replaced', () => {
+    const h = harness();
+    h.channel.replaceTransport({ id: 'new', write: vi.fn(), kill: vi.fn() });
+    expect(h.finalClose).not.toHaveBeenCalled();
+  });
+});
+
 it('preserves process and navigator routing but detaches ACP on a dropped peer transport', () => {
   const h = harness();
   h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);

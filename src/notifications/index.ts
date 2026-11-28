@@ -22,6 +22,7 @@ export type NotificationEventType =
   | 'auto-resume'
   | 'editor-suggest'
   | 'question'
+  | 'question-withdrawn'
   | 'transcript-unavailable'
   | 'ssh-recording-failed'
   | 'harness-recording-failed'
@@ -42,6 +43,7 @@ export type NotificationEventType =
   | 'connection-close-failed'
   | 'workspace-ready'
   | 'models-refresh'
+  | 'mcp-failed'
 
 // Background activity requires its own opt-in toggle and is suppressed for the active tab.
 export type AmbientNotificationEvent =
@@ -136,6 +138,10 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'system-schedule-fire': true,
   // Provider refreshes are deliberate actions whose outcomes remain visible while their tab is active.
   'models-refresh': true,
+  // The local MCP server could not start, which the user must see even while its own tab is active.
+  'mcp-failed': true,
+  // A pending question was withdrawn; it must stay as visible as the `question` event it follows.
+  'question-withdrawn': true,
 };
 
 function isAmbient(event: NotificationEventType): event is AmbientNotificationEvent {
@@ -145,12 +151,13 @@ function isAmbient(event: NotificationEventType): event is AmbientNotificationEv
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. An explicit trigger always fires, subject only to the tab being open (enforced
 // in `notify`), except system schedule and model refresh notices, which have default-on toggles.
-// Ambient events use their own toggle and are subject to focus suppression.
+// Ambient events use their own toggle and are subject to focus suppression. An undefined
+// `activeLabel` means no tab is active yet, so focus suppresses nothing.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
   tabLabel: string,
-  activeLabel: string,
+  activeLabel: string | undefined,
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
   if (event === 'system-schedule-fire') return config?.events.systemScheduleFire ?? true;
@@ -198,7 +205,9 @@ export function notify(
   message?: string,
   { openFile, openTab, detectedAt }: NotifyOptions = {},
 ): void {
-  const activeLabel = managers.tab.cur().label;
+  // A startup failure, such as the MCP server's, can be reported before the launch shell opens the
+  // first tab. With no tabs there is no active one, and `cur()` would answer `undefined`.
+  const activeLabel = managers.tab.tabs.length === 0 ? undefined : managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
   const tab = managers.tab.byLabel(tabLabel);
   const color = tab?.dotColor;

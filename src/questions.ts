@@ -22,12 +22,14 @@ export class Questions {
 
   constructor(private onChange: (tab: string, pending: PendingQuestionView | undefined) => void = () => {}) {}
 
-  register(request: QuestionRequest, signal?: AbortSignal): Promise<string> {
+  register(request: QuestionRequest, signal?: AbortSignal, onWithdraw?: () => void): Promise<string> {
     if (signal?.aborted) return Promise.resolve(QUESTION_CANCELLED);
     return new Promise((resolve) => {
       const entry: QueuedQuestion = { ...request, id: `question-${this.nextId++}`, resolve };
       if (signal) {
-        const cancel = () => this.cancelEntry(entry);
+        const cancel = () => {
+          if (this.cancelEntry(entry)) onWithdraw?.();
+        };
         signal.addEventListener('abort', cancel, { once: true });
         entry.cleanup = () => signal.removeEventListener('abort', cancel);
       }
@@ -88,18 +90,19 @@ export class Questions {
     this.onChange(entry.tab, this.pendingFor(entry.tab));
   }
 
-  private cancelEntry(entry: QueuedQuestion): void {
+  private cancelEntry(entry: QueuedQuestion): boolean {
     if (this.active.get(entry.tab) === entry) {
       this.finish(entry, QUESTION_CANCELLED);
-      return;
+      return true;
     }
     const queue = this.queued.get(entry.tab);
     const index = queue?.indexOf(entry) ?? -1;
-    if (!queue || index < 0) return;
+    if (!queue || index < 0) return false;
     queue.splice(index, 1);
     if (queue.length === 0) this.queued.delete(entry.tab);
     entry.cleanup?.();
     entry.resolve(QUESTION_CANCELLED);
+    return true;
   }
 
   private finish(entry: QueuedQuestion, value: string): void {

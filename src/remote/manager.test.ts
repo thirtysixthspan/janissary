@@ -3,6 +3,10 @@ import { RemoteManager, type RemoteLaunchHandlers } from './manager.js';
 import { remoteCaptureCommand, remoteServeCommand } from './entry-factory.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import type { RemoteChannel } from './channel/index.js';
+import { createRemotePtySession } from './pty-session.js';
+import { Questions } from '../questions.js';
 import { notify } from '../notifications/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
@@ -986,5 +990,185 @@ describe('joined plugin tab remote target', () => {
     expect(tab.remote).toBeUndefined();
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
     emit.mockRestore();
+  });
+});
+
+type McpHarnessLaunch = Pick<Extract<ClientFrame, { type: 'spawn' }>, 'harness' | 'mcp' | 'offline'>;
+
+function mcpHarness(launch?: McpHarnessLaunch, session?: string) {
+  let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
+  const write = vi.fn();
+  const tabs = [{
+    label: 'asker',
+    harness: { name: 'claude', program: 'claude', ptyId: 'rpty1', status: 'running' },
+  }] as unknown as Tab[];
+  const questions = new Questions();
+  const managers = {
+    pty: {
+      spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
+        transport = handlers;
+        return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill: vi.fn() };
+      }),
+      reassignTransports: vi.fn(),
+    },
+    sessions: { dropSession: vi.fn() },
+    tab: {
+      findIndex: vi.fn(() => -1), closeTab: vi.fn(), tabs, byLabel: vi.fn(), cur: () => ({ label: 'creator' }),
+    },
+    questions,
+  } as unknown as Managers;
+  const remote = new RemoteManager(managers);
+  const channel = remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
+  transport?.onData(`${encodeHandshake(session)}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  if (launch) {
+    channel.send({
+      type: 'spawn', id: 'rpty1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+      agentName: 'creator', ...launch,
+    });
+  }
+  write.mockClear();
+  return {
+    questions,
+    killHarness: () => channel.send({ type: 'kill', id: 'rpty1' }),
+    send: (frame: ServerFrame) => transport?.onData(`${encodeFrame(frame)}\n`),
+    sent: () => write.mock.calls.map(([data]: [string]) => String(data)).join(''),
+    transport: () => transport,
+    dispose: () => remote.dispose(),
+  };
+}
+
+describe('RemoteManager mcp-call dispatch', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('runs the local executor and answers with the correlated result', async () => {
+    const h = mcpHarness({ harness: 'claude', mcp: true });
+    const register = vi.spyOn(h.questions, 'register');
+    h.send({
+      type: 'mcp-call', call: 'call-9', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Port?' }),
+    });
+
+    expect(register).toHaveBeenCalledOnce();
+    const pending = h.questions.pendingFor('asker');
+    expect(pending?.question).toBe('Port?');
+    expect(h.questions.answer('asker', pending!.id, '4242')).toBe(true);
+    await vi.waitFor(() => expect(h.sent()).toContain('"type":"mcp-result"'));
+    expect(h.sent()).toContain('"call":"call-9"');
+    expect(h.sent()).toContain(Buffer.from('4242').toString('base64'));
+    h.dispose();
+  });
+
+  it.each([
+    { peer: 'a peer reporting its pending ids', mcpPending: ['call-9'] },
+    { peer: 'an earlier version-49 peer', mcpPending: undefined },
+  ])('replays a settled question after a timed-out attach with $peer', async ({ mcpPending }) => {
+    vi.useFakeTimers();
+    const h = mcpHarness({ harness: 'claude', mcp: true }, RECORDED_SESSION);
+    try {
+      const call: ServerFrame = {
+        type: 'mcp-call', call: 'call-9', tool: 'question',
+        args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Port?' }),
+      };
+      const register = vi.spyOn(h.questions, 'register');
+      h.send(call);
+      const pending = h.questions.pendingFor('asker');
+      if (!pending) throw new Error('expected a pending question');
+      h.transport()?.onExit();
+      expect(h.questions.answer('asker', pending.id, '4242')).toBe(true);
+      await vi.advanceTimersByTimeAsync(15_750);
+      expect(h.sent()).not.toContain('"type":"mcp-result"');
+
+      h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
+      h.send({ type: 'attach-result', accepted: true, ...(mcpPending && { mcpPending }) });
+      h.send(call);
+
+      expect(h.sent()).toContain(encodeFrame({
+        type: 'mcp-result', call: 'call-9', text: '4242', isError: false,
+      }));
+      expect(register).toHaveBeenCalledOnce();
+      expect(h.questions.pendingFor('asker')).toBeUndefined();
+    } finally {
+      h.dispose();
+      vi.useRealTimers();
+    }
+  });
+
+  it('withdraws a pending question on a cancel frame and shows the next queued one', async () => {
+    const h = mcpHarness({ harness: 'claude', mcp: true });
+    h.send({
+      type: 'mcp-call', call: 'call-10', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'First?' }),
+    });
+    h.send({
+      type: 'mcp-call', call: 'call-11', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Second?' }),
+    });
+    expect(h.questions.pendingFor('asker')?.question).toBe('First?');
+    h.killHarness();
+    h.send({
+      type: 'mcp-call', call: 'after-kill', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Still running?' }),
+    });
+    expect(h.sent()).toContain(encodeFrame({
+      type: 'mcp-result', call: 'after-kill', text: 'MCP is not enabled for this remote session.', isError: true,
+    }));
+
+    h.send({ type: 'mcp-cancel', call: 'call-10' });
+
+    await vi.waitFor(() => expect(h.sent()).toContain(encodeFrame({
+      type: 'mcp-result', call: 'call-10', text: 'Question cancelled.', isError: false,
+    })));
+    expect(h.questions.pendingFor('asker')?.question).toBe('Second?');
+    h.send({ type: 'mcp-cancel', call: 'call-11' });
+    await vi.waitFor(() => expect(h.questions.pendingFor('asker')).toBeUndefined());
+    h.dispose();
+  });
+
+  it.each([
+    { scenario: 'no recorded launch' },
+    { scenario: 'MCP turned off', launch: { harness: 'claude', mcp: false } },
+    { scenario: 'an offline harness', launch: { harness: 'claude', mcp: true, offline: true } },
+    { scenario: 'no harness process', launch: { mcp: true } },
+  ])('refuses a question with $scenario before registration', ({ launch }) => {
+    const h = mcpHarness(launch);
+    const register = vi.spyOn(h.questions, 'register');
+
+    h.send({
+      type: 'mcp-call', call: 'refused', tool: 'question',
+      args: JSON.stringify({ tab: 'asker', kind: 'ask', question: 'Port?' }),
+    });
+
+    expect(register).not.toHaveBeenCalled();
+    expect(h.questions.pendingFor('asker')).toBeUndefined();
+    expect(h.sent()).toContain(encodeFrame({
+      type: 'mcp-result', call: 'refused', text: 'MCP is not enabled for this remote session.', isError: true,
+    }));
+    h.dispose();
+  });
+});
+
+describe('remote spawn MCP flag', () => {
+  function spawnFrames(flag?: boolean): ClientFrame[] {
+    const frames: ClientFrame[] = [];
+    const channel = {
+      attach: vi.fn(),
+      send: (frame: ClientFrame) => { frames.push(frame); },
+    } as unknown as RemoteChannel;
+    createRemotePtySession(channel, {} as Managers, {
+      id: 'rpty1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24,
+      ...(flag !== undefined && { mcp: flag }),
+    }, () => {});
+    return frames;
+  }
+
+  it('sends no mcp true in the spawn frame when the caller supplies a false flag', () => {
+    const spawn = spawnFrames(false).find((frame) => frame.type === 'spawn');
+    expect(spawn).toBeDefined();
+    expect(spawn).not.toHaveProperty('mcp', true);
+  });
+
+  it('forwards a supplied true flag into the spawn frame', () => {
+    const spawn = spawnFrames(true).find((frame) => frame.type === 'spawn');
+    expect(spawn).toMatchObject({ mcp: true });
   });
 });

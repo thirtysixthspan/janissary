@@ -41,6 +41,8 @@ export class DetachedPeer {
     // the query to it. Defaulted so every existing caller (including every test) needs no change.
     private getCapture: (id: string) => { text: string; capturedAt: number } | undefined = () => { /* no detection pipeline wired */ },
     private currentBusyStates: () => Iterable<{ id: string; busy: boolean; unread: boolean }> = () => [],
+    private linkChanged: (linked: boolean) => void = () => {},
+    private mcpPendingCalls?: () => string[] | undefined,
   ) {
     this.record = peerRecordPath(root, session);
   }
@@ -72,6 +74,8 @@ export class DetachedPeer {
     if (this.stopped || this.socketPath === undefined) return;
     writePeerRecord(this.record, { pid: process.pid, socket: this.socketPath, label, version: REMOTE_PROTOCOL_VERSION });
   }
+
+  linked(): boolean { return !this.stopped && this.sink !== undefined; }
 
   emit(frame: ServerFrame): void {
     if (this.stopped) return;
@@ -108,10 +112,12 @@ export class DetachedPeer {
 
   detach(): void {
     if (this.stopped) return;
+    const wasLinked = this.linked();
     this.sink = undefined;
     this.socket?.destroy();
     this.socket = undefined;
     this.expiry ??= setTimeout(this.expired, REMOTE_DETACH_TIMEOUT_MS);
+    if (wasLinked) this.linkChanged(false);
   }
 
   dispose(): void {
@@ -157,7 +163,12 @@ export class DetachedPeer {
       clearTimeout(this.expiry);
       this.expiry = undefined;
       this.sink = (chunk) => { socket.write(chunk); };
-      this.emit({ type: 'attach-result', accepted: true, ...((this.dropped || this.history.truncated) && { truncated: true }) });
+      const mcpPending = this.mcpPendingCalls?.();
+      this.emit({
+        type: 'attach-result', accepted: true,
+        ...((this.dropped || this.history.truncated) && { truncated: true }),
+        ...(mcpPending !== undefined && { mcpPending }),
+      });
       this.dropped = false;
       const history = this.history.frames(classified.restore === true);
       for (const replay of history) socket.write(`${encodeFrame(replay)}\n`);
@@ -167,6 +178,7 @@ export class DetachedPeer {
       this.pending = [];
       this.pendingBytes = 0;
       for (const busyFrame of busyTransitionFrames(this.currentBusyStates())) socket.write(`${encodeFrame(busyFrame)}\n`);
+      this.linkChanged(true);
       this.receive(buffer.slice(newline + 1));
     });
     socket.on('close', () => {

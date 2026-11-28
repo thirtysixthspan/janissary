@@ -1,6 +1,6 @@
 import type { Tab } from './types.js';
 import { recordLeavingActiveTab as recordLeavingActiveTabOp, popFocusHistory as popFocusHistoryOp, mostRecentFileNavigatorLabel as mostRecentFileNavigatorLabelOp } from './focus-history.js';
-import { clearUnreadTab, markUnreadTab } from './transcript/events.js';
+import { clearUnreadTab, markUnreadQuestionTab, markUnreadTab } from './transcript/events.js';
 import { repairPaneSelections } from './split-selection.js';
 import { applyOpenResult as applyOpenResultOp } from './open-result.js';
 
@@ -17,6 +17,12 @@ export type TabSelectionPort = {
 
 export function markUnread(port: TabSelectionPort, label: string): boolean {
   return markUnreadTab(port.tabs, label, port.tabs[port.activeTab]?.label, port.secondaryTabLabel);
+}
+
+// A pending question badges its tab even while the answering agent's ACP prompt is set, so it uses
+// the visibility-only path rather than the shared rule above.
+export function markUnreadQuestion(port: TabSelectionPort, label: string): boolean {
+  return markUnreadQuestionTab(port.tabs, label, port.tabs[port.activeTab]?.label, port.secondaryTabLabel);
 }
 
 // Immediate, unlike the activation paths: this is the harness going back to work, not the user

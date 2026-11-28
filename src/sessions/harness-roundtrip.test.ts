@@ -7,6 +7,7 @@ import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { spawnPty, type PtyHandlers } from '../pty.js';
+import { Questions } from '../questions.js';
 import { RemoteManager } from '../remote/manager.js';
 import { REMOTE_SHUTDOWN_DRAIN_MS } from '../remote/shutdown-drain.js';
 import { decodeFrame, encodeFrame, encodeHandshake } from '../remote/protocol.js';
@@ -36,6 +37,12 @@ vi.mock('../harness/observers.js', () => ({
 }));
 vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: () => ({}) }));
 vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
+vi.mock('../remote/serve-mcp.js', () => ({
+  FarSideMcp: class {
+    launch = vi.fn().mockResolvedValue({ url: 'http://127.0.0.1:51234/mcp', token: 'far-test-token' });
+    dispose = vi.fn();
+  },
+}));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 const WORKSPACE = '/remote-only/project/.janissary/workspace/claude';
@@ -47,6 +54,7 @@ function harness() {
   const frames: ClientFrame[] = [];
   const remoteKills = vi.fn();
   const remoteSpawns = vi.fn();
+  let attachReplay: ServerFrame | undefined;
   const emit = (frame: ServerFrame) => {
     const transport = transports.at(-1);
     if (transport?.connected) transport.handlers.onData(transport.id, `${encodeFrame(frame)}\n`);
@@ -79,7 +87,15 @@ function harness() {
         frames.push(frame as ClientFrame);
         switch (frame.type) {
           case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
-          case 'attach': { setTimeout(() => { emit({ type: 'attach-result', accepted: true }); }, 0); break; }
+          case 'attach': {
+            setTimeout(() => {
+              emit({ type: 'attach-result', accepted: true });
+              const replay = attachReplay;
+              attachReplay = undefined;
+              if (replay) emit(replay);
+            }, 0);
+            break;
+          }
           case 'session-state': { setTimeout(() => { emit({ type: 'session-state-result', processes: processes.states() }); }, 0); break; }
           case 'spawn': { processes.spawn(frame); break; }
           case 'kill': { processes.kill(frame.id); break; }
@@ -98,8 +114,12 @@ function harness() {
   managers.terminalRuntime = new TerminalRuntimeManager(managers);
   managers.harness = new HarnessManager(managers);
   managers.sessions = new SessionsManager(managers);
+  managers.questions = new Questions();
   wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
-  return { transports, frames, processes, remoteKills, remoteSpawns };
+  return {
+    transports, frames, processes, remoteKills, remoteSpawns, emit,
+    replayOnAttach: (frame: ServerFrame) => { attachReplay = frame; },
+  };
 }
 
 beforeEach(() => {
@@ -121,8 +141,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function launch() {
+async function launch(mcp = false) {
   const fixture = harness();
+  if (mcp) {
+    managers.mcp = { localLaunch: () => ({ url: 'http://127.0.0.1:51235/mcp', token: 'local-test-token' }) } as unknown as Managers['mcp'];
+  }
   expect(managers.harness.run('harness claude on devbox')).toBeUndefined();
   await vi.advanceTimersByTimeAsync(10);
   expect(managers.tab.harnessTab('claude')?.harness.status).toBe('running');
@@ -185,6 +208,66 @@ describe('harness sessions round trip', () => {
     expect(built.runtimes[1].dispose).toHaveBeenCalledOnce();
     expect(built.runtimes[2].dispose).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalledWith(expect.anything(), 'remote-session-terminated', expect.anything(), expect.anything());
+  });
+
+  // Launched while the local server was down, so the far harness has no MCP config. A server that
+  // comes up before the attach must not make the rebuilt tab, or the record written after it, claim one.
+  it('keeps a harness launched without MCP flagged off through an attach once the local server runs', async () => {
+    const h = await launch();
+    expect(managers.tab.byLabel('claude')?.mcp).toBe(false);
+    managers.mcp = { localLaunch: () => ({ url: 'http://127.0.0.1:51234/mcp', token: 'tok-123' }) } as unknown as Managers['mcp'];
+    for (let cycle = 0; cycle < 2; cycle++) {
+      expect(managers.sessions.detach('claude')).toBe(true);
+      expect(saved.records[0]?.processes[0]).toMatchObject({ kind: 'harness', mcp: false });
+      expect(managers.sessions.attach(SESSION)).toBe(true);
+      await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);
+      expect(managers.tab.harnessTab('claude')?.harness.status).toBe('running');
+      expect(managers.tab.byLabel('claude')?.mcp).toBe(false);
+    }
+    expect(h.processes.states()[0]).toMatchObject({ mcp: false });
+    expect(h.remoteSpawns).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a restored MCP harness targeting its rebuilt tab when its original label is occupied', async () => {
+    const h = await launch(true);
+    expect(h.processes.states()[0]).toMatchObject({ mcp: true });
+    expect(managers.sessions.detach('claude')).toBe(true);
+    await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);
+    seedTestTab(managers.tab, 'claude').title = 'claude-2';
+    h.replayOnAttach({
+      type: 'mcp-call', call: 'replay', tool: 'question',
+      args: JSON.stringify({ tab: 'claude', kind: 'ask', question: 'While restoring?' }),
+    });
+    expect(managers.sessions.attach(SESSION)).toBe(true);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(managers.tab.harnessTab('claude-2')?.harness.status).toBe('running');
+    const replay = managers.questions.pendingFor('claude-2');
+    expect(replay?.question).toBe('While restoring?');
+    expect(managers.questions.answer('claude-2', replay!.id, 'Ready')).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.frames).toContainEqual({ type: 'mcp-result', call: 'replay', text: 'Ready', isError: false });
+    seedTestTab(managers.tab, 'reviews').title = 'Review desk';
+
+    h.emit({
+      type: 'mcp-call', call: 'own', tool: 'question',
+      args: JSON.stringify({ tab: 'CLAUDE', kind: 'ask', question: 'Which port?' }),
+    });
+
+    const pending = managers.questions.pendingFor('claude-2');
+    expect(pending?.question).toBe('Which port?');
+    expect(managers.questions.pendingFor('claude')).toBeUndefined();
+    expect(managers.questions.answer('claude-2', pending!.id, '3000')).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.frames).toContainEqual({ type: 'mcp-result', call: 'own', text: '3000', isError: false });
+
+    h.emit({
+      type: 'mcp-call', call: 'other', tool: 'question',
+      args: JSON.stringify({ tab: 'review desk', kind: 'ask', question: 'Ready?' }),
+    });
+
+    expect(managers.questions.pendingFor('reviews')?.question).toBe('Ready?');
+    expect(managers.questions.pendingFor('claude-2')).toBeUndefined();
+    expect(h.remoteSpawns).toHaveBeenCalledOnce();
   });
 
   it('ignores an old transport exit delivered after the harness has been restored', async () => {

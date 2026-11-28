@@ -7,6 +7,7 @@ export {
   faBolt as autoPermitIcon,
   faStopwatch as autoResumeIcon,
   faGlobe as browserIcon,
+  faServer as mcpIcon,
   faThumbsUp as approveIcon,
   faThumbsDown as rejectIcon,
   faClipboard as snapshotIcon,

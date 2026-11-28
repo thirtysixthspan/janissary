@@ -55,8 +55,22 @@ export function decodeAttach(record: Record<string, unknown>): DecodeResult {
   };
 }
 
+export function decodeAttachResult(record: Record<string, unknown>): DecodeResult {
+  const { accepted, truncated, mcpPending } = record;
+  if (typeof accepted !== 'boolean') return malformed('attach-result');
+  if (truncated !== undefined && typeof truncated !== 'boolean') return malformed('attach-result');
+  if (mcpPending !== undefined && (!Array.isArray(mcpPending) || !mcpPending.every(nonEmptyString))) {
+    return malformed('attach-result');
+  }
+  return {
+    type: 'attach-result', accepted,
+    ...(truncated !== undefined && { truncated }),
+    ...(mcpPending !== undefined && { mcpPending }),
+  };
+}
+
 export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume, shell, cwd } = record;
+  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume, mcp, shell, cwd } = record;
   const launch = decodeLaunch(record.launch);
   const env = decodeEnv(record.env);
   const shellRecord = typeof shell === 'object' && shell !== null && !Array.isArray(shell)
@@ -69,6 +83,7 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     || !(browser === undefined || typeof browser === 'boolean')
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
     || !(autoResume === undefined || typeof autoResume === 'boolean')
+    || !(mcp === undefined || typeof mcp === 'boolean')
     || !(shell === undefined || isShellMarkerNonce(shellNonce))
     || !(cwd === undefined || nonEmptyString(cwd)) || (shell !== undefined && mode !== 'pty')
     || launch === false || env === false || ((launch !== undefined || env !== undefined) && mode !== 'pty')
@@ -80,6 +95,7 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     ...(browser !== undefined && { browser }),
     ...(autoApprove !== undefined && { autoApprove }),
     ...(autoResume !== undefined && { autoResume }),
+    ...(mcp !== undefined && { mcp }),
     ...(shell !== undefined && { shell: { nonce: shellNonce as string } }),
     ...(cwd !== undefined && { cwd }),
     ...(launch !== undefined && { launch }),

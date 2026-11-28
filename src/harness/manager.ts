@@ -126,7 +126,7 @@ export class HarnessManager extends HarnessTabSpawn {
     retry?: { creator: Tab; cwd: string; tried: readonly string[]; systemSchedule?: true; baseLabel?: string },
   ): string | undefined {
     const {
-      name, workspace, offline, autoApprove, autoResume, browser, label: label_, model, effort, prompt, remote,
+      name, workspace, offline, autoApprove, autoResume, browser, mcp, label: label_, model, effort, prompt, remote,
     } = launch;
     const creator = retry?.creator ?? (invocation === undefined
       ? this.managers.tab.cur()
@@ -164,7 +164,7 @@ export class HarnessManager extends HarnessTabSpawn {
     const group = resolveTabGroup(this.managers.tab.tabs, launch.group, creator, dotColor);
     this.spawnTab({
       name, label, cwd, workspaceDir, offline, group: group.id, groupName: group.name, groupColor: group.color,
-      dotColor, autoApprove, autoResume, browser, model, effort, ready, workspaceCancel, remote,
+      dotColor, autoApprove, autoResume, browser, mcp, model, effort, ready, workspaceCancel, remote,
       ...(nameRetry && { nameRetry }),
     });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);

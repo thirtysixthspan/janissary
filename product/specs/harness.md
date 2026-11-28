@@ -10,7 +10,7 @@ row, and the one place its behavior differs (the connections panel is shown, not
 
 ```
 harness
-harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]
+harness <claude|opencode|codex> [as <label>] [on <address>] [in group <name|id>] [-w|--workspace|--no-workspace] [--offline] [-y|--yes] [--no-auto-approve] [-b|--browser|--no-browser] [--no-mcp] [--auto-resume|--no-auto-resume] [--model <name>] [--effort <level>] [with <prompt>]
 harness capture <name>
 harness transcript <name>
 ```
@@ -64,8 +64,8 @@ dialog over the command bar instead of returning a usage error. The dialog is a 
 choosing the harness and its launch flags with controls rather than typing the command by hand. It
 offers: a harness selector (claude, opencode, codex), a **Label** field (the `as <label>` name), a
 **Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **E2E browser** toggle (`-b`),
-an **Auto-approve** toggle (`-y`), an **Auto-resume** toggle (`--auto-resume`), a **Model** search field,
-and an **Effort** dropdown.
+an **MCP server** toggle (`--no-mcp` to opt out), an **Auto-approve** toggle (`-y`), an **Auto-resume**
+toggle (`--auto-resume`), a **Model** search field, and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
 enabled only for a harness that accepts `-y` — today claude, opencode, and codex all do, so switching
@@ -75,7 +75,10 @@ disable it. The dialog offers Auto-approve for exactly the harnesses the `harnes
 same rule against the harnesses the command accepts `--auto-resume` for — today opencode and codex,
 so switching to claude clears and disables it. **E2E browser** stays
 enabled for every harness, since none rejects it. It starts checked, matching the command's default,
-and unchecking it adds `--no-browser` to the built command. The **Model** field is a search input:
+and unchecking it adds `--no-browser` to the built command. **MCP server** likewise starts checked and
+unchecking it adds `--no-mcp`; it is available for every harness. Checking **Offline** clears and
+disables **MCP server**, since an offline launch carries no MCP config, and unchecking **Offline**
+re-enables it. The **Model** field is a search input:
 you type to filter the selected harness's enabled models, `Tab` completes a single match, or fills
 the longest common prefix when several match, and the matching models appear in a dropdown whose
 rows you can click to pick one and whose highlighted row `Return` accepts. A blank field means the harness's default model, adding no
@@ -428,6 +431,14 @@ while the band and the notification line keep the earlier death on record. Start
 
 The flag is available from both launch surfaces: the `harness` command and the **E2E browser**
 checkbox in the New harness dialog.
+
+### MCP server config
+
+A harness launched with MCP config gets the local server's connection details on the host where it runs. `JANISSARY_TAB` holds the tab's label, `JANISSARY_MCP_URL` holds the server URL, and `JANISSARY_MCP_TOKEN` holds the bearer token. The token goes in the environment, never in argv, so it does not show up in the process list or a transcript. The launch fragment names those variables rather than carrying their values, and the same fragment works on either host (see [[mcp-server]]).
+
+Claude needs two more overrides alongside them. `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS=0` keeps a waiting call in the foreground, and `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=0` stops its five-minute idle abort. They are launch settings only, so the server sends no heartbeat traffic just to keep a question open.
+
+MCP is off when the launch carries `--no-mcp` or `--offline`, or when the local server is not running. Then the launch has neither the fragment nor any MCP environment variable. Each local or remote harness launch drops inherited values for `JANISSARY_TAB`, `JANISSARY_MCP_URL` and `JANISSARY_MCP_TOKEN`. The far host also drops forwarded values for those three variables. When MCP is enabled, the host running the harness supplies its own endpoint, token, and tab name. One decision at launch drives both the fragment and the environment, so they cannot disagree. The opt-out is available from both launch surfaces: the `harness` command and the **MCP server** checkbox in the New harness dialog.
 
 ### Launch prompt (`with <prompt>`)
 

@@ -36,6 +36,14 @@ export function tokenFromReq(request: IncomingMessage): string | null {
   }
 }
 
+/** Extract the bearer token from an `Authorization` header. */
+export function bearerToken(request: IncomingMessage): string | null {
+  const authorization = request.headers.authorization;
+  if (!authorization) return null;
+  const match = /^Bearer\s+(\S+)$/i.exec(authorization);
+  return match?.[1] ?? null;
+}
+
 /** Constant-time token comparison. */
 export function tokenMatches(expected: string, got: string | null): boolean {
   if (!got) return false;

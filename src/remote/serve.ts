@@ -49,6 +49,7 @@ export class RemoteServer {
   // A terminate attach is never relayed: what the local side sends after it is dropped, not written
   // into a parked peer that may speak another protocol version.
   private terminating = false;
+  private disconnectedAt?: number;
 
   constructor(
     private pathArgument: string | undefined,
@@ -67,6 +68,7 @@ export class RemoteServer {
     process.stdin.on('end', () => { this.detach(); });
     process.stdin.on('error', () => this.detach());
     process.stdout.on('error', () => this.detach());
+    process.stdout.on('close', () => this.detach());
     process.stdin.resume();
   }
 
@@ -129,13 +131,14 @@ export class RemoteServer {
     case 'shutdown': { this.shutdown(0); return; }
     case 'provision': { void this.provision(frame); return; }
     case 'clone-answer': { if (!this.offer?.answer(frame.accept)) this.refuse('Unexpected remote frame "clone-answer".'); return; }
-    case 'spawn': { this.spawn(frame); return; }
+    case 'spawn': { void this.spawn(frame); return; }
     // Retained before it is delivered, so what the peer replays is in the order it saw the two
     // directions — which is what pairs a command with the output it produced.
     case 'input': { this.peer?.input(frame); this.provisioned?.processes.input(frame.id, frame.data); return; }
     case 'resize': { this.provisioned?.processes.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.provisioned?.processes.kill(frame.id); return; }
     case 'resume-ack': { this.provisioned?.processes.resumeDelivered(frame.id); return; }
+    case 'mcp-result': { this.provisioned?.processes.mcpResult(frame); return; }
     case 'capture-request': { answerCaptureRequest(frame, this.provisioned?.processes, this.lookupRoot(frame.origin), (f) => this.emit(f)); return; }
     case 'filesystem-open': {
       if (!this.provisioned) { this.refuse('No remote workspace has been provisioned.'); return; }
@@ -190,7 +193,10 @@ export class RemoteServer {
       peer: this.peer,
       idle: () => !this.provisioned && !this.stopping,
       stopping: () => this.stopping,
-      provisioned: (workspace) => { this.provisioned = workspace; },
+      provisioned: (workspace) => {
+        this.provisioned = workspace;
+        workspace.processes.linkChanged(this.disconnectedAt);
+      },
     }, frame.label, frame.tokens ?? {}, frame.identity ?? {}, cloned, frame.depth);
   }
 
@@ -201,24 +207,37 @@ export class RemoteServer {
     this.workspaces = (this.options.settle ?? settleRoot)(root);
     if (!this.listening) return true;
     this.peer = await startPeer(root, this.sessionId, (data) => this.receive(data), () => this.shutdown(0),
-      (id) => this.provisioned?.processes.latestCapture(id), () => this.provisioned?.processes.busyStates() ?? []);
+      (id) => this.provisioned?.processes.latestCapture(id), () => this.provisioned?.processes.busyStates() ?? [],
+      (linked) => this.linkChanged(linked), () => this.provisioned?.processes.mcpPendingCalls());
     if (!this.peer) { this.shutdown(1); return false; }
     this.emit = (frame) => this.peer?.emit(frame);
+    if (this.disconnectedAt !== undefined) this.peer.detach();
     return true;
   }
 
-  private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
+  private async spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): Promise<void> {
     if (!this.requireWorkspace()) return;
     this.peer?.track(frame);
     // A process that will not start is that process's failure, not the session's: it answers as an
     // exit, which also drops what the peer tracked a line above, and every other frame keeps working.
     try {
-      this.provisioned?.processes.spawn(frame);
+      await this.provisioned?.processes.spawn(frame);
     } catch {
       this.emit({ type: 'exit', id: frame.id, exitCode: 1 });
       return;
     }
     if (frame.harness !== undefined) this.transcripts.follow(frame.harness, this.provisioned?.dir);
+  }
+
+  linked(): boolean {
+    return this.peer === undefined
+      ? process.stdout.writable && this.disconnectedAt === undefined
+      : this.peer.linked();
+  }
+
+  private linkChanged(linked: boolean): void {
+    this.disconnectedAt = linked ? undefined : (this.disconnectedAt ?? performance.now());
+    this.provisioned?.processes.linkChanged(this.disconnectedAt);
   }
 
   // Give up the transport while leaving the session running: the peer holds its workspace and its
@@ -232,7 +251,8 @@ export class RemoteServer {
     if (this.relay || this.root === undefined) { this.shutdown(0); return; }
     this.buffer = '';
     this.provisioned?.acp.detachRuns();
-    this.peer?.detach();
+    if (this.peer === undefined) this.linkChanged(false);
+    else this.peer.detach();
   }
 
   // Nothing this server runs exists outside the clone it provisioned, so every frame that starts

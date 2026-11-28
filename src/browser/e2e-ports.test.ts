@@ -3,7 +3,7 @@ import { randomInt } from 'node:crypto';
 import {
   BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST, isBrowserBandPort,
 } from '../sandbox/browser/ports.js';
-import { allocateBrowserPorts, type BrowserPorts } from './e2e-ports.js';
+import { allocateBrowserPorts, reservePort, type BrowserPorts, type ReservedPort } from './e2e-ports.js';
 
 // Every case here stubs the draw to a constant. That is deliberate: what this module promises is
 // that the pair is usable *whatever* the draw returns, and a suite that leans on two random numbers
@@ -133,5 +133,43 @@ describe('BrowserPorts.release', () => {
     const third = allocate();
     expect([third.guardPort, third.browserPort]).not.toContain(first.guardPort);
     expect([third.guardPort, third.browserPort]).not.toContain(first.browserPort);
+  });
+});
+
+// A caller that already knows its port, like the MCP server reusing its saved one, holds it in the
+// same set the guard draws walk past.
+describe('reservePort', () => {
+  const held: ReservedPort[] = [];
+
+  function reserve(port: number): ReservedPort {
+    const reservation = reservePort(port);
+    held.push(reservation);
+    return reservation;
+  }
+
+  afterEach(() => {
+    for (const reservation of held) reservation.release();
+    held.length = 0;
+  });
+
+  it('keeps a guard draw that lands on the reserved port off it', () => {
+    reserve(DRAWN);
+    expect(allocate().guardPort).not.toBe(DRAWN);
+  });
+
+  it('hands the port back to the next guard draw once released', () => {
+    reservePort(DRAWN).release();
+    expect(allocate().guardPort).toBe(DRAWN);
+  });
+
+  it('leaves the earlier holder in place when a repeat reservation is released', () => {
+    reserve(DRAWN);
+    reservePort(DRAWN).release();
+    expect(allocate().guardPort).not.toBe(DRAWN);
+  });
+
+  it('reserves a port outside the guard range without disturbing a guard draw', () => {
+    expect(reserve(80).port).toBe(80);
+    expect(allocate().guardPort).toBe(DRAWN);
   });
 });

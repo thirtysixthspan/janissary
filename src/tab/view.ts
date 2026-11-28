@@ -228,6 +228,7 @@ function tabFlags(tab: Tab, provisioning: string[]): string[] {
     ...autoApproveFlag(tab),
     ...autoResumeFlag(tab),
     ...browserFlag(tab),
+    ...mcpFlag(tab),
   ];
 }
 
@@ -253,4 +254,12 @@ function autoResumeFlag(tab: Tab): string[] {
 function browserFlag(tab: Tab): string[] {
   if (!tab.browser) return [];
   return tab.harness?.browserRunning ? ['browserInUse'] : ['browser'];
+}
+
+// The metadata row's MCP flag. `mcpInUse` once the harness first calls the MCP server, left set for
+// the tab's life; otherwise it reports the launch: `tab.mcp` is set when the tab was launched with
+// MCP config. See the Metadata row in `product/specs/tabs.md`.
+function mcpFlag(tab: Tab): string[] {
+  if (!tab.mcp) return [];
+  return tab.harness?.mcpUsed ? ['mcpInUse'] : ['mcp'];
 }

@@ -34,6 +34,7 @@ describe('HarnessManager e2e browser', () => {
         JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok',
         JANISSARY_PLAYWRIGHT: '/pw/index.js',
       },
+      { harness: true },
     );
   });
 

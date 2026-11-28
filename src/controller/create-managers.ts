@@ -23,6 +23,7 @@ import { MonitorManager } from '../monitor/manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { Questions } from '../questions.js';
+import { McpManager } from '../mcp/manager.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { TabPluginHost } from '../plugins/host.js';
@@ -59,9 +60,11 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.questions = new Questions((label, pending) => {
     messageBus.emit('state', { type: 'dirty' });
     if (pending && managers.tab.cur().label !== label) {
+      managers.tab.markUnreadQuestion(label);
       notify(managers, 'question', label, undefined, { openTab: label });
     }
   });
+  managers.mcp = new McpManager(managers, projectDir);
   managers.conversations = new ConversationsManager(managers, { projectDir });
   managers.models = new ModelCatalogManager(managers, { projectDir });
   managers.sessions = new SessionsManager(managers);

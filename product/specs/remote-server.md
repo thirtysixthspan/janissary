@@ -352,6 +352,10 @@ Protocol version 47 adds `acp-session-started`, a server-only frame carrying a t
 
 Protocol version 48 adds the read-only `list-directory`, `stat-path`, `path-exists`, `head-lines`, and `tail-lines` operations, so typed `file list`, `file stat`, `file exists`, `file head`, and `file tail` on a remote tab run against the remote clone and answer with finished output text rather than raw navigator data. The first three carry a `path`, the last two a `path` and a `count`; any other argument shape is an invalid request. The far side validates containment and the secret rules before formatting and answers `{ text }` with the finished output, so local and remote wording cannot drift. A version-47 peer would refuse the new operations as unknown only after the handshake had passed, so the exact-version handshake refuses that pairing first.
 
+Protocol version 49 adds the `mcp-call` and `mcp-result` frames, the request-and-answer pair for passing an MCP tool call back to the local Janissary process to execute over the session's existing connection. `mcp-call` carries a correlation id, a tool name, and the arguments as base64-encoded JSON; `mcp-result` carries the same correlation id, the result text as base64, and whether the call was an error. Arguments that decode to anything other than a JSON object — `null`, a string, a number, a boolean, or an array — are answered as errors reading `Malformed MCP arguments: <the arguments as sent>`, leave no call pending, and let a later valid call with the same id register and answer normally. A call whose tool name is not one the local server advertises, or whose arguments fail the `question` tool's validation, is refused the same way: it is answered as an error with `Unknown MCP tool "<tool>".` or the validation text given in [[mcp-server]], and leaves no call pending. Version 49 also admits `mcp-cancel`. A cancellation carries the original correlation id as a non-empty plain string and tells the local side the caller has abandoned the call. A missing or empty id makes the frame malformed. A cancellation for an unknown id or for a call already answered changes nothing. The optional `received: true` field acknowledges a result and releases only its cached reply. An accepted `attach-result` can also include `mcpPending`, the list of call ids still eligible for replay. Earlier version-49 peers can omit either field and keep exchanging the original frame forms. The launch frame also carries an `mcp` flag so the far side starts its own endpoint for that harness; a remote launch never receives the local server's connection details, and a remote harness launched while the local server is not running is given no MCP. A version-48 peer would refuse these frames as unknown only after the handshake had passed, so the exact-version handshake refuses that pairing first.
+
+The local channel admits `mcp-call` only while a locally recorded online harness in that session has MCP enabled. On Attach, the saved launch record supports replay before the harness tab finishes rebuilding. An attached channel without an eligible harness replies with `MCP is not enabled for this remote session.` using the call's correlation id. An `mcp-cancel` still reaches a call accepted earlier, even after the last eligible harness exits or is stopped.
+
 Version 47 is one version for the whole feature set, not one bump per frame; version 48 has since taken the next bump, so 47 is no longer unreleased. The run-clone request and its answer, and the optional workspace selectors on `acp-open` and `agent-resolve`, belong to this same version and do not move the constant: a peer that speaks 47 already refuses any older one at the handshake, and bumping again would split peers that support the same frames. The comment above the protocol version records these frames and fields as extensions of 47 and the five new file operations as version 48.
 
 Unavailable sends, explicit disconnect, transport loss, protocol failure, and channel finish settle and detach ACP listeners, including before readiness. Late frames for detached ids are ignored. A provider id already reported before such a terminal event stays observed; a later readiness failure neither erases nor replaces it. A lost core ACP session is closed locally and replaced by a later request once its channel is ready; autonomous runs retain their transport-loss termination. Durable activity capture belongs only to the initiating project's recorder. The sessions tab's existing shell/harness restoration policy is unchanged.
@@ -404,7 +408,8 @@ A browser-exit frame's message is optional but, when present, must be a nonempty
 newlines, which JSON escaping keeps from being read as the end of a frame. A session-state reply
 must carry an array of process entries, each with a nonempty spawn id and program and a declared
 mode, and an auto-approve setting that is either absent or a boolean — a valid setting is kept, not
-dropped on the way in. `autoResume` follows the same rule. A shell process carries a `shell` object
+dropped on the way in. `autoResume` follows the same rule, and so does `mcp`, the MCP decision a
+harness process was launched with, which an attach uses to show the rebuilt tab's MCP flag. A shell process carries a `shell` object
 with a 32-character lowercase hexadecimal nonce, an optional offline flag, and an optional working
 directory; the decoder preserves these fields and refuses malformed shell metadata. One malformed
 entry makes the whole reply malformed rather than shortening the list, because a
@@ -555,6 +560,8 @@ A refused attachment for a missing session, a recorded peer process that no long
 
 Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
 
+When a remote channel closes for good, Janissary drops its outstanding MCP questions even if their target tabs stay open. The next question from a different caller appears without a withdrawal notice or a reply to the closed channel. A recoverable transport drop keeps outstanding questions during the MCP reconnect window.
+
 A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.
@@ -691,6 +698,24 @@ Busy-transition frames are emitted only when either the busy or unread value cha
 receives the current busy snapshot once per running process, carrying its real unread state rather
 than always clearing it, and the far side's own duplicate-suppression is realigned to that snapshot so
 a later change back to the pre-attach state is not mistaken for a repeat and dropped.
+
+MCP calls a remote harness makes through the far-side server hold through a lost link for a 60-second
+grace window, whether or not a call is pending when the link drops. An intentional Detach starts the
+same window. A call made during an outage has the time remaining in that window. If the link returns
+in time, the endpoint sends each waiting call with its original identifier immediately after the
+attach replay. The local session reuses any existing question for that identifier, and only the
+harness that asked receives the answer. If the window ends with no link, every waiting call fails
+with `Janissary is not connected.`. Later calls fail at once with the same text and leave no question
+behind until a link returns. A successful attach ends the outage even when the endpoint is idle, so a
+later loss starts a new 60-second window.
+
+The local session keeps a completed answer available while the far side can replay its call. A
+receipt acknowledgement releases the stored answer as soon as the far side consumes it. If the
+acknowledgement was lost, the next accepted attach retires completed results outside the far side's
+pending list before replay starts. An empty list retires every completed result. Pending questions
+survive this reconciliation and timed-out attach attempts. Older version-49 peers that omit the list
+can still replay their calls. A result without an acknowledgement or a later pending list remains
+available until the channel closes.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
@@ -899,9 +924,10 @@ and closes the channel (and therefore the tab).
 ### `janus remote-serve [<project-dir>]`
 
 The far end. It runs attached inside an ordinary ssh session and speaks a framed protocol over that
-session's stdin and stdout. It takes no instance lock, starts no HTTP server, opens no window, and
-writes no log file; it is not addressable by `janus stop`, and it lives and dies with its ssh
-channel.
+session's stdin and stdout. It takes no instance lock, opens no window, and writes no log file; the
+only HTTP servers it starts listen on loopback: the e2e browser's protocol guard for each harness
+launched with `-b`/`--browser`, and the one MCP endpoint shared by the harnesses that asked for one. It is not
+addressable by `janus stop`, and it lives and dies with its ssh channel.
 
 With a directory argument it is rooted exactly there, with no upward walk. Without one it walks up
 from the ssh login directory looking for a git repository. Either way the root must be a git
@@ -920,11 +946,61 @@ ssh session before then ends the server instead of parking it, since there is no
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
 inside it, drives one ACP agent per tab sharing its channel, tails a harness transcript, reads and watches files inside
 that workspace, applies the navigator's filesystem mutations there, reads that workspace's own change set against
-`HEAD` for a diff tab, and removes the clone on exit. It
+`HEAD` for a diff tab, serves one loopback MCP endpoint to the harnesses that asked for it, and
+removes the clone on exit. It
 will not open tabs, serve paths outside the provisioned workspace, run anything outside that
 workspace, or accept a message outside its protocol. The ACP agent is killed before the clone is
 removed, so the clone is never taken out from under a live agent, and every one of them is killed —
 a shared channel's server holds one agent per tab using it.
+
+#### MCP on the far side
+
+A harness launched with MCP enabled gets its MCP endpoint on the remote host, inside that session's
+`janus remote-serve`, without naming a remote port or setting up an ssh forward before connecting.
+The remote mints its own bearer token for the endpoint and gives that endpoint and token to the
+harness in its launch environment. The local server's persisted token never leaves the local
+machine: it is not sent in the launch request, does not appear in the harness's environment, and is
+never accepted as the far-side endpoint's credential. Only loopback clients can reach the endpoint,
+and its address and token stay the same while the session is detached or reconnecting.
+
+Exactly one endpoint is claimed per remote process. Its address and token reach a harness only after
+the loopback port has bound, so no harness starts with an address nothing serves. If another process
+on the host already holds that port, the collision is a contained failure of that endpoint: the
+reason is reported back over the session, the colliding harness is refused with exit code 1 rather
+than given an unbound address, and the remote session and its other tabs keep running. The endpoint
+returns the port to the shared reservation pool as soon as the bind fails. Every harness that later
+asks for MCP on that session receives the stored reason in its own tab before the same exit-code-1
+refusal, so none closes without being told why. Each refused harness, the colliding one included, is
+told exactly once. The reason reaches its tab when the launch is refused.
+
+A harness waiting for that bind already holds its process id. A second launch with the same id is
+ignored, as it is for a running process. Closing the tab, or ending the session, before the bind
+settles means the harness never starts: no process is left running on the remote host, and the tab
+is answered with exit code 1, as any launch that could not start is. Input typed and resizes made
+during the wait are not lost. Once the harness starts, it gets the latest size and then the input in
+the order it was typed.
+
+The endpoint serves the same question tool a local harness sees. Each call is passed back to the
+local Janissary over the session's existing connection, where the question is put to the human, and
+the answer travels back to the harness that asked for it. Nothing about an MCP call is answered on
+the remote host, so the remote harness sees the same question panel and the same cancellation or
+error text as any other harness. A harness launched without MCP gets no endpoint and no MCP
+variables in its environment.
+
+Arguments cross the session as one encoded JSON value, so the local side reads exactly what the
+far-side harness sent. A call whose arguments are not valid JSON is answered on the spot with an
+error naming the bad arguments: no question is opened, and the call id is left unclaimed, so a later
+valid call using that id starts a fresh question and receives its own answer rather than replaying
+the error.
+
+A call the harness abandons withdraws its question on the local tab. The far side sends a
+cancellation naming that call when the harness cancels the request and when the grace window expires
+with no link, before its own tool call fails. The local side aborts the pending question, so the
+panel closes, `Question from <tab> withdrawn` is recorded, and the next queued question for that tab
+appears. A cancellation arriving after the human answered changes nothing and records no withdrawal.
+Cancellations travel even while the link is down, so one issued during an outage is delivered on a
+later attach; calls themselves are still withheld during an outage and open no question for a later
+attach.
 
 #### Run clones
 

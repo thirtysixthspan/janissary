@@ -20,6 +20,7 @@ import type { MonitorManager } from './monitor/manager.js';
 import type { FileNavigatorManager } from './file-navigator/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { Questions } from './questions.js';
+import type { McpManager } from './mcp/manager.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
 import type { ModelCatalogManager } from './models/manager.js';
@@ -62,6 +63,7 @@ type ManagerRegistry = {
   fileNavigator: FileNavigatorManager;
   editorWatch: EditorWatchManager;
   questions: Questions;
+  mcp: McpManager;
   plugins: TabPluginHost;
   conversations: ConversationsManager;
   models: ModelCatalogManager;
@@ -126,6 +128,7 @@ export const MANAGER_DISPOSE_ORDER = [
   // all read the queue while tearing down, and it owns no process or handle of its own to release.
   'notifications',
   'nativeCommandSettings',
+  'mcp',
   'questions',
   'tab',
   'database',

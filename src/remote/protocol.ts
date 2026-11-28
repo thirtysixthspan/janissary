@@ -269,7 +269,18 @@
 // answer with finished output text rather than raw navigator data. A version-47 peer would refuse
 // them as unknown after the handshake had already passed, so the exact-version handshake refuses
 // that pairing first.
-export const REMOTE_PROTOCOL_VERSION = 48;
+//
+// Version 49 adds the `mcp-call` and `mcp-result` frames: the far side asks the local janissary to
+// execute one MCP tool call and answers with its result, both correlated by `call`. A version-48
+// peer would refuse both as unknown frames only after the handshake had passed, so the exact-version
+// handshake refuses that pairing first. It also adds `mcp-cancel`, keyed by the same call id, so a
+// caller that abandons a question withdraws it locally instead of leaving the panel and the tab's
+// queue stuck; this stays in version 49 because both peers of this feature set understand the frame.
+// An optional `received: true` on that frame acknowledges a result, and an accepted attach can
+// carry `mcpPending` to reconcile results whose acknowledgements were lost with the transport.
+// A `session-state-result` process also reports its spawn's optional `mcp` flag, so an attach
+// rebuilds the tab from the far harness's own launch rather than from the local server's state.
+export const REMOTE_PROTOCOL_VERSION = 49;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

@@ -6,13 +6,15 @@ import { createController, type Controller } from '../controller.js';
 import { openNotificationsTab } from '../notifications/tab.js';
 import { TabPluginHost } from '../plugins/host.js';
 import { SystemShellManager } from '../system-shell.js';
-import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { seedRootTab, seedTestTab } from '../tab/root-tab-test-fixture.js';
 import { AcpSessionRecords } from '../acp-records/manager.js';
 import { ACP_RECORD_RETENTION_MS } from '../acp-records/model.js';
 import { AcpRecordStore } from '../acp-records/store.js';
 import type { AcpRecordSource } from '../acp-records/types.js';
 import { createControllerTestProject } from './test-project.js';
 import type { AcpOptions } from '../acp/types.js';
+import type { AcpPendingPrompt } from '../acp/prompt-state.js';
+import { tabRuntime } from '../tab/runtime.js';
 import { executeAgentRun } from '../agent/execute.js';
 
 const acpMock = vi.hoisted(() => ({ connect: vi.fn() }));
@@ -57,6 +59,40 @@ describe('createManagers question-pending wiring', () => {
     c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
     void c.managers.questions.register({ tab: 'janus', kind: 'ask', question: 'ok?' });
     expect(feedText(c)).not.toContain('Question from janus');
+  });
+
+  it('marks a background tab unread when a question becomes pending and still notifies', () => {
+    const c = makeController();
+    seedTestTab(c.managers.tab, 'bob');
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is the background tab
+    void c.managers.questions.register({ tab: 'bob', kind: 'ask', question: 'ok?' });
+    expect(c.view().find((t) => t.label === 'bob')?.hasUnread).toBe(true);
+    expect(feedText(c)).toContain('Question from bob');
+  });
+
+  it('does not mark the active tab unread when a question becomes pending for it', () => {
+    const c = makeController();
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
+    void c.managers.questions.register({ tab: 'janus', kind: 'ask', question: 'ok?' });
+    expect(c.view().find((t) => t.label === 'janus')?.hasUnread).toBe(false);
+    expect(feedText(c)).not.toContain('Question from janus');
+  });
+
+  it('marks a background tab unread for a pending question while its ACP query awaits an answer', () => {
+    const c = makeController();
+    seedTestTab(c.managers.tab, 'bob');
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is the background tab
+    const bob = c.managers.tab.byLabel('bob')!;
+    const pending: AcpPendingPrompt = {
+      finish: () => {}, abort: new AbortController(), prompt: 'task', role: 'ask',
+      roleName: 'ask', commands: [], runningEntries: new Set(),
+    };
+    tabRuntime(bob).acpRoles = { ask: { prompt: pending } };
+    void c.managers.questions.register({ tab: 'bob', kind: 'ask', question: 'ok?' });
+    expect(c.view().find((t) => t.label === 'bob')?.hasUnread).toBe(true);
   });
 });
 
@@ -236,5 +272,36 @@ describe('createManagers native command settings wiring', () => {
     const state = c.stateEvent();
     if (state.t !== 'state') throw new Error('expected a state event');
     expect(state.disabledApplicationCommands).toContainEqual(expect.objectContaining({ name: 'hist' }));
+  });
+});
+
+describe('createManagers MCP start failure', () => {
+  let projectDir: string;
+  let controller: Controller | undefined;
+  beforeEach(() => {
+    projectDir = mkdtempSync(path.join(tmpdir(), 'controller-mcp-failure-'));
+  });
+  afterEach(async () => {
+    await controller?.shutdown();
+    controller = undefined;
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  // The state file fails synchronously inside the MCP manager's constructor, before the launch shell
+  // has opened any tab, so the notice must go through the real managers with no active tab.
+  it('records one mcp-failed notification for a corrupt state file before any tab exists', async () => {
+    const file = path.join(projectDir, '.janissary', 'mcp.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, '{"port":');
+
+    controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, projectDir);
+    await controller.managers.mcp.ready;
+
+    expect(controller.managers.tab.tabs).toEqual([]);
+    const failures = controller.managers.notifications.all.filter((n) => n.event === 'mcp-failed');
+    expect(failures.map((n) => [n.tabLabel, n.message])).toEqual([[
+      'janus',
+      `MCP server failed to start: invalid MCP state file ${file}; delete it and restart Janissary to replace it`,
+    ]]);
   });
 });

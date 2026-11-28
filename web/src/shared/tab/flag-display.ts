@@ -1,5 +1,5 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { workspacedIcon, autoPermitIcon, autoResumeIcon, browserIcon, syncIcon, recordingIcon } from '../icons';
+import { workspacedIcon, autoPermitIcon, autoResumeIcon, browserIcon, mcpIcon, syncIcon, recordingIcon } from '../icons';
 
 // `className` marks a flag drawn differently from the row's own: `tab-flag--active` highlights green
 // a workspace that has landed, an auto-approve that has cleared a prompt (`autoApproved`), an
@@ -27,6 +27,8 @@ export const tabFlagDisplay: Record<string, {
   autoResuming: { icon: autoResumeIcon, label: 'Auto-resuming', className: 'tab-flag--active' },
   browser: { icon: browserIcon, label: 'E2E browser' },
   browserInUse: { icon: browserIcon, label: 'E2E browser in use', className: 'tab-flag--active' },
+  mcp: { icon: mcpIcon, label: 'MCP server' },
+  mcpInUse: { icon: mcpIcon, label: 'MCP server in use', className: 'tab-flag--active' },
   recording: { icon: recordingIcon, label: 'recording', pressable: true },
   recordingOff: { icon: recordingIcon, label: 'not recording' },
 };

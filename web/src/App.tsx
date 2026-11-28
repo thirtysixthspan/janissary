@@ -8,6 +8,7 @@ import type { DirtyTabHandle } from './shared/tab/handles';
 import { useTabHandles } from './useTabHandles';
 import { useUnsavedQuitGuard } from './unsaved-work/useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
+import { useQuestionFocusReturn } from './useQuestionFocusReturn';
 import { useSectionNav } from './useSectionNav';
 import { useTabEntries } from './useTabEntries';
 import { useCmdW } from './useCmdW';
@@ -27,7 +28,7 @@ import { useWindowFocus } from './useWindowFocus';
 import { useNativeNotifications } from './notifications/useNativeNotifications';
 import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 import { useCmdWRefs } from './useCmdWRefs';
-import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
+import { useNavigatorSelectionsCollector } from './file-navigator/useNavigatorSelectionsCollector';
 import { useOverlayPlugins } from './useOverlayPlugins';
 import { disabledApplicationCommand } from './shared/command-availability';
 import { visibleTabs } from './shared/tab/visible-tabs';
@@ -180,14 +181,10 @@ export function App({ client }: { client: JanusClient }) {
 
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
 
-  // The file navigator's selections are client-only React state, so the app shell — not the
-  // protocol client — is what tells the client where to read them from when the server asks.
-  useEffect(
-    () => client.registerStateCollector('fileNavigatorSelections', collectNavigatorSelections),
-    [client],
-  );
+  useNavigatorSelectionsCollector(client);
 
   useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef, saveWalkOpenRef);
+  const onQuestionPanelRemove = useQuestionFocusReturn(currentRef, harnessHandles, inputReference);
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference), keyboardCapturedRef);
 
@@ -242,7 +239,7 @@ export function App({ client }: { client: JanusClient }) {
             reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
             splitPct={splitPct} setSplitPct={setSplitPct}
             focusLeft={focusLeft} focusRight={focusRight}
-            harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
+            harnessHandles={harnessHandles} questionPanelRef={questionPanelRef} onQuestionPanelRemove={onQuestionPanelRemove}
             tabHandles={tabHandles}
             dirtyPluginTabs={dirtyPluginTabs} registerPluginDirtyHandle={registerPluginDirtyHandle}
             getPluginTabState={getPluginTabState}

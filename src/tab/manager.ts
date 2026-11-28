@@ -152,6 +152,7 @@ export class TabManager extends TabTranscriptState {
 
   // Selection and focus history (see `./selection-operations.ts`).
   markUnread(label: string): boolean { return selectionOperations.markUnread(this, label); }
+  markUnreadQuestion(label: string): boolean { return selectionOperations.markUnreadQuestion(this, label); }
   clearUnread(label: string): void { selectionOperations.clearUnread(this, label); }
 
   recordLeavingActiveTab(newIndex: number): void { selectionOperations.recordLeavingActiveTab(this, newIndex); }

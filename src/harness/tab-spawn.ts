@@ -14,6 +14,9 @@ import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import { failHarnessSpawn, startRemoteTab } from './remote-launch.js';
 import type { Managers } from '../managers.js';
+import type { McpLaunch } from '../mcp/manager.js';
+
+type McpDecision = { enabled: boolean; launch: McpLaunch | undefined };
 
 // Creating the harness tab and giving it a PTY: the half of a launch that touches the tab, PTY and
 // runtime registries, as opposed to the half that decides what to launch and what to call it. It
@@ -43,6 +46,14 @@ export class HarnessTabSpawn {
     tab.autoApprove = autoApprove;
     tab.autoResume = autoResume;
     tab.browser = options.browser;
+    const launch = this.managers.mcp?.localLaunch();
+    // An attach adopting a recorded process reports how that process was launched; the far side
+    // already holds its endpoint, so the local server's current state has no say in it.
+    const enabled = options.resumePtyId === undefined
+      ? options.mcp !== false && !offline && launch !== undefined
+      : options.mcp === true;
+    const mcp: McpDecision = { enabled, launch };
+    tab.mcp = mcp.enabled;
     // Deliberately left with no `workspaceDir`: a remote tab's clone lives on the other host, and
     // `src/tab/cleanup.ts` reads that field to schedule a recursive delete of the *local* path.
     if (remote) tab.remote = { address: remote.address, host: remote.host };
@@ -52,12 +63,12 @@ export class HarnessTabSpawn {
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
 
     if (remote) {
-      startRemoteTab(this.managers, options, remote, (remoteCwd, notice) => this.finishSpawn({ ...options, cwd: remoteCwd }, notice));
+      startRemoteTab(this.managers, options, remote, (remoteCwd, notice) => this.finishSpawn({ ...options, cwd: remoteCwd }, mcp, notice));
       return;
     }
     const ready = options.ready;
     if (!ready) {
-      this.finishSpawn(options);
+      this.finishSpawn(options, mcp);
       return;
     }
     // Broadcast the placeholder now — its PTY isn't ready yet, but the tab itself is, and the
@@ -67,7 +78,7 @@ export class HarnessTabSpawn {
       label,
       ready,
       (l) => this.managers.tab.tabs.some((t) => t.label === l),
-      () => this.finishSpawn(options),
+      () => this.finishSpawn(options, mcp),
       (message, error) => { failHarnessSpawn(this.managers, options, message, error); },
     );
   }
@@ -78,11 +89,12 @@ export class HarnessTabSpawn {
   // isolation notice; everything downstream of the spawn is identical either way.
   protected finishSpawn(
     options: SpawnTabOptions,
+    mcp: McpDecision,
     remoteNotice?: string,
   ): void {
     const { name, label, cwd, workspaceDir, offline, autoApprove, autoResume, browser, model, effort, remote } = options;
     const program = HARNESS_COMMANDS[name];
-    const command = buildHarnessCommand(name, model, effort);
+    const command = buildHarnessCommand(name, model, effort, mcp.enabled);
     const channel = remote ? this.managers.remote.get(label) : undefined;
     // A remote tab starts nothing locally: the remote builds its own guard, child, and workspace on
     // the far side from the `browser` flag on the spawn frame.
@@ -90,6 +102,7 @@ export class HarnessTabSpawn {
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({
         name, cwd, label, browser,
+        ...(mcp.enabled && mcp.launch !== undefined && { mcp: mcp.launch }),
         onBrowserGone: (message, log) => reportBrowserGone(this.managers, label, message, log),
         onBrowserStarted: () => reportBrowserStarted(this.managers, label),
       });
@@ -97,8 +110,10 @@ export class HarnessTabSpawn {
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
       const id = channel
-        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove, autoResume }, options.resumePtyId)
-        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
+        ? this.managers.pty.registerRemotePty(label, channel, {
+          program, command, harness: name, offline, browser, autoApprove, autoResume, mcp: mcp.enabled,
+        }, options.resumePtyId)
+        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env, { harness: true });
        this.managers.terminalRuntime.install(
          id,
          label,

@@ -28,11 +28,13 @@ The panel's controls keep Shift+Tab ahead of section navigation (see [[keyboard-
 
 Switching to a tab that already has a pending question moves keyboard focus to that panel's Cancel button, regardless of whether the question is a free-text or approval question — this is separate from, and takes priority over, the kind-based focus a question gets the moment it first opens.
 
+When a question on the current harness tab resolves while keyboard focus is inside the panel, focus returns to that harness tab's terminal. This applies to answers, cancellations, and withdrawals. Focus stays where the user moved it if it already left the panel, including when the page body holds focus after a control loses focus.
+
 ### Notifications
 
-Registering a question while its owning tab is not focused records `Question from <tab>` in the notifications feed when that feed is open, naming the tab as its tab strip does — its title when it has one, otherwise its label. This event has no configuration toggle. Its tab name is a link that focuses the asking tab.
+Registering a question while its owning tab is not focused records `Question from <tab>` in the notifications feed when that feed is open, naming the tab as its tab strip does — its title when it has one, otherwise its label. It also marks the tab unread, so the tab strip shows its unread badge even while the asking agent's ACP query is still open awaiting the answer. This event has no configuration toggle. Its tab name is a link that focuses the asking tab.
 
-No notification is added when the owning tab is already focused. As with every notification, a question raised while the notifications feed is closed opens that feed in the right sidebar rather than being dropped.
+No notification or unread badge is added when the owning tab is already focused. As with every notification, a question raised while the notifications feed is closed opens that feed in the right sidebar rather than being dropped.
 
 ### Ordering and lifetime
 
@@ -42,4 +44,4 @@ Questions are in-memory state. They are not persisted or restored.
 
 ### Cancellation
 
-Cancellation, owning-tab closure, and server shutdown return `Question cancelled.` to the waiting agent. There is no shell command, external HTTP endpoint, timeout, or caller-supplied default.
+Cancellation, owning-tab closure, and server shutdown return `Question cancelled.` to the waiting agent. Harnesses can ask through the local MCP endpoint at `http://127.0.0.1:<port>/mcp`, with the same cancellation result. There is no timeout or caller-supplied default.

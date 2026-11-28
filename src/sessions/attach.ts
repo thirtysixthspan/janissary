@@ -121,14 +121,20 @@ export function startSessionAttach(
     if (record.launchKind === 'harness' && harness !== undefined) {
       const creator = managers.tab.cur();
       const spawnId = spawnIdOf(record);
+      const recorded = record.processes.find((process) => process.id === spawnId);
+      const mcp = recorded?.mcp ?? false;
+      const offline = recorded?.offline ?? false;
+      // The recorded `mcp` travels with the adopted spawn id: the far process already holds whatever
+      // endpoint it was launched with. A record with no `mcp` describes a launch that had no MCP.
       managers.harness.attachRemote({
-        name: harness, label, cwd: record.workspaceDir, workspaceDir: undefined, offline: false,
+        name: harness, label, cwd: record.workspaceDir, workspaceDir: undefined,
+        offline,
         group: creator.group, groupColor: creator.groupColor,
         dotColor: distinctColor(managers.tab.tabs.map((tab) => tab.dotColor)),
-        autoApprove: record.processes.find((process) => process.id === spawnId)?.autoApprove ?? false,
-        autoResume: record.processes.find((process) => process.id === spawnId)?.autoResume ?? false,
-        browser: false, remote: address, resume: resumed,
-        ...(spawnId !== undefined && { resumePtyId: spawnId }),
+        autoApprove: recorded?.autoApprove ?? false,
+        autoResume: recorded?.autoResume ?? false,
+        browser: false, remote: address, resume: { ...resumed, mcpPtyId: mcp && !offline ? spawnId : undefined },
+        ...(spawnId !== undefined && { resumePtyId: spawnId, mcp }),
       });
       return;
     }

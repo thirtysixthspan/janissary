@@ -118,6 +118,77 @@ describe('acp-tool-result codec', () => {
   });
 });
 
+describe('mcp call and result codec', () => {
+  const call = 'call-1';
+  const args = '{"path":"notes.txt","limit":10}';
+  const text = 'first\nsecond\u{1}';
+
+  it('round-trips a call with its base64 args intact', () => {
+    const frame: RemoteFrame = { type: 'mcp-call', call, tool: 'file read', args };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ args: Buffer.from(args).toString('base64') });
+    expect(encoded).not.toContain('\n');
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it.each([true, false])('round-trips a result with isError %s and its base64 text intact', (isError) => {
+    const frame: RemoteFrame = { type: 'mcp-result', call, text, isError };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toMatchObject({ text: Buffer.from(text).toString('base64'), isError });
+    expect(encoded).not.toContain('\n');
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips an empty result text', () => {
+    const frame: RemoteFrame = { type: 'mcp-result', call, text: '', isError: false };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips a cancel with its call id plain on the wire', () => {
+    const frame: RemoteFrame = { type: 'mcp-cancel', call };
+    const encoded = encodeFrame(frame);
+    expect(JSON.parse(encoded)).toEqual({ type: 'mcp-cancel', call });
+    expect(decodeFrame(encoded)).toEqual(frame);
+  });
+
+  it('round-trips a received-result acknowledgement on the existing cancellation frame', () => {
+    const frame: RemoteFrame = { type: 'mcp-cancel', call, received: true };
+    expect(JSON.parse(encodeFrame(frame))).toEqual(frame);
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips an empty attach snapshot distinctly from one without metadata', () => {
+    expect(roundTrip({ type: 'attach-result', accepted: true, mcpPending: [] }))
+      .toEqual({ type: 'attach-result', accepted: true, mcpPending: [] });
+    expect(roundTrip({ type: 'attach-result', accepted: true }))
+      .toEqual({ type: 'attach-result', accepted: true });
+  });
+
+  it.each([{ mcpPending: 'call-1' }, { mcpPending: [''] }, { mcpPending: [5] }])(
+    'refuses malformed attach pending metadata $mcpPending', ({ mcpPending }) => {
+      expect(decodeFrame(JSON.stringify({ type: 'attach-result', accepted: true, mcpPending })))
+        .toEqual({ error: 'Malformed remote frame "attach-result".' });
+    },
+  );
+
+  it.each([
+    ['a call without a correlation id', { type: 'mcp-call', tool: 'file read', args }],
+    ['a call without a tool name', { type: 'mcp-call', call, args }],
+    ['a call without args', { type: 'mcp-call', call, tool: 'file read' }],
+    ['a result without a correlation id', { type: 'mcp-result', text, isError: false }],
+    ['a result without text', { type: 'mcp-result', call, isError: false }],
+    ['a result without an error flag', { type: 'mcp-result', call, text }],
+    ['a result with a non-boolean error flag', { type: 'mcp-result', call, text, isError: 'yes' }],
+    ['a cancel without a correlation id', { type: 'mcp-cancel' }],
+    ['a cancel with an empty correlation id', { type: 'mcp-cancel', call: '' }],
+    ['a cancel with a malformed received flag', { type: 'mcp-cancel', call, received: false }],
+  ])('refuses %s', (_label, record) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({
+      error: expect.stringContaining(`Malformed remote frame "${String(record.type)}"`),
+    });
+  });
+});
+
 describe('acp-turn codec', () => {
   it.each([true, false])('round-trips a start with first: %s and no display on the wire', (first) => {
     const frame: RemoteFrame = { type: 'acp-turn', id: 'run1', phase: 'start', first };
@@ -858,6 +929,30 @@ describe('frame codec', () => {
     });
   });
 
+  it('round-trips a spawn frame carrying mcp: true', () => {
+    const encoded = encodeFrame({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: true,
+    });
+    expect(decodeFrame(encoded)).toEqual({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: true,
+    });
+  });
+
+  it('round-trips an explicit mcp: false rather than dropping it', () => {
+    const encoded = encodeFrame({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: false,
+    });
+    const decoded = decodeFrame(encoded);
+    expect(decoded).toEqual({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, mcp: false,
+    });
+    expect(Object.hasOwn(decoded, 'mcp')).toBe(true);
+  });
+
   it('round-trips a browser-exited frame', () => {
     expect(decodeFrame(encodeFrame({ type: 'browser-exited', id: 'r1' }))).toEqual({
       type: 'browser-exited', id: 'r1',
@@ -962,7 +1057,7 @@ describe('session-state frames', () => {
     const frame = {
       type: 'session-state-result',
       processes: [
-        { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude' },
+        { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', mcp: false },
         { id: 'spawn-2', program: 'bash', mode: 'pipe', agentName: 'bekir' },
         { id: 'spawn-3', program: 'zsh', mode: 'pty', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/ws/src', autoResume: true },
       ],
@@ -993,6 +1088,10 @@ describe('session-state frames', () => {
     {
       what: 'a process with an invalid shell nonce',
       record: { type: 'session-state-result', processes: [{ id: 'a', program: 'zsh', mode: 'pty', shell: { nonce: 'bad' } }] },
+    },
+    {
+      what: 'a process whose MCP flag is not a boolean',
+      record: { type: 'session-state-result', processes: [{ id: 'a', program: 'claude', mode: 'pty', harness: 'claude', mcp: 'yes' }] },
     },
   ])('refuses $what by name', ({ record }) => {
     expect(decodeFrame(JSON.stringify(record))).toEqual({
@@ -1037,6 +1136,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'input': { type: 'input', id: 'r1', data: 'hello' },
   'resize': { type: 'resize', id: 'r1', cols: 120, rows: 50 },
   'kill': { type: 'kill', id: 'r1' },
+  'resume-ack': { type: 'resume-ack', id: 'r1' },
   'capture-request': {
     type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1',
     origin: 'git@github.com:owner/repo.git',
@@ -1056,12 +1156,13 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'acp-run': { type: 'acp-run', id: 'racp1', text: 'summarize this project', snapshot: { kind: 'agent', grants: ['file'], askUser: true } },
   'acp-tool-result': { type: 'acp-tool-result', id: 'racp1', request: 0, output: 'first\nsecond' },
+  'mcp-result': { type: 'mcp-result', call: 'call-1', text: 'first\nsecond', isError: true },
   'acp-close': { type: 'acp-close', id: 'racp1' },
   'acp-cancel': { type: 'acp-cancel', id: 'racp1' },
-  'attach-result': { type: 'attach-result', accepted: true, truncated: true },
+  'attach-result': { type: 'attach-result', accepted: true, truncated: true, mcpPending: ['call-1'] },
   'session-state-result': {
     type: 'session-state-result',
-    processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, agentName: 'bekir' }],
+    processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, mcp: true, agentName: 'bekir' }],
   },
   'workspace-ready': {
     type: 'workspace-ready', dir: '/srv/ws/claude', notice: 'isolation on', cleaned: '/srv/ws/claude',
@@ -1081,6 +1182,10 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'transcript': { type: 'transcript', blocks: ['first'] },
   'shell-history': { type: 'shell-history', id: 'agent', runs: [{ source: 'input', text: 'ls\n' }] },
   'gate-event': { type: 'gate-event', id: 'r1', message: 'Auto-approved', capturedAt: 1_700_000_000_000, capture: 'screen' },
+  'resume-event': {
+    type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 3_600_000 }, capturedAt: 1_700_000_000_000, capture: 'screen',
+  },
+  'resume-cancel': { type: 'resume-cancel', id: 'r1' },
   'busy-transition': { type: 'busy-transition', id: 'r1', busy: true, unread: true },
   'capture-reply': { type: 'capture-reply', id: 'r1', request: 'q1', text: 'screen', capturedAt: 1_700_000_000_000 },
   'filesystem-reply': { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content: 'aMOpbGxv' } },
@@ -1095,6 +1200,8 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
   'acp-turn': { type: 'acp-turn', id: 'racp1', phase: 'end', display: 'first\nsecond' },
   'acp-tool-request': { type: 'acp-tool-request', id: 'racp1', request: 1, command: 'file read\nnotes.txt' },
+  'mcp-call': { type: 'mcp-call', call: 'call-1', tool: 'file read', args: '{"path":"notes.txt"}' },
+  'mcp-cancel': { type: 'mcp-cancel', call: 'call-1', received: true },
   'acp-tool-step': {
     type: 'acp-tool-step', id: 'racp1', command: 'db query', result: 'command not granted', workspace: false, refused: 'disabled',
   },
@@ -1218,8 +1325,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 48', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(48);
+  it('is 49', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(49);
   });
 
   it('mentions the current version in the source changelog', () => {
@@ -1237,7 +1344,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-cancel', 'acp-close', 'acp-open', 'acp-run', 'acp-tool-result', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'resize', 'resume-ack', 'run-clone', 'session-state', 'shutdown', 'spawn',
+      'input', 'kill', 'mcp-result', 'provision', 'resize', 'resume-ack', 'run-clone', 'session-state', 'shutdown', 'spawn',
     ]);
   });
 
@@ -1246,7 +1353,7 @@ describe('admitted frame types', () => {
       'acp-activity', 'acp-chunk', 'acp-closed', 'acp-error', 'acp-ready', 'acp-run-end', 'acp-session-started',
       'acp-tool-request', 'acp-tool-step', 'acp-turn',
       'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
-      'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
+      'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'mcp-call', 'mcp-cancel', 'name-in-use',
       'output', 'resume-cancel', 'resume-event', 'root-refused', 'run-clone-result', 'session-state-result', 'shell-history', 'transcript',
       'workspace-failed', 'workspace-ready',
     ]);
@@ -1292,7 +1399,9 @@ describe('base64 field declaration', () => {
     }, { text: b64('one\ntwo') }],
     ['acp-turn', { type: 'acp-turn', id: 'r1', phase: 'end', display: 'one\ntwo' }, { display: b64('one\ntwo') }],
     ['acp-tool-result', { type: 'acp-tool-result', id: 'r1', request: 0, output: 'one\ntwo' }, { output: b64('one\ntwo') }],
+    ['mcp-result', { type: 'mcp-result', call: 'call-1', text: 'one\ntwo', isError: true }, { text: b64('one\ntwo') }],
     ['acp-tool-request', { type: 'acp-tool-request', id: 'r1', request: 0, command: 'one\ntwo' }, { command: b64('one\ntwo') }],
+    ['mcp-call', { type: 'mcp-call', call: 'call-1', tool: 'file read', args: 'one\ntwo' }, { args: b64('one\ntwo') }],
     ['acp-tool-step', {
       type: 'acp-tool-step', id: 'r1', command: 'one\ntwo', result: 'three\nfour', workspace: true,
     }, { command: b64('one\ntwo'), result: b64('three\nfour') }],
@@ -1340,7 +1449,7 @@ describe('base64 field declaration', () => {
       .toSorted(order);
     expect(withFields).toEqual([
       'acp-activity', 'acp-chunk', 'acp-run', 'acp-tool-request', 'acp-tool-result', 'acp-tool-step', 'acp-turn',
-      'capture-reply', 'gate-event', 'input', 'output', 'resume-event', 'shell-history', 'transcript',
+      'capture-reply', 'gate-event', 'input', 'mcp-call', 'mcp-result', 'output', 'resume-event', 'shell-history', 'transcript',
     ]);
   });
 });

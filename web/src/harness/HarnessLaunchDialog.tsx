@@ -34,6 +34,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
   const autoApproveNames = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(view.autoApprove);
   const autoResumeEnabled = autoResumeSupported(view, fields.name);
   const autoResumeNames = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(view.autoResume);
+  const mcpEnabled = !fields.offline;
 
   const listState = useRef<ModelSearchListState>({ open: false, highlighted: false });
   const onListChange = useCallback((state: ModelSearchListState) => { listState.current = state; }, []);
@@ -80,6 +81,15 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
           <label className="harness-launch-check">
             <input type="checkbox" checked={fields.browser} onChange={(e) => update({ browser: e.target.checked })} />
             E2E browser (-b)
+          </label>
+          <label className={`harness-launch-check${mcpEnabled ? '' : ' disabled'}`}>
+            <input
+              type="checkbox"
+              checked={fields.mcp}
+              disabled={!mcpEnabled}
+              onChange={(e) => update({ mcp: e.target.checked })}
+            />
+            MCP server (--no-mcp to disable)
           </label>
           <label className={`harness-launch-check${autoApproveEnabled ? '' : ' disabled'}`}>
             <input

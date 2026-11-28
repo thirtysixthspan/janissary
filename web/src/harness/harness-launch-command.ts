@@ -12,6 +12,7 @@ export type HarnessLaunchFields = {
   // endpoint the harness drives it through. Every harness accepts it, so unlike auto-approve there
   // is no per-harness disabling.
   browser: boolean;
+  mcp: boolean;
   model: string;
   effort: string;
 };
@@ -31,6 +32,7 @@ export function buildHarnessLaunchCommand(fields: HarnessLaunchFields): string {
   if (!fields.workspace) parts.push('--no-workspace');
   if (fields.offline) parts.push('--offline');
   if (!fields.browser) parts.push('--no-browser');
+  if (!fields.mcp && !fields.offline) parts.push('--no-mcp');
   if (!fields.autoApprove) parts.push('--no-auto-approve');
   if (!fields.autoResume) parts.push('--no-auto-resume');
   if (fields.model) parts.push('--model', fields.model);

@@ -9,22 +9,33 @@ import { loadProjectTokens } from '../project/tokens.js';
 import { loadGitIdentity, getGitIdentity } from '../git/identity.js';
 import { spawnPty } from '../pty.js';
 import { RemoteServer } from './serve.js';
+import { FarSideMcp } from './serve-mcp.js';
 import { wireShutdown, CHANNEL_SIGNALS } from './serve-start.js';
 import { WorkspaceManager } from '../workspace/manager.js';
 import { RemoteChannel } from './channel/index.js';
 import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake, REMOTE_PROTOCOL_VERSION } from './protocol.js';
-import type { ServerFrame } from './protocol-frames.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import type { PromptHandlers } from '../acp/types.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { provisionRemoteWorkspace, type ProvisionedWorkspace } from './serve-provision.js';
 import type * as ProvisionModule from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
+import type * as Crypto from 'node:crypto';
 import { createConnection, createServer } from 'node:net';
 import { readFileSync } from 'node:fs';
 
 // Only the process spawners are faked: every other part of this file drives the real server against
 // a real clone, and the credential a spawn is handed is the one thing that has no other observable.
 vi.mock('../pty.js');
+
+const cryptoMock = vi.hoisted(() => ({ port: undefined as number | undefined }));
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof Crypto>();
+  return {
+    ...actual,
+    randomInt: (min: number, max: number) => cryptoMock.port ?? actual.randomInt(min, max),
+  };
+});
 
 // The ACP agent is faked for the same reason, plus one of its own: `shutdown` must kill it *before*
 // the clone is removed, and that ordering is only observable from inside the kill.
@@ -468,6 +479,39 @@ describe('RemoteServer', () => {
     expect(exit).toHaveBeenCalledWith(0);
   });
 
+  it('reflects stdout writability and the detach flag before a peer exists', async () => {
+    const { server, frames } = makeServer();
+    expect(server.linked()).toBe(true);
+    const writable = vi.spyOn(process.stdout, 'writable', 'get').mockReturnValue(false);
+    try {
+      expect(server.linked()).toBe(false);
+    } finally { writable.mockRestore(); }
+    server.receive(`${encodeFrame({ type: 'provision', label: 'link-state-no-peer' })}\n`);
+    await waitForWorkspaceReady(frames);
+    server.detach();
+    expect(server.linked()).toBe(false);
+    server.shutdown(0);
+  });
+
+  it('delegates its link state to a real peer once one exists', async () => {
+    const { server } = makeServer();
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    (server as unknown as { peer: DetachedPeer }).peer = peer;
+    try {
+      expect(server.linked()).toBe(peer.linked());
+      peer.detach();
+      expect(server.linked()).toBe(false);
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+        expect(server.linked()).toBe(true);
+      } finally { socket.destroy(); }
+    } finally { peer.dispose(); }
+    expect(server.linked()).toBe(false);
+  });
+
   it('refuses a frame outside the union', () => {
     const { server, frames } = makeServer();
     server.receive(`${JSON.stringify({ type: 'exec', id: 'r1' })}\n`);
@@ -557,6 +601,41 @@ describe('RemoteServer', () => {
     expect(frames.find((frame) => frame.type === 'session-state-result')?.processes).toEqual([]);
     expect(exit).not.toHaveBeenCalled();
     server.shutdown(0);
+  });
+
+  it('reports a failed shared MCP endpoint to a later harness before exiting it', async () => {
+    const probe = new FarSideMcp(vi.fn(), 'probe');
+    const probeLaunch = await probe.launch();
+    const port = Number(new URL(probeLaunch.url).port);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    probe.dispose();
+    cryptoMock.port = port;
+    const blocker = createServer();
+    await new Promise<void>((resolve) => blocker.listen(port, '127.0.0.1', () => resolve()));
+    const { server, frames, exit } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'mcp-collision' })}\n`);
+      await waitForWorkspaceReady(frames);
+      const spawnFrame = (id: string) => (server as unknown as {
+        spawn: (frame: Extract<ClientFrame, { type: 'spawn' }>) => Promise<void>;
+      }).spawn({ ...SPAWN_FRAME, id, mcp: true });
+      await spawnFrame('r1');
+      await spawnFrame('r2');
+
+      const refusals = frames.filter((frame) => (frame.type === 'output' && frame.data.includes('MCP endpoint could not bind'))
+        || (frame.type === 'exit' && (frame.id === 'r1' || frame.id === 'r2')));
+      expect(refusals).toEqual([
+        { type: 'output', id: 'r1', data: expect.stringContaining('EADDRINUSE') },
+        { type: 'exit', id: 'r1', exitCode: 1 },
+        { type: 'output', id: 'r2', data: expect.stringContaining('MCP endpoint could not bind') },
+        { type: 'exit', id: 'r2', exitCode: 1 },
+      ]);
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      cryptoMock.port = undefined;
+      blocker.close();
+      server.shutdown(0);
+    }
   });
 
   // A peer that has not provisioned is holding nothing, which is a fact worth stating: answering
@@ -1162,6 +1241,53 @@ describe('RemoteServer — settling the root', () => {
 });
 
 describe('detached peer rendezvous', () => {
+  it('reports its link state across start, attach, detach, and dispose', async () => {
+    const linkChanged = vi.fn();
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn(), undefined, undefined, linkChanged);
+    try {
+      expect(peer.linked()).toBe(false);
+      await peer.start(vi.fn());
+      expect(peer.linked()).toBe(true);
+      peer.detach();
+      expect(peer.linked()).toBe(false);
+      expect(linkChanged.mock.calls).toEqual([[false]]);
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+        expect(peer.linked()).toBe(true);
+        expect(linkChanged.mock.calls).toEqual([[false], [true]]);
+        socket.destroy();
+        await vi.waitFor(() => expect(linkChanged.mock.calls).toEqual([[false], [true], [false]]));
+        expect(peer.linked()).toBe(false);
+      } finally { socket.destroy(); }
+    } finally { peer.dispose(); }
+    expect(peer.linked()).toBe(false);
+  });
+
+  it('delivers the pending MCP ids on the accepted attach before replaying frames', async () => {
+    const pendingCalls = () => ['call-9'];
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn(),
+      undefined, undefined, undefined, pendingCalls);
+    try {
+      await peer.start(vi.fn());
+      peer.detach();
+      peer.emit({ type: 'transcript', blocks: ['Buffered output'] });
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+          { type: 'attach-result', accepted: true, mcpPending: ['call-9'] },
+          { type: 'transcript', blocks: ['Buffered output'] },
+        ]));
+      } finally {
+        socket.destroy();
+      }
+    } finally {
+      peer.dispose();
+    }
+  });
+
   it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through terminal hangup and a fresh remote-serve process', async (mode) => {
     const script = `
       import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};

@@ -15,7 +15,7 @@ export function autoResumeSupported(view: HarnessLaunchView, name: string): bool
 export function initialFields(view: HarnessLaunchView): HarnessLaunchFields {
   const name = view.names[0] ?? 'claude';
   return {
-    name, label: '', workspace: true, offline: false, browser: true,
+    name, label: '', workspace: true, offline: false, browser: true, mcp: true,
     autoApprove: autoApproveSupported(view, name), autoResume: autoResumeSupported(view, name),
     model: '', effort: '',
   };
@@ -37,5 +37,7 @@ export function nextFields(
   else if (patch.name !== undefined && !autoApproveSupported(view, previous.name)) next.autoApprove = true;
   if (!autoResumeSupported(view, next.name)) next.autoResume = false;
   else if (patch.name !== undefined && !autoResumeSupported(view, previous.name)) next.autoResume = true;
+  if (next.offline) next.mcp = false;
+  else if (patch.offline !== undefined && previous.offline) next.mcp = true;
   return next;
 }

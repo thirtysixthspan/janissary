@@ -19,6 +19,7 @@ import {
 } from './manager-reports.js';
 import type { RemoteLaunchHandlers } from './manager.js';
 import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
+import { createMcpRelay } from './mcp-relay.js';
 import { createRemoteTranscriptSource } from './transcript-source.js';
 
 export type RemoteEntryFactoryOptions = {
@@ -71,6 +72,10 @@ export function createRemoteEntry({
   const { promise: ready, resolve: resolveReady, reject: rejectReady } = createDeferred<string>();
   void ready.catch(() => {});
   const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
+  const restoredMcpTab = resume?.mcpPtyId === undefined
+    ? undefined
+    : { originalLabel: resume.workspaceLabel ?? label, label, harness: managers.tab.byLabel(label)?.harness };
+  const mcpRelay = createMcpRelay(managers, (frame) => deferred.channel?.send(frame), restoredMcpTab);
   const terminal = (data: string) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data });
   // A clone offer waiting for its y/n, answered by keystrokes typed into the placeholder.
   let offer: CloneOfferText | undefined;
@@ -108,6 +113,7 @@ export function createRemoteEntry({
       onFrame: (frame) => {
         switch (frame.type) {
         case 'attach-result': {
+          if (frame.accepted && frame.mcpPending !== undefined) mcpRelay.reconcile(frame.mcpPending);
           handleAttachResult(managers, entry, frame, label, resume, state,
             () => reportTruncatedReplay(managers, entry));
           break;
@@ -139,6 +145,12 @@ export function createRemoteEntry({
           break;
         }
         case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
+        case 'mcp-call': {
+          if (channel.allowsMcpCalls()) mcpRelay.handle(frame);
+          else channel.send({ type: 'mcp-result', call: frame.call, text: 'MCP is not enabled for this remote session.', isError: true });
+          break;
+        }
+        case 'mcp-cancel': { mcpRelay.cancel(frame); break; }
         case 'browser-exited': { notifyBrowserGone(managers, frame.id, frame.message); break; }
         case 'browser-started': { notifyBrowserStarted(managers, frame.id); break; }
         default: { transcript.push(frame.blocks); }
@@ -153,12 +165,13 @@ export function createRemoteEntry({
         entry.handlers.get(label)?.onFailed(message);
       },
       onClose: () => channelClosed(entry),
+      onFinalClose: () => mcpRelay.clear(),
       onProcesses: sessionsChanged,
       onSessionExit: (_id, owner, harness) => {
         terminateRemoteProcess(managers, entry, owner ?? label, harness);
         sessionsChanged();
       },
-    },
+    }, resume?.mcpPtyId,
   );
   deferred.channel = channel;
   if (resume) channel.sessionId = resume.session;
@@ -182,7 +195,7 @@ export function createRemoteEntry({
     channel, transcript, address, labels: new Set([label]), runRefs: new Set(), handlers: new Map([[label, handlers]]),
     ready, resolveReady, rejectReady, settled: false, closed: false,
     launchLabel: label, workspaceLabel: resume?.workspaceLabel ?? label,
-    attach: new Attach(connect, () => channel.close()),
+    attach: new Attach(connect, () => deferred.session?.kill()),
   };
   connect();
   return entry;

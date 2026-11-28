@@ -127,6 +127,10 @@ describe('shouldNotify — ambient events', () => {
     expect(shouldNotify(allOn, 'state-change', 'janus', 'janus')).toBe(false);
   });
 
+  it('is not suppressed for focus when no tab is active yet', () => {
+    expect(shouldNotify(allOn, 'state-change', 'janus', undefined)).toBe(true);
+  });
+
   it('is suppressed when the event toggle is off', () => {
   });
 
@@ -539,6 +543,19 @@ describe('notify — line composition', () => {
     const [, entry] = append.mock.calls[0];
     expect(entry.from).toBe('8:32pm janus');
     expect(managers.notifications.all[0]?.tabName).toBeUndefined();
+  });
+
+  // A startup failure can be reported before the launch shell opens the first tab, when the tab
+  // manager holds no tabs and `cur()` answers `undefined` whatever its type says.
+  it('records a notification while no tab is open yet', () => {
+    const managers = {
+      tab: { tabs: [], byLabel: () => {}, cur: () => {} },
+      notifications: new NotificationQueue(),
+    } as unknown as Managers;
+    notify(managers, 'mcp-failed', 'janus', 'MCP server failed to start: boom');
+    expect(managers.notifications.all.map((n) => [n.event, n.tabLabel, n.message]))
+      .toEqual([['mcp-failed', 'janus', 'MCP server failed to start: boom']]);
+    expect(managers.notifications.all[0]?.entry.from).toBe('8:32pm janus');
   });
 });
 

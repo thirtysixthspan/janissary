@@ -36,6 +36,7 @@ type AppMainProps = LayoutState & {
   closeTab: (index: number, reason?: { terminalExited: string }) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
+  onQuestionPanelRemove: (hadFocus: boolean) => void;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   dirtyPluginTabs: ReadonlySet<string>;
   registerPluginDirtyHandle: (label: string, handle: DirtyTabHandle | null) => void;
@@ -62,7 +63,7 @@ export function AppMain({
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
   splitPct, setSplitPct,
-  harnessHandles, questionPanelRef, tabHandles,
+  harnessHandles, questionPanelRef, onQuestionPanelRemove, tabHandles,
   dirtyPluginTabs, registerPluginDirtyHandle, getPluginTabState,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit,
   quitWalkRef, saveWalkOpenRef, onQuit, revealDocked, guardRef,
@@ -90,7 +91,7 @@ export function AppMain({
         windowFocused={windowFocused}
         dirtyTabs={dirtyPluginTabs}
         mountedProps={{
-          harnessHandles, tabHandles, questionPanelRef,
+          harnessHandles, tabHandles, questionPanelRef, onQuestionPanelRemove,
           onPluginDirtyHandle: registerPluginDirtyHandle,
           getPluginTabState,
           pickerOverlays,

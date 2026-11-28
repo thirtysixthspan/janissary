@@ -90,7 +90,7 @@ While a tab is busy — running a shell command, an ACP turn, or any other in-fl
 
 When an **inactive** tab receives new content — ACP output, a shell command finishing, or a browser/connection command completing — an **unread badge** (a flag icon) appears on that tab in the tab strip, rendered as a sibling of the tab name so it does not inherit the busy-dot blink. The badge stays until the tab is focused *and dwelt on* (see **Clearing**), then clears. The active tab never shows the badge.
 
-**Marking.** Content delivery marks a tab unread only when the target tab is neither the focused tab nor the visible selection in the other split pane, and is not docked into a sidebar. In-progress shell output does not mark — the busy dot already conveys that state; the badge signals completed new output. A tab still waiting on an ACP query that has not resolved with a response does not mark either, no matter how much ACP output or tool-step content streams into it: the busy dot says it is working, and the badge is reserved for a response that has actually arrived. Once the query settles, its response marks the tab as usual. A command's new entry is content, though: a command that starts in an inactive tab — a scheduled command, or one delivered by another tab’s `send` — marks it when its entry appears, the same for a shell command as for a browser or connection command, and marks it again when it finishes.
+**Marking.** Content delivery marks a tab unread only when the target tab is neither the focused tab nor the visible selection in the other split pane, and is not docked into a sidebar. In-progress shell output does not mark — the busy dot already conveys that state; the badge signals completed new output. A tab still waiting on an ACP query that has not resolved with a response does not mark either, no matter how much ACP output or tool-step content streams into it: the busy dot says it is working, and the badge is reserved for a response that has actually arrived. Once the query settles, its response marks the tab as usual. A pending question is the exception to that suppression: when an agent asks the human a question, its tab is badged as soon as the question is registered, while the ACP query is still open waiting for the answer, so the tab that needs attention can be found while the agent is stalled. The ordinary visibility rules still apply — the active tab, the other pane's visible selection, and docked tabs are never badged, and the dwell clears the badge once the tab is visited. A command's new entry is content, though: a command that starts in an inactive tab — a scheduled command, or one delivered by another tab’s `send` — marks it when its entry appears, the same for a shell command as for a browser or connection command, and marks it again when it finishes.
 
 **Docked tabs never badge.** A tab docked into a sidebar (see `sidebars.md`) is permanently visible chrome and can never become the active tab, so it is never eligible for the unread badge either — new content delivered to a docked tab (for example the notifications tab) never sets `hasUnread`. Docking does not clear a badge either: a tab that was badged and then docked keeps it, since a docked tab is on screen but was never selected, so no dwell is coming to take the badge off.
 
@@ -159,17 +159,18 @@ selection is preserved so the selected text can be copied.
 The tab strip's own labels are not selectable with the mouse — clicking and dragging across a
 tab's name behaves like clicking any other UI control rather than highlighting text.
 
-Today there are five possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
+Today there are six possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone (including a remote tab, whose clone lives on the other host), **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
 only — see Auto-approve permissions in `harness.md`), **auto-resuming** (a stopwatch icon of its own), shown when
 auto-resume is enabled on a harness tab (see Auto-resume after a usage limit in `harness.md`), **E2E browser** (a globe icon), shown for a tab
 launched with the e2e browser, which is every harness tab not launched with `--no-browser` (harness
-tabs only — see End-to-end browser in `harness.md`), and **recording** (a film icon), shown on every
+tabs only — see End-to-end browser in `harness.md`), **MCP server** (a server icon), shown for a harness
+tab launched with MCP config (harness tabs only), and **recording** (a film icon), shown on every
 tab kind whose session is recorded — harness, ssh, and shell tabs, and no others (see
 `harness-recording.md` § The recording flag).
-They appear in that order, with the recording icon **first**, so the browser icon sits to the right of the others. Hovering a flag's
+They appear in that order, with the recording icon **first**, so the browser icon sits to the right of the others and the MCP icon to the right of the browser. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "Auto-resume" or "Auto-resuming",
-"E2E browser", "recording" or "not recording"). More flags of the
+"E2E browser", "MCP server" or "MCP server in use", "recording" or "not recording"). More flags of the
 same kind are expected in the future. The workspaced flag is drawn in the same green as the
 browser-in-use flag. While a tab's workspace is still being provisioned, a transient provisioning
 indicator takes the workspaced flag's place, and the workspaced flag replaces it once provisioning
@@ -209,6 +210,20 @@ band stays up as the record of the earlier death.
 A remote tab rebuilt by attaching from a new local session learns of a browser only when one starts,
 so a browser already running on the far side before that attach leaves the flag plain until the next
 start.
+
+The MCP flag has two looks. A harness tab launched with MCP config shows the plain server with the
+"MCP server" tooltip from the moment it opens. Once the harness first calls the MCP server, the icon
+turns green and its tooltip reads "MCP server in use"; it stays green for the rest of the tab's life,
+for a local tab and a remote one alike. A remote reconnect does not change either state — the
+connection plug reports the reconnect, and the flag keeps reporting the launch and first use. A tab
+not launched with MCP config shows no MCP flag at all.
+
+A remote harness tab rebuilt by attaching from the Sessions tab reports the far harness's own
+launch: it shows the MCP flag when that harness was launched with MCP config and no flag when it was
+launched with `--no-mcp`, with `--offline`, or while the local server was down, whatever the local
+MCP server's state at attach time. The
+flag starts plain after the attach, even if the harness had already called the server, and turns
+green on its next call.
 
 Harness and shell tabs also show a file-navigator button (a folder icon) in an action group at
 the right edge of the metadata row. Its tooltip is "Open file navigator in this workspace" when the

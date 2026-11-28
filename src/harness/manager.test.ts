@@ -926,6 +926,7 @@ describe('HarnessManager model/effort', () => {
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'opencode', 'opencode', "opencode $(opencode --help 2>/dev/null | grep -q -e --standalone && echo --standalone) --model 'opencode-go/glm-5.2'",
       '/project', undefined, false, undefined,
+      { harness: true },
     );
   });
 
@@ -936,6 +937,7 @@ describe('HarnessManager model/effort', () => {
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", '/project', undefined, false,
       { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
+      { harness: true },
     );
   });
 
@@ -946,6 +948,7 @@ describe('HarnessManager model/effort', () => {
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', 'claude', '/project', undefined, false,
       { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
+      { harness: true },
     );
   });
 
@@ -1567,6 +1570,7 @@ describe('HarnessManager system-schedule naming', () => {
     expect(tabs.at(-1)).toMatchObject({ label: 'claude-2', group: 7, groupName: 'Creator group', groupColor: '#abcdef' });
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude-2', 'claude', 'claude', '/captured/cwd', undefined, false, expect.anything(),
+      { harness: true },
     );
   });
 

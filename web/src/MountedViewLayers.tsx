@@ -25,6 +25,7 @@ type Properties = {
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
+  onQuestionPanelRemove?: (hadFocus: boolean) => void;
   visibleLabels?: string[];
   onSplit?: (index: number) => void;
   // Told when a plugin tab's unsaved state changes, so the tab strip can mark it. The handle itself
@@ -69,7 +70,7 @@ function TabBodyDiv({
 // editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video playback
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current: candidate, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
+  tabs, current: candidate, client, closeTab, harnessHandles, tabHandles, questionPanelRef, onQuestionPanelRemove,
   visibleLabels: requestedLabels, onSplit, onPluginDirtyHandle, onPluginDirty, getPluginTabState, pickerOverlays, pickerSourceTab, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
@@ -150,7 +151,9 @@ export function MountedViewLayers({
             overlay={t.label === current?.label ? pluginOverlay(t) : undefined}
           />
         ))}
-      {current?.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}
+      {current?.pendingQuestion && (
+        <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} onBeforeRemove={onQuestionPanelRemove} />
+      )}
     </>
   );
 }

@@ -139,6 +139,10 @@ export type ClientFrame =
     // use — the remote starts its own guard, its own confined browser, and its own workspace
     // directory, exactly as `harnessEnv`'s doc comment states the general rule.
     browser?: boolean;
+    // Whether this harness wants an MCP server. The far side starts its own endpoint for it and
+    // publishes that endpoint's own URL and token in the harness environment; the local side only
+    // carries the decision, never its own MCP connection details.
+    mcp?: boolean;
     // Whether this harness process should auto-approve its own permission gates on the far side.
     // Meaningful only alongside `harness`; ignored for a plain PTY takeover or inline terminal card.
     autoApprove?: boolean;
@@ -190,6 +194,7 @@ export type ClientFrame =
   }
   | { type: 'acp-run'; id: string; text: string; snapshot: AcpRunSnapshot }
   | { type: 'acp-tool-result'; id: string; request: number; output?: string; error?: string }
+  | { type: 'mcp-result'; call: string; text: string; isError: boolean }
   | { type: 'acp-cancel'; id: string }
   | { type: 'acp-close'; id: string };
 
@@ -200,7 +205,7 @@ export type ServerFrame =
   // gone, not that this attempt failed — which is the distinction `src/remote/attach.ts` turns
   // into an ended tab instead of another round of backoff. `truncated` says the peer's replay buffer
   // overflowed while it waited, so what follows is missing its oldest output.
-  | { type: 'attach-result'; accepted: boolean; truncated?: boolean }
+  | { type: 'attach-result'; accepted: boolean; truncated?: boolean; mcpPending?: string[] }
   // The answer to `session-state`: one entry per process still running in the workspace. An empty
   // list is a real answer and not a failure — it says the peer is holding a workspace with nothing
   // in it, which is the one case the local side ends rather than attaches.
@@ -305,6 +310,8 @@ export type ServerFrame =
   // so the pair can be matched. The local side records and displays that step itself, so the far
   // side sends no `acp-tool-step` for it.
   | { type: 'acp-tool-request'; id: string; request: number; command: string }
+  | { type: 'mcp-call'; call: string; tool: string; args: string }
+  | { type: 'mcp-cancel'; call: string; received?: true }
   // A step the far side completed on its own: a workspace-tool run (`workspace: true`) or a gate
   // refusal (`workspace: false`). `refused` is present only as `'disabled'`, for a disabled or
   // agent-off refusal. `command` and `result` are base64-encoded free text, and an empty `result` is
@@ -338,6 +345,7 @@ export type RemoteProcessState = {
   harness?: string;
   autoApprove?: boolean;
   autoResume?: boolean;
+  mcp?: boolean;
   agentName?: string;
   shell?: { nonce: string };
   offline?: boolean;
@@ -355,7 +363,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'agent-resolve': true, 'run-clone': true,
-  'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true,
+  'acp-open': true, 'acp-run': true, 'acp-tool-result': true, 'acp-cancel': true, 'acp-close': true, 'mcp-result': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
@@ -366,5 +374,5 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'agent-resolve-result': true, 'run-clone-result': true,
   'acp-ready': true, 'acp-session-started': true, 'acp-chunk': true, 'acp-turn': true, 'acp-tool-request': true, 'acp-tool-step': true,
   'acp-run-end': true,
-  'acp-activity': true, 'acp-closed': true, 'acp-error': true,
+  'acp-activity': true, 'acp-closed': true, 'acp-error': true, 'mcp-call': true, 'mcp-cancel': true,
 };

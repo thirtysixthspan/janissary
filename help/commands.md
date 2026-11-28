@@ -51,7 +51,7 @@
 | `files cursor` | `files cursor <path>` restores the cursor |
 | `files expand` | `files expand <path>` expands a directory |
 | `files select` | `files select <path>` restores the selection |
-| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out |
+| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, `--no-mcp`, or `--no-auto-resume` to opt out |
 | `harness capture` | `harness capture <name>` saves a screen capture |
 | `help` | `help` lists the commands; use a help subcommand for a page or the key bindings |
 | `help <command>` | Show one command's usage, use cases, and examples |
@@ -74,6 +74,7 @@
 | `layout sidebar` | `layout sidebar left\|right <width>` sets a sidebar's width |
 | `layout split` | `layout split <percent>` sets the left pane's share of the center area |
 | `layout window` | `layout window <width> <height>` sets the application window size |
+| `mcp` | Print the local MCP server's state as a key/value block, never the token |
 | `models` | Open the model catalog |
 | `models left` | Dock the model catalog in the left sidebar |
 | `models right` | Dock the model catalog in the right sidebar |

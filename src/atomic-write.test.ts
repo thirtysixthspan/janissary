@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type * as Fs from 'node:fs';
-import { atomicWriteFile } from './atomic-write.js';
+import { atomicWriteFile, atomicWritePrivateFile } from './atomic-write.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
@@ -53,6 +53,17 @@ describe('atomicWriteFile', () => {
     atomicWriteFile(target, 'second', 0o644);
     expect(statSync(target).mode & 0o777).toBe(0o600);
     expect(readFileSync(target, 'utf8')).toBe('second');
+  });
+
+  it('replaces a wider target with an owner-only file through the private writer', () => {
+    const target = path.join(root(), 'credential.json');
+    writeFileSync(target, 'before');
+    chmodSync(target, 0o644);
+
+    atomicWritePrivateFile(target, 'after');
+
+    expect(statSync(target).mode & 0o777).toBe(0o600);
+    expect(readFileSync(target, 'utf8')).toBe('after');
   });
 
   it('leaves an existing directory in place and cleans the temporary file when replacement fails', () => {

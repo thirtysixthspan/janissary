@@ -130,6 +130,26 @@ describe('startSessionAttach', () => {
     expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({ autoApprove: true, autoResume: true }));
   });
 
+  it('passes the recorded harness MCP decision and offline mode to the harness attach', async () => {
+    const h = harness();
+    const saved = {
+      ...record(),
+      processes: [{ id: 'rpty1', label: 'claude', kind: 'harness' as const, harness: 'claude', mcp: true, offline: true }],
+    };
+    await startSessionAttach(h.managers, saved);
+    expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({
+      resumePtyId: 'rpty1', mcp: true, offline: true,
+    }));
+  });
+
+  it('attaches a harness recorded without an MCP decision or offline mode with both off', async () => {
+    const h = harness();
+    await startSessionAttach(h.managers, record());
+    expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({
+      resumePtyId: 'rpty1', mcp: false, offline: false,
+    }));
+  });
+
   it('attaches a shell session without adopting its PTY as the placeholder agent shell', async () => {
     const h = harness();
     vi.mocked(startSshBridge).mockImplementation(
