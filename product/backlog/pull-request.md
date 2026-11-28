@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the MCP server spec's claim that a local call with a non-string option gets the `options must be a list of strings.` tool error.
-
-Existing Issue: The `question` tool section of the MCP server spec lists `options must be a list of strings.` among the exact texts a call receives, but on the local HTTP path the SDK checks the zod input schema before the tool callback runs and answers a non-string option with its own `Input validation error: Invalid arguments for tool question: ...` text, so only relayed remote calls ever get the listed sentence. Severity: 3/10
-
-Existing Risk: 3/10 - A harness author or tester who trusts the spec matches on a sentence the local server never sends, and a verification step built from that list reports the local path as broken when it is not.
-
-Proposal Risk: 1/10 - The spec then says which path produces which text; the remaining hazard is an SDK upgrade rewording its own validation message, which the spec would describe without quoting.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the MCP server spec's error text for a local non-string option". `createHandler` in `src/mcp/handler.ts` registers `questionInputSchema` from `src/mcp/tools.ts`, whose `options: z.array(z.string()).optional()` makes the SDK's `McpServer` refuse a non-string option before the callback, as a tool error whose text starts with `Input validation error:`; `validateQuestionArgs` in `src/mcp/question-tool.ts` produces `options must be a list of strings.` only for calls that reach it through `decodeCall` in `src/remote/mcp-relay.ts`. In `product/specs/mcp-server.md`, move that bullet out of The `question` tool section's exact-text list into the Remote relay section beside the other relayed-call texts, add one sentence to the local section saying arguments whose types do not match the tool's declared schema are refused by the MCP layer with its own input-validation tool error before the exact checks run, and adjust the Remote relay sentence that says relayed arguments get "the same exact texts, as a local call" so it no longer implies the options sentence is shared. Make the matching edit to the relayed-call sentence in the version-49 paragraph of `product/specs/remote-server.md` only if it implies the same. No code change; `src/mcp/question-tool.test.ts` and the "refuses $label without registering and lets a later valid call with the same id register" cases in `src/remote/mcp-relay.test.ts` keep pinning the sentence where it is produced, and `src/mcp/handler.test.ts` must keep passing untouched.
-
-
 * Correct the notifications spec's description of the withdrawn-question event, which says it only covers questions on background tabs.
 
 Existing Issue: The `question-withdrawn` entry in the notifications spec opens with "a question asked by an agent in a background tab is withdrawn before it is answered", while the MCP executor records the withdrawal for an abandoned question on any tab, active or not, and the same entry goes on to say the line is recorded even while that tab is active. Severity: 2/10
