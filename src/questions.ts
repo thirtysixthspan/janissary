@@ -1,4 +1,5 @@
 import type { PendingQuestionView, QuestionKind } from './protocol.js';
+import type { QuestionChoice } from './protocol/tab.js';
 
 export const QUESTION_CANCELLED = 'Question cancelled.';
 
@@ -6,7 +7,10 @@ export type QuestionRequest = {
   tab: string;
   kind: QuestionKind;
   question: string;
+  // Approve questions only; never set for `choose` questions.
   options?: string[];
+  choices?: QuestionChoice[];
+  defaultOption?: string;
 };
 
 type QueuedQuestion = QuestionRequest & {
