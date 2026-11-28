@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the remote-server spec's claim that the MCP endpoint is the only HTTP server `janus remote-serve` starts.
-
-Existing Issue: The `janus remote-serve` section of the remote-server spec now says "the only HTTP server it starts is a loopback MCP endpoint for a harness that asks for one", but the same process also starts a loopback e2e browser guard, a WebSocket server listening on its own port, for every harness it spawns with the browser flag set. Severity: 2/10
-
-Existing Risk: 3/10 - The sentence is the spec's statement of the remote host's network surface, so anyone re-deriving the far side's threat model from it misses one listener per `-b` harness.
-
-Proposal Risk: 1/10 - Only the sentence changes; a wording that still omitted a listener would show against the far-side spawn code it names.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "correct the remote-server spec's statement of the HTTP servers remote-serve starts". `RemoteProcesses.spawnPty` in `src/remote/serve-processes.ts` calls `harnessSpawnEnv` in `src/harness/scratch-dir.ts` with `browser: frame.browser`, which starts `startLazyE2EBrowserServer` in `src/browser/e2e-server.ts` and, through `startE2EGuard` in `src/browser/e2e-guard.ts`, a `WebSocketServer` on a loopback guard port, alongside the `FarSideMcp` listener in `src/remote/serve-mcp.ts`. In the first paragraph of the `janus remote-serve [<project-dir>]` section of `product/specs/remote-server.md`, replace the "only HTTP server" clause with one saying the only HTTP servers it starts listen on loopback: the e2e browser guard for each harness launched with the browser and the MCP endpoint for harnesses that asked for one. Leave the capability-surface paragraph and the rest of the section as they are. No code or test changes. Verify by reading the paragraph against those two spawn paths.
-
-
 * Declare the zod package the MCP tool registry imports, instead of relying on the copy the MCP SDK happens to hoist.
 
 Existing Issue: The MCP tool registry imports `z` from `zod` to build the `question` input schema, but `zod` appears nowhere in `package.json`, so the import resolves only because npm hoists the copy that `@modelcontextprotocol/server` and `@modelcontextprotocol/core` depend on. Severity: 4/10

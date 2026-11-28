@@ -915,7 +915,8 @@ and closes the channel (and therefore the tab).
 
 The far end. It runs attached inside an ordinary ssh session and speaks a framed protocol over that
 session's stdin and stdout. It takes no instance lock, opens no window, and writes no log file; the
-only HTTP server it starts is a loopback MCP endpoint for a harness that asks for one. It is not
+only HTTP servers it starts listen on loopback: the e2e browser's protocol guard for each harness
+launched with `-b`/`--browser`, and the one MCP endpoint shared by the harnesses that asked for one. It is not
 addressable by `janus stop`, and it lives and dies with its ssh channel.
 
 With a directory argument it is rooted exactly there, with no upward walk. Without one it walks up
