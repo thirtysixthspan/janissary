@@ -274,3 +274,34 @@ describe('createManagers native command settings wiring', () => {
     expect(state.disabledApplicationCommands).toContainEqual(expect.objectContaining({ name: 'hist' }));
   });
 });
+
+describe('createManagers MCP start failure', () => {
+  let projectDir: string;
+  let controller: Controller | undefined;
+  beforeEach(() => {
+    projectDir = mkdtempSync(path.join(tmpdir(), 'controller-mcp-failure-'));
+  });
+  afterEach(async () => {
+    await controller?.shutdown();
+    controller = undefined;
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  // The state file fails synchronously inside the MCP manager's constructor, before the launch shell
+  // has opened any tab, so the notice must go through the real managers with no active tab.
+  it('records one mcp-failed notification for a corrupt state file before any tab exists', async () => {
+    const file = path.join(projectDir, '.janissary', 'mcp.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, '{"port":');
+
+    controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, projectDir);
+    await controller.managers.mcp.ready;
+
+    expect(controller.managers.tab.tabs).toEqual([]);
+    const failures = controller.managers.notifications.all.filter((n) => n.event === 'mcp-failed');
+    expect(failures.map((n) => [n.tabLabel, n.message])).toEqual([[
+      'janus',
+      `MCP server failed to start: invalid MCP state file ${file}; delete it and restart Janissary to replace it`,
+    ]]);
+  });
+});

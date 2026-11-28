@@ -151,12 +151,13 @@ function isAmbient(event: NotificationEventType): event is AmbientNotificationEv
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. An explicit trigger always fires, subject only to the tab being open (enforced
 // in `notify`), except system schedule and model refresh notices, which have default-on toggles.
-// Ambient events use their own toggle and are subject to focus suppression.
+// Ambient events use their own toggle and are subject to focus suppression. An undefined
+// `activeLabel` means no tab is active yet, so focus suppresses nothing.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
   tabLabel: string,
-  activeLabel: string,
+  activeLabel: string | undefined,
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
   if (event === 'system-schedule-fire') return config?.events.systemScheduleFire ?? true;
@@ -204,7 +205,9 @@ export function notify(
   message?: string,
   { openFile, openTab, detectedAt }: NotifyOptions = {},
 ): void {
-  const activeLabel = managers.tab.cur().label;
+  // A startup failure, such as the MCP server's, can be reported before the launch shell opens the
+  // first tab. With no tabs there is no active one, and `cur()` would answer `undefined`.
+  const activeLabel = managers.tab.tabs.length === 0 ? undefined : managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
   const tab = managers.tab.byLabel(tabLabel);
   const color = tab?.dotColor;

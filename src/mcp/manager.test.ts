@@ -69,8 +69,8 @@ afterEach(() => {
 describe('McpManager state file failures', () => {
   const remedy = 'delete it and restart Janissary to replace it';
 
-  async function startFailed(): Promise<string> {
-    const manager = new McpManager(fixtureManagers(), root);
+  async function startFailed(managers = fixtureManagers()): Promise<string> {
+    const manager = new McpManager(managers, root);
     try {
       await manager.ready;
       expect(manager.localLaunch()).toBeUndefined();
@@ -107,6 +107,21 @@ describe('McpManager state file failures', () => {
     expect(reason).toContain('EISDIR');
     expect(reason.endsWith(`); ${remedy}`)).toBe(true);
     expect(statSync(file).isDirectory()).toBe(true);
+  });
+
+  // The launch shell opens the first tab only after every manager exists, so a synchronous failure
+  // in the constructor meets a tab manager holding no tabs, whose `cur()` answers `undefined`.
+  it('records the failure through the real managers while no tab is open yet', async () => {
+    const file = path.join(root, '.janissary', 'mcp.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, '{"port":');
+    const managers = {
+      tab: { tabs: [], cur: () => {}, byLabel: () => {} },
+    } as unknown as Managers;
+
+    const reason = await startFailed(managers);
+    expect(reason).toBe(`invalid MCP state file ${file}; ${remedy}`);
+    expect(vi.mocked(deliverNotification).mock.calls[0]?.[0]).toBe(managers);
   });
 });
 

@@ -8,7 +8,6 @@ import { getConfig } from '../config.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { makeToken } from '../security.js';
-import type { Tab } from '../tab/types.js';
 import { createLocalExecutor } from './executor.js';
 import { guard, type NodeHandler } from './guard.js';
 import { createHandler } from './handler.js';
@@ -138,16 +137,7 @@ export class McpManager {
   }
 
   private recordFailure(managers: Managers): void {
-    const detail = `MCP server failed to start: ${this.failure}`;
-    if (managers.tab.cur()) {
-      notify(managers, 'mcp-failed', SYSTEM_LABEL, detail);
-      return;
-    }
-    const fallback = Object.create(managers) as Managers;
-    const tab = Object.create(managers.tab) as typeof managers.tab;
-    tab.cur = () => ({ label: SYSTEM_LABEL, dotColor: undefined }) as unknown as Tab;
-    fallback.tab = tab;
-    notify(fallback, 'mcp-failed', SYSTEM_LABEL, detail);
+    notify(managers, 'mcp-failed', SYSTEM_LABEL, `MCP server failed to start: ${this.failure}`);
   }
 
   private async start(managers: Managers): Promise<void> {

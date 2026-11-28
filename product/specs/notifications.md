@@ -171,7 +171,8 @@ These event types can produce a notification line:
 - **`mcp-failed`** — the local MCP server could not start. The line reads
   `MCP server failed to start: <reason>`, carrying the failure reason verbatim, and one notification
   is recorded for the failure. It is explicit, has no config toggle, and is recorded even when its
-  tab is active. It defaults to a desktop banner with the `error` cue.
+  tab is active. It is also recorded when the failure comes before the launch shell has opened any
+  tab, such as a broken state file at startup. It defaults to a desktop banner with the `error` cue.
 - **`transcript-unavailable`** — a harness tab's session record could not be found, so the tab is
   limited to screen snapshots and has no transcript file (see [[harness-recording]]). The line reads
   `no harness transcript found` and is recorded once per tab, never repeated.
@@ -313,7 +314,8 @@ A keyboard shortcut the client blocks because its command appears disabled is re
 ### Focus suppression
 
 An ambient event on the **currently active** tab never produces a notification — only background
-tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
+tabs feed the notifications tab. Before the launch shell opens the first tab, no tab is active, so
+focus suppresses nothing. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`,
 `auto-resume`, `editor-suggest`, `system-schedule-fire`, `models-refresh`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, `layout`, `connection-closed`, `connection-close-failed`, `workspace-ready`, `tab`,

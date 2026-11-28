@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the forged Managers and Tab objects the MCP manager builds to record its failure notification.
-
-Existing Issue: `McpManager.recordFailure` builds a fake `Managers` with `Object.create(managers)`, a fake tab manager with `Object.create(managers.tab)`, and a `cur()` returning `{ label: 'janus', dotColor: undefined } as unknown as Tab`, only so `notify` can read an active label during a synchronous failure inside `createManagers`. Severity: 3/10
-
-Existing Risk: 3/10 - Any change to `notify` or `deliverNotification` that writes a field on `managers` or its tab manager, or reads more of the cast `Tab`, silently writes into the shadow object or reads undefined, losing or corrupting the one failure notice the user gets.
-
-Proposal Risk: 1/10 - The failure is recorded through the ordinary `notify` path once managers exist, so the only remaining dependency is the documented construction order.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "record the MCP start failure without forging Managers or a Tab". In `src/mcp/manager.ts`, make `start` yield before doing any work (for example by awaiting a resolved promise or `setImmediate`) so even a synchronous state-file failure reaches `recordFailure` after `createManagers` in `src/controller/create-managers.ts` has finished and the root tab exists, then delete the `Object.create` fallback and call `notify(managers, 'mcp-failed', 'janus', detail)` directly; if a path can still run with no current tab, give `notify` in `src/notifications/index.ts` a documented fallback for a missing `cur()` instead. Keep exactly one notification. The taken-port test in `src/mcp/manager.test.ts` pins the notification shape and must keep passing; add a test that a corrupt state file still produces one `mcp-failed` notification through a real `createManagers` call in `src/controller/create-managers.test.ts`.
-
-
 * Correct the pull request description's claim that a call made while detached is rejected at once.
 
 Existing Issue: The description says "a call made while detached is rejected before any frame is sent with `Janissary is not connected.`", but `FarSideMcp.relay` rejects only after a grace window has already expired with no link; a call made in the first 60 seconds after a Detach, or after a Detach with no call pending, is held and waits a full window before it fails. Severity: 3/10
