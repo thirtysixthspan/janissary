@@ -45,3 +45,5 @@ Questions are in-memory state. They are not persisted or restored.
 ### Cancellation
 
 Cancellation, owning-tab closure, and server shutdown return `Question cancelled.` to the waiting agent. Harnesses can ask through the local MCP endpoint at `http://127.0.0.1:<port>/mcp`, with the same cancellation result. There is no timeout or caller-supplied default.
+
+Escape from inside the panel cancels a free-text or approval question. An Escape that is part of an input-method composition does not cancel it: the question stays pending and any text already typed in the field remains there. This covers both keydowns marked as composing and those that report only the browser's keyCode 229 composition signal, so dismissing a half-composed character never discards the answer in progress.

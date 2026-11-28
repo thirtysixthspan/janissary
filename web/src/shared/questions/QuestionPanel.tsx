@@ -42,6 +42,7 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
       <div
         className="question-panel-content"
         onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
           if (event.key !== 'Escape') return;
           respond(null);
           event.preventDefault();

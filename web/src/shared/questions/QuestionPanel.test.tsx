@@ -99,6 +99,28 @@ describe('QuestionPanel', () => {
     }
   });
 
+  it.each([
+    { composition: 'isComposing', eventInit: { isComposing: true } },
+    { composition: 'keyCode 229', eventInit: { keyCode: 229 } },
+  ])('Escape during IME composition ($composition) on the ask textbox does not answer', ({ eventInit }) => {
+    const globalKeyDown = vi.fn();
+    globalThis.addEventListener('keydown', globalKeyDown);
+    try {
+      const { value, send } = client();
+      const question: PendingQuestionView = {
+        id: 'question-13', tab: 'build', kind: 'ask', question: 'What port?',
+      };
+      render(<QuestionPanel question={question} client={value} />);
+      const target = screen.getByRole('textbox', { name: 'Answer' });
+      target.focus();
+      fireEvent.keyDown(target, { key: 'Escape', ...eventInit });
+      expect(send).not.toHaveBeenCalled();
+      expect(globalKeyDown).toHaveBeenCalledOnce();
+    } finally {
+      globalThis.removeEventListener('keydown', globalKeyDown);
+    }
+  });
+
   it('is non-modal and does not trap unrelated input', async () => {
     const behind = vi.fn();
     const { value } = client();
