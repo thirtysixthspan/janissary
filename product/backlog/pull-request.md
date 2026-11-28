@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Close the documentation debt by recording the new Escape-to-cancel shortcut in the question panel's keyboard spec and in-app key help.
-
-Existing Issue: The question panel now cancels on Escape, but the Keyboard focus and navigation section of product/specs/agent-questions.md lists only Tab, Shift+Tab, and the arrow keys, and help/keys.md carries no question-panel Escape row, so neither authoritative keyboard reference mentions the new cancellation input. Severity: 3/10
-
-Existing Risk: 3/10 - A developer or user consulting the spec or in-app help to learn the panel's keys never learns that Escape cancels, so the documented keyboard contract silently diverges from the shipped one and a later change can reintroduce or contradict the shortcut without any reference to check.
-
-Proposal Risk: 1/10 - Updating prose in two reference documents cannot change runtime behavior, so the only residual risk is wording drift if the shortcut is changed again without updating the same two pages.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2257 "document Escape-to-cancel for the question panel". In product/specs/agent-questions.md, add a sentence to the Keyboard focus and navigation section stating that pressing Escape while focus is inside a pending question panel cancels the question by sending the null answer, that the shortcut is scoped to focus inside the panel so the panel stays non-modal, and that the key is stopped from reaching app-wide handlers. In help/keys.md, add a question-panel controls entry, or extend the existing Shift+Tab note, with an `Escape` row describing the same cancellation. Keep both statements limited to what web/src/shared/questions/QuestionPanel.tsx actually implements and do not change the component. The Escape table in web/src/shared/questions/QuestionPanel.test.tsx pins the behavior these documents will describe and must keep passing untouched.
-
 * Handle the IME-composition case so Escape used to dismiss a composition does not discard a pending free-text answer.
 
 Existing Issue: The new Escape handler on the panel wrapper checks only event.key and calls respond(null) for any Escape, including a keydown marked isComposing from an input method, so dismissing an IME composition in an ask panel cancels the whole question and discards the text typed so far. Severity: 4/10
