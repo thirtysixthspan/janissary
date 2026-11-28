@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make a corrupt or unreadable MCP state file a reported, recoverable failure and document it.
-
-Existing Issue: A `.janissary/mcp.json` that fails to parse or decode keeps the server down on every start with the reason `invalid MCP state file`, which names no file and suggests no fix, and `product/specs/mcp-server.md` describes neither this edge case nor its exact message. Severity: 3/10
-
-Existing Risk: 3/10 - A truncated or hand-mangled state file silently disables MCP for every harness in the project until someone guesses which file to delete, since the notification and the `mcp` command both show only the bare reason.
-
-Proposal Risk: 1/10 - The reason names the file and the spec states the behavior, so the only remaining cost is the manual deletion the user is now told about.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "name the state file in the invalid-MCP-state failure and document the corrupt-file edge case". In `src/mcp/manager.ts`, change `loadState`'s decode-failure and read-failure reasons to include the state file path (for example `invalid MCP state file <path>; delete it to pick a new port and token`), and add the case to the Server section of `product/specs/mcp-server.md` with the exact text, stating that the server stays down and Janissary runs normally. Add a test to `src/mcp/manager.test.ts` that writes invalid JSON to the state file and asserts one `mcp-failed` notification whose message contains the path and that `status()` reports the same reason. The existing taken-port test in that file must keep passing.
-
-
 * Remove the forged Managers and Tab objects the MCP manager builds to record its failure notification.
 
 Existing Issue: `McpManager.recordFailure` builds a fake `Managers` with `Object.create(managers)`, a fake tab manager with `Object.create(managers.tab)`, and a `cur()` returning `{ label: 'janus', dotColor: undefined } as unknown as Tab`, only so `notify` can read an active label during a synchronous failure inside `createManagers`. Severity: 3/10

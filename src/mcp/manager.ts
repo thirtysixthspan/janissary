@@ -17,6 +17,7 @@ const LOOPBACK = '127.0.0.1';
 const MCP_PATH = '/mcp';
 const STATE_MODE = 0o600;
 const SYSTEM_LABEL = 'janus';
+const STATE_REMEDY = 'delete it and restart Janissary to replace it';
 
 export type McpStatus =
   | { status: 'running'; url: string; port: number }
@@ -53,10 +54,11 @@ function loadState(file: string): { state?: State; error?: string } {
     text = readFileSync(file, 'utf8');
   } catch (error) {
     const missing = error instanceof Error && 'code' in error && error.code === 'ENOENT';
-    return missing ? {} : { error: reasonOf(error) };
+    if (missing) return {};
+    return { error: `unreadable MCP state file ${file} (${reasonOf(error)}); ${STATE_REMEDY}` };
   }
   const state = decodeState(text);
-  return state ? { state } : { error: 'invalid MCP state file' };
+  return state ? { state } : { error: `invalid MCP state file ${file}; ${STATE_REMEDY}` };
 }
 
 function saveState(file: string, state: State): void {

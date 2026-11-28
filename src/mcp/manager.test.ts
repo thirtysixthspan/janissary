@@ -66,6 +66,50 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
+describe('McpManager state file failures', () => {
+  const remedy = 'delete it and restart Janissary to replace it';
+
+  async function startFailed(): Promise<string> {
+    const manager = new McpManager(fixtureManagers(), root);
+    try {
+      await manager.ready;
+      expect(manager.localLaunch()).toBeUndefined();
+      const status = manager.status();
+      if (status.status !== 'not running') throw new Error('expected a stopped server');
+      expect(deliverNotification).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(deliverNotification).mock.calls[0]?.[1]).toMatchObject({
+        event: 'mcp-failed',
+        tabLabel: 'janus',
+        message: `MCP server failed to start: ${status.reason}`,
+      });
+      return status.reason;
+    } finally {
+      manager.dispose();
+    }
+  }
+
+  it('names the state file and the remedy when it is not valid JSON', async () => {
+    const file = path.join(root, '.janissary', 'mcp.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, '{"port":');
+
+    const reason = await startFailed();
+    expect(reason).toBe(`invalid MCP state file ${file}; ${remedy}`);
+    expect(readFileSync(file, 'utf8')).toBe('{"port":');
+  });
+
+  it('names the state file and the remedy when it cannot be read', async () => {
+    const file = path.join(root, '.janissary', 'mcp.json');
+    mkdirSync(file, { recursive: true });
+
+    const reason = await startFailed();
+    expect(reason.startsWith(`unreadable MCP state file ${file} (`)).toBe(true);
+    expect(reason).toContain('EISDIR');
+    expect(reason.endsWith(`); ${remedy}`)).toBe(true);
+    expect(statSync(file).isDirectory()).toBe(true);
+  });
+});
+
 describe.skipIf(!canReachLoopback)('McpManager', () => {
   it('persists the chosen port and token with mode 0600 and reuses them on the next start', async () => {
     const managers = fixtureManagers();
