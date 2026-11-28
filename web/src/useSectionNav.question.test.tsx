@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import type { PendingQuestionView, TabView } from '@shared/protocol';
+import { CUSTOM_ANSWER_LABEL } from '@shared/shared/question-choice';
 import { QuestionPanel } from './shared/questions/QuestionPanel';
 import { useSectionNav } from './useSectionNav';
 import type { JanusClient } from './shared/ws/ws';
@@ -34,6 +35,11 @@ const approve: PendingQuestionView = {
 };
 
 const ask: PendingQuestionView = { id: 'question-2', tab: 'build', kind: 'ask', question: 'Your name?' };
+
+const choose: PendingQuestionView = {
+  id: 'question-3', tab: 'build', kind: 'choose', question: 'Pick one',
+  choices: [{ label: 'First' }, { label: 'Second' }],
+};
 
 function inPanel(): boolean {
   return screen.getByRole('dialog').contains(document.activeElement);
@@ -83,6 +89,19 @@ describe('Shift+Tab in a pending question panel', () => {
     const focusCenter = vi.fn();
     render(<Harness question={ask} focusCenter={focusCenter} />);
     expect(screen.getByRole('textbox', { name: 'Answer' })).toHaveFocus();
+
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    expect(inPanel()).toBe(true);
+    expect(focusCenter).not.toHaveBeenCalled();
+  });
+
+  it('keeps Shift+Tab on a choice radio inside the panel instead of cycling sections', async () => {
+    const user = userEvent.setup();
+    const focusCenter = vi.fn();
+    render(<Harness question={choose} focusCenter={focusCenter} />);
+    screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL }).focus();
 
     await user.keyboard('{Shift>}{Tab}{/Shift}');
 

@@ -96,6 +96,12 @@ describe('QuestionPanel', () => {
       role: 'button',
       name: 'Cancel',
     },
+    {
+      kind: 'choose',
+      question: chooseQuestion({ id: 'question-14' }),
+      role: 'radio',
+      name: 'First',
+    },
   ])('Escape on a $kind question sends answer: null and stops propagation', ({ question, role, name }) => {
     const globalKeyDown = vi.fn();
     globalThis.addEventListener('keydown', globalKeyDown);
@@ -389,5 +395,141 @@ describe('QuestionPanel', () => {
 
     expect(screen.getByRole('group', { name: 'Pick one' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL })).toBeInTheDocument();
+  });
+
+  it('focuses the first choice on open when no default is selected', () => {
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    expect(screen.getByRole('radio', { name: 'First' })).toHaveFocus();
+  });
+
+  it('focuses Submit on open when a default is selected', () => {
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion({ defaultOption: 'First' })} client={value} />);
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toHaveFocus();
+  });
+
+  it('selects the custom alternative when its text field is typed into', async () => {
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL }), 'my answer');
+
+    expect(screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+  });
+
+  it('wraps Tab from Cancel into the radio group and Shift+Tab back to Cancel', async () => {
+    const user = userEvent.setup();
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+    const first = screen.getByRole('radio', { name: 'First' });
+    const second = screen.getByRole('radio', { name: 'Second' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+
+    expect(first).toHaveFocus();
+    cancel.focus();
+    await user.keyboard('{Tab}');
+    expect(first).toHaveFocus();
+
+    await user.click(second);
+    cancel.focus();
+    await user.keyboard('{Tab}');
+    expect(second).toHaveFocus();
+
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(cancel).toHaveFocus();
+  });
+
+  it('keeps focus in the group on arrow selection but moves it to the field on Space', async () => {
+    const user = userEvent.setup();
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+    const custom = screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL });
+    const field = screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL });
+
+    await user.keyboard('{ArrowRight}{ArrowRight}');
+    expect(custom).toHaveFocus();
+    expect(custom).toBeChecked();
+    expect(field).not.toHaveFocus();
+
+    fireEvent.keyUp(custom, { key: ' ' });
+    expect(field).toHaveFocus();
+  });
+
+  it('moves focus to the custom field on a pointer click on its radio', async () => {
+    const user = userEvent.setup();
+    const { value } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    await user.click(screen.getByRole('radio', { name: CUSTOM_ANSWER_LABEL }));
+
+    expect(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL })).toHaveFocus();
+  });
+
+  it('submits the selected choice on Enter over a radio', () => {
+    const { value, send } = client();
+    render(<QuestionPanel question={chooseQuestion({ defaultOption: 'First' })} client={value} />);
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'First' }), { key: 'Enter' });
+
+    expect(send).toHaveBeenCalledWith({
+      method: 'answerQuestion',
+      params: { tab: 'build', id: 'question-choose', answer: 'First' },
+    });
+  });
+
+  it('submits the typed alternative on Enter in the custom field', async () => {
+    const user = userEvent.setup();
+    const { value, send } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    await user.type(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL }), 'my answer{Enter}');
+
+    expect(send).toHaveBeenCalledWith({
+      method: 'answerQuestion',
+      params: { tab: 'build', id: 'question-choose', answer: 'my answer' },
+    });
+  });
+
+  it('does not submit on Enter while Submit is disabled', async () => {
+    const user = userEvent.setup();
+    const { value, send } = client();
+    render(<QuestionPanel question={chooseQuestion()} client={value} />);
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'First' }), { key: 'Enter' });
+    const field = screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL });
+    await user.type(field, '   {Enter}');
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('restores first-choice focus and clears typed text when the panel is remounted', async () => {
+    const { value } = client();
+    const question = chooseQuestion();
+    const firstRender = render(<QuestionPanel question={question} client={value} />);
+    await userEvent.type(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL }), 'draft');
+    expect(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL })).toHaveValue('draft');
+
+    firstRender.unmount();
+    render(<QuestionPanel question={question} client={value} />);
+
+    expect(screen.getByRole('radio', { name: 'First' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: CUSTOM_ANSWER_LABEL })).toHaveValue('');
+  });
+
+  it('restores Submit focus after a remount when a default is present', () => {
+    const { value } = client();
+    const question = chooseQuestion({ defaultOption: 'Second' });
+    const firstRender = render(<QuestionPanel question={question} client={value} />);
+    expect(screen.getByRole('button', { name: 'Submit' })).toHaveFocus();
+
+    firstRender.unmount();
+    render(<QuestionPanel question={question} client={value} />);
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toHaveFocus();
+    expect(screen.getByRole('radio', { name: 'Second' })).toBeChecked();
   });
 });
