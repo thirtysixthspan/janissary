@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { closeSync, fchmodSync, fstatSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { atomicWriteFile } from '../atomic-write.js';
+import { atomicWritePrivateFile, OWNER_ONLY_FILE_MODE } from '../atomic-write.js';
 import { reservePort, reserveReachablePort } from '../browser/e2e-ports.js';
 import { getConfig } from '../config.js';
 import type { Managers } from '../managers.js';
@@ -11,7 +11,6 @@ import { createLocalExecutor } from './executor.js';
 import { createHandler } from './handler.js';
 import { createMcpServer, MCP_HOST, mcpUrl } from './listener.js';
 
-const STATE_MODE = 0o600;
 const SYSTEM_LABEL = 'janus';
 const STATE_REMEDY = 'delete it and restart Janissary to replace it';
 
@@ -45,21 +44,29 @@ function decodeState(value: string): State | undefined {
 }
 
 function loadState(file: string): { state?: State; error?: string } {
-  let text: string;
+  let descriptor: number | undefined;
+  let state: State | undefined;
   try {
-    text = readFileSync(file, 'utf8');
+    descriptor = openSync(file, 'r');
+    state = decodeState(readFileSync(descriptor, 'utf8'));
+    if (!state) return { error: `invalid MCP state file ${file}; ${STATE_REMEDY}` };
+    if ((fstatSync(descriptor).mode & 0o7777) !== OWNER_ONLY_FILE_MODE) {
+      fchmodSync(descriptor, OWNER_ONLY_FILE_MODE);
+    }
+    return { state };
   } catch (error) {
     const missing = error instanceof Error && 'code' in error && error.code === 'ENOENT';
-    if (missing) return {};
-    return { error: `unreadable MCP state file ${file} (${reasonOf(error)}); ${STATE_REMEDY}` };
+    if (descriptor === undefined && missing) return {};
+    const failure = state ? 'could not secure' : 'unreadable';
+    return { error: `${failure} MCP state file ${file} (${reasonOf(error)}); ${STATE_REMEDY}` };
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
-  const state = decodeState(text);
-  return state ? { state } : { error: `invalid MCP state file ${file}; ${STATE_REMEDY}` };
 }
 
 function saveState(file: string, state: State): void {
   mkdirSync(path.dirname(file), { recursive: true });
-  atomicWriteFile(file, `${JSON.stringify(state, undefined, 2)}\n`, STATE_MODE);
+  atomicWritePrivateFile(file, `${JSON.stringify(state, undefined, 2)}\n`);
 }
 
 function stateToSave(

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, fchmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import type * as Fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
@@ -12,6 +13,10 @@ import type { Tab } from '../tab/types.js';
 import { McpManager } from './manager.js';
 
 vi.mock('../notifications/deliver.js', () => ({ deliverNotification: vi.fn() }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof Fs>();
+  return { ...actual, fchmodSync: vi.fn(actual.fchmodSync) };
+});
 
 const canReachLoopback = await loopbackReachable();
 
@@ -92,10 +97,12 @@ describe('McpManager state file failures', () => {
     const file = path.join(root, '.janissary', 'mcp.json');
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, '{"port":');
+    chmodSync(file, 0o644);
 
     const reason = await startFailed();
     expect(reason).toBe(`invalid MCP state file ${file}; ${remedy}`);
     expect(readFileSync(file, 'utf8')).toBe('{"port":');
+    expect(statSync(file).mode & 0o777).toBe(0o644);
   });
 
   it('names the state file and the remedy when it cannot be read', async () => {
@@ -107,6 +114,21 @@ describe('McpManager state file failures', () => {
     expect(reason).toContain('EISDIR');
     expect(reason.endsWith(`); ${remedy}`)).toBe(true);
     expect(statSync(file).isDirectory()).toBe(true);
+  });
+
+  it('leaves valid saved state intact when private permissions cannot be applied', async () => {
+    const file = path.join(root, '.janissary', 'mcp.json');
+    const savedText = JSON.stringify({ token: 'saved-token' });
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, savedText);
+    chmodSync(file, 0o644);
+    vi.mocked(fchmodSync).mockImplementationOnce(() => { throw new Error('permission denied'); });
+
+    const reason = await startFailed();
+
+    expect(reason).toBe(`could not secure MCP state file ${file} (permission denied); ${remedy}`);
+    expect(readFileSync(file, 'utf8')).toBe(savedText);
+    expect(statSync(file).mode & 0o777).toBe(0o644);
   });
 
   // The launch shell opens the first tab only after every manager exists, so a synchronous failure
@@ -135,18 +157,25 @@ describe.skipIf(!canReachLoopback)('McpManager', () => {
     if (status.status !== 'running') throw new Error('expected a running server');
 
     const file = path.join(root, '.janissary', 'mcp.json');
-    const saved = JSON.parse(readFileSync(file, 'utf8')) as { port: number; token: string };
+    const savedText = readFileSync(file, 'utf8');
+    const saved = JSON.parse(savedText) as { port: number; token: string };
     expect(saved.port).toBe(status.port);
     expect(statSync(file).mode & 0o777).toBe(0o600);
     const launch = { url: `http://127.0.0.1:${status.port}/mcp`, token: saved.token };
     expect(first.localLaunch()).toEqual(launch);
 
     await first.dispose();
+    chmodSync(file, 0o644);
     const second = new McpManager(managers, root);
-    await second.ready;
-    expect(second.localLaunch()).toEqual(launch);
-    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(saved);
-    await second.dispose();
+    try {
+      expect(statSync(file).mode & 0o777).toBe(0o600);
+      await second.ready;
+      expect(second.localLaunch()).toEqual(launch);
+      expect(readFileSync(file, 'utf8')).toBe(savedText);
+    } finally {
+      second.dispose();
+      await second.ready;
+    }
   });
 
   it('uses mcpPort instead of the saved port without writing it back', async () => {
@@ -190,6 +219,7 @@ describe.skipIf(!canReachLoopback)('McpManager', () => {
     first.dispose();
 
     delete getConfig().mcpPort;
+    chmodSync(file, 0o644);
     const second = new McpManager(managers, root);
     await second.ready;
     try {
@@ -200,6 +230,7 @@ describe.skipIf(!canReachLoopback)('McpManager', () => {
       expect(status.port).toBeLessThan(BROWSER_PORT_BAND_FIRST);
       expect(second.localLaunch()?.token).toBe(token);
       expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ port: status.port, token });
+      expect(statSync(file).mode & 0o777).toBe(0o600);
     } finally {
       second.dispose();
     }

@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - A session with an eligible harness keeps its existing shar
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Gate incoming MCP calls on the remote harness launch decision". Use locally known harness spawn state from `src/remote/channel/index.ts` and the recorded attach path in `src/harness/tab-spawn.ts` to authorize MCP dispatch in `src/remote/entry-factory.ts`. Refuse calls before the relay executor is invoked when the session has no eligible harness, without losing cancellation and cleanup for a call already accepted. Preserve explicit cross-tab targeting for an allowed caller and make the existing fake-channel success cases in `src/remote/manager.test.ts` register an eligible harness. Add a defensive test that a channel lacking the grant leaves the question queue untouched, and record the channel policy in the remote and MCP specs.
 
 
-* Enforce private permissions on the local MCP credential when reusing and updating saved state.
-
-Existing Issue: The manager accepts existing state regardless of file mode and its atomic writer uses `0600` only for new files, preserving a token-only state's wider mode on replacement. Severity: 5/10
-
-Existing Risk: 5/10 - A copied or restored credential with wider permissions can remain readable by another local account when the server uses it again.
-
-Proposal Risk: 2/10 - Valid existing tokens keep their values while the server enforces private access, and permission failures leave MCP unavailable with an actionable notification.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 2256 "Enforce private permissions on reused MCP state". Inspect `loadState` and `saveState` in `src/mcp/manager.ts` and `src/atomic-write.ts`'s preserve-existing-mode contract. Enforce private permissions for valid MCP state before starting the listener and ensure an atomic replacement stays private, while retaining general atomic writer behavior for other files. Preserve invalid-file diagnostics and keep the configured port and token stable. Add defensive mode assertions to `src/mcp/manager.test.ts` for reused full state and a token-only update, and specify the private-mode requirement in `product/specs/mcp-server.md`.
-
-
 * Clear ambient MCP credentials from a harness launch when MCP injection is disabled.
 
 Existing Issue: A launch with MCP disabled omits the MCP overlay, but the underlying PTY environment still inherits any existing MCP variables from the launching process on the pass-through sandbox path. Severity: 5/10
